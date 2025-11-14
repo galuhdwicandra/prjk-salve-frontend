@@ -70,7 +70,6 @@ export interface Order {
     photos?: OrderPhoto[];
 }
 
-
 export type OrderPhotoKind = 'BEFORE' | 'AFTER';
 
 export interface OrderPhoto {

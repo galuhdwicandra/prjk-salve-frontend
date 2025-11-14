@@ -26,6 +26,8 @@ const DeliveryDetail = lazy(() => import('../pages/deliveries/DeliveryDetail'));
 const VouchersIndex = lazy(() => import('../pages/vouchers/VouchersIndex'));
 const VoucherForm = lazy(() => import('../pages/vouchers/VoucherForm'));
 const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesIndex'));
+const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
+const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 
 export const router = createBrowserRouter([
     {
@@ -233,9 +235,31 @@ export const router = createBrowserRouter([
                 path: '/expenses',
                 element: (
                     <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <div>Expenses (placeholder)</div>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <ExpensesIndex />
+                        </Suspense>
                     </Guarded>
-                )
+                ),
+            },
+            {
+                path: '/expenses/new',
+                element: (
+                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <ExpenseForm />
+                        </Suspense>
+                    </Guarded>
+                ),
+            },
+            {
+                path: '/expenses/:id/edit',
+                element: (
+                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <ExpenseForm />
+                        </Suspense>
+                    </Guarded>
+                ),
             },
             {
                 path: '/receivables',

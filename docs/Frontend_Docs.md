@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-11-09 17:56:00_  
+_Dihasilkan otomatis: 2025-11-14 17:51:25_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2025\apk-web-salve\Projek Salve\prjk-salve\frontend`
 
 
@@ -1648,7 +1648,7 @@ export interface SingleResponse<T> {
 
 ### src\types\orders.ts
 
-- SHA: `7bb455ee5cab`  
+- SHA: `5c7a23c675eb`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1705,6 +1705,7 @@ export interface Order {
     id: string;
     branch_id: string;
     customer_id: string | null;
+    number: string; // ← TAMBAHKAN BARIS INI
     status: OrderBackendStatus;
     subtotal: number;
     discount: number;
@@ -5252,8 +5253,8 @@ export default function OrderDetail(): React.ReactElement {
 
 ### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `9532cbdbe580`  
-- Ukuran: 2 KB
+- SHA: `47194ecaa000`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5261,6 +5262,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder } from '../../api/orders';
 import { buildWhatsAppLink } from '../../utils/wa';
+import type { Order } from '../../types/orders';
+import { toIDR } from '../../utils/money';
 
 export default function OrderReceipt(): React.ReactElement {
     const { id } = useParams<{ id: string }>();
@@ -5268,6 +5271,7 @@ export default function OrderReceipt(): React.ReactElement {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [waPhone, setWaPhone] = useState<string>('');
+    const [order, setOrder] = useState<Order | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -5278,8 +5282,12 @@ export default function OrderReceipt(): React.ReactElement {
 
                 try {
                     const orderRes = await getOrder(id);
-                    const wa = orderRes?.data?.customer?.whatsapp ?? '';
-                    if (wa) setWaPhone(wa);
+                    const ord = orderRes?.data ?? null;
+                    if (ord) {
+                        setOrder(ord);
+                        const wa = ord.customer?.whatsapp ?? '';
+                        if (wa) setWaPhone(wa);
+                    }
                 } catch {
                     // Biarkan tetap jalan meski gagal ambil order (struk tetap tampil)
                 }
@@ -5295,8 +5303,40 @@ export default function OrderReceipt(): React.ReactElement {
     if (error) return <div className="p-4 text-red-600">{error}</div>;
 
     const onPrint = () => window.print();
+
     const onSendWA = () => {
-        const url = buildWhatsAppLink(waPhone, 'Halo, berikut struk transaksi Anda. Terima kasih 🙏');
+        if (!waPhone) return;
+
+        // Default message kalau order belum kebaca (harusnya jarang terjadi)
+        let message = 'Halo, berikut struk transaksi Anda. Terima kasih 🙏';
+
+        if (order) {
+            const name = order.customer?.name ?? 'Pelanggan';
+            const nomor = order.invoice_no ?? order.number;
+            const total = toIDR(order.grand_total);
+            const sisa = order.due_amount;
+
+            if (sisa > 0) {
+                // MODE TAGIHAN / JATUH TEMPO
+                message = [
+                    `Halo ${name},`,
+                    `Ini tagihan laundry Anda dengan nomor ${nomor}.`,
+                    `Total: ${total}.`,
+                    `Sisa tagihan: ${toIDR(sisa)}.`,
+                    `Mohon melakukan pelunasan sebelum jatuh tempo. Terima kasih 🙏`,
+                ].join('\n');
+            } else {
+                // MODE KUITANSI (SUDAH LUNAS)
+                message = [
+                    `Halo ${name},`,
+                    `Ini kuitansi pelunasan transaksi laundry Anda dengan nomor ${nomor}.`,
+                    `Total dibayar: ${total}.`,
+                    `Terima kasih telah menggunakan layanan kami 🙏`,
+                ].join('\n');
+            }
+        }
+
+        const url = buildWhatsAppLink(waPhone, message);
         window.open(url, '_blank');
     };
 
@@ -5311,7 +5351,11 @@ export default function OrderReceipt(): React.ReactElement {
                     onChange={(e) => setWaPhone(e.target.value)}
                     className="px-3 py-2 rounded border"
                 />
-                <button className="px-3 py-2 rounded bg-black text-white dark:bg-white dark:text-black" onClick={onSendWA} disabled={!waPhone}>
+                <button
+                    className="px-3 py-2 rounded bg-black text-white dark:bg-white dark:text-black"
+                    onClick={onSendWA}
+                    disabled={!waPhone}
+                >
                     Kirim WhatsApp
                 </button>
             </div>
