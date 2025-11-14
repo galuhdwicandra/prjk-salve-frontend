@@ -50,6 +50,7 @@ export interface Order {
     id: string;
     branch_id: string;
     customer_id: string | null;
+    number: string; // ← TAMBAHKAN BARIS INI
     status: OrderBackendStatus;
     subtotal: number;
     discount: number;
@@ -68,6 +69,7 @@ export interface Order {
     items?: OrderItem[];
     photos?: OrderPhoto[];
 }
+
 
 export type OrderPhotoKind = 'BEFORE' | 'AFTER';
 
