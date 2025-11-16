@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-11-14 17:51:25_  
+_Dihasilkan otomatis: 2025-11-15 00:46:26_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2025\apk-web-salve\Projek Salve\prjk-salve\frontend`
 
 
@@ -11,6 +11,7 @@ _Dihasilkan otomatis: 2025-11-14 17:51:25_
   - [src\api\client.ts](#file-srcapiclientts)
   - [src\api\customers.ts](#file-srcapicustomersts)
   - [src\api\deliveries.ts](#file-srcapideliveriests)
+  - [src\api\expenses.ts](#file-srcapiexpensests)
   - [src\api\invoiceCounters.ts](#file-srcapiinvoicecountersts)
   - [src\api\orderPhotos.ts](#file-srcapiorderphotosts)
   - [src\api\orders.ts](#file-srcapiordersts)
@@ -36,6 +37,7 @@ _Dihasilkan otomatis: 2025-11-14 17:51:25_
   - [src\types\branches.ts](#file-srctypesbranchests)
   - [src\types\customers.ts](#file-srctypescustomersts)
   - [src\types\deliveries.ts](#file-srctypesdeliveriests)
+  - [src\types\expenses.ts](#file-srctypesexpensests)
   - [src\types\orders.ts](#file-srctypesordersts)
   - [src\types\payments.ts](#file-srctypespaymentsts)
   - [src\types\receivables.ts](#file-srctypesreceivablests)
@@ -70,6 +72,8 @@ _Dihasilkan otomatis: 2025-11-14 17:51:25_
   - [src\pages\customers\CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
   - [src\pages\deliveries\DeliveryDetail.tsx](#file-srcpagesdeliveriesdeliverydetailtsx)
   - [src\pages\deliveries\DeliveryIndex.tsx](#file-srcpagesdeliveriesdeliveryindextsx)
+  - [src\pages\expenses\ExpenseForm.tsx](#file-srcpagesexpensesexpenseformtsx)
+  - [src\pages\expenses\ExpensesIndex.tsx](#file-srcpagesexpensesexpensesindextsx)
   - [src\pages\Login.tsx](#file-srcpageslogintsx)
   - [src\pages\orders\OrderDetail.tsx](#file-srcpagesordersorderdetailtsx)
   - [src\pages\orders\OrderReceipt.tsx](#file-srcpagesordersorderreceipttsx)
@@ -399,6 +403,145 @@ export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPa
     { headers: { 'Content-Type': 'application/json' } }
   );
   return data;
+}
+
+```
+</details>
+
+### src\api\expenses.ts
+
+- SHA: `366273253174`  
+- Ukuran: 4 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/api/expenses.ts
+import { api, type ApiEnvelope } from './client';
+import type {
+    Expense,
+    ExpenseCreatePayload,
+    ExpenseUpdatePayload,
+    ExpenseQuery,
+    SingleResponse,
+    PaginationMeta,
+} from '../types/expenses';
+
+/** Laravel paginator shape (server) */
+type Paginator<T> = {
+    data: T[];
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+};
+
+function isPaginator<T>(v: unknown): v is Paginator<T> {
+    return (
+        !!v &&
+        typeof v === 'object' &&
+        Array.isArray((v as { data?: unknown }).data) &&
+        typeof (v as { current_page?: unknown }).current_page !== 'undefined'
+    );
+}
+
+/** GET /expenses */
+export async function listExpenses(
+    params: ExpenseQuery = {},
+): Promise<ApiEnvelope<Expense[], PaginationMeta | null>> {
+    const { data: env } = await api.get<unknown>('/expenses', { params });
+
+    if (isPaginator<Expense>(env)) {
+        const out: ApiEnvelope<Expense[], PaginationMeta> = {
+            data: env.data,
+            meta: {
+                current_page: env.current_page,
+                per_page: env.per_page,
+                total: env.total,
+                last_page: env.last_page,
+            },
+            message: null,
+            errors: null,
+        };
+        return out;
+    }
+
+    return {
+        data: (env as { data?: Expense[] })?.data ?? [],
+        meta: null,
+        message: (env as { message?: string | null })?.message ?? null,
+        errors: (env as { errors?: Record<string, string[]> | null })?.errors ?? null,
+    };
+}
+
+/** GET /expenses/{id} */
+export async function getExpense(id: string): Promise<SingleResponse<Expense>> {
+    const { data } = await api.get<SingleResponse<Expense>>(`/expenses/${encodeURIComponent(id)}`);
+    return data;
+}
+
+/** POST /expenses (multipart jika ada file 'proof', JSON jika tidak) */
+export async function createExpense(payload: ExpenseCreatePayload): Promise<SingleResponse<Expense>> {
+    if (payload.proof) {
+        const fd = new FormData();
+        if (payload.branch_id) fd.append('branch_id', payload.branch_id);
+        fd.append('category', payload.category);
+        fd.append('amount', String(payload.amount ?? 0));
+        if (typeof payload.note !== 'undefined') fd.append('note', payload.note ?? '');
+        fd.append('proof', payload.proof);
+        const { data } = await api.post<SingleResponse<Expense>>('/expenses', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return data;
+    }
+
+    const json: {
+        branch_id?: string;
+        category: string;
+        amount: number;
+        note?: string | null;
+    } = {
+        category: payload.category,
+        amount: payload.amount,
+    };
+    if (payload.branch_id) json.branch_id = payload.branch_id;
+    if (typeof payload.note !== 'undefined') json.note = payload.note;
+
+    const { data } = await api.post<SingleResponse<Expense>>('/expenses', json);
+    return data;
+}
+
+export async function updateExpense(
+    id: string,
+    payload: ExpenseUpdatePayload,
+): Promise<SingleResponse<Expense>> {
+    if (payload.proof) {
+        const fd = new FormData();
+        fd.append('category', payload.category);
+        fd.append('amount', String(payload.amount ?? 0));
+        if (typeof payload.note !== 'undefined') fd.append('note', payload.note ?? '');
+        fd.append('proof', payload.proof);
+        const { data } = await api.put<SingleResponse<Expense>>(`/expenses/${encodeURIComponent(id)}`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return data;
+    }
+
+    const json: {
+        category: string;
+        amount: number;
+        note?: string | null;
+    } = {
+        category: payload.category,
+        amount: payload.amount,
+    };
+    if (typeof payload.note !== 'undefined') json.note = payload.note;
+
+    const { data } = await api.put<SingleResponse<Expense>>(`/expenses/${encodeURIComponent(id)}`, json);
+    return data;
+}
+
+export async function deleteExpense(id: string) {
+    return api.delete(`/expenses/${encodeURIComponent(id)}`);
 }
 
 ```
@@ -1002,7 +1145,7 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `ed232c872107`  
+- SHA: `6ca595a8c3b3`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1084,6 +1227,7 @@ export function RequireRole(props: { roles: RoleName[]; children: React.ReactNod
     if (!allowed) return (props.fallback ?? null);
     return <>{props.children}</>;
 }
+
 ```
 </details>
 
@@ -1131,8 +1275,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `49bb2ecee04c`  
-- Ukuran: 12 KB
+- SHA: `9498b9ac37cf`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1164,6 +1308,8 @@ const DeliveryDetail = lazy(() => import('../pages/deliveries/DeliveryDetail'));
 const VouchersIndex = lazy(() => import('../pages/vouchers/VouchersIndex'));
 const VoucherForm = lazy(() => import('../pages/vouchers/VoucherForm'));
 const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesIndex'));
+const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
+const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 
 export const router = createBrowserRouter([
     {
@@ -1371,9 +1517,31 @@ export const router = createBrowserRouter([
                 path: '/expenses',
                 element: (
                     <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <div>Expenses (placeholder)</div>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <ExpensesIndex />
+                        </Suspense>
                     </Guarded>
-                )
+                ),
+            },
+            {
+                path: '/expenses/new',
+                element: (
+                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <ExpenseForm />
+                        </Suspense>
+                    </Guarded>
+                ),
+            },
+            {
+                path: '/expenses/:id/edit',
+                element: (
+                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <ExpenseForm />
+                        </Suspense>
+                    </Guarded>
+                ),
             },
             {
                 path: '/receivables',
@@ -1640,6 +1808,74 @@ export interface SingleResponse<T> {
   data: T | null;
   meta: Record<string, unknown> | null;
   message: string;
+  errors: Record<string, string[] | string> | null;
+}
+
+```
+</details>
+
+### src\types\expenses.ts
+
+- SHA: `8527b92302de`  
+- Ukuran: 1 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/types/expenses.ts
+export interface Expense {
+  id: string;
+  branch_id: string;
+  category: string;
+  amount: number;
+  note: string | null;
+  proof_path: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  // Optional eager loaded relation
+  branch?: { id: string; name: string } | null;
+}
+
+export interface ExpenseCreatePayload {
+  branch_id?: string; // required untuk Superadmin (divalidasi backend)
+  category: string;
+  amount: number;
+  note?: string | null;
+  proof?: File | null;
+}
+
+export interface ExpenseUpdatePayload {
+  category: string;
+  amount: number;
+  note?: string | null;
+  proof?: File | null; // jika diisi: mengganti bukti lama
+}
+
+export interface ExpenseQuery {
+  branch_id?: string;
+  date_from?: string; // YYYY-MM-DD
+  date_to?: string;   // YYYY-MM-DD
+  page?: number;
+  per_page?: number;
+}
+
+export type PaginationMeta = {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+};
+
+export interface Paginated<T> {
+  data: T[];
+  meta: PaginationMeta;
+  message: string | null;
+  errors: Record<string, string[] | string> | null;
+}
+
+export interface SingleResponse<T> {
+  data: T | null;
+  meta: Record<string, unknown> | null;
+  message: string | null;
   errors: Record<string, string[] | string> | null;
 }
 
@@ -4928,6 +5164,355 @@ export default function DeliveryIndex() {
       />
     </div>
   );
+}
+
+```
+</details>
+
+### src\pages\expenses\ExpenseForm.tsx
+
+- SHA: `53cf31566e56`  
+- Ukuran: 7 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+// src/pages/expenses/ExpenseForm.tsx
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createExpense, getExpense, updateExpense } from '../../api/expenses';
+import { listBranches } from '../../api/branches';
+import type { Expense } from '../../types/expenses';
+import type { Branch } from '../../types/branches';
+import { toIDR } from '../../utils/money';
+import { useHasRole } from '../../store/useAuth';
+
+export default function ExpenseForm() {
+    const params = useParams();
+    const id = params.id ? String(params.id) : null;
+    const editing = !!id;
+    const nav = useNavigate();
+    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+    const isSuperadmin = useHasRole(['Superadmin']);
+
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState<string>('');
+
+    const [branchList, setBranchList] = useState<Branch[]>([]);
+    const [branchId, setBranchId] = useState<string>('');
+
+    const [category, setCategory] = useState<string>('');
+    const [amount, setAmount] = useState<string>('0');
+    const [note, setNote] = useState<string>('');
+    const [existingProof, setExistingProof] = useState<string | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
+
+    const title = editing ? 'Ubah Pengeluaran' : 'Tambah Pengeluaran';
+
+    useEffect(() => {
+        let stop = false;
+        (async () => {
+            setLoading(true); setErr('');
+            try {
+                if (isSuperadmin) {
+                    const b = await listBranches({ per_page: 100 });
+                    if (!stop) setBranchList(b.data ?? []);
+                }
+                if (editing && id) {
+                    const res = await getExpense(id);
+                    const row = res.data as Expense | null;
+                    if (row) {
+                        if (isSuperadmin) setBranchId(String(row.branch_id));
+                        setCategory(row.category);
+                        setAmount(String(row.amount ?? 0));
+                        setNote(row.note ?? '');
+                        setExistingProof(row.proof_path ?? null);
+                    }
+                }
+            } catch (e) {
+                if (import.meta.env.DEV) console.error('[ExpenseForm] load error', e);
+                setErr('Gagal memuat data');
+            } finally {
+                if (!stop) setLoading(false);
+            }
+        })();
+        return () => { stop = true; };
+    }, [editing, id, isSuperadmin]);
+
+    async function onSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!canManage) return;
+        try {
+            setLoading(true); setErr('');
+            const file = fileRef.current?.files?.[0] ?? null;
+            const num = Number(amount || 0);
+            if (Number.isNaN(num)) { setErr('Nominal tidak valid'); setLoading(false); return; }
+
+            if (editing && id) {
+                await updateExpense(id, { category, amount: num, note: note || null, proof: file ?? undefined });
+            } else {
+                const payload: { branch_id?: string; category: string; amount: number; note?: string | null; proof?: File | null } = {
+                    category, amount: num, note: note || null,
+                };
+                if (isSuperadmin) payload.branch_id = branchId || undefined;
+                if (file) payload.proof = file;
+                await createExpense(payload);
+            }
+            nav('/expenses');
+        } catch (e) {
+            if (import.meta.env.DEV) console.error('[ExpenseForm] submit error', e);
+            setErr('Gagal menyimpan');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function fileUrl(path: string | null): string | null {
+        if (!path) return null;
+        const base = String(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '');
+        const clean = String(path).replace(/^\/+/, '');
+        return `${base}/${clean}`;
+    }
+
+    return (
+        <div className="p-4">
+            <h1 className="text-lg font-semibold mb-3">{title}</h1>
+
+            {err && <div className="mb-2 text-sm text-red-600">{err}</div>}
+            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
+
+            {!loading && (
+                <form onSubmit={onSubmit} className="grid gap-3 max-w-xl">
+                    {isSuperadmin && (
+                        <label className="grid gap-1 text-sm">
+                            <span>Cabang</span>
+                            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} required className="border rounded-md px-2 py-1">
+                                <option value="">-- pilih cabang --</option>
+                                {branchList.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+                            </select>
+                        </label>
+                    )}
+
+                    <label className="grid gap-1 text-sm">
+                        <span>Kategori</span>
+                        <input value={category} onChange={(e) => setCategory(e.target.value)} required className="border rounded-md px-2 py-1" placeholder="Contoh: Listrik / Sewa / Operasional lain" />
+                    </label>
+
+                    <label className="grid gap-1 text-sm">
+                        <span>Nominal</span>
+                        <input value={amount} onChange={(e) => setAmount(e.target.value)} required className="border rounded-md px-2 py-1" inputMode="numeric" />
+                        <span className="text-xs text-gray-500">{toIDR(Number(amount || 0))}</span>
+                    </label>
+
+                    <label className="grid gap-1 text-sm">
+                        <span>Catatan</span>
+                        <textarea value={note} onChange={(e) => setNote(e.target.value)} className="border rounded-md px-2 py-1" rows={3} placeholder="Opsional" />
+                    </label>
+
+                    <label className="grid gap-1 text-sm">
+                        <span>Bukti (foto/struk/PDF)</span>
+                        <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="border rounded-md px-2 py-1" />
+                        {existingProof && (
+                            <a href={fileUrl(existingProof) ?? '#'} target="_blank" rel="noopener noreferrer" className="text-xs underline">
+                                Lihat bukti saat ini
+                            </a>
+                        )}
+                    </label>
+
+                    <div className="mt-2 flex items-center gap-3">
+                        <button type="submit" disabled={loading} className="rounded-lg bg-black px-3 py-2 text-white text-sm disabled:opacity-50">
+                            {editing ? 'Simpan Perubahan' : 'Simpan'}
+                        </button>
+                        <button type="button" onClick={() => nav('/expenses')} className="text-sm underline">Batal</button>
+                    </div>
+                </form>
+            )}
+        </div>
+    );
+}
+
+```
+</details>
+
+### src\pages\expenses\ExpensesIndex.tsx
+
+- SHA: `fdbd00d25868`  
+- Ukuran: 9 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+// src/pages/expenses/ExpensesIndex.tsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { listExpenses, deleteExpense } from '../../api/expenses';
+import { listBranches } from '../../api/branches';
+import type { Expense, ExpenseQuery } from '../../types/expenses';
+import type { Branch } from '../../types/branches';
+import { toIDR } from '../../utils/money';
+import { useHasRole } from '../../store/useAuth';
+
+type Meta = { current_page: number; per_page: number; total: number; last_page: number };
+
+export default function ExpensesIndex() {
+    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+    const isSuperadmin = useHasRole(['Superadmin']);
+    const nav = useNavigate();
+
+    const [rows, setRows] = useState<Expense[]>([]);
+    const [meta, setMeta] = useState<Meta | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState<string>('');
+    const [branchList, setBranchList] = useState<Branch[]>([]);
+
+    // Filters
+    const [branchId, setBranchId] = useState<string>('');
+    const [dateFrom, setDateFrom] = useState<string>('');
+    const [dateTo, setDateTo] = useState<string>('');
+    const [page, setPage] = useState<number>(1);
+    const [perPage, setPerPage] = useState<number>(15);
+
+    const params: ExpenseQuery = useMemo(() => {
+        const out: ExpenseQuery = { page, per_page: perPage };
+        if (isSuperadmin && branchId) out.branch_id = branchId;
+        if (dateFrom) out.date_from = dateFrom;
+        if (dateTo) out.date_to = dateTo;
+        return out;
+    }, [page, perPage, isSuperadmin, branchId, dateFrom, dateTo]);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        setErr('');
+        try {
+            if (isSuperadmin && branchList.length === 0) {
+                const bres = await listBranches({ per_page: 100 });
+                setBranchList(bres.data ?? []);
+            }
+            const res = await listExpenses(params);
+            setRows(res.data ?? []);
+            setMeta((res.meta as unknown as Meta) ?? null);
+        } catch (e) {
+            setErr('Gagal memuat data');
+            if (import.meta.env.DEV) console.error('[ExpensesIndex] load error', e);
+        } finally {
+            setLoading(false);
+        }
+    }, [params, isSuperadmin, branchList.length]);
+
+    useEffect(() => { load(); }, [load]);
+
+    async function onDelete(row: Expense) {
+        if (!canManage) return;
+        const ok = window.confirm(`Hapus pengeluaran "${row.category}" sebesar ${toIDR(Number(row.amount))}?`);
+        if (!ok) return;
+        try {
+            await deleteExpense(row.id);
+            await load();
+        } catch (e) {
+            if (import.meta.env.DEV) console.error('[ExpensesIndex] delete error', e);
+            alert('Gagal menghapus');
+        }
+    }
+
+    function fileUrl(path: string | null): string | null {
+        if (!path) return null;
+        const base = String(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '');
+        const clean = String(path).replace(/^\/+/, '');
+        return `${base}/${clean}`;
+    }
+
+    return (
+        <div className="p-4">
+            <div className="mb-3 flex items-center justify-between">
+                <h1 className="text-lg font-semibold">Biaya Operasional</h1>
+                {canManage && (
+                    <button
+                        className="rounded-lg bg-black px-3 py-2 text-white text-sm"
+                        onClick={() => nav('/expenses/new')}
+                    >
+                        Tambah
+                    </button>
+                )}
+            </div>
+
+            <div className="mb-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+                {isSuperadmin && (
+                    <select
+                        value={branchId}
+                        onChange={(e) => setBranchId(e.target.value)}
+                        className="border rounded-md px-2 py-1 text-sm"
+                    >
+                        <option value="">Semua Cabang</option>
+                        {branchList.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+                    </select>
+                )}
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border rounded-md px-2 py-1 text-sm" />
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border rounded-md px-2 py-1 text-sm" />
+                <select value={perPage} onChange={(e) => { setPerPage(parseInt(e.target.value, 10)); setPage(1); }} className="border rounded-md px-2 py-1 text-sm">
+                    {[10, 15, 25, 50, 100].map(n => <option key={n} value={n}>{n}/hal</option>)}
+                </select>
+                <button onClick={() => { setPage(1); load(); }} className="border rounded-md px-3 py-1 text-sm">Terapkan</button>
+            </div>
+
+            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
+            {err && <div className="text-sm text-red-600">{err}</div>}
+            {!loading && rows.length === 0 && <div className="text-sm text-gray-500">Belum ada data.</div>}
+
+            {!loading && rows.length > 0 && (
+                <div className="overflow-auto">
+                    <table className="min-w-full text-sm">
+                        <thead>
+                            <tr className="text-left border-b">
+                                <th className="p-2">Tanggal</th>
+                                {isSuperadmin && <th className="p-2">Cabang</th>}
+                                <th className="p-2">Kategori</th>
+                                <th className="p-2">Nominal</th>
+                                <th className="p-2">Catatan</th>
+                                <th className="p-2">Bukti</th>
+                                {canManage && <th className="p-2"></th>}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map(r => (
+                                <tr key={r.id} className="border-b hover:bg-gray-50">
+                                    <td className="p-2">{r.created_at ? new Date(r.created_at).toLocaleString('id-ID') : '-'}</td>
+                                    {isSuperadmin && <td className="p-2">{r.branch?.name ?? r.branch_id}</td>}
+                                    <td className="p-2">{r.category}</td>
+                                    <td className="p-2">{toIDR(Number(r.amount))}</td>
+                                    <td className="p-2">{r.note ?? '-'}</td>
+                                    <td className="p-2">
+                                        {r.proof_path ? (
+                                            <a
+                                                className="underline"
+                                                target="_blank" rel="noopener noreferrer"
+                                                href={fileUrl(r.proof_path) ?? '#'}
+                                            >
+                                                Lihat
+                                            </a>
+                                        ) : (
+                                            <span className="text-gray-400">-</span>
+                                        )}
+                                    </td>
+                                    {canManage && (
+                                        <td className="p-2 text-right space-x-2">
+                                            <Link to={`/expenses/${encodeURIComponent(r.id)}/edit`} className="underline">Edit</Link>
+                                            <button onClick={() => onDelete(r)} className="underline text-red-600">Hapus</button>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {meta && meta.last_page > 1 && (
+                <div className="mt-3 flex items-center gap-2">
+                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border rounded-md px-3 py-1 text-sm disabled:opacity-50">Prev</button>
+                    <div className="text-sm">Hal {page} / {meta.last_page} • {meta.total} data</div>
+                    <button disabled={page >= meta.last_page} onClick={() => setPage(p => p + 1)} className="border rounded-md px-3 py-1 text-sm disabled:opacity-50">Next</button>
+                </div>
+            )}
+        </div>
+    );
 }
 
 ```

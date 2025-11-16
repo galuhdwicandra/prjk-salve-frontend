@@ -28,6 +28,7 @@ const VoucherForm = lazy(() => import('../pages/vouchers/VoucherForm'));
 const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesIndex'));
 const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
+const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 
 export const router = createBrowserRouter([
     {
@@ -39,7 +40,13 @@ export const router = createBrowserRouter([
         children: [
             {
                 path: '/',
-                element: <div className="text-sm text-gray-600">Dashboard</div>,
+                element: (
+                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
+                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
+                            <DashboardHome />
+                        </Suspense>
+                    </Guarded>
+                ),
             },
             {
                 path: '/customers',
