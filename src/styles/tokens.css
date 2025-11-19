@@ -1,0 +1,49 @@
+/* Design Tokens — SALVE (Light default) */
+:root {
+  --color-primary: #0000ff;
+  --color-on-primary: #ffffff;
+
+  --color-text: #0b1220;
+  --color-bg: #ffffff;
+  --color-surface: #f5f7fb;
+  --color-border: #e6eaf2;
+
+  --blue-700: #0033ff;
+  --blue-600: #1a4bff;
+  --blue-500: #3366ff;
+  --blue-100: #e6edff;
+
+  --color-success: #11a362;
+  --color-warning: #ef9300;
+  --color-danger:  #d92d20;
+  --color-info:    #2e7cf6;
+
+  --focus-ring: 0 0 0 3px rgba(0, 0, 255, .25);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 1px rgba(0,0,0,.04);
+  --shadow-2: 0 6px 16px rgba(0,0,0,.08);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  color-scheme: light;
+}
+
+/* Dark */
+html[data-theme="dark"] {
+  --color-text: #f5f7fb;
+  --color-bg: #0b1220;
+  --color-surface: #101826;
+  --color-border: #1c2432;
+  color-scheme: dark;
+}
+
+/* High-contrast */
+html[data-theme="hc"] {
+  --color-text: #000;
+  --color-bg: #fff;
+  --color-surface: #fff;
+  --color-border: #000;
+  --focus-ring: 0 0 0 3px #0000ff;
+  color-scheme: light;
+}

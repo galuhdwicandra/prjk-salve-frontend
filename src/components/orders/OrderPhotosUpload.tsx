@@ -39,29 +39,48 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border p-4">
-      <div className="text-sm font-semibold mb-3">Order Photos</div>
+    <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold tracking-tight">Order Photos</h3>
+        <p className="text-xs text-gray-600">Unggah foto <span className="font-medium">Before</span> dan <span className="font-medium">After</span>. {isMobile ? 'Kamera tersedia di perangkat Anda.' : 'Dukung drag-drop & pilih file.'}</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* BEFORE */}
         <section className="border rounded-xl p-3">
-          <div className="text-xs font-medium mb-2">Before</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium">Before</div>
+            <div className="text-[10px] text-gray-500">PNG/JPG, &le; 5MB</div>
+          </div>
+
           <div
-            className="border rounded-lg p-4 text-center text-xs"
+            className="border border-dashed rounded-lg p-4 text-center text-xs bg-white/50 hover:bg-black/5 transition-colors"
             onDragOver={e => e.preventDefault()}
             onDrop={e => {
               e.preventDefault();
               const dropped = Array.from(e.dataTransfer.files || []);
               setFiles(prev => ({ ...prev, before: [...prev.before, ...dropped] }));
             }}
+            aria-label="Drop zone foto before"
           >
             {isMobile ? (
-              <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("before")}>
+              <button
+                type="button"
+                className="btn-primary disabled:opacity-50"
+                onClick={() => pick("before")}
+                disabled={busy}
+              >
                 Buka Kamera
               </button>
             ) : (
               <>
-                <div className="mb-2">Drop file ke sini atau</div>
-                <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("before")}>
+                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => pick("before")}
+                  disabled={busy}
+                >
                   Pilih File
                 </button>
               </>
@@ -79,31 +98,52 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
           />
 
           {files.before.length > 0 && (
-            <ul className="mt-2 text-xs list-disc pl-5">
-              {files.before.map((f, i) => <li key={i}>{f.name}</li>)}
+            <ul className="mt-2 text-xs divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70 overflow-hidden">
+              {files.before.map((f, i) => (
+                <li key={i} className="px-3 py-2 flex items-center justify-between">
+                  <span className="truncate">{f.name}</span>
+                  <span className="text-[10px] text-gray-500 ml-2">{Math.ceil(f.size/1024)} KB</span>
+                </li>
+              ))}
             </ul>
           )}
         </section>
 
+        {/* AFTER */}
         <section className="border rounded-xl p-3">
-          <div className="text-xs font-medium mb-2">After</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium">After</div>
+            <div className="text-[10px] text-gray-500">PNG/JPG, &le; 5MB</div>
+          </div>
+
           <div
-            className="border rounded-lg p-4 text-center text-xs"
+            className="border border-dashed rounded-lg p-4 text-center text-xs bg-white/50 hover:bg-black/5 transition-colors"
             onDragOver={e => e.preventDefault()}
             onDrop={e => {
               e.preventDefault();
               const dropped = Array.from(e.dataTransfer.files || []);
               setFiles(prev => ({ ...prev, after: [...prev.after, ...dropped] }));
             }}
+            aria-label="Drop zone foto after"
           >
             {isMobile ? (
-              <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("after")}>
+              <button
+                type="button"
+                className="btn-primary disabled:opacity-50"
+                onClick={() => pick("after")}
+                disabled={busy}
+              >
                 Buka Kamera
               </button>
             ) : (
               <>
-                <div className="mb-2">Drop file ke sini atau</div>
-                <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("after")}>
+                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => pick("after")}
+                  disabled={busy}
+                >
                   Pilih File
                 </button>
               </>
@@ -121,8 +161,13 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
           />
 
           {files.after.length > 0 && (
-            <ul className="mt-2 text-xs list-disc pl-5">
-              {files.after.map((f, i) => <li key={i}>{f.name}</li>)}
+            <ul className="mt-2 text-xs divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70 overflow-hidden">
+              {files.after.map((f, i) => (
+                <li key={i} className="px-3 py-2 flex items-center justify-between">
+                  <span className="truncate">{f.name}</span>
+                  <span className="text-[10px] text-gray-500 ml-2">{Math.ceil(f.size/1024)} KB</span>
+                </li>
+              ))}
             </ul>
           )}
         </section>
@@ -131,15 +176,16 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
       <div className="mt-3 flex gap-2">
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border"
+          className="btn-primary disabled:opacity-50"
           onClick={onUpload}
           disabled={busy || (files.before.length === 0 && files.after.length === 0)}
+          aria-live="polite"
         >
           {busy ? "Mengunggah..." : "Upload"}
         </button>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border"
+          className="btn-outline disabled:opacity-50"
           onClick={() => setFiles({ before: [], after: [] })}
           disabled={busy}
         >

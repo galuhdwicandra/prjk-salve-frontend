@@ -2,18 +2,16 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import ProductSearch from '../../components/pos/ProductSearch';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
-import { createOrder } from '../../api/orders';
+import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
 import type { OrderCreatePayload } from '../../types/orders';
+import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
+import type { RoleName } from '../../api/client';
+import CustomerPicker from '../../components/customers/CustomerPicker';
+import { uploadOrderPhotos } from '../../api/orderPhotos';
+import { applyVoucherToOrder } from '../../api/vouchers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/useAuth';
-import type { RoleName } from '../../api/client';
-import { createOrderPayment } from '../../api/orders';
-import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
-import CustomerPicker from "../../components/customers/CustomerPicker";
-import { uploadOrderPhotos } from "../../api/orderPhotos";
 import { toIDR } from '../../utils/money';
-import { getOrder } from '../../api/orders';
-import { applyVoucherToOrder } from '../../api/vouchers';
 
 type HttpError = { response?: { status?: number; data?: unknown } };
 
@@ -30,12 +28,14 @@ const dlog = (...args: unknown[]) => {
   if (import.meta.env?.DEV) console.log('[POSPage]', ...args);
 };
 
-export default function POSPage(): React.ReactElement {
+export default function POSPage() {
   const nav = useNavigate();
   const { user, hasRole } = useAuth;
   const branchId = user?.branch_id ? String(user.branch_id) : '';
+
+  // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
-  const [customerId, setCustomerId] = useState<string>("");
+  const [customerId, setCustomerId] = useState<string>('');
   const [discount, setDiscount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -43,20 +43,28 @@ export default function POSPage(): React.ReactElement {
   const PAY_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir'];
   const canPay = hasRole(PAY_ROLES);
 
+  // photos
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
   const [afterFiles, setAfterFiles] = useState<File[]>([]);
   const beforeRef = useRef<HTMLInputElement>(null);
   const afterRef = useRef<HTMLInputElement>(null);
-  const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
 
+  // device / UI
+  const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+
+  // payment
   type PayMode = 'PENDING' | 'DP' | 'FULL';
   const [mode, setMode] = useState<PayMode>('PENDING');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [dpAmount, setDpAmount] = useState<number>(0);
+
+  // voucher
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
-  const subtotal = useMemo(() => items.reduce((s, it) => s + (it.price * it.qty), 0), [items]);
+  // totals
+  const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
   const payableNow = useMemo(() => {
     if (mode === 'PENDING') return 0;
@@ -64,23 +72,23 @@ export default function POSPage(): React.ReactElement {
     return total;
   }, [mode, dpAmount, total]);
   const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
-  const canSubmit = useMemo(() => {
-    return items.length > 0 && !!customerId && !loading;
-  }, [items.length, customerId, loading]);
+  const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
 
+  // logs
   useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
   useEffect(() => { dlog('items changed', items); }, [items]);
   useEffect(() => { dlog('discount changed', discount); }, [discount]);
   useEffect(() => { dlog('notes changed', notes); }, [notes]);
   useEffect(() => { dlog('totals', { subtotal, grand }); }, [subtotal, grand]);
 
+  // cart ops
   function addItem(svc: { id: string; name: string; unit: string; price_effective: number }) {
     dlog('addItem clicked', svc);
     setItems((prev) => {
       const found = prev.find((p) => p.service_id === svc.id);
       if (found) {
-        const next = prev.map((p) => p.service_id === svc.id ? { ...p, qty: p.qty + 1 } : p);
-        dlog('increment qty', { service_id: svc.id, nextQty: (found.qty + 1) });
+        const next = prev.map((p) => (p.service_id === svc.id ? { ...p, qty: p.qty + 1 } : p));
+        dlog('increment qty', { service_id: svc.id, nextQty: found.qty + 1 });
         return next;
       }
       const next = [...prev, { service_id: svc.id, name: svc.name, unit: svc.unit, price: svc.price_effective, qty: 1 }];
@@ -88,94 +96,56 @@ export default function POSPage(): React.ReactElement {
       return next;
     });
   }
+  const onChangeQty = (id: string, qty: number) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, qty } : p)));
+  const onChangeNote = (id: string, note: string) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, note } : p)));
+  const onRemove = (id: string) => setItems((prev) => prev.filter((p) => p.service_id !== id));
 
-  const onChangeQty = (id: string, qty: number) => {
-    dlog('onChangeQty', { id, qty });
-    setItems((prev) => prev.map((p) => p.service_id === id ? { ...p, qty } : p));
-  };
-
-  const onChangeNote = (id: string, note: string) => {
-    dlog('onChangeNote', { id, note });
-    setItems((prev) => prev.map((p) => p.service_id === id ? { ...p, note } : p));
-  };
-
-  const onRemove = (id: string) => {
-    dlog('onRemove', { id });
-    setItems((prev) => prev.filter((p) => p.service_id !== id));
-  };
-
+  // submit
   async function onSubmit() {
     dlog('onSubmit start');
-    if (items.length === 0) {
-      setError('Keranjang kosong');
-      dlog('onSubmit blocked: empty cart');
-      return;
-    }
-    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
-      setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
-      dlog('onSubmit blocked: no branch_id for Kasir');
-      return;
-    }
-    if (!customerId) {
-      setError('Pelanggan wajib dipilih.');
-      return;
-    }
-    if (mode === 'DP') {
-      if (payableNow <= 0 || payableNow > total) {
-        setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
-        return;
-      }
-    }
-    if (mode === 'FULL' && payableNow <= 0) {
-      setError('Nominal pembayaran harus > 0 untuk mode FULL.');
-      return;
-    }
+    if (items.length === 0) return setError('Keranjang kosong');
+    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) return setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
+    if (!customerId) return setError('Pelanggan wajib dipilih.');
+    if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) return setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
+    if (mode === 'FULL' && payableNow <= 0) return setError('Nominal pembayaran harus > 0 untuk mode FULL.');
 
     setLoading(true); setError(null);
     try {
+      // 1) create order
       const payload: OrderCreatePayload = {
         branch_id: branchId || undefined,
         customer_id: customerId,
-        items: items.map((it) => ({
-          service_id: it.service_id,
-          qty: it.qty,
-          note: it.note ?? null
-        })),
+        items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
         discount: discount || 0,
         notes: notes || null,
       };
       dlog('createOrder payload', payload);
-
       const res = await createOrder(payload);
-      dlog('createOrder response', res);
       let order = res.data!;
 
+      // 2) apply voucher (optional)
       if (voucherCode.trim()) {
         try {
           setVoucherMsg(null);
           await applyVoucherToOrder(String(order.id), { code: voucherCode.trim().toUpperCase() });
-
-          // Ambil ulang order agar total/discount sinkron dengan backend
-          const refreshed = await getOrder(String(order.id));
+          const refreshed = await getOrder(String(order.id)); // sync totals
           order = refreshed.data!;
           setVoucherMsg('Voucher berhasil diterapkan.');
         } catch (ex: unknown) {
           const ax = ex as HttpError;
-          const msg = extractServerMessage(ax.response?.data)
-            ?? (ax.response?.status === 422
+          const msg =
+            extractServerMessage(ax.response?.data) ??
+            (ax.response?.status === 422
               ? 'Voucher tidak valid / syarat tidak terpenuhi'
               : ax.response?.status === 404
-                ? 'Kode voucher tidak ditemukan'
-                : 'Gagal menerapkan voucher');
+              ? 'Kode voucher tidak ditemukan'
+              : 'Gagal menerapkan voucher');
           setVoucherMsg(msg);
         }
       }
 
-      const adjustedPayNow = Math.min(
-        payableNow,
-        Number((order)?.grand_total ?? payableNow)
-      );
-
+      // 3) payment (if allowed & not pending)
+      const adjustedPayNow = Math.min(payableNow, Number(order?.grand_total ?? payableNow));
       if (canPay && mode !== 'PENDING') {
         const payPayload: PaymentCreatePayload =
           mode === 'DP'
@@ -184,10 +154,10 @@ export default function POSPage(): React.ReactElement {
 
         dlog('createOrderPayment payload', payPayload);
         const payRes = await createOrderPayment(order.id, payPayload);
-        dlog('createOrderPayment response', payRes);
         order = payRes.order;
       }
 
+      // 4) upload photos (best-effort)
       try {
         if (beforeFiles.length || afterFiles.length) {
           dlog('uploadOrderPhotos start', { before: beforeFiles.length, after: afterFiles.length });
@@ -199,151 +169,68 @@ export default function POSPage(): React.ReactElement {
       }
 
       alert('Transaksi tersimpan');
-      dlog('navigate to receipt', { orderId: order.id });
       nav(`/orders/${order.id}/receipt`, { replace: true });
     } catch (e: unknown) {
       dlog('createOrder error', e);
       const ax = e as HttpError;
       if (ax.response?.status === 403) {
-        const msg = extractServerMessage(ax.response.data)
-          ?? 'Forbidden: Anda tidak diizinkan melakukan pembayaran untuk order ini.';
+        const msg = extractServerMessage(ax.response.data) ?? 'Forbidden: Anda tidak diizinkan melakukan pembayaran untuk order ini.';
         setError(msg);
       } else if (ax.response?.status === 422) {
-        // tampilkan pesan + rincian field dari server
         const data = ax.response.data as { message?: string; errors?: Record<string, string[]> } | undefined;
-        const msg = data?.message ?? 'Validasi gagal (422)';
         console.error('[POSPage] 422 detail:', data?.errors);
-        setError(msg);
+        setError(data?.message ?? 'Validasi gagal (422)');
       } else {
-        const msg = (e as Error)?.message ?? 'Gagal menyimpan transaksi';
-        setError(msg);
+        setError((e as Error)?.message ?? 'Gagal menyimpan transaksi');
       }
     } finally {
       setLoading(false);
-      dlog('onSubmit finally: loading=false');
     }
   }
 
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <div className="space-y-3">
-        <ProductSearch onPick={addItem} />
-      </div>
-
-      <div className="space-y-3">
-        {/* Info cabang (read-only) agar kasir paham kontek transaksi */}
-        <div className="rounded-2xl border p-3">
-          <div className="text-xs text-muted-foreground">Cabang</div>
-          <div className="text-sm font-semibold">{branchId || '-'}</div>
-        </div>
-
-        <CartPanel
-          items={items}
-          onChangeQty={onChangeQty}
-          onChangeNote={onChangeNote}
-          onRemove={onRemove}
-        />
-
-        {/* Order Photos */}
-        <div className="rounded-2xl border p-3 space-y-3">
-          <div className="text-sm font-semibold">Order Photos</div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {/* BEFORE */}
-            <div className="border rounded-xl p-3">
-              <div className="text-xs font-medium mb-2">Before</div>
-              <div
-                className="border rounded-lg p-4 text-center text-xs"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const dropped = Array.from(e.dataTransfer.files || []);
-                  setBeforeFiles(prev => [...prev, ...dropped]);
-                }}
-              >
-                {isMobile ? (
-                  <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => beforeRef.current?.click()}>
-                    Buka Kamera
-                  </button>
-                ) : (
-                  <>
-                    <div className="mb-2">Drop file ke sini atau</div>
-                    <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => beforeRef.current?.click()}>
-                      Pilih File
-                    </button>
-                  </>
-                )}
-              </div>
-              <input
-                ref={beforeRef}
-                type="file"
-                accept="image/*"
-                capture={isMobile ? "environment" : undefined}
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const list = e.target.files ? Array.from(e.target.files) : [];
-                  setBeforeFiles(prev => [...prev, ...list]);
-                }}
-              />
-              {beforeFiles.length > 0 && (
-                <ul className="mt-2 text-xs list-disc pl-5">
-                  {beforeFiles.map((f, i) => <li key={i}>{f.name}</li>)}
-                </ul>
-              )}
-            </div>
-
-            {/* AFTER */}
-            <div className="border rounded-xl p-3">
-              <div className="text-xs font-medium mb-2">After</div>
-              <div
-                className="border rounded-lg p-4 text-center text-xs"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const dropped = Array.from(e.dataTransfer.files || []);
-                  setAfterFiles(prev => [...prev, ...dropped]);
-                }}
-              >
-                {isMobile ? (
-                  <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => afterRef.current?.click()}>
-                    Buka Kamera
-                  </button>
-                ) : (
-                  <>
-                    <div className="mb-2">Drop file ke sini atau</div>
-                    <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => afterRef.current?.click()}>
-                      Pilih File
-                    </button>
-                  </>
-                )}
-              </div>
-              <input
-                ref={afterRef}
-                type="file"
-                accept="image/*"
-                capture={isMobile ? "environment" : undefined}
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const list = e.target.files ? Array.from(e.target.files) : [];
-                  setAfterFiles(prev => [...prev, ...list]);
-                }}
-              />
-              {afterFiles.length > 0 && (
-                <ul className="mt-2 text-xs list-disc pl-5">
-                  {afterFiles.map((f, i) => <li key={i}>{f.name}</li>)}
-                </ul>
-              )}
-            </div>
+    <div className="grid gap-4 md:grid-cols-[1fr_minmax(420px,480px)]">
+      {/* LEFT: katalog & pencarian */}
+      <section className="space-y-3">
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-sm font-semibold">Cari Layanan</h1>
+            <span className="text-[10px] text-gray-500">Ctrl+K · Enter tambah · Del hapus</span>
+          </div>
+          <div className="mt-2">
+            <ProductSearch onPick={addItem} />
           </div>
         </div>
 
-        <div className="rounded-2xl border p-3 space-y-2">
+        {/* Order Photos */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
+          <div className="text-sm font-semibold">Foto Pesanan</div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {/* BEFORE */}
+            <UploadBox
+              title="Before"
+              isMobile={isMobile}
+              inputRef={beforeRef}
+              files={beforeFiles}
+              onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
+            />
+            {/* AFTER */}
+            <UploadBox
+              title="After"
+              isMobile={isMobile}
+              inputRef={afterRef}
+              files={afterFiles}
+              onFiles={(f) => setAfterFiles((prev) => [...prev, ...f])}
+            />
+          </div>
+        </div>
+
+        {/* Form ringkas (pelanggan, voucher, diskon, catatan) */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
           <div className="grid gap-1">
             <label className="text-xs">
               Pelanggan <span className="text-red-600">*</span>
             </label>
-
             <CustomerPicker
               value={customerId}
               onChange={setCustomerId}
@@ -351,77 +238,119 @@ export default function POSPage(): React.ReactElement {
               requiredText="Pelanggan wajib dipilih dari data terdaftar."
             />
           </div>
-          {/* Voucher */}
+
           <div className="grid gap-1">
             <label className="text-xs">Kode Voucher</label>
             <div className="flex gap-2">
               <input
-                className="border rounded px-3 py-2 flex-1"
+                className="input px-3 py-2 flex-1"
                 placeholder="MASUKKAN-KODE"
                 value={voucherCode}
                 onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
               />
-              <span className="text-[10px] text-gray-500 self-center">
-                Voucher diterapkan saat “Simpan & Cetak”
-              </span>
+              <span className="self-center text-[10px] text-gray-500">Voucher diterapkan saat “Simpan & Cetak”</span>
             </div>
             {voucherMsg && <div className="text-xs text-gray-600">{voucherMsg}</div>}
           </div>
+
           <div className="grid gap-1">
             <label className="text-xs">Diskon</label>
             <input
               type="number"
               min={0}
-              className="border rounded px-3 py-2"
+              className="input px-3 py-2"
               value={discount}
-              onChange={(e) => {
-                const v = Number(e.target.value) || 0;
-                dlog('discount input', v);
-                setDiscount(v);
-              }}
-            />
-          </div>
-          <div className="grid gap-1">
-            <label className="text-xs">Catatan</label>
-            <textarea
-              className="border rounded px-3 py-2"
-              value={notes}
-              onChange={(e) => { dlog('notes input', e.target.value); setNotes(e.target.value); }}
+              onChange={(e) => setDiscount(Number(e.target.value) || 0)}
             />
           </div>
 
-          <div className="flex justify-between text-sm pt-2">
+          <div className="grid gap-1">
+            <label className="text-xs">Catatan</label>
+            <textarea
+              className="input px-3 py-2 min-h-[84px]"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* RIGHT: cart & pembayaran */}
+      <aside className="md:sticky md:top-4 md:h-[calc(100dvh-2rem)] md:overflow-auto space-y-3">
+        {/* Info cabang */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3">
+          <div className="text-xs text-gray-600">Cabang</div>
+          <div className="text-sm font-semibold">{branchId || '-'}</div>
+        </div>
+
+        {/* Desktop cart */}
+        <div className="hidden md:block">
+          <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
+        </div>
+
+        {/* Mobile bottom bar summary */}
+        <MobileCartBar
+          open={mobileCartOpen}
+          setOpen={setMobileCartOpen}
+          itemsCount={items.reduce((n, it) => n + it.qty, 0)}
+          total={grand}
+        >
+          {/* Cart content inside bottom sheet */}
+          <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
+        </MobileCartBar>
+
+        {/* Payment & actions */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
+          <div className="flex justify-between text-sm">
             <span>Grand Total</span>
             <span className="font-semibold">{toIDR(grand)}</span>
           </div>
 
-          {/* Pembayaran */}
-          <div className="pt-2 space-y-2">
+          {/* Mode Pembayaran */}
+          <div className="space-y-2">
             <div className="text-xs font-medium">Mode Pembayaran</div>
-            <div className="flex gap-2">
-              {(['PENDING', 'DP', 'FULL'] as const).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={`px-3 py-1 rounded border ${mode === m ? 'bg-black text-white dark:bg-white dark:text-black' : ''}`}
-                >
-                  {m}
-                </button>
-              ))}
+            <div className="inline-flex rounded-lg border border-[color:var(--color-border)] overflow-hidden">
+              {(['PENDING', 'DP', 'FULL'] as const).map((m) => {
+                const active = mode === m;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                        : 'bg-white text-[color:var(--color-text-default)] hover:bg-black/5'
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
             </div>
 
             {mode === 'FULL' && (
               <div>
                 <div className="text-xs font-medium mb-1">Metode</div>
-                {(['CASH', 'QRIS', 'TRANSFER'] as PaymentMethod[]).map(pm => (
-                  <button
-                    key={pm}
-                    onClick={() => setMethod(pm)}
-                    className={`mr-2 mb-2 px-3 py-1 rounded border ${method === pm ? 'bg-black text-white dark:bg-white dark:text-black' : ''}`}
-                  >
-                    {pm}
-                  </button>
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  {(['CASH', 'QRIS', 'TRANSFER'] as PaymentMethod[]).map((pm) => {
+                    const active = method === pm;
+                    return (
+                      <button
+                        key={pm}
+                        onClick={() => setMethod(pm)}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                          active
+                            ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                            : 'bg-white hover:bg-black/5'
+                        }`}
+                        aria-pressed={active}
+                      >
+                        {pm}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -434,35 +363,172 @@ export default function POSPage(): React.ReactElement {
                   max={total}
                   value={dpAmount}
                   onChange={(e) => setDpAmount(Number(e.target.value) || 0)}
-                  className="border rounded px-3 py-2 w-full"
+                  className="input px-3 py-2 w-full"
                   placeholder="Masukkan nominal DP"
                 />
-                <div className="text-xs mt-1">Dibayar sekarang: <b>{toIDR(payableNow)}</b></div>
+                <div className="text-xs mt-1">
+                  Dibayar sekarang: <b>{toIDR(payableNow)}</b>
+                </div>
               </div>
             )}
           </div>
 
-          {error && <div className="text-sm text-red-600">{error}</div>}
+          {error && (
+            <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+              {error}
+            </div>
+          )}
 
           <div className="flex gap-2">
             <button
-              disabled={loading || !canSubmit}   // <<< pakai canSubmit
-              className="rounded bg-black text-white px-3 py-2 disabled:opacity-50"
+              disabled={loading || !canSubmit}
+              className="btn-primary disabled:opacity-60"
               onClick={() => void onSubmit()}
             >
               {loading ? 'Menyimpan…' : 'Simpan & Cetak'}
             </button>
-
             <button
               type="button"
-              className="rounded border px-3 py-2"
-              onClick={() => { dlog('cancel/back clicked'); history.back(); }}
+              className="btn-outline"
+              onClick={() => {
+                dlog('cancel/back clicked');
+                history.back();
+              }}
             >
               Batal
             </button>
           </div>
         </div>
-      </div>
+      </aside>
     </div>
+  );
+}
+
+/* ------------------------
+   Subcomponents (UI)
+------------------------ */
+
+function UploadBox({
+  title,
+  isMobile,
+  inputRef,
+  files,
+  onFiles,
+}: {
+  title: string;
+  isMobile: boolean;
+  inputRef:
+    | React.RefObject<HTMLInputElement>
+    | React.MutableRefObject<HTMLInputElement | null>;
+  files: File[];
+  onFiles: (f: File[]) => void;
+}) {
+  return (
+    <div className="border border-[color:var(--color-border)] rounded-lg p-3">
+      <div className="text-xs font-medium mb-2">{title}</div>
+      <div
+        className="border border-dashed border-[color:var(--color-border)] rounded-lg p-4 text-center text-xs bg-white/70"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const dropped = Array.from(e.dataTransfer.files || []);
+          onFiles(dropped);
+        }}
+      >
+        {isMobile ? (
+          <button type="button" className="btn-outline" onClick={() => inputRef.current?.click()}>
+            Buka Kamera
+          </button>
+        ) : (
+          <>
+            <div className="mb-2 text-gray-600">Drop file ke sini atau</div>
+            <button type="button" className="btn-outline" onClick={() => inputRef.current?.click()}>
+              Pilih File
+            </button>
+          </>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture={isMobile ? 'environment' : undefined}
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const list = e.target.files ? Array.from(e.target.files) : [];
+          onFiles(list);
+        }}
+      />
+      {files.length > 0 && (
+        <ul className="mt-2 text-xs list-disc pl-5">
+          {files.map((f, i) => (
+            <li key={i}>{f.name}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MobileCartBar({
+  open,
+  setOpen,
+  itemsCount,
+  total,
+  children,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  itemsCount: number;
+  total: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      {/* sticky bottom bar on mobile */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-30">
+        <div className="mx-auto max-w-[1200px] px-3 pb-[env(safe-area-inset-bottom)]">
+          <div className="rounded-t-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] shadow-elev-2 p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-xs">
+                <div className="font-medium">{itemsCount} item</div>
+                <div className="text-gray-600">Total {toIDR(total)}</div>
+              </div>
+              <button className="btn-primary" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="mobile-cart-sheet">
+                Buka Keranjang
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* bottom sheet */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-cart-title"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            id="mobile-cart-sheet"
+            className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-[var(--color-surface)] shadow-elev-2 border border-[color:var(--color-border)] p-3 max-h-[80dvh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-[color:var(--color-border)]">
+              <div id="mobile-cart-title" className="text-sm font-semibold">
+                Keranjang
+              </div>
+              <button className="btn-outline px-2 py-1" onClick={() => setOpen(false)}>
+                Tutup
+              </button>
+            </div>
+            <div className="pt-2">{children}</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

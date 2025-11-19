@@ -3,9 +3,9 @@ import { createBrowserRouter } from 'react-router-dom';
 import GuestLayout from '../layouts/GuestLayout';
 import ProtectedLayout from '../layouts/ProtectedLayout';
 import LoginPage from '../pages/Login';
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import Guarded from './Guarded';
-// import DashboardHome from '../pages/DashboardHome';
+import LazyBoundary from '../components/LazyBoundary';
 
 const BranchIndex = lazy(() => import('../pages/branches/BranchIndex'));
 const BranchForm = lazy(() => import('../pages/branches/BranchForm'));
@@ -31,287 +31,287 @@ const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 
 export const router = createBrowserRouter([
-    {
-        element: <GuestLayout />,
-        children: [{ path: '/login', element: <LoginPage /> }],
-    },
-    {
-        element: <ProtectedLayout />,
-        children: [
+  {
+    element: <GuestLayout />,
+    children: [{ path: '/login', element: <LoginPage /> }],
+  },
+  {
+    element: <ProtectedLayout />,
+    children: [
+      {
+        path: '/',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
+            <LazyBoundary>
+              <DashboardHome />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/customers',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <CustomersIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/customers/:id',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <CustomerDetail />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/service-categories',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <CategoryIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/services',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ServiceIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/services/new',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ServiceForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/services/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ServiceForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/users',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <UsersList />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/users/new',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <UserForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/users/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <UserForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <BranchIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches/new',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <BranchForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <BranchForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches/:id/invoice-settings',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <InvoiceSettings />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/pos',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <POSPage />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/orders',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <OrdersIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/orders/:id',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <OrderDetail />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/orders/:id/receipt',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <OrderReceipt />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/deliveries',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
+            <LazyBoundary>
+              <DeliveryIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/deliveries/:id',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
+            <LazyBoundary>
+              <DeliveryDetail />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/expenses',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ExpensesIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/expenses/new',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ExpenseForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/expenses/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ExpenseForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/receivables',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <ReceivablesIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
+        ? [
             {
-                path: '/',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <DashboardHome />
-                        </Suspense>
-                    </Guarded>
-                ),
+              path: '/vouchers',
+              element: (
+                <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                  <LazyBoundary>
+                    <VouchersIndex />
+                  </LazyBoundary>
+                </Guarded>
+              ),
             },
             {
-                path: '/customers',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <CustomersIndex />
-                        </Suspense>
-                    </Guarded>
-                ),
+              path: '/vouchers/new',
+              element: (
+                <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                  <LazyBoundary>
+                    <VoucherForm />
+                  </LazyBoundary>
+                </Guarded>
+              ),
             },
             {
-                path: '/customers/:id',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <CustomerDetail />
-                        </Suspense>
-                    </Guarded>
-                ),
+              path: '/vouchers/:id/edit',
+              element: (
+                <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                  <LazyBoundary>
+                    <VoucherForm />
+                  </LazyBoundary>
+                </Guarded>
+              ),
             },
-            {
-                path: '/service-categories',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <CategoryIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/services',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ServiceIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/services/new',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ServiceForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/services/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ServiceForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/users',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <UsersList />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/users/new',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <UserForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/users/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <UserForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <BranchIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches/new',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <BranchForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <BranchForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches/:id/invoice-settings',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <InvoiceSettings />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/pos',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <POSPage />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/orders',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <OrdersIndex />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/orders/:id',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <OrderDetail />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/orders/:id/receipt',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <OrderReceipt />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/deliveries',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <DeliveryIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/deliveries/:id',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <DeliveryDetail />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/expenses',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ExpensesIndex />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/expenses/new',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ExpenseForm />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/expenses/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ExpenseForm />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/receivables',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ReceivablesIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
-                ? [
-                    {
-                        path: '/vouchers',
-                        element: (
-                            <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                                <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                                    <VouchersIndex />
-                                </Suspense>
-                            </Guarded>
-                        ),
-                    },
-                    {
-                        path: '/vouchers/new',
-                        element: (
-                            <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                                <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                                    <VoucherForm />
-                                </Suspense>
-                            </Guarded>
-                        ),
-                    },
-                    {
-                        path: '/vouchers/:id/edit',
-                        element: (
-                            <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                                <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                                    <VoucherForm />
-                                </Suspense>
-                            </Guarded>
-                        ),
-                    },
-                ]
-                : []),
-        ],
-    },
+          ]
+        : []),
+    ],
+  },
 ]);

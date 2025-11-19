@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-11-15 00:46:26_  
+_Dihasilkan otomatis: 2025-11-19 22:09:14_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2025\apk-web-salve\Projek Salve\prjk-salve\frontend`
 
 
@@ -10,6 +10,7 @@ _Dihasilkan otomatis: 2025-11-15 00:46:26_
   - [src\api\branches.ts](#file-srcapibranchests)
   - [src\api\client.ts](#file-srcapiclientts)
   - [src\api\customers.ts](#file-srcapicustomersts)
+  - [src\api\dashboard.ts](#file-srcapidashboardts)
   - [src\api\deliveries.ts](#file-srcapideliveriests)
   - [src\api\expenses.ts](#file-srcapiexpensests)
   - [src\api\invoiceCounters.ts](#file-srcapiinvoicecountersts)
@@ -36,6 +37,7 @@ _Dihasilkan otomatis: 2025-11-15 00:46:26_
 - [Types (src/types)](#types-srctypes)
   - [src\types\branches.ts](#file-srctypesbranchests)
   - [src\types\customers.ts](#file-srctypescustomersts)
+  - [src\types\dashboard.ts](#file-srctypesdashboardts)
   - [src\types\deliveries.ts](#file-srctypesdeliveriests)
   - [src\types\expenses.ts](#file-srctypesexpensests)
   - [src\types\orders.ts](#file-srctypesordersts)
@@ -53,6 +55,7 @@ _Dihasilkan otomatis: 2025-11-15 00:46:26_
   - [src\components\delivery\DeliveryStatusStepper.tsx](#file-srccomponentsdeliverydeliverystatussteppertsx)
   - [src\components\Dropzone.tsx](#file-srccomponentsdropzonetsx)
   - [src\components\FilterBar.tsx](#file-srccomponentsfilterbartsx)
+  - [src\components\LazyBoundary.tsx](#file-srccomponentslazyboundarytsx)
   - [src\components\orders\OrderPhotos.tsx](#file-srccomponentsordersorderphotostsx)
   - [src\components\orders\OrderPhotosGallery.tsx](#file-srccomponentsordersorderphotosgallerytsx)
   - [src\components\orders\OrderPhotosUpload.tsx](#file-srccomponentsordersorderphotosuploadtsx)
@@ -70,6 +73,7 @@ _Dihasilkan otomatis: 2025-11-15 00:46:26_
   - [src\pages\branches\InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
   - [src\pages\customers\CustomerDetail.tsx](#file-srcpagescustomerscustomerdetailtsx)
   - [src\pages\customers\CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
+  - [src\pages\dashboard\DashboardHome.tsx](#file-srcpagesdashboarddashboardhometsx)
   - [src\pages\deliveries\DeliveryDetail.tsx](#file-srcpagesdeliveriesdeliverydetailtsx)
   - [src\pages\deliveries\DeliveryIndex.tsx](#file-srcpagesdeliveriesdeliveryindextsx)
   - [src\pages\expenses\ExpenseForm.tsx](#file-srcpagesexpensesexpenseformtsx)
@@ -93,6 +97,7 @@ _Dihasilkan otomatis: 2025-11-15 00:46:26_
   - [src\utils\files.ts](#file-srcutilsfilests)
   - [src\utils\money.ts](#file-srcutilsmoneyts)
   - [src\utils\order-status.ts](#file-srcutilsorder-statusts)
+  - [src\utils\theme.ts](#file-srcutilsthemets)
   - [src\utils\wa.ts](#file-srcutilswats)
 
 - [Entry Files](#entry-files)
@@ -337,6 +342,35 @@ export async function resolveOrCreateCustomerByWA(
         throw new Error('Gagal membuat pelanggan');
     }
     return created.data;
+}
+
+```
+</details>
+
+### src\api\dashboard.ts
+
+- SHA: `b5b7cbd6f727`  
+- Ukuran: 513 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/api/dashboard.ts
+import { api } from './client';
+import type { ApiEnvelope } from './client';
+import type { DashboardSummary, DashboardSummaryMeta } from '../types/dashboard';
+
+export interface DashboardSummaryQuery {
+  from: string;
+  to: string;
+  branch_id?: string | null;
+}
+
+export async function getDashboardSummary(params: DashboardSummaryQuery) {
+  const { data } = await api.get<ApiEnvelope<DashboardSummary, DashboardSummaryMeta>>(
+    '/dashboard/summary',
+    { params },
+  );
+  return data;
 }
 
 ```
@@ -1145,87 +1179,212 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `6ca595a8c3b3`  
-- Ukuran: 4 KB
+- SHA: `256d0ca0278e`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/layouts/ProtectedLayout.tsx
+import { useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth, useHasRole } from '../store/useAuth';
 import type { RoleName } from '../api/client';
 
 export default function ProtectedLayout() {
-    const me = useAuth.user;
-    const location = useLocation();
-    const nav = useNavigate();
-    if (!me) {
-        return <Navigate to="/login" replace state={{ from: location }} />;
-    }
+  const me = useAuth.user;
+  const location = useLocation();
+  const nav = useNavigate();
 
-    const FF = {
-        vouchers: import.meta.env.VITE_FEATURE_VOUCHER === 'true',
-        delivery: import.meta.env.VITE_FEATURE_DELIVERY === 'true',
-        receivables: import.meta.env.VITE_FEATURE_RECEIVABLES === 'true',
-    };
+  // Drawer untuk mobile
+  const [open, setOpen] = useState(false);
 
-    type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
-    const MENU: MenuItem[] = [
-        { label: 'Dashboard', to: '/', roles: ['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir'] },
-        { label: 'POS', to: '/pos', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
-        { label: 'Orders', to: '/orders', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
-        { label: 'Customers', to: '/customers', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
-        { label: 'Services', to: '/services', roles: ['Superadmin', 'Admin Cabang'] },
-        { label: 'Users', to: '/users', roles: ['Superadmin', 'Admin Cabang'] },
-        { label: 'Branches', to: '/branches', roles: ['Superadmin'] },
-        { label: 'Delivery', to: '/deliveries', roles: ['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir'], show: FF.delivery },
-        { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
-        { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
-        { label: 'Vouchers', to: '/vouchers', roles: ['Superadmin', 'Admin Cabang'], show: FF.vouchers },
-    ];
+  if (!me) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
 
-    return (
-        <div className="flex min-h-dvh">
-            <aside className="w-64 border-r p-4 space-y-4">
-                <div>
-                    <div className="font-semibold">POS Salve</div>
-                    <div className="text-xs text-gray-600">
-                        {me.name}<br />{me.roles.join(', ')}
-                    </div>
-                </div>
-                <nav className="space-y-1">
-                    {MENU.filter((m) => (m.show ?? true) && (me.roles ?? []).some((r) => m.roles.includes(r)))
-                        .map((m) => (
-                            <NavLink
-                                key={m.to}
-                                to={m.to}
-                                className={({ isActive }) =>
-                                    `block rounded px-3 py-2 text-sm ${isActive ? 'bg-black text-white' : 'hover:bg-gray-100'}`
-                                }
-                            >
-                                {m.label}
-                            </NavLink>
-                        ))}
-                </nav>
-                <button
-                    onClick={async () => { await useAuth.logout(); nav('/login', { replace: true }); }}
-                    className="rounded border px-3 py-2 text-sm"
-                >
-                    Logout
-                </button>
-            </aside>
-            <section className="flex-1 p-6">
-                <Outlet />
-            </section>
+  const FF = {
+    vouchers: import.meta.env.VITE_FEATURE_VOUCHER === 'true',
+    delivery: import.meta.env.VITE_FEATURE_DELIVERY === 'true',
+    receivables: import.meta.env.VITE_FEATURE_RECEIVABLES === 'true',
+  };
+
+  type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
+  const MENU: MenuItem[] = [
+    { label: 'Dashboard', to: '/', roles: ['Superadmin', 'Admin Cabang,', 'Kasir', 'Petugas Cuci', 'Kurir'] as RoleName[] },
+    { label: 'POS', to: '/pos', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
+    { label: 'Orders', to: '/orders', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
+    { label: 'Customers', to: '/customers', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
+    { label: 'Services', to: '/services', roles: ['Superadmin', 'Admin Cabang'] },
+    { label: 'Users', to: '/users', roles: ['Superadmin', 'Admin Cabang'] },
+    { label: 'Branches', to: '/branches', roles: ['Superadmin'] },
+    { label: 'Delivery', to: '/deliveries', roles: ['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir'], show: FF.delivery },
+    { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
+    { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
+    { label: 'Vouchers', to: '/vouchers', roles: ['Superadmin', 'Admin Cabang'], show: FF.vouchers },
+  ];
+
+  const VISIBLE = MENU.filter(
+    (m) => (m.show ?? true) && (me.roles ?? []).some((r) => m.roles.includes(r as RoleName)),
+  );
+
+  return (
+    <div className="min-h-dvh bg-[var(--color-surface)] text-[var(--color-text-default)]">
+      {/* Topbar */}
+      <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur">
+        <div className="container-app flex h-14 items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {/* Toggle drawer (mobile) */}
+            <button
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] hover:bg-[#E6EDFF] transition-colors"
+              aria-label="Open menu"
+              onClick={() => setOpen(true)}
+            >
+              {/* ikon burger sederhana */}
+              <span className="block h-0.5 w-4 bg-current" />
+              <span className="block h-0.5 w-4 bg-current mt-1" />
+              <span className="block h-0.5 w-4 bg-current mt-1" />
+            </button>
+            <div className="font-semibold">SALVE</div>
+          </div>
+
+          {/* Aksi cepat sederhana (placeholder) */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                await useAuth.logout();
+                nav('/login', { replace: true });
+              }}
+              className="hidden md:inline-flex h-9 items-center rounded-lg border border-[var(--color-border)] px-3 text-sm hover:bg-[#E6EDFF] transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
-    );
+      </header>
+
+      <div className="container-app grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-6 py-6">
+        {/* Sidebar (desktop) */}
+        <aside className="hidden md:block rounded-lg border border-[var(--color-border)] bg-white/90 p-4 shadow-elev-1">
+          <UserCard name={me.name} roles={me.roles} />
+          <nav className="mt-4 space-y-1">
+            {VISIBLE.map((m) => (
+              <NavLink
+                key={m.to}
+                to={m.to}
+                className={({ isActive }) =>
+                  [
+                    'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)] shadow-elev-1'
+                      : 'hover:bg-[#E6EDFF]',
+                  ].join(' ')
+                }
+              >
+                {m.label}
+              </NavLink>
+            ))}
+          </nav>
+          <button
+            onClick={async () => {
+              await useAuth.logout();
+              nav('/login', { replace: true });
+            }}
+            className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[#E6EDFF] transition-colors"
+          >
+            Logout
+          </button>
+        </aside>
+
+        {/* Drawer Sidebar (mobile) */}
+        <MobileDrawer open={open} onClose={() => setOpen(false)}>
+          <div className="p-4">
+            <UserCard name={me.name} roles={me.roles} />
+            <nav className="mt-4 space-y-1">
+              {VISIBLE.map((m) => (
+                <NavLink
+                  key={m.to}
+                  to={m.to}
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    [
+                      'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)] shadow-elev-1'
+                        : 'hover:bg-[#E6EDFF]',
+                    ].join(' ')
+                  }
+                >
+                  {m.label}
+                </NavLink>
+              ))}
+            </nav>
+            <button
+              onClick={async () => {
+                await useAuth.logout();
+                nav('/login', { replace: true });
+              }}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[#E6EDFF] transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        </MobileDrawer>
+
+        {/* Konten */}
+        <main className="min-w-0">
+          <div className="rounded-lg border border-[var(--color-border)] bg-white/90 p-4 shadow-elev-1">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function UserCard(props: { name: string; roles: string[] }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      <div className="font-semibold">{props.name}</div>
+      <div className="mt-0.5 text-xs text-black/60 dark:text-white/70">
+        {props.roles?.join(', ')}
+      </div>
+    </div>
+  );
+}
+
+function MobileDrawer(props: { open: boolean; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <>
+      {/* Overlay */}
+      <div
+        className={[
+          'fixed inset-0 z-40 bg-black/30 transition-opacity md:hidden',
+          props.open ? 'opacity-100' : 'pointer-events-none opacity-0',
+        ].join(' ')}
+        onClick={props.onClose}
+        aria-hidden={!props.open}
+      />
+      {/* Panel */}
+      <aside
+        className={[
+          'fixed inset-y-0 left-0 z-50 w-72 border-r border-[var(--color-border)] bg-white p-0 shadow-elev-2 transition-transform md:hidden',
+          props.open ? 'translate-x-0' : '-translate-x-full',
+        ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+      >
+        {props.children}
+      </aside>
+    </>
+  );
 }
 
 /** Komponen guard untuk tombol/aksi dalam halaman */
 export function RequireRole(props: { roles: RoleName[]; children: React.ReactNode; fallback?: React.ReactNode }) {
-    const allowed = useHasRole(props.roles);
-    if (!allowed) return (props.fallback ?? null);
-    return <>{props.children}</>;
+  const allowed = useHasRole(props.roles);
+  if (!allowed) return props.fallback ?? null;
+  return <>{props.children}</>;
 }
 
 ```
@@ -1275,8 +1434,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `9498b9ac37cf`  
-- Ukuran: 13 KB
+- SHA: `be7db023a69b`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1285,9 +1444,9 @@ import { createBrowserRouter } from 'react-router-dom';
 import GuestLayout from '../layouts/GuestLayout';
 import ProtectedLayout from '../layouts/ProtectedLayout';
 import LoginPage from '../pages/Login';
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import Guarded from './Guarded';
-// import DashboardHome from '../pages/DashboardHome';
+import LazyBoundary from '../components/LazyBoundary';
 
 const BranchIndex = lazy(() => import('../pages/branches/BranchIndex'));
 const BranchForm = lazy(() => import('../pages/branches/BranchForm'));
@@ -1310,286 +1469,294 @@ const VoucherForm = lazy(() => import('../pages/vouchers/VoucherForm'));
 const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesIndex'));
 const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
+const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 
 export const router = createBrowserRouter([
-    {
-        element: <GuestLayout />,
-        children: [{ path: '/login', element: <LoginPage /> }],
-    },
-    {
-        element: <ProtectedLayout />,
-        children: [
+  {
+    element: <GuestLayout />,
+    children: [{ path: '/login', element: <LoginPage /> }],
+  },
+  {
+    element: <ProtectedLayout />,
+    children: [
+      {
+        path: '/',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
+            <LazyBoundary>
+              <DashboardHome />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/customers',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <CustomersIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/customers/:id',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <CustomerDetail />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/service-categories',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <CategoryIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/services',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ServiceIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/services/new',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ServiceForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/services/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ServiceForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/users',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <UsersList />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/users/new',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <UserForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/users/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <UserForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <BranchIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches/new',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <BranchForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <BranchForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/branches/:id/invoice-settings',
+        element: (
+          <Guarded roles={['Superadmin']}>
+            <LazyBoundary>
+              <InvoiceSettings />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/pos',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <POSPage />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/orders',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <OrdersIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/orders/:id',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <OrderDetail />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/orders/:id/receipt',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <OrderReceipt />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/deliveries',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
+            <LazyBoundary>
+              <DeliveryIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/deliveries/:id',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
+            <LazyBoundary>
+              <DeliveryDetail />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/expenses',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ExpensesIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/expenses/new',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ExpenseForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/expenses/:id/edit',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <ExpenseForm />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/receivables',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <ReceivablesIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
+        ? [
             {
-                path: '/',
-                element: <div className="text-sm text-gray-600">Dashboard</div>,
+              path: '/vouchers',
+              element: (
+                <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                  <LazyBoundary>
+                    <VouchersIndex />
+                  </LazyBoundary>
+                </Guarded>
+              ),
             },
             {
-                path: '/customers',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <CustomersIndex />
-                        </Suspense>
-                    </Guarded>
-                ),
+              path: '/vouchers/new',
+              element: (
+                <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                  <LazyBoundary>
+                    <VoucherForm />
+                  </LazyBoundary>
+                </Guarded>
+              ),
             },
             {
-                path: '/customers/:id',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <CustomerDetail />
-                        </Suspense>
-                    </Guarded>
-                ),
+              path: '/vouchers/:id/edit',
+              element: (
+                <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                  <LazyBoundary>
+                    <VoucherForm />
+                  </LazyBoundary>
+                </Guarded>
+              ),
             },
-            {
-                path: '/service-categories',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <CategoryIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/services',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ServiceIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/services/new',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ServiceForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/services/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ServiceForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/users',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <UsersList />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/users/new',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <UserForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/users/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <UserForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <BranchIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches/new',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <BranchForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <BranchForm />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/branches/:id/invoice-settings',
-                element: (
-                    <Guarded roles={['Superadmin']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <InvoiceSettings />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/pos',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <POSPage />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/orders',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <OrdersIndex />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/orders/:id',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <OrderDetail />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/orders/:id/receipt',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <OrderReceipt />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/deliveries',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <DeliveryIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/deliveries/:id',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <DeliveryDetail />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            {
-                path: '/expenses',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ExpensesIndex />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/expenses/new',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ExpenseForm />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/expenses/:id/edit',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ExpenseForm />
-                        </Suspense>
-                    </Guarded>
-                ),
-            },
-            {
-                path: '/receivables',
-                element: (
-                    <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
-                        <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                            <ReceivablesIndex />
-                        </Suspense>
-                    </Guarded>
-                )
-            },
-            ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
-                ? [
-                    {
-                        path: '/vouchers',
-                        element: (
-                            <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                                <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                                    <VouchersIndex />
-                                </Suspense>
-                            </Guarded>
-                        ),
-                    },
-                    {
-                        path: '/vouchers/new',
-                        element: (
-                            <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                                <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                                    <VoucherForm />
-                                </Suspense>
-                            </Guarded>
-                        ),
-                    },
-                    {
-                        path: '/vouchers/:id/edit',
-                        element: (
-                            <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                                <Suspense fallback={<div className="text-sm text-gray-500">Memuat…</div>}>
-                                    <VoucherForm />
-                                </Suspense>
-                            </Guarded>
-                        ),
-                    },
-                ]
-                : []),
-        ],
-    },
+          ]
+        : []),
+    ],
+  },
 ]);
+
 ```
 </details>
 
@@ -1717,6 +1884,62 @@ export interface SingleResponse<T> {
   meta: Record<string, unknown> | null;
   message: string;
   errors: Record<string, string[] | string> | null;
+}
+
+```
+</details>
+
+### src\types\dashboard.ts
+
+- SHA: `7c56c02702aa`  
+- Ukuran: 1013 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/types/dashboard.ts
+export interface TopServiceRow {
+  service_id: number | string;
+  name: string;
+  qty: number;
+  amount: number;
+}
+
+export interface OmzetDailyPoint {
+  date: string;      // YYYY-MM-DD
+  amount: number;
+}
+
+export interface OmzetMonthlyPoint {
+  month: string;     // YYYY-MM
+  amount: number;
+}
+
+/**
+ * Cerminan tepat dari payload backend /dashboard/summary
+ * Lihat Backend_Docs.md M11 DashboardController::summary()
+ */
+export interface DashboardSummary {
+  omzet_total: number;
+  orders_count: number;
+
+  top_services: TopServiceRow[];
+
+  vouchers_used_count: number;
+  vouchers_used_amount: number;
+
+  delivery_shipping_fee: number;
+
+  receivables_open_count: number;
+  receivables_open_amount: number;
+
+  omzet_daily: OmzetDailyPoint[];
+  omzet_monthly: OmzetMonthlyPoint[];
+}
+
+export interface DashboardSummaryMeta {
+  from: string;               // YYYY-MM-DD
+  to: string;                 // YYYY-MM-DD
+  branch_id?: string | null;  // UUID cabang atau null/undefined = semua
 }
 
 ```
@@ -2728,10 +2951,38 @@ export default function FilterBar() { return null; }
 ```
 </details>
 
+### src\components\LazyBoundary.tsx
+
+- SHA: `8ed0e79357ac`  
+- Ukuran: 470 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+// src/components/LazyBoundary.tsx
+import { Suspense, type ReactNode } from 'react';
+
+export default function LazyBoundary({ children }: { children: ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="loading-inline" role="status" aria-live="polite">
+          <span className="spinner" aria-hidden="true"></span>
+          <span className="loading-text">Memuat…</span>
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
+
+```
+</details>
+
 ### src\components\orders\OrderPhotos.tsx
 
-- SHA: `7a8dcb82fbd4`  
-- Ukuran: 7 KB
+- SHA: `616c2e46ff31`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -2740,185 +2991,216 @@ import { useMemo, useRef, useState } from "react";
 import { uploadOrderPhotos } from "../../api/orderPhotos";
 
 type Props = {
-    orderId: string;
-    onUploaded?: () => void;
+  orderId: string;
+  onUploaded?: () => void;
 };
 
 type Incoming = { before: File[]; after: File[] };
 
 export default function OrderPhotos({ orderId, onUploaded }: Props) {
-    const [files, setFiles] = useState<Incoming>({ before: [], after: [] });
-    const [busy, setBusy] = useState(false);
-    const beforeRef = useRef<HTMLInputElement>(null);
-    const afterRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<Incoming>({ before: [], after: [] });
+  const [busy, setBusy] = useState(false);
+  const beforeRef = useRef<HTMLInputElement>(null);
+  const afterRef = useRef<HTMLInputElement>(null);
 
-    // Heuristik ringan: mobile? -> gunakan capture camera
-    const isMobile = useMemo(() => {
-        const ua = navigator.userAgent.toLowerCase();
-        return /android|iphone|ipad|ipod/.test(ua);
-    }, []);
+  // Heuristik ringan: mobile? -> gunakan capture camera
+  const isMobile = useMemo(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    return /android|iphone|ipad|ipod/.test(ua);
+  }, []);
 
-    function pick(kind: "before" | "after") {
-        (kind === "before" ? beforeRef : afterRef).current?.click();
+  function pick(kind: "before" | "after") {
+    (kind === "before" ? beforeRef : afterRef).current?.click();
+  }
+
+  function onChange(kind: "before" | "after", list: FileList | null) {
+    if (!list) return;
+    const arr = Array.from(list);
+    setFiles(prev => ({
+      ...prev,
+      [kind]: [...prev[kind], ...arr],
+    }));
+  }
+
+  async function onUpload() {
+    try {
+      setBusy(true);
+      await uploadOrderPhotos(orderId, files.before, files.after);
+      setFiles({ before: [], after: [] });
+      onUploaded?.();
+    } finally {
+      setBusy(false);
     }
+  }
 
-    function onChange(kind: "before" | "after", list: FileList | null) {
-        if (!list) return;
-        const arr = Array.from(list);
-        setFiles(prev => ({
-            ...prev,
-            [kind]: [...prev[kind], ...arr],
-        }));
-    }
-
-    async function onUpload() {
-        try {
-            setBusy(true);
-            await uploadOrderPhotos(orderId, files.before, files.after);
-            setFiles({ before: [], after: [] });
-            onUploaded?.();
-        } finally {
-            setBusy(false);
-        }
-    }
-
-    return (
-        <div className="rounded-2xl border p-4">
-            <div className="text-sm font-semibold mb-3">Order Photos</div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <section className="border rounded-xl p-3">
-                    <div className="text-xs font-medium mb-2">Before</div>
-
-                    {/* PC: drag & drop; Mobile: tombol kamera */}
-                    <div
-                        className="border rounded-lg p-4 text-center text-xs"
-                        onDragOver={e => e.preventDefault()}
-                        onDrop={e => {
-                            e.preventDefault();
-                            const dropped = Array.from(e.dataTransfer.files || []);
-                            setFiles(prev => ({ ...prev, before: [...prev.before, ...dropped] }));
-                        }}
-                    >
-                        {isMobile ? (
-                            <button
-                                type="button"
-                                className="px-3 py-2 rounded-lg border"
-                                onClick={() => pick("before")}
-                            >
-                                Buka Kamera
-                            </button>
-                        ) : (
-                            <>
-                                <div className="mb-2">Drop file ke sini atau</div>
-                                <button
-                                    type="button"
-                                    className="px-3 py-2 rounded-lg border"
-                                    onClick={() => pick("before")}
-                                >
-                                    Pilih File
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    <input
-                        ref={beforeRef}
-                        type="file"
-                        accept="image/*"
-                        // KUNCI untuk kamera HP:
-                        // capture="environment" akan memicu kamera belakang di banyak mobile browser.
-                        // Di desktop, ini diabaikan dan akan buka file chooser.
-                        capture={isMobile ? "environment" : undefined}
-                        multiple
-                        className="hidden"
-                        onChange={e => onChange("before", e.target.files)}
-                    />
-
-                    {/* Preview ringkas */}
-                    {files.before.length > 0 && (
-                        <ul className="mt-2 text-xs list-disc pl-5">
-                            {files.before.map((f, i) => (
-                                <li key={i}>{f.name}</li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
-
-                <section className="border rounded-xl p-3">
-                    <div className="text-xs font-medium mb-2">After</div>
-
-                    <div
-                        className="border rounded-lg p-4 text-center text-xs"
-                        onDragOver={e => e.preventDefault()}
-                        onDrop={e => {
-                            e.preventDefault();
-                            const dropped = Array.from(e.dataTransfer.files || []);
-                            setFiles(prev => ({ ...prev, after: [...prev.after, ...dropped] }));
-                        }}
-                    >
-                        {isMobile ? (
-                            <button
-                                type="button"
-                                className="px-3 py-2 rounded-lg border"
-                                onClick={() => pick("after")}
-                            >
-                                Buka Kamera
-                            </button>
-                        ) : (
-                            <>
-                                <div className="mb-2">Drop file ke sini atau</div>
-                                <button
-                                    type="button"
-                                    className="px-3 py-2 rounded-lg border"
-                                    onClick={() => pick("after")}
-                                >
-                                    Pilih File
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    <input
-                        ref={afterRef}
-                        type="file"
-                        accept="image/*"
-                        capture={isMobile ? "environment" : undefined}
-                        multiple
-                        className="hidden"
-                        onChange={e => onChange("after", e.target.files)}
-                    />
-
-                    {files.after.length > 0 && (
-                        <ul className="mt-2 text-xs list-disc pl-5">
-                            {files.after.map((f, i) => (
-                                <li key={i}>{f.name}</li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
-            </div>
-
-            <div className="mt-3 flex gap-2">
-                <button
-                    type="button"
-                    className="px-3 py-2 rounded-lg border"
-                    onClick={onUpload}
-                    disabled={busy || (files.before.length === 0 && files.after.length === 0)}
-                >
-                    {busy ? "Mengunggah..." : "Upload"}
-                </button>
-                <button
-                    type="button"
-                    className="px-3 py-2 rounded-lg border"
-                    onClick={() => setFiles({ before: [], after: [] })}
-                    disabled={busy}
-                >
-                    Reset
-                </button>
-            </div>
+  return (
+    <div className="card border border-[color:var(--color-border)] rounded-2xl shadow-elev-1 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="text-sm font-semibold tracking-tight">Order Photos</div>
+          <p className="text-xs text-gray-600">Foto sebelum & sesudah (opsional). Gunakan kamera belakang untuk hasil terbaik.</p>
         </div>
-    );
+        {busy && (
+          <span className="inline-flex items-center gap-2 text-xs text-gray-600" aria-live="polite">
+            <span className="h-3 w-3 rounded-full border-2 border-black/20 border-t-black/70 animate-spin" />
+            Mengunggah…
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* BEFORE */}
+        <section className="card border border-[color:var(--color-border)] rounded-xl p-3">
+          <header className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium">Before</div>
+            <span className="text-[10px] text-gray-500">{files.before.length} file</span>
+          </header>
+
+          {/* PC: drag & drop; Mobile: tombol kamera */}
+          <div
+            className="group relative grid place-content-center rounded-xl border-2 border-dashed border-[color:var(--color-border)] bg-white/80 p-5 text-center text-xs hover:border-[color:var(--color-brand-primary)] transition-colors"
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => {
+              e.preventDefault();
+              const dropped = Array.from(e.dataTransfer.files || []);
+              setFiles(prev => ({ ...prev, before: [...prev.before, ...dropped] }));
+            }}
+            role="button"
+            aria-label="Area unggah foto sebelum"
+          >
+            {isMobile ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => pick("before")}
+              >
+                Buka Kamera
+              </button>
+            ) : (
+              <>
+                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
+                <div className="text-gray-500">atau</div>
+                <button
+                  type="button"
+                  className="btn-outline mt-2"
+                  onClick={() => pick("before")}
+                >
+                  Pilih File
+                </button>
+              </>
+            )}
+          </div>
+
+          <input
+            ref={beforeRef}
+            type="file"
+            accept="image/*"
+            capture={isMobile ? "environment" : undefined}
+            multiple
+            className="hidden"
+            onChange={e => onChange("before", e.target.files)}
+          />
+
+          {/* Preview ringkas */}
+          {files.before.length > 0 && (
+            <ul className="mt-3 divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70">
+              {files.before.map((f, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
+                  <span className="truncate max-w-[70%]">{f.name}</span>
+                  <span className="shrink-0 text-[10px] text-gray-500">{Math.ceil(f.size / 1024)} KB</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* AFTER */}
+        <section className="card border border-[color:var(--color-border)] rounded-xl p-3">
+          <header className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium">After</div>
+            <span className="text-[10px] text-gray-500">{files.after.length} file</span>
+          </header>
+
+          <div
+            className="group relative grid place-content-center rounded-xl border-2 border-dashed border-[color:var(--color-border)] bg-white/80 p-5 text-center text-xs hover:border-[color:var(--color-brand-primary)] transition-colors"
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => {
+              e.preventDefault();
+              const dropped = Array.from(e.dataTransfer.files || []);
+              setFiles(prev => ({ ...prev, after: [...prev.after, ...dropped] }));
+            }}
+            role="button"
+            aria-label="Area unggah foto sesudah"
+          >
+            {isMobile ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => pick("after")}
+              >
+                Buka Kamera
+              </button>
+            ) : (
+              <>
+                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
+                <div className="text-gray-500">atau</div>
+                <button
+                  type="button"
+                  className="btn-outline mt-2"
+                  onClick={() => pick("after")}
+                >
+                  Pilih File
+                </button>
+              </>
+            )}
+          </div>
+
+          <input
+            ref={afterRef}
+            type="file"
+            accept="image/*"
+            capture={isMobile ? "environment" : undefined}
+            multiple
+            className="hidden"
+            onChange={e => onChange("after", e.target.files)}
+          />
+
+          {files.after.length > 0 && (
+            <ul className="mt-3 divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70">
+              {files.after.map((f, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
+                  <span className="truncate max-w-[70%]">{f.name}</span>
+                  <span className="shrink-0 text-[10px] text-gray-500">{Math.ceil(f.size / 1024)} KB</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={onUpload}
+          disabled={busy || (files.before.length === 0 && files.after.length === 0)}
+        >
+          {busy ? "Mengunggah..." : "Upload"}
+        </button>
+        <button
+          type="button"
+          className="btn-outline"
+          onClick={() => setFiles({ before: [], after: [] })}
+          disabled={busy}
+        >
+          Reset
+        </button>
+        <span className="text-[10px] text-gray-500 ml-auto">
+          Hanya gambar (*.jpg, *.png, *.heic). Kamera belakang aktif di mobile.
+        </span>
+      </div>
+    </div>
+  );
 }
 
 ```
@@ -2926,100 +3208,108 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
 
 ### src\components\orders\OrderPhotosGallery.tsx
 
-- SHA: `65fde62d6968`  
+- SHA: `1dbf91a387b4`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/orders/OrderPhotosGallery.tsx
 import { useMemo } from "react";
-
 import type { OrderPhoto } from "../../types/orders";
 
 const fileUrl = (p?: string | null) => {
-    if (!p) return "";
-    if (/^https?:\/\//i.test(p)) return p;
-    const filesBase = (import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
-    // Fallback pintar: jika FILES_BASE_URL kosong, coba turunan dari API_BASE_URL (buang suffix /api/v1)
-    const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
-    const originFallback = apiBase.replace(/\/api\/v1$/i, "");
-    const base = filesBase || originFallback || "";
-    return `${base}/${String(p).replace(/^\/+/, "")}`;
+  if (!p) return "";
+  if (/^https?:\/\//i.test(p)) return p;
+  const filesBase = (import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
+  // Fallback pintar: jika FILES_BASE_URL kosong, coba turunan dari API_BASE_URL (buang suffix /api/v1)
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+  const originFallback = apiBase.replace(/\/api\/v1$/i, "");
+  const base = filesBase || originFallback || "";
+  return `${base}/${String(p).replace(/^\/+/, "")}`;
 };
 
 export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] }) {
-    const groups = useMemo(() => {
-        const norm = (k: unknown) => String(k || "").toUpperCase();
-        return {
-            before: photos.filter(p => norm(p.kind) === "BEFORE"),
-            after: photos.filter(p => norm(p.kind) === "AFTER"),
-        };
-    }, [photos]);
+  const groups = useMemo(() => {
+    const norm = (k: unknown) => String(k || "").toUpperCase();
+    return {
+      before: photos.filter(p => norm(p.kind) === "BEFORE"),
+      after: photos.filter(p => norm(p.kind) === "AFTER"),
+    };
+  }, [photos]);
 
-    if (!photos?.length) {
-        return (
-            <div className="rounded-2xl border p-3">
-                <div className="text-sm font-semibold mb-1">Order Photos</div>
-                <div className="text-xs text-muted-foreground">Belum ada foto.</div>
-            </div>
-        );
-    }
-
+  if (!photos?.length) {
     return (
-        <div className="rounded-2xl border p-3 space-y-4">
-            <div className="text-sm font-semibold">Order Photos</div>
-            <Section label="Before" items={groups.before} />
-            <Section label="After" items={groups.after} />
-        </div>
+      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
+        <div className="text-sm font-semibold mb-1">Order Photos</div>
+        <div className="text-xs text-gray-500">Belum ada foto.</div>
+      </div>
     );
+  }
+
+  return (
+    <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-4">
+      <div className="text-sm font-semibold tracking-tight">Order Photos</div>
+      <Section label="Before" items={groups.before} />
+      <Section label="After" items={groups.after} />
+    </div>
+  );
 }
 
 function resolveCreatedAt(p: OrderPhoto): string | undefined {
-    // Jangan asumsikan nama field timestamp. Ambil yang ada saja.
-    const anyP = p as unknown as Record<string, unknown>;
-    const raw =
-        (anyP["created_at"] as string | undefined) ??
-        (anyP["createdAt"] as string | undefined) ??
-        (anyP["uploaded_at"] as string | undefined) ??
-        (anyP["timestamp"] as string | undefined);
+  // Jangan asumsikan nama field timestamp. Ambil yang ada saja.
+  const anyP = p as unknown as Record<string, unknown>;
+  const raw =
+    (anyP["created_at"] as string | undefined) ??
+    (anyP["createdAt"] as string | undefined) ??
+    (anyP["uploaded_at"] as string | undefined) ??
+    (anyP["timestamp"] as string | undefined);
 
-    if (!raw) return undefined;
-    const d = new Date(raw);
-    return isNaN(d.getTime()) ? undefined : d.toLocaleString();
+  if (!raw) return undefined;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? undefined : d.toLocaleString();
 }
 
 function Section({ label, items }: { label: string; items: OrderPhoto[] }) {
-    return (
-        <div>
-            <div className="text-xs font-medium mb-2">{label}</div>
-            {!items.length ? (
-                <div className="text-xs text-muted-foreground">-</div>
-            ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {items.map(p => {
-                        const url = fileUrl(p.path);
-                        return (
-                            <a key={p.id} href={url} target="_blank" rel="noopener noreferrer"
-                                title={resolveCreatedAt(p)}
-                                className="border rounded-lg overflow-hidden bg-muted/30">
-                                <img
-                                    src={url}
-                                    alt={`${label} photo`}
-                                    loading="lazy"
-                                    className="w-full h-32 object-cover"
-                                    onError={(e) => {
-                                        (e.currentTarget as HTMLImageElement).src =
-                                            "data:image/svg+xml;utf8," +
-                                            encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'><rect width='100%' height='100%' fill='#eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='#999'>image not found</text></svg>");
-                                    }}
-                                />
-                            </a>
-                        );
-                    })}
-                </div>
-            )}
+  return (
+    <div>
+      <div className="text-xs font-medium text-gray-600 mb-2">{label}</div>
+      {!items.length ? (
+        <div className="text-xs text-gray-500">-</div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {items.map(p => {
+            const url = fileUrl(p.path);
+            return (
+              <a
+                key={p.id}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={resolveCreatedAt(p)}
+                className="group relative block overflow-hidden rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] transition-shadow hover:shadow-elev-2 focus:outline-none focus-visible:shadow-[var(--focus-ring)]"
+              >
+                <img
+                  src={url}
+                  alt={`${label} photo`}
+                  loading="lazy"
+                  className="w-full h-32 md:h-36 lg:h-40 object-cover transition-transform duration-150 ease-out group-hover:scale-[1.02]"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      "data:image/svg+xml;utf8," +
+                      encodeURIComponent(
+                        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'><rect width='100%' height='100%' fill='#eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='#999'>image not found</text></svg>"
+                      );
+                  }}
+                />
+                {/* subtle overlay on hover */}
+                <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+              </a>
+            );
+          })}
         </div>
-    );
+      )}
+    </div>
+  );
 }
 
 ```
@@ -3027,8 +3317,8 @@ function Section({ label, items }: { label: string; items: OrderPhoto[] }) {
 
 ### src\components\orders\OrderPhotosUpload.tsx
 
-- SHA: `abd285ec6a67`  
-- Ukuran: 5 KB
+- SHA: `17221e244132`  
+- Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3073,29 +3363,48 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border p-4">
-      <div className="text-sm font-semibold mb-3">Order Photos</div>
+    <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold tracking-tight">Order Photos</h3>
+        <p className="text-xs text-gray-600">Unggah foto <span className="font-medium">Before</span> dan <span className="font-medium">After</span>. {isMobile ? 'Kamera tersedia di perangkat Anda.' : 'Dukung drag-drop & pilih file.'}</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* BEFORE */}
         <section className="border rounded-xl p-3">
-          <div className="text-xs font-medium mb-2">Before</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium">Before</div>
+            <div className="text-[10px] text-gray-500">PNG/JPG, &le; 5MB</div>
+          </div>
+
           <div
-            className="border rounded-lg p-4 text-center text-xs"
+            className="border border-dashed rounded-lg p-4 text-center text-xs bg-white/50 hover:bg-black/5 transition-colors"
             onDragOver={e => e.preventDefault()}
             onDrop={e => {
               e.preventDefault();
               const dropped = Array.from(e.dataTransfer.files || []);
               setFiles(prev => ({ ...prev, before: [...prev.before, ...dropped] }));
             }}
+            aria-label="Drop zone foto before"
           >
             {isMobile ? (
-              <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("before")}>
+              <button
+                type="button"
+                className="btn-primary disabled:opacity-50"
+                onClick={() => pick("before")}
+                disabled={busy}
+              >
                 Buka Kamera
               </button>
             ) : (
               <>
-                <div className="mb-2">Drop file ke sini atau</div>
-                <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("before")}>
+                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => pick("before")}
+                  disabled={busy}
+                >
                   Pilih File
                 </button>
               </>
@@ -3113,31 +3422,52 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
           />
 
           {files.before.length > 0 && (
-            <ul className="mt-2 text-xs list-disc pl-5">
-              {files.before.map((f, i) => <li key={i}>{f.name}</li>)}
+            <ul className="mt-2 text-xs divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70 overflow-hidden">
+              {files.before.map((f, i) => (
+                <li key={i} className="px-3 py-2 flex items-center justify-between">
+                  <span className="truncate">{f.name}</span>
+                  <span className="text-[10px] text-gray-500 ml-2">{Math.ceil(f.size/1024)} KB</span>
+                </li>
+              ))}
             </ul>
           )}
         </section>
 
+        {/* AFTER */}
         <section className="border rounded-xl p-3">
-          <div className="text-xs font-medium mb-2">After</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium">After</div>
+            <div className="text-[10px] text-gray-500">PNG/JPG, &le; 5MB</div>
+          </div>
+
           <div
-            className="border rounded-lg p-4 text-center text-xs"
+            className="border border-dashed rounded-lg p-4 text-center text-xs bg-white/50 hover:bg-black/5 transition-colors"
             onDragOver={e => e.preventDefault()}
             onDrop={e => {
               e.preventDefault();
               const dropped = Array.from(e.dataTransfer.files || []);
               setFiles(prev => ({ ...prev, after: [...prev.after, ...dropped] }));
             }}
+            aria-label="Drop zone foto after"
           >
             {isMobile ? (
-              <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("after")}>
+              <button
+                type="button"
+                className="btn-primary disabled:opacity-50"
+                onClick={() => pick("after")}
+                disabled={busy}
+              >
                 Buka Kamera
               </button>
             ) : (
               <>
-                <div className="mb-2">Drop file ke sini atau</div>
-                <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => pick("after")}>
+                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => pick("after")}
+                  disabled={busy}
+                >
                   Pilih File
                 </button>
               </>
@@ -3155,8 +3485,13 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
           />
 
           {files.after.length > 0 && (
-            <ul className="mt-2 text-xs list-disc pl-5">
-              {files.after.map((f, i) => <li key={i}>{f.name}</li>)}
+            <ul className="mt-2 text-xs divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70 overflow-hidden">
+              {files.after.map((f, i) => (
+                <li key={i} className="px-3 py-2 flex items-center justify-between">
+                  <span className="truncate">{f.name}</span>
+                  <span className="text-[10px] text-gray-500 ml-2">{Math.ceil(f.size/1024)} KB</span>
+                </li>
+              ))}
             </ul>
           )}
         </section>
@@ -3165,15 +3500,16 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
       <div className="mt-3 flex gap-2">
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border"
+          className="btn-primary disabled:opacity-50"
           onClick={onUpload}
           disabled={busy || (files.before.length === 0 && files.after.length === 0)}
+          aria-live="polite"
         >
           {busy ? "Mengunggah..." : "Upload"}
         </button>
         <button
           type="button"
-          className="px-3 py-2 rounded-lg border"
+          className="btn-outline disabled:opacity-50"
           onClick={() => setFiles({ before: [], after: [] })}
           disabled={busy}
         >
@@ -3189,8 +3525,8 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
 
 ### src\components\orders\OrderStatusStepper.tsx
 
-- SHA: `b53ef33ff2af`  
-- Ukuran: 1004 B
+- SHA: `77e3205182c1`  
+- Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3207,16 +3543,52 @@ type Props = {
 
 export default function OrderStatusStepper({ backendStatus }: Props): React.ReactElement {
   const current = BACKEND_TO_UI_STATUS[backendStatus];
+  const activeIdx = UI_FLOW.indexOf(current);
 
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div
+      className="flex items-center gap-2 text-xs select-none"
+      role="list"
+      aria-label="Order progress"
+    >
       {UI_FLOW.map((s, idx) => {
-        const activeIdx = UI_FLOW.indexOf(current);
-        const active = idx <= activeIdx;
+        const isCurrent = idx === activeIdx;
+        const isDone = idx < activeIdx;
+
+        const dotCls =
+          'grid place-items-center h-6 w-6 rounded-full border text-[10px] font-semibold transition-transform duration-150 motion-reduce:transition-none';
+        const dotState = isCurrent
+          ? 'bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)] border-transparent scale-[1.04]'
+          : isDone
+          ? 'bg-[#E6EDFF] text-[var(--color-brand-primary)] border-[color:var(--color-brand-primary)]'
+          : 'bg-[color:var(--color-surface)] text-gray-500 border-[color:var(--color-border)]';
+
+        const labelCls = 'text-[11px] font-medium tracking-wide';
+        const labelState = isCurrent
+          ? 'text-[color:var(--color-text-default)]'
+          : isDone
+          ? 'text-[var(--color-brand-primary)]'
+          : 'text-gray-500';
+
+        const barCls = 'h-[2px] rounded w-6 md:w-10';
+        const barState = idx < activeIdx
+          ? 'bg-[var(--color-brand-primary)]/80'
+          : 'bg-[color:var(--color-border)]';
+
         return (
           <React.Fragment key={s}>
-            <div className={`px-2 py-1 rounded ${active ? 'bg-black text-white' : 'border'}`}>{s}</div>
-            {idx < UI_FLOW.length - 1 && <div className="w-6 h-px bg-muted" />}
+            <div
+              className="flex items-center gap-2"
+              role="listitem"
+              aria-current={isCurrent ? 'step' : undefined}
+              aria-label={s}
+            >
+              <span className={`${dotCls} ${dotState}`} aria-hidden="true">{idx + 1}</span>
+              <span className={`${labelCls} ${labelState}`}>{s}</span>
+            </div>
+            {idx < UI_FLOW.length - 1 && (
+              <div className={`${barCls} ${barState}`} aria-hidden="true" />
+            )}
           </React.Fragment>
         );
       })}
@@ -3229,77 +3601,153 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
 
 ### src\components\pos\CartPanel.tsx
 
-- SHA: `59c5ea9a2040`  
-- Ukuran: 3 KB
+- SHA: `ae5609e46bc7`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/pos/CartPanel.tsx
 import { useMemo } from 'react';
+import { toIDR } from '../../utils/money';
+import type { ReactElement } from 'react';
 
 export type CartItem = {
-    service_id: string;
-    name: string;
-    unit: string;
-    price: number;
-    qty: number;
-    note?: string | null;
+  service_id: string;
+  name: string;
+  unit: string;
+  price: number;
+  qty: number;
+  note?: string | null;
 };
 
 type Props = {
-    items: CartItem[];
-    onChangeQty: (service_id: string, qty: number) => void;
-    onChangeNote: (service_id: string, note: string) => void;
-    onRemove: (service_id: string) => void;
+  items: CartItem[];
+  onChangeQty: (service_id: string, qty: number) => void;
+  onChangeNote: (service_id: string, note: string) => void;
+  onRemove: (service_id: string) => void;
 };
 
-export default function CartPanel({ items, onChangeQty, onChangeNote, onRemove }: Props): React.ReactElement {
-    const subtotal = useMemo(
-        () => items.reduce((s, it) => s + (it.price * it.qty), 0),
-        [items]
-    );
+export default function CartPanel({
+  items,
+  onChangeQty,
+  onChangeNote,
+  onRemove,
+}: Props): ReactElement  {
+  const subtotal = useMemo(
+    () => items.reduce((s, it) => s + it.price * it.qty, 0),
+    [items],
+  );
 
-    return (
-        <div className="rounded-2xl border p-3 space-y-2">
-            <div className="text-sm font-semibold">Keranjang</div>
-            {items.length === 0 && <div className="text-sm text-muted-foreground">Belum ada item</div>}
+  return (
+    <div className="card rounded-lg border border-(--color-border) shadow-elev-1 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">Keranjang</div>
+        <div className="text-[10px] text-gray-600">{items.length} item</div>
+      </div>
 
-            {items.length > 0 && (
-                <div className="space-y-2">
-                    {items.map((it) => (
-                        <div key={it.service_id} className="flex items-start gap-2 border-b pb-2">
-                            <div className="flex-1">
-                                <div className="font-medium">{it.name}</div>
-                                <div className="text-xs text-muted-foreground">{it.unit}</div>
-                                <div className="text-sm mt-1">{(it.price * it.qty).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</div>
-                                <input
-                                    className="mt-1 border rounded px-2 py-1 w-full"
-                                    placeholder="Catatan item (opsional)"
-                                    value={it.note ?? ''}
-                                    onChange={(e) => onChangeNote(it.service_id, e.target.value)}
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="number"
-                                    min={1}
-                                    className="border rounded px-2 py-1 w-20"
-                                    value={it.qty}
-                                    onChange={(e) => onChangeQty(it.service_id, Math.max(1, Number(e.target.value)))}
-                                />
-                                <button className="text-xs underline" onClick={() => onRemove(it.service_id)}>Hapus</button>
-                            </div>
-                        </div>
-                    ))}
-                    <div className="flex justify-between text-sm font-semibold">
-                        <span>Subtotal</span>
-                        <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</span>
-                    </div>
-                </div>
-            )}
+      {items.length === 0 && (
+        <div className="rounded-lg border border-dashed border-(--color-border) p-4 text-sm text-gray-600 text-center">
+          Belum ada item
         </div>
-    );
+      )}
+
+      {items.length > 0 && (
+        <>
+          <ul className="space-y-2">
+            {items.map((it) => (
+              <li
+                key={it.service_id}
+                className="flex items-start gap-3 pb-2 border-b border-(--color-border)"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium truncate">{it.name}</div>
+                    <span className="chip chip--subtle text-xs">{it.unit}</span>
+                  </div>
+
+                  <div className="mt-1 text-sm font-semibold">
+                    {toIDR(it.price * it.qty)}
+                  </div>
+
+                  <input
+                    className="input mt-2 px-2 py-2 text-sm w-full"
+                    placeholder="Catatan item (opsional)"
+                    value={it.note ?? ''}
+                    onChange={(e) => onChangeNote(it.service_id, e.target.value)}
+                    aria-label={`Catatan untuk ${it.name}`}
+                  />
+                </div>
+
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <QtyStepper
+                    value={it.qty}
+                    onChange={(v) => onChangeQty(it.service_id, Math.max(1, v))}
+                    label={`Kuantitas ${it.name}`}
+                  />
+                  <button
+                    type="button"
+                    className="btn-outline px-2 py-1 text-xs border-(--color-status-danger) text-(--color-status-danger)"
+                    onClick={() => onRemove(it.service_id)}
+                    aria-label={`Hapus ${it.name}`}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex justify-between items-center pt-2 text-sm font-semibold">
+            <span>Subtotal</span>
+            <span>{toIDR(subtotal)}</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------
+   Subcomponents (UI)
+------------------------ */
+
+function QtyStepper({
+  value,
+  onChange,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  label?: string;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-lg border border-(--color-border) overflow-hidden">
+      <button
+        type="button"
+        className="px-2 py-1 hover:bg-black/5"
+        onClick={() => onChange(Math.max(1, value - 1))}
+        aria-label={label ? `${label}: kurang` : 'Kurangi jumlah'}
+      >
+        &minus;
+      </button>
+      <input
+        type="number"
+        min={1}
+        value={value}
+        onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
+        className="w-16 text-center py-1 input border-0 focus:ring-0"
+        aria-label={label ?? 'Jumlah'}
+      />
+      <button
+        type="button"
+        className="px-2 py-1 hover:bg-black/5"
+        onClick={() => onChange(value + 1)}
+        aria-label={label ? `${label}: tambah` : 'Tambah jumlah'}
+      >
+        +
+      </button>
+    </div>
+  );
 }
 
 ```
@@ -3307,222 +3755,256 @@ export default function CartPanel({ items, onChangeQty, onChangeNote, onRemove }
 
 ### src\components\pos\CheckoutDialog.tsx
 
-- SHA: `0fccdb776dc4`  
-- Ukuran: 10 KB
+- SHA: `61a587f4382b`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/pos/CheckoutDialog.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createOrderPayment } from "../../api/orders";
 import type { PaymentCreatePayload, PaymentMethod } from "../../types/payments";
 import { applyVoucherToOrder } from "../../api/vouchers";
 import type { Order } from "../../types/orders";
 import { toIDR } from "../../utils/money";
 
-type PayMode = 'PENDING' | PaymentMethod;
+type PayMode = 'PENDING' | 'DP' | PaymentMethod;
 
 type Props = {
-    open: boolean;
-    onClose: () => void;
-    order: Order;
-    onPaid: (order: Order) => void;
+  open: boolean;
+  onClose: () => void;
+  order: Order;
+  onPaid: (order: Order) => void;
 };
 
 const METHODS: PaymentMethod[] = ['CASH', 'QRIS', 'TRANSFER'];
 
 export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) {
-    const [mode, setMode] = useState<PayMode>('PENDING');
-    const [dpAmount, setDpAmount] = useState<number>(0);
-    const [payAmount, setPayAmount] = useState<number>(order.grand_total);
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string | null>(null);
-    const [voucherCode, setVoucherCode] = useState<string>('');
-    const [applyLoading, setApplyLoading] = useState<boolean>(false);
-    const [applyMsg, setApplyMsg] = useState<string | null>(null);
-    const [applyErr, setApplyErr] = useState<string | null>(null);
+  const [mode, setMode] = useState<PayMode>('PENDING');
+  const [dpAmount, setDpAmount] = useState<number>(0);
+  const [payAmount, setPayAmount] = useState<number>(order.grand_total);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-    const due = useMemo(
-        () => Math.max((order.grand_total ?? 0) - (order.paid_amount ?? 0), 0),
-        [order.grand_total, order.paid_amount]
-    );
+  const [voucherCode, setVoucherCode] = useState<string>('');
+  const [applyLoading, setApplyLoading] = useState<boolean>(false);
+  const [applyMsg, setApplyMsg] = useState<string | null>(null);
+  const [applyErr, setApplyErr] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!open) return;
-        setMode('PENDING');
-        setDpAmount(0);
-        setPayAmount(due);
-        setErr(null);
-        setVoucherCode('');
-        setApplyMsg(null);
-        setApplyErr(null);
-    }, [open, order.id, due]);
+  const due = useMemo(
+    () => Math.max((order.grand_total ?? 0) - (order.paid_amount ?? 0), 0),
+    [order.grand_total, order.paid_amount]
+  );
 
-    async function onSubmit() {
-        try {
-            setErr(null);
-            if (mode === 'PENDING') {
-                onClose();
-                onPaid(order);
-                return;
-            }
+  // focus voucher input saat dialog terbuka
+  const voucherRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    setMode('PENDING');
+    setDpAmount(0);
+    setPayAmount(due);
+    setErr(null);
+    setVoucherCode('');
+    setApplyMsg(null);
+    setApplyErr(null);
+    // small delay untuk memastikan render selesai
+    setTimeout(() => voucherRef.current?.focus(), 0);
+  }, [open, order.id, due]);
 
-            let payload: PaymentCreatePayload;
+  async function onSubmit() {
+    try {
+      setErr(null);
+      if (mode === 'PENDING') {
+        onClose();
+        onPaid(order);
+        return;
+      }
 
-            if (mode === 'DP') {
-                const n = Number.isFinite(dpAmount) ? dpAmount : 0;
-                if (n <= 0) throw new Error('Nominal DP harus > 0');
-                if (n > due) throw new Error('DP melebihi sisa tagihan');
-                payload = { method: 'DP', amount: n };
-            } else {
-                const n = Number.isFinite(payAmount) ? payAmount : 0;
-                if (n <= 0) throw new Error('Nominal bayar harus > 0');
-                if (n > due) throw new Error('Nominal bayar melebihi sisa tagihan');
-                payload = { method: mode, amount: n };
-            }
+      let payload: PaymentCreatePayload;
 
-            setLoading(true);
-            const { order: updated } = await createOrderPayment(order.id, payload);
-            onPaid(updated);
-            onClose();
-        } catch (e) {
-            const m = e instanceof Error ? e.message : 'Gagal menyimpan pembayaran';
-            setErr(m);
-        } finally {
-            setLoading(false);
-        }
+      if (mode === 'DP') {
+        const n = Number.isFinite(dpAmount) ? dpAmount : 0;
+        if (n <= 0) throw new Error('Nominal DP harus > 0');
+        if (n > due) throw new Error('DP melebihi sisa tagihan');
+        payload = { method: 'DP', amount: n };
+      } else {
+        const n = Number.isFinite(payAmount) ? payAmount : 0;
+        if (n <= 0) throw new Error('Nominal bayar harus > 0');
+        if (n > due) throw new Error('Nominal bayar melebihi sisa tagihan');
+        payload = { method: mode, amount: n };
+      }
+
+      setLoading(true);
+      const { order: updated } = await createOrderPayment(order.id, payload);
+      onPaid(updated);
+      onClose();
+    } catch (e) {
+      const m = e instanceof Error ? e.message : 'Gagal menyimpan pembayaran';
+      setErr(m);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    if (!open) return null;
+  if (!open) return null;
 
-    return (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-                <div className="p-4 border-b">
-                    <div className="text-lg font-semibold">Pembayaran</div>
-                    <div className="text-xs text-gray-500">Tagihan: {toIDR(order.grand_total)} · Sudah bayar: {toIDR(order.paid_amount)} · Sisa: {toIDR(due)}</div>
-                </div>
-
-                <div className="p-4 space-y-3">
-                    {/* Voucher apply */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium">Voucher</label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                className="w-full border rounded px-3 py-2 text-sm"
-                                placeholder="MASUKKAN-KODE"
-                                value={voucherCode}
-                                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                            />
-                            <button
-                                type="button"
-                                className="border rounded px-3 py-2 text-sm disabled:opacity-50"
-                                disabled={applyLoading || voucherCode.trim().length === 0}
-                                onClick={async () => {
-                                    setApplyLoading(true);
-                                    setApplyMsg(null);
-                                    setApplyErr(null);
-                                    try {
-                                        const res = await applyVoucherToOrder(String(order.id), { code: voucherCode.trim().toUpperCase() });
-                                        const updated = res.order as Order;
-                                        onPaid(updated);
-                                        const pot = typeof res.applied_amount === 'number' ? res.applied_amount : 0;
-                                        setApplyMsg(`Voucher diterapkan. Potongan: ${toIDR(pot)}`);
-                                    } catch (ex: unknown) {
-                                        const statusObj = ex as { response?: { status?: number } };
-                                        const status = typeof statusObj?.response?.status === 'number' ? statusObj.response!.status! : 0;
-                                        if (status === 422) setApplyErr('Voucher tidak valid / tidak memenuhi syarat');
-                                        else if (status === 403) setApplyErr('Tidak berwenang menerapkan voucher untuk order ini');
-                                        else setApplyErr('Gagal menerapkan voucher');
-                                    } finally {
-                                        setApplyLoading(false);
-                                    }
-                                }}
-                            >
-                                {applyLoading ? 'Menerapkan…' : 'Terapkan'}
-                            </button>
-                        </div>
-
-                        {applyMsg && <div className="text-xs text-green-700">{applyMsg}</div>}
-                        {applyErr && <div className="text-xs text-red-600">{applyErr}</div>}
-                    </div>
-                    <label className="block text-sm font-medium">Mode</label>
-                    <div className="grid grid-cols-3 gap-2">
-                        <button
-                            type="button"
-                            className={`border rounded px-3 py-2 ${mode === 'PENDING' ? 'bg-gray-900 text-white' : ''}`}
-                            onClick={() => setMode('PENDING')}
-                        >Pending</button>
-
-                        <button
-                            type="button"
-                            className={`border rounded px-3 py-2 ${mode === 'DP' ? 'bg-gray-900 text-white' : ''}`}
-                            onClick={() => setMode('DP')}
-                        >DP</button>
-
-                        {METHODS.map(m => (
-                            <button
-                                key={m}
-                                type="button"
-                                className={`border rounded px-3 py-2 ${mode === m ? 'bg-gray-900 text-white' : ''}`}
-                                onClick={() => setMode(m)}
-                            >{m}</button>
-                        ))}
-                    </div>
-
-                    {mode === 'DP' && (
-                        <div>
-                            <label className="block text-sm mb-1">Nominal DP</label>
-                            <input
-                                type="number"
-                                min={1}
-                                max={due}
-                                value={dpAmount}
-                                onChange={(e) => {
-                                    const v = Math.max(0, Math.min(Number(e.target.value || 0), due));
-                                    setDpAmount(v);
-                                }}
-                                className="w-full border rounded px-3 py-2"
-                            />
-                            <div className="text-xs text-gray-500 mt-1">Maksimal {toIDR(due)}</div>
-                        </div>
-                    )}
-
-                    {mode !== 'PENDING' && mode !== 'DP' && (
-                        <div>
-                            <label className="block text-sm mb-1">Nominal Bayar</label>
-                            <input
-                                type="number"
-                                min={1}
-                                max={due}
-                                value={payAmount}
-                                onChange={(e) => {
-                                    const v = Math.max(0, Math.min(Number(e.target.value || 0), due));
-                                    setPayAmount(v);
-                                }}
-                                className="w-full border rounded px-3 py-2"
-                            />
-                            <div className="text-xs text-gray-500 mt-1">Sisa tagihan: {toIDR(due)}</div>
-                        </div>
-                    )}
-
-                    {err && <div className="text-sm text-red-600">{err}</div>}
-                </div>
-
-                <div className="p-4 border-t flex items-center justify-end gap-2">
-                    <button type="button" className="px-3 py-2 border rounded" onClick={onClose} disabled={loading}>Batal</button>
-                    <button
-                        type="button"
-                        className="px-3 py-2 border rounded bg-gray-900 text-white disabled:opacity-50"
-                        onClick={() => void onSubmit()}
-                        disabled={loading}
-                    >
-                        {loading ? 'Menyimpan…' : 'Simpan'}
-                    </button>
-                </div>
-            </div>
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkout-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-elev-2 bg-(--color-surface) text-(--color-text-default) border border-(--color-border)"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-(--color-border)">
+          <div id="checkout-title" className="text-lg font-semibold">Pembayaran</div>
+          <div className="text-xs text-gray-600">
+            Tagihan: {toIDR(order.grand_total)} · Sudah bayar: {toIDR(order.paid_amount)} · Sisa: {toIDR(due)}
+          </div>
         </div>
-    );
+
+        {/* Body */}
+        <div className="p-4 space-y-4">
+          {/* Voucher */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Voucher</label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={voucherRef}
+                className="input px-3 py-2 text-sm flex-1"
+                placeholder="MASUKKAN-KODE"
+                value={voucherCode}
+                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+              />
+              <button
+                type="button"
+                className="btn-outline disabled:opacity-50"
+                disabled={applyLoading || voucherCode.trim().length === 0}
+                onClick={async () => {
+                  setApplyLoading(true);
+                  setApplyMsg(null);
+                  setApplyErr(null);
+                  try {
+                    const res = await applyVoucherToOrder(String(order.id), { code: voucherCode.trim().toUpperCase() });
+                    const updated = res.order as Order;
+                    onPaid(updated);
+                    const pot = typeof (res).applied_amount === 'number' ? (res).applied_amount : 0;
+                    setApplyMsg(`Voucher diterapkan. Potongan: ${toIDR(pot)}`);
+                  } catch (ex: unknown) {
+                    const statusObj = ex as { response?: { status?: number } };
+                    const status = typeof statusObj?.response?.status === 'number' ? statusObj.response!.status! : 0;
+                    if (status === 422) setApplyErr('Voucher tidak valid / tidak memenuhi syarat');
+                    else if (status === 403) setApplyErr('Tidak berwenang menerapkan voucher untuk order ini');
+                    else setApplyErr('Gagal menerapkan voucher');
+                  } finally {
+                    setApplyLoading(false);
+                  }
+                }}
+              >
+                {applyLoading ? 'Menerapkan…' : 'Terapkan'}
+              </button>
+            </div>
+            {applyMsg && <div className="text-xs text-green-700">{applyMsg}</div>}
+            {applyErr && <div className="text-xs text-red-600">{applyErr}</div>}
+          </div>
+
+          {/* Mode */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Mode</label>
+            <div className="inline-flex rounded-lg border border-(--color-border) overflow-hidden">
+              {(['PENDING', 'DP', ...METHODS] as PayMode[]).map((m) => {
+                const active = mode === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMode(m)}
+                    className={`px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? 'bg-(--color-brand-primary) text-(--color-brand-on)'
+                        : 'bg-white hover:bg-black/5'
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* DP input */}
+          {mode === 'DP' && (
+            <div>
+              <label className="block text-sm mb-1">Nominal DP</label>
+              <input
+                type="number"
+                min={1}
+                max={due}
+                value={dpAmount}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(Number(e.target.value || 0), due));
+                  setDpAmount(v);
+                }}
+                className="input px-3 py-2 w-full"
+              />
+              <div className="text-xs text-gray-500 mt-1">Maksimal {toIDR(due)}</div>
+            </div>
+          )}
+
+          {/* Pay amount input */}
+          {mode !== 'PENDING' && mode !== 'DP' && (
+            <div>
+              <label className="block text-sm mb-1">Nominal Bayar</label>
+              <input
+                type="number"
+                min={1}
+                max={due}
+                value={payAmount}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(Number(e.target.value || 0), due));
+                  setPayAmount(v);
+                }}
+                className="input px-3 py-2 w-full"
+              />
+              <div className="text-xs text-gray-500 mt-1">Sisa tagihan: {toIDR(due)}</div>
+            </div>
+          )}
+
+          {err && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+            >
+              {err}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-(--color-border) flex items-center justify-end gap-2">
+          <button type="button" className="btn-outline" onClick={onClose} disabled={loading}>
+            Batal
+          </button>
+          <button
+            type="button"
+            className="btn-primary disabled:opacity-60"
+            onClick={() => void onSubmit()}
+            disabled={loading}
+          >
+            {loading ? 'Menyimpan…' : 'Simpan'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 ```
@@ -3530,8 +4012,8 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
 
 ### src\components\pos\ProductSearch.tsx
 
-- SHA: `628d180f0602`  
-- Ukuran: 3 KB
+- SHA: `98beac76b2a9`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3543,73 +4025,98 @@ import { getEffectivePrice } from '../../api/servicePrices';
 import { useAuth } from '../../store/useAuth';
 
 type Props = {
-    onPick: (row: Service & { price_effective: number }) => void;
+  onPick: (row: Service & { price_effective: number }) => void;
 };
 
 export default function ProductSearch({ onPick }: Props): React.ReactElement {
-    const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
-    const branchId: string = user?.branch_id != null ? String(user.branch_id) : '';
-    const [q, setQ] = useState('');
-    const [rows, setRows] = useState<(Service & { price_effective: number })[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
+  const branchId: string = user?.branch_id != null ? String(user.branch_id) : '';
+  const [q, setQ] = useState('');
+  const [rows, setRows] = useState<(Service & { price_effective: number })[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const refresh = useCallback(async () => {
-        setLoading(true); setError(null);
-        try {
-            const res = await listServices({ q, is_active: true, per_page: 10, page: 1 });
-            const base = (res.data ?? []);
-            const withPrice = await Promise.all(
-                base.map(async (s) => ({
-                    ...s,
-                    price_effective: branchId ? await getEffectivePrice({ id: s.id, price_default: s.price_default }, branchId) : Number(s.price_default),
-                }))
-            );
-            setRows(withPrice);
-        } catch {
-            setError('Gagal memuat layanan');
-        } finally {
-            setLoading(false);
-        }
-    }, [q, branchId]);
+  const refresh = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await listServices({ q, is_active: true, per_page: 10, page: 1 });
+      const base = (res.data ?? []);
+      const withPrice = await Promise.all(
+        base.map(async (s) => ({
+          ...s,
+          price_effective: branchId
+            ? await getEffectivePrice({ id: s.id, price_default: s.price_default }, branchId)
+            : Number(s.price_default),
+        }))
+      );
+      setRows(withPrice);
+    } catch {
+      setError('Gagal memuat layanan');
+    } finally {
+      setLoading(false);
+    }
+  }, [q, branchId]);
 
-    useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
 
-    return (
-        <div className="space-y-2">
-            <div className="flex gap-2">
-                <input
-                    className="border rounded px-3 py-2 w-full"
-                    placeholder="Cari layanan…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') void refresh(); }}
-                />
-                <button className="border rounded px-3 py-2" onClick={() => void refresh()}>Cari</button>
-            </div>
+  return (
+    <div className="space-y-2">
+      {/* Search bar */}
+      <div className="flex gap-2">
+        <input
+          className="input px-3 py-2 w-full"
+          placeholder="Cari layanan…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') void refresh(); }}
+          aria-label="Cari layanan"
+        />
+        <button
+          className="btn-outline"
+          onClick={() => void refresh()}
+          aria-label="Cari"
+        >
+          Cari
+        </button>
+      </div>
+      <div className="text-[10px] text-gray-500">Enter untuk cari • Klik kartu layanan untuk menambah ke keranjang</div>
 
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-            {error && <div className="text-sm text-red-600">{error}</div>}
+      {/* States */}
+      {loading && (
+        <div className="text-sm text-gray-500" aria-live="polite">Memuat…</div>
+      )}
+      {error && (
+        <div className="text-sm text-red-600" role="alert" aria-live="polite">{error}</div>
+      )}
 
-            {!loading && !error && rows.length > 0 && (
-                <div className="grid md:grid-cols-2 gap-2">
-                    {rows.map((r) => (
-                        <button
-                            key={r.id}
-                            className="border rounded p-3 text-left hover:bg-muted"
-                            onClick={() => onPick(r)}
-                        >
-                            <div className="font-medium">{r.name}</div>
-                            <div className="text-xs text-muted-foreground">{r.unit}</div>
-                            <div className="text-sm mt-1">{r.price_effective.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</div>
-                        </button>
-                    ))}
+      {/* Results */}
+      {!loading && !error && rows.length > 0 && (
+        <div className="grid md:grid-cols-2 gap-2">
+          {rows.map((r) => (
+            <button
+              key={r.id}
+              className="rounded-lg border border-(--color-border) bg-(--color-surface) p-3 text-left transition-colors hover:bg-black/5 focus-visible:focus-ring"
+              onClick={() => onPick(r)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium">{r.name}</div>
+                  <div className="text-xs text-gray-600">{r.unit}</div>
                 </div>
-            )}
-
-            {!loading && !error && rows.length === 0 && <div className="text-sm text-muted-foreground">Tidak ada hasil</div>}
+                <div className="text-sm font-semibold tabular-nums">
+                  {r.price_effective.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
-    );
+      )}
+
+      {!loading && !error && rows.length === 0 && (
+        <div className="text-sm text-gray-600">Tidak ada hasil</div>
+      )}
+    </div>
+  );
 }
 
 ```
@@ -4754,6 +5261,365 @@ export default function CustomersIndex() {
 ```
 </details>
 
+### src\pages\dashboard\DashboardHome.tsx
+
+- SHA: `33e53e367992`  
+- Ukuran: 12 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+// src/pages/dashboard/DashboardHome.tsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { listBranches } from '../../api/branches';
+import { getDashboardSummary } from '../../api/dashboard';
+import type { Branch } from '../../types/branches';
+import type { DashboardSummary, DashboardSummaryMeta } from '../../types/dashboard';
+import { toIDR } from '../../utils/money';
+import { useAuth, useHasRole } from '../../store/useAuth';
+
+type Meta = DashboardSummaryMeta;
+
+function today(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+function firstDayThisMonth(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-01`;
+}
+
+export default function DashboardHome() {
+  const me = useAuth.user;
+  const isSuperadmin = useHasRole(['Superadmin']);
+
+  // filter
+  const [branchList, setBranchList] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState<string>(() => {
+    if (!isSuperadmin && me?.branch_id) return String(me.branch_id);
+    return '';
+  });
+  const [from, setFrom] = useState<string>(firstDayThisMonth());
+  const [to, setTo] = useState<string>(today());
+
+  // data
+  const [data, setData] = useState<DashboardSummary | null>(null);
+  const [meta, setMeta] = useState<Meta | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string>('');
+
+  const q = useMemo(() => {
+    // Superadmin boleh pilih cabang; role lain pakai cabang login
+    const out: { from: string; to: string; branch_id?: string | null } = { from, to };
+    if (isSuperadmin) {
+      if (branchId) out.branch_id = branchId;
+    } else {
+      if (me?.branch_id) out.branch_id = String(me.branch_id);
+    }
+    return out;
+  }, [from, to, branchId, isSuperadmin, me?.branch_id]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr('');
+    try {
+      if (isSuperadmin && branchList.length === 0) {
+        const br = await listBranches({ per_page: 100 });
+        setBranchList(br.data ?? []);
+      }
+      const res = await getDashboardSummary(q);
+      setData(res.data ?? null);
+      setMeta((res.meta as Meta) ?? null);
+    } catch (e) {
+      setErr('Gagal memuat ringkasan dashboard');
+      if (import.meta.env.DEV) console.error('[DashboardHome] load error', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [q, isSuperadmin, branchList.length]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-xs text-gray-600">Ringkasan kinerja & laporan</p>
+        </div>
+      </header>
+
+      {/* FilterBar */}
+      <section
+        className="card bg-[var(--color-surface)] border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Filter ringkas dashboard"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3">
+          {isSuperadmin && (
+            <label className="grid gap-1 text-sm">
+              <span className="text-[color:var(--color-text-default)]">Cabang</span>
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="input px-2 py-2 bg-white text-[color:var(--color-text-default)]"
+              >
+                <option value="">Semua Cabang</option>
+                {branchList.map(b => (
+                  <option key={b.id} value={String(b.id)}>{b.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Dari Tanggal</span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="input px-2 py-2 bg-white"
+            />
+          </label>
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Sampai Tanggal</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="input px-2 py-2 bg-white"
+            />
+          </label>
+
+          <div className="flex items-end gap-2 md:col-span-2">
+            <button
+              type="button"
+              onClick={() => load()}
+              className="btn-primary"
+              aria-label="Terapkan filter"
+            >
+              Terapkan
+            </button>
+            <button
+              type="button"
+              onClick={() => { setFrom(firstDayThisMonth()); setTo(today()); }}
+              className="btn-outline"
+              aria-label="Reset tanggal"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Error */}
+      {err ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {err}
+        </div>
+      ) : null}
+
+      {/* KPI Cards */}
+      <section
+        className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3"
+        aria-busy={loading ? 'true' : 'false'}
+      >
+        <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} />
+        <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} />
+        <KpiCard
+          title="Voucher Terpakai"
+          value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
+          loading={loading}
+        />
+        <KpiCard
+          title="Ongkir"
+          value={toIDR(Number(data?.delivery_shipping_fee ?? 0))}
+          loading={loading}
+        />
+        <KpiCard
+          title="Piutang Terbuka"
+          value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
+          loading={loading}
+        />
+      </section>
+
+      {/* Top Layanan */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Top Layanan</h2>
+        <div className="card bg-[var(--color-surface)] rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+          <div className="overflow-auto">
+            <table className="min-w-[560px] w-full text-sm">
+              <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Layanan</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th className="text-right">Pendapatan</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <RowSkeleton colSpan={3} />
+                ) : (data?.top_services?.length ?? 0) === 0 ? (
+                  <tr><td colSpan={3} className="px-3 py-4 text-center text-gray-500">Belum ada data</td></tr>
+                ) : (
+                  (data?.top_services ?? []).map((r) => (
+                    <tr
+                      key={`${r.service_id}-${r.name}`}
+                      className="hover:bg-black/5 transition-colors"
+                    >
+                      <Td>{r.name}</Td>
+                      <Td className="text-right">{r.qty}</Td>
+                      <Td className="text-right">{toIDR(Number(r.amount))}</Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Omzet harian & bulanan */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <SimpleTable
+          title="Omzet Harian"
+          cols={[
+            { label: 'Tanggal', align: 'left' },
+            { label: 'Omzet', align: 'right' },
+          ]}
+          loading={loading}
+          empty={(data?.omzet_daily?.length ?? 0) === 0}
+        >
+          {(data?.omzet_daily ?? []).map((d) => (
+            <tr key={d.date} className="hover:bg-black/5 transition-colors">
+              <Td>{d.date}</Td>
+              <Td className="text-right">{toIDR(Number(d.amount))}</Td>
+            </tr>
+          ))}
+        </SimpleTable>
+
+        <SimpleTable
+          title="Omzet Bulanan"
+          cols={[
+            { label: 'Bulan', align: 'left' },
+            { label: 'Omzet', align: 'right' },
+          ]}
+          loading={loading}
+          empty={(data?.omzet_monthly?.length ?? 0) === 0}
+        >
+          {(data?.omzet_monthly ?? []).map((m) => (
+            <tr key={m.month} className="hover:bg-black/5 transition-colors">
+              <Td>{m.month}</Td>
+              <Td className="text-right">{toIDR(Number(m.amount))}</Td>
+            </tr>
+          ))}
+        </SimpleTable>
+      </section>
+
+      {/* Meta */}
+      <footer className="text-xs text-gray-500">
+        Rentang data: {meta?.from ?? from} s.d. {meta?.to ?? to}
+        {meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ''}
+      </footer>
+    </div>
+  );
+}
+
+/* ------------------------
+   Subcomponents (UI)
+------------------------ */
+
+function KpiCard(props: { title: string; value: string; loading?: boolean }) {
+  return (
+    <div className="card bg-[var(--color-surface)] rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3">
+      <div className="text-xs text-gray-600">{props.title}</div>
+      <div className="mt-1 text-lg font-semibold min-h-[28px]">
+        {props.loading ? (
+          <span className="inline-block h-5 w-24 rounded bg-black/10 animate-pulse" />
+        ) : (
+          props.value
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton({ colSpan }: { colSpan: number }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-3 py-4">
+        <div className="flex items-center justify-center gap-3">
+          <span className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
+          <span className="h-4 w-40 rounded bg-black/10 animate-pulse" />
+          <span className="h-4 w-24 rounded bg-black/10 animate-pulse" />
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function SimpleTable(props: {
+  title: string;
+  cols: { label: string; align?: 'left' | 'right' }[];
+  loading: boolean;
+  empty: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h2 className="text-sm font-semibold mb-2">{props.title}</h2>
+      <div className="card bg-[var(--color-surface)] rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+        <div className="overflow-auto">
+          <table className="min-w-[380px] w-full text-sm">
+            <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+              <tr className="divide-x divide-[color:var(--color-border)]">
+                {props.cols.map((c) => (
+                  <Th key={c.label} className={c.align === 'right' ? 'text-right' : 'text-left'}>
+                    {c.label}
+                  </Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[color:var(--color-border)]">
+              {props.loading ? (
+                <RowSkeleton colSpan={props.cols.length} />
+              ) : props.empty ? (
+                <tr>
+                  <td colSpan={props.cols.length} className="px-3 py-4 text-center text-gray-500">
+                    Belum ada data
+                  </td>
+                </tr>
+              ) : (
+                props.children
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+</details>
+
 ### src\pages\deliveries\DeliveryDetail.tsx
 
 - SHA: `e8f0c3c5c22c`  
@@ -5520,76 +6386,225 @@ export default function ExpensesIndex() {
 
 ### src\pages\Login.tsx
 
-- SHA: `11145de7569b`  
-- Ukuran: 2 KB
+- SHA: `90dee148deeb`  
+- Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+// src/pages/Login.tsx
+import { useState, type FormEvent } from 'react';
 import type { AxiosError } from 'axios';
 import { useAuth, homePathByRole } from '../store/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function LoginPage() {
-    const nav = useNavigate();
-    const loc = useLocation();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    async function onSubmit(e: FormEvent) {
-        e.preventDefault();
-        setLoading(true); setError(null);
-        try {
-            const me = await useAuth.login({ email, password });
-            // refresh /auth/me agar branch/roles pasti sesuai presentasi backend
-            const profile = await useAuth.fetchMe();
-            const from = (loc.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
-            const fallback = homePathByRole(profile?.roles ?? me?.roles ?? []);
-            nav(from ?? fallback, { replace: true });
-        } catch (err: unknown) {
-            const ax = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
-            const msg =
-                ax.response?.data?.errors?.auth?.[0] ??
-                ax.response?.data?.message ??
-                'Login gagal';
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    return (
-        <form onSubmit={onSubmit} className="grid gap-3">
-            <h1 className="text-xl font-semibold">Masuk</h1>
-            {error && <div className="text-sm text-red-600">{error}</div>}
-            <input required type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border rounded px-3 py-2" />
-            <input required type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="border rounded px-3 py-2" />
-            <button disabled={loading} className="rounded bg-black text-white px-3 py-2">
-                {loading ? 'Memproses…' : 'Login'}
-            </button>
-        </form>
-    );
+/** Ikon mata (show) */
+function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
+      <circle cx="12" cy="12" r="3.2" />
+    </svg>
+  );
 }
+
+/** Ikon mata tertutup (hide) */
+function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M1 12s4-7 11-7a12 12 0 0 1 5.6 1.4" />
+      <path d="M23 12s-4 7-11 7A12 12 0 0 1 6.4 18.6" />
+      <line x1="3" y1="3" x2="21" y2="21" />
+    </svg>
+  );
+}
+
+export default function LoginPage() {
+  const nav = useNavigate();
+  const loc = useLocation();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const me = await useAuth.login({ email, password });
+      const profile = await useAuth.fetchMe();
+      const from = (loc.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
+      const fallback = homePathByRole(profile?.roles ?? me?.roles ?? []);
+      nav(from ?? fallback, { replace: true });
+    } catch (err: unknown) {
+      const ax = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
+      const msg =
+        ax.response?.data?.errors?.auth?.[0] ??
+        ax.response?.data?.message ??
+        'Login gagal';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main
+      className="
+        text-[color:var(--color-text)] overflow-hidden
+      "
+    >
+      {/* Layer gradient halus */}
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none absolute inset-0 -z-10
+          [background:radial-gradient(1000px_600px_at_50%_-120px,rgba(51,102,255,0.10),transparent_55%)]
+        "
+      />
+
+      {/* Card autentikasi */}
+      <section
+        aria-labelledby="auth-title"
+        className="
+          w-full max-w-[420px] rounded-2xl border
+          border-[color:var(--color-border)]
+          bg-[color:var(--color-bg)]
+          p-6 sm:p-8 shadow-[var(--shadow-2)]
+        "
+      >
+        <header className="mb-6 sm:mb-8 text-center">
+          <div className="text-xs font-semibold tracking-[0.18em] text-[color:var(--color-primary)]">
+            SALVE
+          </div>
+          <h1 id="auth-title" className="mt-1 text-2xl font-semibold">Masuk</h1>
+        </header>
+
+        {error && (
+          <div
+            role="alert"
+            className="
+              mb-4 rounded-md border px-3 py-2 text-sm
+              border-[color:var(--color-danger)]
+              text-[color:var(--color-danger)]
+              bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]
+            "
+          >
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} aria-busy={loading} className="space-y-4">
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <input
+              id="email"
+              required
+              type="email"
+              placeholder="nama@domain.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              disabled={loading}
+              aria-invalid={!!error}
+              className="
+                block w-full rounded-md
+                border border-[color:var(--color-border)]
+                bg-white/95 text-[color:var(--color-text)]
+                placeholder:text-slate-500
+                px-3 py-2
+                focus:outline-none focus-visible:shadow-[var(--focus-ring)]
+                disabled:opacity-60
+              "
+            />
+          </div>
+
+          {/* Password + toggle show/hide */}
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="text-sm font-medium">Kata sandi</label>
+            <div className="relative">
+              <input
+                id="password"
+                required
+                type={showPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={loading}
+                aria-invalid={!!error}
+                className="
+                  block w-full rounded-md
+                  border border-[color:var(--color-border)]
+                  bg-white/95 text-[color:var(--color-text)]
+                  placeholder:text-slate-500
+                  px-3 py-2 pr-12
+                  focus:outline-none focus-visible:shadow-[var(--focus-ring)]
+                  disabled:opacity-60
+                "
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((v) => !v)}
+                disabled={loading}
+                aria-label={showPwd ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                aria-pressed={showPwd}
+                className="
+                  absolute right-1.5 top-1/2 -translate-y-1/2
+                  rounded-md px-2 py-1
+                  text-slate-600 hover:bg-[color:var(--blue-100)]
+                  focus:outline-none focus-visible:shadow-[var(--focus-ring)]
+                  disabled:opacity-60
+                "
+              >
+                {showPwd ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="
+              inline-flex w-full items-center justify-center rounded-lg
+              bg-[color:var(--color-primary)] px-4 py-2.5
+              font-medium text-[color:var(--color-on-primary)]
+              transition hover:shadow-[var(--shadow-2)] active:scale-[.98]
+              focus:outline-none focus-visible:shadow-[var(--focus-ring)]
+              disabled:opacity-60
+            "
+          >
+            {loading ? 'Memproses…' : 'Masuk'}
+          </button>
+
+        </form>
+      </section>
+    </main>
+  );
+}
+
 ```
 </details>
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `ef1231b373be`  
-- Ukuran: 12 KB
+- SHA: `37985d01f821`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/orders/OrderDetail.tsx
 import { useCallback, useEffect, useState } from 'react';
 import {
-    getOrder,
-    updateOrderStatus,
-    getOrderReceiptHtml,
-    openOrderReceipt,
+  getOrder,
+  updateOrderStatus,
+  getOrderReceiptHtml,
+  openOrderReceipt,
 } from '../../api/orders';
 import ReceiptPreview from '../../components/ReceiptPreview';
 import type { Order, OrderBackendStatus } from '../../types/orders';
@@ -5600,237 +6615,285 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
 import { isAxiosError } from 'axios';
 
-
 type ApiErrorResponse = {
-    message?: string;
-    errors?: Record<string, string[] | string>;
+  message?: string;
+  errors?: Record<string, string[] | string>;
 };
 
 export default function OrderDetail(): React.ReactElement {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
-    const [row, setRow] = useState<Order | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string | null>(null);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [row, setRow] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-    const [receiptOpen, setReceiptOpen] = useState(false);
-    const [receiptHtml, setReceiptHtml] = useState<string>('');
-    const [receiptLoading, setReceiptLoading] = useState(false);
-    const [receiptErr, setReceiptErr] = useState<string | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptHtml, setReceiptHtml] = useState<string>('');
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [receiptErr, setReceiptErr] = useState<string | null>(null);
 
-    const loadReceipt = useCallback(async () => {
-        if (!id) return;
-        setReceiptLoading(true);
-        setReceiptErr(null);
-        try {
-            const html = await getOrderReceiptHtml(id);
-            setReceiptHtml(html);
-        } catch {
-            setReceiptErr('Gagal memuat struk');
-        } finally {
-            setReceiptLoading(false);
+  const loadReceipt = useCallback(async () => {
+    if (!id) return;
+    setReceiptLoading(true);
+    setReceiptErr(null);
+    try {
+      const html = await getOrderReceiptHtml(id);
+      setReceiptHtml(html);
+    } catch {
+      setReceiptErr('Gagal memuat struk');
+    } finally {
+      setReceiptLoading(false);
+    }
+  }, [id]);
+
+  const refresh = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await getOrder(id);
+      setRow(res.data);
+    } catch {
+      setErr('Gagal memuat detail');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const onTransit = useCallback(async (next: OrderBackendStatus) => {
+    if (!id) return;
+    try {
+      await updateOrderStatus(id, next);
+      await refresh();
+    } catch (e: unknown) {
+      let msg = 'Gagal ubah status';
+      if (isAxiosError<ApiErrorResponse>(e)) {
+        const api = e.response?.data;
+        const errMap = api?.errors;
+
+        const nextVal = errMap?.['next'];
+        let detail: string | undefined;
+        if (typeof nextVal === 'string') detail = nextVal;
+        else if (Array.isArray(nextVal)) detail = nextVal[0];
+        else if (errMap) {
+          const v = Object.values(errMap)[0];
+          detail = Array.isArray(v) ? v[0] : (typeof v === 'string' ? v : undefined);
         }
-    }, [id]);
 
-    const refresh = useCallback(async () => {
-        if (!id) return;
-        setLoading(true);
-        setErr(null);
-        try {
-            const res = await getOrder(id);
-            setRow(res.data);
-        } catch {
-            setErr('Gagal memuat detail');
-        } finally {
-            setLoading(false);
-        }
-    }, [id]);
+        msg = api?.message ?? detail ?? msg;
+      }
+      alert(msg);
+    }
+  }, [id, refresh]);
 
-    useEffect(() => { void refresh(); }, [refresh]);
-
-    const onTransit = useCallback(async (next: OrderBackendStatus) => {
-        if (!id) return;
-        try {
-            await updateOrderStatus(id, next);
-            await refresh();
-        } catch (e: unknown) {
-            let msg = 'Gagal ubah status';
-            if (isAxiosError<ApiErrorResponse>(e)) {
-                const api = e.response?.data;
-                const errMap = api?.errors;
-
-                const nextVal = errMap?.['next'];
-                let detail: string | undefined;
-                if (typeof nextVal === 'string') detail = nextVal;
-                else if (Array.isArray(nextVal)) detail = nextVal[0];
-                else if (errMap) {
-                    const v = Object.values(errMap)[0];
-                    detail = Array.isArray(v) ? v[0] : (typeof v === 'string' ? v : undefined);
-                }
-
-                msg = api?.message ?? detail ?? msg;
-            }
-            alert(msg);
-        }
-    }, [id, refresh]);
-
-    return (
-        <div className="space-y-3">
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-            {err && <div className="text-sm text-red-600">{err}</div>}
-            {!loading && !row && !err && <div className="text-sm text-muted-foreground">Tidak ditemukan</div>}
-            {row && (
-                <>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-sm font-semibold">Order #{row.id}</div>
-                            <div className="text-xs text-muted-foreground">{row.customer?.name ?? '-'}</div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {/* Tombol buka struk di tab baru */}
-                            <button
-                                type="button"
-                                className="px-3 py-1.5 text-xs border rounded"
-                                onClick={() => openOrderReceipt(row.id)}             // GET /orders/{id}/receipt -> tab baru
-                                title="Buka struk di tab baru"
-                            >
-                                Receipt
-                            </button>
-
-                            {/* Toggle preview di halaman */}
-                            <button
-                                type="button"
-                                className="px-3 py-1.5 text-xs border rounded"
-                                onClick={async () => {
-                                    const next = !receiptOpen;
-                                    setReceiptOpen(next);
-                                    if (next && !receiptHtml) {
-                                        await loadReceipt();
-                                    }
-                                }}
-                                title="Tampilkan/ sembunyikan preview struk"
-                            >
-                                {receiptOpen ? 'Tutup Preview' : 'Preview Receipt'}
-                            </button>
-
-                            {/* Shortcut ke halaman Piutang (F10) bila masih ada sisa */}
-                            {(row.due_amount ?? 0) > 0 && (
-                                <button
-                                    type="button"
-                                    className="px-3 py-1.5 text-xs rounded bg-black text-white"
-                                    onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? '')}`)}
-                                    title="Menuju halaman Piutang untuk pelunasan"
-                                >
-                                    Pelunasan
-                                </button>
-                            )}
-
-                            <OrderStatusStepper backendStatus={row.status} />
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl border p-3 overflow-auto">
-                        <table className="min-w-full text-sm">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-3 py-2 text-left">Layanan</th>
-                                    <th className="px-3 py-2 text-left">Qty</th>
-                                    <th className="px-3 py-2 text-left">Harga</th>
-                                    <th className="px-3 py-2 text-left">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(row.items ?? []).map((it) => (
-                                    <tr key={it.id} className="border-t">
-                                        <td className="px-3 py-2">{it.service?.name ?? it.service_id}</td>
-                                        <td className="px-3 py-2">{it.qty}</td>
-                                        <td className="px-3 py-2">{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</td>
-                                        <td className="px-3 py-2">{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        <div className="flex justify-end gap-6 mt-3 text-sm">
-                            <div><span className="text-muted-foreground">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                            <div><span className="text-muted-foreground">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                            <div><span className="text-muted-foreground">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                            <div><span className="text-muted-foreground">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                        </div>
-                    </div>
-
-                    <OrderPhotosGallery
-                        key={`${row.id}:${row.photos?.length ?? 0}`}
-                        photos={row.photos ?? []}
-                    />
-                    <div className="mt-3">
-                        <OrderPhotosUpload
-                            orderId={row.id}
-                            onUploaded={async () => { await refresh(); }}
-                        />
-                    </div>
-
-                    {/* RECEIPT PREVIEW */}
-                    {receiptOpen && (
-                        <div className="rounded-2xl border">
-                            <div className="flex items-center justify-between px-3 py-2 border-b">
-                                <div className="text-sm font-semibold">Receipt Preview</div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        className="px-3 py-1.5 text-xs border rounded"
-                                        onClick={loadReceipt}
-                                        disabled={receiptLoading}
-                                    >
-                                        {receiptLoading ? 'Memuat…' : 'Reload'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="px-3 py-1.5 text-xs border rounded"
-                                        onClick={() => openOrderReceipt(row.id, true)} // auto-print di tab baru (opsional)
-                                        title="Buka & print"
-                                    >
-                                        Open & Print
-                                    </button>
-                                </div>
-                            </div>
-
-                            {receiptErr && <div className="p-3 text-xs text-red-600">{receiptErr}</div>}
-                            {!receiptErr && receiptLoading && (
-                                <div className="p-3 text-xs text-muted-foreground">Memuat struk…</div>
-                            )}
-                            {!receiptErr && !receiptLoading && !receiptHtml && (
-                                <div className="p-3 text-xs text-muted-foreground">Belum ada HTML struk.</div>
-                            )}
-                            {!receiptErr && !!receiptHtml && (
-                                <ReceiptPreview html={receiptHtml} height="70vh" />
-                            )}
-                        </div>
-                    )}
-
-                    <div className="rounded-2xl border p-3 flex flex-wrap gap-2">
-                        {getAllowedNext(row.status).map((s) => (
-                            <button
-                                key={s}
-                                className="border rounded px-2 py-1 text-xs"
-                                onClick={() => void onTransit(s)}
-                                title={`Set status ke ${s}`}
-                            >
-                                Set {s}
-                            </button>
-                        ))}
-
-                        {getAllowedNext(row.status).length === 0 && (
-                            <span className="text-xs text-muted-foreground">
-                                Status terminal — tidak ada transisi.
-                            </span>
-                        )}
-                    </div>
-                </>
-            )}
+  return (
+    <div className="space-y-4">
+      {loading && <div className="text-sm text-gray-600">Memuat…</div>}
+      {err && (
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {err}
         </div>
-    );
+      )}
+      {!loading && !row && !err && (
+        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-6 text-sm text-gray-500">
+          Tidak ditemukan
+        </div>
+      )}
+
+      {row && (
+        <>
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold tracking-tight">Order #{row.id}</div>
+              <div className="text-xs text-gray-600">{row.customer?.name ?? '-'}</div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Buka struk tab baru */}
+              <button
+                type="button"
+                className="btn-outline px-3 py-1.5 text-xs"
+                onClick={() => openOrderReceipt(row.id)}
+                title="Buka struk di tab baru"
+              >
+                Receipt
+              </button>
+
+              {/* Toggle preview di halaman */}
+              <button
+                type="button"
+                className="btn-outline px-3 py-1.5 text-xs"
+                onClick={async () => {
+                  const next = !receiptOpen;
+                  setReceiptOpen(next);
+                  if (next && !receiptHtml) {
+                    await loadReceipt();
+                  }
+                }}
+                title="Tampilkan/sembunyikan preview struk"
+              >
+                {receiptOpen ? 'Tutup Preview' : 'Preview Receipt'}
+              </button>
+
+              {/* Shortcut pelunasan bila masih ada sisa */}
+              {(row.due_amount ?? 0) > 0 && (
+                <button
+                  type="button"
+                  className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)]"
+                  onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? '')}`)}
+                  title="Menuju halaman Piutang untuk pelunasan"
+                >
+                  Pelunasan
+                </button>
+              )}
+
+              {/* Stepper status (komponen existing) */}
+              <OrderStatusStepper backendStatus={row.status} />
+            </div>
+          </div>
+
+          {/* Items table */}
+          <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                  <tr className="divide-x divide-[color:var(--color-border)]">
+                    <Th>Layanan</Th>
+                    <Th>Qty</Th>
+                    <Th>Harga</Th>
+                    <Th>Total</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[color:var(--color-border)]">
+                  {(row.items ?? []).map((it) => (
+                    <tr key={it.id} className="hover:bg-black/5 transition-colors">
+                      <Td>{it.service?.name ?? it.service_id}</Td>
+                      <Td>{it.qty}</Td>
+                      <Td>
+                        {Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                      </Td>
+                      <Td>
+                        {Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals */}
+            <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
+              <div>
+                <span className="text-gray-600">Subtotal</span>{' '}
+                <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
+              </div>
+              <div>
+                <span className="text-gray-600">Diskon</span>{' '}
+                <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
+              </div>
+              <div>
+                <span className="text-gray-600">Grand</span>{' '}
+                <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
+              </div>
+              <div>
+                <span className="text-gray-600">Sisa</span>{' '}
+                <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
+              </div>
+            </div>
+          </div>
+
+          {/* Photos */}
+          <OrderPhotosGallery
+            key={`${row.id}:${row.photos?.length ?? 0}`}
+            photos={row.photos ?? []}
+          />
+          <div className="mt-3">
+            <OrderPhotosUpload
+              orderId={row.id}
+              onUploaded={async () => { await refresh(); }}
+            />
+          </div>
+
+          {/* Receipt Preview */}
+          {receiptOpen && (
+            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--color-border)]">
+                <div className="text-sm font-semibold">Receipt Preview</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn-outline px-3 py-1.5 text-xs disabled:opacity-50"
+                    onClick={loadReceipt}
+                    disabled={receiptLoading}
+                    title="Muat ulang HTML struk"
+                  >
+                    {receiptLoading ? 'Memuat…' : 'Reload'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline px-3 py-1.5 text-xs"
+                    onClick={() => openOrderReceipt(row.id, true)}
+                    title="Buka & print"
+                  >
+                    Open & Print
+                  </button>
+                </div>
+              </div>
+
+              {receiptErr && <div className="p-3 text-xs text-red-600">{receiptErr}</div>}
+              {!receiptErr && receiptLoading && (
+                <div className="p-3 text-xs text-gray-600">Memuat struk…</div>
+              )}
+              {!receiptErr && !receiptLoading && !receiptHtml && (
+                <div className="p-3 text-xs text-gray-600">Belum ada HTML struk.</div>
+              )}
+              {!receiptErr && !!receiptHtml && (
+                <ReceiptPreview html={receiptHtml} height="70vh" />
+              )}
+            </div>
+          )}
+
+          {/* Status transitions */}
+          <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 flex flex-wrap gap-2">
+            {getAllowedNext(row.status).map((s) => (
+              <button
+                key={s}
+                className="btn-outline px-2 py-1 text-xs"
+                onClick={() => void onTransit(s)}
+                title={`Set status ke ${s}`}
+              >
+                Set {s}
+              </button>
+            ))}
+
+            {getAllowedNext(row.status).length === 0 && (
+              <span className="text-xs text-gray-600">
+                Status terminal — tidak ada transisi.
+              </span>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------
+   Sub-komponen presentasional (UI-only)
+------------------------- */
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+      {children}
+    </th>
+  );
+}
+function Td({ children }: { children: React.ReactNode }) {
+  return <td className="px-3 py-2 align-middle">{children}</td>;
 }
 
 ```
@@ -5838,11 +6901,12 @@ export default function OrderDetail(): React.ReactElement {
 
 ### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `47194ecaa000`  
-- Ukuran: 4 KB
+- SHA: `8b3aedb32eb3`  
+- Ukuran: 5 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/orders/OrderReceipt.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder } from '../../api/orders';
@@ -5851,102 +6915,159 @@ import type { Order } from '../../types/orders';
 import { toIDR } from '../../utils/money';
 
 export default function OrderReceipt(): React.ReactElement {
-    const { id } = useParams<{ id: string }>();
-    const [html, setHtml] = useState<string>('');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [waPhone, setWaPhone] = useState<string>('');
-    const [order, setOrder] = useState<Order | null>(null);
+  const { id } = useParams<{ id: string }>();
+  const [html, setHtml] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [waPhone, setWaPhone] = useState<string>('');
+  const [order, setOrder] = useState<Order | null>(null);
 
-    useEffect(() => {
-        (async () => {
-            try {
-                if (!id) return;
-                const h = await getOrderReceiptHtml(id);
-                setHtml(h);
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!id) return;
+        const h = await getOrderReceiptHtml(id);
+        setHtml(h);
 
-                try {
-                    const orderRes = await getOrder(id);
-                    const ord = orderRes?.data ?? null;
-                    if (ord) {
-                        setOrder(ord);
-                        const wa = ord.customer?.whatsapp ?? '';
-                        if (wa) setWaPhone(wa);
-                    }
-                } catch {
-                    // Biarkan tetap jalan meski gagal ambil order (struk tetap tampil)
-                }
-            } catch (e: unknown) {
-                setError((e as Error).message || 'Gagal memuat struk');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [id]);
-
-    if (loading) return <div className="p-4">Memuat struk…</div>;
-    if (error) return <div className="p-4 text-red-600">{error}</div>;
-
-    const onPrint = () => window.print();
-
-    const onSendWA = () => {
-        if (!waPhone) return;
-
-        // Default message kalau order belum kebaca (harusnya jarang terjadi)
-        let message = 'Halo, berikut struk transaksi Anda. Terima kasih 🙏';
-
-        if (order) {
-            const name = order.customer?.name ?? 'Pelanggan';
-            const nomor = order.invoice_no ?? order.number;
-            const total = toIDR(order.grand_total);
-            const sisa = order.due_amount;
-
-            if (sisa > 0) {
-                // MODE TAGIHAN / JATUH TEMPO
-                message = [
-                    `Halo ${name},`,
-                    `Ini tagihan laundry Anda dengan nomor ${nomor}.`,
-                    `Total: ${total}.`,
-                    `Sisa tagihan: ${toIDR(sisa)}.`,
-                    `Mohon melakukan pelunasan sebelum jatuh tempo. Terima kasih 🙏`,
-                ].join('\n');
-            } else {
-                // MODE KUITANSI (SUDAH LUNAS)
-                message = [
-                    `Halo ${name},`,
-                    `Ini kuitansi pelunasan transaksi laundry Anda dengan nomor ${nomor}.`,
-                    `Total dibayar: ${total}.`,
-                    `Terima kasih telah menggunakan layanan kami 🙏`,
-                ].join('\n');
-            }
+        try {
+          const orderRes = await getOrder(id);
+          const ord = orderRes?.data ?? null;
+          if (ord) {
+            setOrder(ord);
+            const wa = ord.customer?.whatsapp ?? '';
+            if (wa) setWaPhone(wa);
+          }
+        } catch {
+          // Biarkan tetap jalan meski gagal ambil order (struk tetap tampil)
         }
+      } catch (e: unknown) {
+        setError((e as Error).message || 'Gagal memuat struk');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [id]);
 
-        const url = buildWhatsAppLink(waPhone, message);
-        window.open(url, '_blank');
-    };
-
+  if (loading) {
     return (
-        <div className="p-3 space-y-3">
-            <div className="flex items-center gap-2 print:hidden">
-                <button className="px-3 py-2 rounded border" onClick={onPrint}>Print</button>
-                <input
-                    type="tel"
-                    placeholder="No. WA (62…/08…)"
-                    value={waPhone}
-                    onChange={(e) => setWaPhone(e.target.value)}
-                    className="px-3 py-2 rounded border"
-                />
-                <button
-                    className="px-3 py-2 rounded bg-black text-white dark:bg-white dark:text-black"
-                    onClick={onSendWA}
-                    disabled={!waPhone}
-                >
-                    Kirim WhatsApp
-                </button>
-            </div>
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="p-4 max-w-3xl mx-auto">
+        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
+          <div className="h-4 w-40 rounded bg-black/10 animate-pulse mb-3" />
+          <div className="h-3 w-full rounded bg-black/10 animate-pulse mb-2" />
+          <div className="h-3 w-5/6 rounded bg-black/10 animate-pulse mb-2" />
+          <div className="h-3 w-4/6 rounded bg-black/10 animate-pulse" />
         </div>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 max-w-3xl mx-auto">
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  const onPrint = () => window.print();
+
+  const onSendWA = () => {
+    if (!waPhone) return;
+
+    // Default message kalau order belum kebaca (harusnya jarang terjadi)
+    let message = 'Halo, berikut struk transaksi Anda. Terima kasih 🙏';
+
+    if (order) {
+      const name = order.customer?.name ?? 'Pelanggan';
+      const nomor = order.invoice_no ?? order.number;
+      const total = toIDR(order.grand_total);
+      const sisa = order.due_amount;
+
+      if (sisa > 0) {
+        // MODE TAGIHAN / JATUH TEMPO
+        message = [
+          `Halo ${name},`,
+          `Ini tagihan laundry Anda dengan nomor ${nomor}.`,
+          `Total: ${total}.`,
+          `Sisa tagihan: ${toIDR(sisa)}.`,
+          `Mohon melakukan pelunasan sebelum jatuh tempo. Terima kasih 🙏`,
+        ].join('\n');
+      } else {
+        // MODE KUITANSI (SUDAH LUNAS)
+        message = [
+          `Halo ${name},`,
+          `Ini kuitansi pelunasan transaksi laundry Anda dengan nomor ${nomor}.`,
+          `Total dibayar: ${total}.`,
+          `Terima kasih telah menggunakan layanan kami 🙏`,
+        ].join('\n');
+      }
+    }
+
+    const url = buildWhatsAppLink(waPhone, message);
+    window.open(url, '_blank');
+  };
+
+  return (
+    <div className="p-4 max-w-3xl mx-auto space-y-3">
+      {/* Toolbar (print hidden) */}
+      <div className="print:hidden sticky top-0 z-10">
+        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-3 bg-[var(--color-surface)]">
+          <div className="flex flex-col md:flex-row md:items-end gap-2">
+            <div className="flex gap-2">
+              <button
+                className="btn-outline px-3 py-2"
+                onClick={onPrint}
+                aria-label="Cetak struk"
+                title="Cetak struk"
+              >
+                Print
+              </button>
+            </div>
+
+            <div className="flex-1 md:ml-2">
+              <label className="grid gap-1 text-sm">
+                <span className="text-[color:var(--color-text-default)]">Nomor WhatsApp</span>
+                <input
+                  type="tel"
+                  placeholder="No. WA (62…/08…)"
+                  value={waPhone}
+                  onChange={(e) => setWaPhone(e.target.value)}
+                  className="input px-3 py-2"
+                  aria-label="Nomor WhatsApp"
+                />
+              </label>
+            </div>
+
+            <div className="flex gap-2 md:ml-auto">
+              <button
+                className="btn-primary disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onSendWA}
+                disabled={!waPhone}
+                aria-label="Kirim struk via WhatsApp"
+                title="Kirim WhatsApp"
+              >
+                Kirim WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Preview struk */}
+      <div
+        className="bg-white rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 print:shadow-none print:border-0 print:p-0"
+        role="document"
+        aria-label="Pratinjau struk"
+      >
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+    </div>
+  );
 }
 
 ```
@@ -5954,8 +7075,8 @@ export default function OrderReceipt(): React.ReactElement {
 
 ### src\pages\orders\OrdersIndex.tsx
 
-- SHA: `3741069e8269`  
-- Ukuran: 6 KB
+- SHA: `8f7716c427e2`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -6034,80 +7155,139 @@ export default function OrdersIndex(): React.ReactElement {
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          className="border rounded px-3 py-2"
-          placeholder="Cari kode/nama/phone…"
-          value={q}
-          onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
-        />
-        <select
-          className="border rounded px-3 py-2"
-          value={status}
-          onChange={(e) => { const v = e.target.value as OrderBackendStatus | ''; dlog('status select', v); setStatus(v); }}
-        >
-          <option value="">Semua Status</option>
-          <option value="QUEUE">QUEUE</option>
-          <option value="WASHING">WASHING</option>
-          <option value="DRYING">DRYING</option>
-          <option value="IRONING">IRONING</option>
-          <option value="READY">READY</option>
-          <option value="DELIVERING">DELIVERING</option>
-          <option value="PICKED_UP">PICKED_UP</option>
-          <option value="CANCELED">CANCELED</option>
-        </select>
-        <button className="border rounded px-3 py-2" onClick={onApply}>Terapkan</button>
-        <Link to="/pos" className="ml-auto rounded bg-black text-white px-3 py-2">Buat Transaksi</Link>
-      </div>
+    <div className="space-y-4">
+      {/* FilterBar */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Filter orders"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3">
+          <label className="grid gap-1 text-sm md:col-span-2">
+            <span className="text-[color:var(--color-text-default)]">Pencarian</span>
+            <input
+              className="input px-3 py-2"
+              placeholder="Cari kode/nama/phone…"
+              value={q}
+              onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
+              aria-label="Cari pesanan"
+            />
+          </label>
 
-      {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-      {error && <div className="text-sm text-red-600">{error}</div>}
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Status</span>
+            <select
+              className="input px-3 py-2"
+              value={status}
+              onChange={(e) => { const v = e.target.value as OrderBackendStatus | ''; dlog('status select', v); setStatus(v); }}
+              aria-label="Filter status"
+            >
+              <option value="">Semua Status</option>
+              <option value="QUEUE">QUEUE</option>
+              <option value="WASHING">WASHING</option>
+              <option value="DRYING">DRYING</option>
+              <option value="IRONING">IRONING</option>
+              <option value="READY">READY</option>
+              <option value="DELIVERING">DELIVERING</option>
+              <option value="PICKED_UP">PICKED_UP</option>
+              <option value="CANCELED">CANCELED</option>
+            </select>
+          </label>
 
-      {!loading && !error && rows.length === 0 && <div className="text-sm text-muted-foreground">Data kosong</div>}
+          <div className="flex items-end gap-2">
+            <button className="btn-primary" onClick={onApply}>Terapkan</button>
+            {/* Tombol reset opsional bila ada kebutuhan nanti */}
+          </div>
 
+          <div className="flex items-end md:justify-end">
+            <Link to="/pos" className="btn-primary md:ml-auto text-[color:var(--color-brand-on)]" aria-label="Buat transaksi baru">
+              Buat Transaksi
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Loading / Error / Empty */}
+      {loading && (
+        <div className="text-sm text-gray-600">
+          Memuat…
+        </div>
+      )}
+
+      {error && (
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && rows.length === 0 && (
+        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-6 text-sm text-gray-500">
+          Data kosong
+        </div>
+      )}
+
+      {/* Table */}
       {rows.length > 0 && (
-        <div className="overflow-auto rounded border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left">Kode</th>
-                <th className="px-3 py-2 text-left">Customer</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Total</th>
-                <th className="px-3 py-2 text-left">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((o) => (
-                <tr key={o.id} className="border-t">
-                  <td className="px-3 py-2">{o.id}</td>
-                  <td className="px-3 py-2">{o.customer?.name ?? '-'}</td>
-                  <td className="px-3 py-2">{o.status}</td>
-                  <td className="px-3 py-2">{Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Link to={`/orders/${o.id}`} className="underline text-xs">Detail</Link>
-                      <button
-                        type="button"
-                        className="text-xs border rounded px-2 py-1"
-                        onClick={() => void onOpenReceipt(o.id)}
-                        title="Lihat/Cetak struk"
-                      >
-                        Receipt
-                      </button>
-                    </div>
-                  </td>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Kode</Th>
+                  <Th>Customer</Th>
+                  <Th>Status</Th>
+                  <Th>Total</Th>
+                  <Th>Aksi</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {rows.map((o) => (
+                  <tr key={o.id} className="hover:bg-black/5 transition-colors">
+                    <Td>{o.id}</Td>
+                    <Td>{o.customer?.name ?? '-'}</Td>
+                    <Td><StatusBadge status={o.status} /></Td>
+                    <Td>
+                      {Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <Link to={`/orders/${o.id}`} className="text-xs text-[color:var(--color-brand-primary)] hover:underline">
+                          Detail
+                        </Link>
+                        <button
+                          type="button"
+                          className="text-xs btn-outline px-2 py-1"
+                          onClick={() => void onOpenReceipt(o.id)}
+                          title="Lihat/Cetak struk"
+                        >
+                          Receipt
+                        </button>
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {meta && meta.last_page > 1 && (
-            <div className="flex items-center justify-end gap-2 p-2">
-              <button disabled={page <= 1} className="border rounded px-2 py-1" onClick={onPrev}>Prev</button>
-              <div className="text-xs">Page {meta.current_page} / {meta.last_page}</div>
-              <button disabled={page >= meta.last_page} className="border rounded px-2 py-1" onClick={onNext}>Next</button>
+            <div className="flex items-center justify-end gap-2 p-2 border-t border-[color:var(--color-border)]">
+              <button
+                disabled={page <= 1}
+                className="btn-outline px-2 py-1 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onPrev}
+              >
+                Prev
+              </button>
+              <div className="text-xs text-gray-600">
+                Page {meta.current_page} / {meta.last_page}
+              </div>
+              <button
+                disabled={page >= meta.last_page}
+                className="btn-outline px-2 py-1 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onNext}
+              >
+                Next
+              </button>
             </div>
           )}
         </div>
@@ -6116,13 +7296,41 @@ export default function OrdersIndex(): React.ReactElement {
   );
 }
 
+/* ------------------------
+   Sub-komponen presentasional
+------------------------- */
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+      {children}
+    </th>
+  );
+}
+
+function Td({ children }: { children: React.ReactNode }) {
+  return <td className="px-3 py-2 align-middle">{children}</td>;
+}
+
+function StatusBadge({ status }: { status: OrderBackendStatus }) {
+  // Murni presentasi (warna/varian), tidak mengubah logika data
+  const clsBase = 'chip text-xs';
+  const cls =
+    status === 'CANCELED'
+      ? 'chip--danger'
+      : status === 'READY' || status === 'PICKED_UP'
+      ? 'chip--solid'
+      : 'chip--subtle';
+  return <span className={`${clsBase} ${cls}`}>{status}</span>;
+}
+
 ```
 </details>
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `3d31976c9837`  
-- Ukuran: 18 KB
+- SHA: `a3076e7526f0`  
+- Ukuran: 20 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -6130,18 +7338,16 @@ export default function OrdersIndex(): React.ReactElement {
 import { useEffect, useMemo, useState, useRef } from 'react';
 import ProductSearch from '../../components/pos/ProductSearch';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
-import { createOrder } from '../../api/orders';
+import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
 import type { OrderCreatePayload } from '../../types/orders';
+import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
+import type { RoleName } from '../../api/client';
+import CustomerPicker from '../../components/customers/CustomerPicker';
+import { uploadOrderPhotos } from '../../api/orderPhotos';
+import { applyVoucherToOrder } from '../../api/vouchers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/useAuth';
-import type { RoleName } from '../../api/client';
-import { createOrderPayment } from '../../api/orders';
-import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
-import CustomerPicker from "../../components/customers/CustomerPicker";
-import { uploadOrderPhotos } from "../../api/orderPhotos";
 import { toIDR } from '../../utils/money';
-import { getOrder } from '../../api/orders';
-import { applyVoucherToOrder } from '../../api/vouchers';
 
 type HttpError = { response?: { status?: number; data?: unknown } };
 
@@ -6158,12 +7364,14 @@ const dlog = (...args: unknown[]) => {
   if (import.meta.env?.DEV) console.log('[POSPage]', ...args);
 };
 
-export default function POSPage(): React.ReactElement {
+export default function POSPage() {
   const nav = useNavigate();
   const { user, hasRole } = useAuth;
   const branchId = user?.branch_id ? String(user.branch_id) : '';
+
+  // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
-  const [customerId, setCustomerId] = useState<string>("");
+  const [customerId, setCustomerId] = useState<string>('');
   const [discount, setDiscount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -6171,20 +7379,28 @@ export default function POSPage(): React.ReactElement {
   const PAY_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir'];
   const canPay = hasRole(PAY_ROLES);
 
+  // photos
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
   const [afterFiles, setAfterFiles] = useState<File[]>([]);
   const beforeRef = useRef<HTMLInputElement>(null);
   const afterRef = useRef<HTMLInputElement>(null);
-  const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
 
+  // device / UI
+  const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+
+  // payment
   type PayMode = 'PENDING' | 'DP' | 'FULL';
   const [mode, setMode] = useState<PayMode>('PENDING');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [dpAmount, setDpAmount] = useState<number>(0);
+
+  // voucher
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
-  const subtotal = useMemo(() => items.reduce((s, it) => s + (it.price * it.qty), 0), [items]);
+  // totals
+  const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
   const payableNow = useMemo(() => {
     if (mode === 'PENDING') return 0;
@@ -6192,23 +7408,23 @@ export default function POSPage(): React.ReactElement {
     return total;
   }, [mode, dpAmount, total]);
   const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
-  const canSubmit = useMemo(() => {
-    return items.length > 0 && !!customerId && !loading;
-  }, [items.length, customerId, loading]);
+  const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
 
+  // logs
   useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
   useEffect(() => { dlog('items changed', items); }, [items]);
   useEffect(() => { dlog('discount changed', discount); }, [discount]);
   useEffect(() => { dlog('notes changed', notes); }, [notes]);
   useEffect(() => { dlog('totals', { subtotal, grand }); }, [subtotal, grand]);
 
+  // cart ops
   function addItem(svc: { id: string; name: string; unit: string; price_effective: number }) {
     dlog('addItem clicked', svc);
     setItems((prev) => {
       const found = prev.find((p) => p.service_id === svc.id);
       if (found) {
-        const next = prev.map((p) => p.service_id === svc.id ? { ...p, qty: p.qty + 1 } : p);
-        dlog('increment qty', { service_id: svc.id, nextQty: (found.qty + 1) });
+        const next = prev.map((p) => (p.service_id === svc.id ? { ...p, qty: p.qty + 1 } : p));
+        dlog('increment qty', { service_id: svc.id, nextQty: found.qty + 1 });
         return next;
       }
       const next = [...prev, { service_id: svc.id, name: svc.name, unit: svc.unit, price: svc.price_effective, qty: 1 }];
@@ -6216,94 +7432,56 @@ export default function POSPage(): React.ReactElement {
       return next;
     });
   }
+  const onChangeQty = (id: string, qty: number) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, qty } : p)));
+  const onChangeNote = (id: string, note: string) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, note } : p)));
+  const onRemove = (id: string) => setItems((prev) => prev.filter((p) => p.service_id !== id));
 
-  const onChangeQty = (id: string, qty: number) => {
-    dlog('onChangeQty', { id, qty });
-    setItems((prev) => prev.map((p) => p.service_id === id ? { ...p, qty } : p));
-  };
-
-  const onChangeNote = (id: string, note: string) => {
-    dlog('onChangeNote', { id, note });
-    setItems((prev) => prev.map((p) => p.service_id === id ? { ...p, note } : p));
-  };
-
-  const onRemove = (id: string) => {
-    dlog('onRemove', { id });
-    setItems((prev) => prev.filter((p) => p.service_id !== id));
-  };
-
+  // submit
   async function onSubmit() {
     dlog('onSubmit start');
-    if (items.length === 0) {
-      setError('Keranjang kosong');
-      dlog('onSubmit blocked: empty cart');
-      return;
-    }
-    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
-      setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
-      dlog('onSubmit blocked: no branch_id for Kasir');
-      return;
-    }
-    if (!customerId) {
-      setError('Pelanggan wajib dipilih.');
-      return;
-    }
-    if (mode === 'DP') {
-      if (payableNow <= 0 || payableNow > total) {
-        setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
-        return;
-      }
-    }
-    if (mode === 'FULL' && payableNow <= 0) {
-      setError('Nominal pembayaran harus > 0 untuk mode FULL.');
-      return;
-    }
+    if (items.length === 0) return setError('Keranjang kosong');
+    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) return setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
+    if (!customerId) return setError('Pelanggan wajib dipilih.');
+    if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) return setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
+    if (mode === 'FULL' && payableNow <= 0) return setError('Nominal pembayaran harus > 0 untuk mode FULL.');
 
     setLoading(true); setError(null);
     try {
+      // 1) create order
       const payload: OrderCreatePayload = {
         branch_id: branchId || undefined,
         customer_id: customerId,
-        items: items.map((it) => ({
-          service_id: it.service_id,
-          qty: it.qty,
-          note: it.note ?? null
-        })),
+        items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
         discount: discount || 0,
         notes: notes || null,
       };
       dlog('createOrder payload', payload);
-
       const res = await createOrder(payload);
-      dlog('createOrder response', res);
       let order = res.data!;
 
+      // 2) apply voucher (optional)
       if (voucherCode.trim()) {
         try {
           setVoucherMsg(null);
           await applyVoucherToOrder(String(order.id), { code: voucherCode.trim().toUpperCase() });
-
-          // Ambil ulang order agar total/discount sinkron dengan backend
-          const refreshed = await getOrder(String(order.id));
+          const refreshed = await getOrder(String(order.id)); // sync totals
           order = refreshed.data!;
           setVoucherMsg('Voucher berhasil diterapkan.');
         } catch (ex: unknown) {
           const ax = ex as HttpError;
-          const msg = extractServerMessage(ax.response?.data)
-            ?? (ax.response?.status === 422
+          const msg =
+            extractServerMessage(ax.response?.data) ??
+            (ax.response?.status === 422
               ? 'Voucher tidak valid / syarat tidak terpenuhi'
               : ax.response?.status === 404
-                ? 'Kode voucher tidak ditemukan'
-                : 'Gagal menerapkan voucher');
+              ? 'Kode voucher tidak ditemukan'
+              : 'Gagal menerapkan voucher');
           setVoucherMsg(msg);
         }
       }
 
-      const adjustedPayNow = Math.min(
-        payableNow,
-        Number((order)?.grand_total ?? payableNow)
-      );
-
+      // 3) payment (if allowed & not pending)
+      const adjustedPayNow = Math.min(payableNow, Number(order?.grand_total ?? payableNow));
       if (canPay && mode !== 'PENDING') {
         const payPayload: PaymentCreatePayload =
           mode === 'DP'
@@ -6312,10 +7490,10 @@ export default function POSPage(): React.ReactElement {
 
         dlog('createOrderPayment payload', payPayload);
         const payRes = await createOrderPayment(order.id, payPayload);
-        dlog('createOrderPayment response', payRes);
         order = payRes.order;
       }
 
+      // 4) upload photos (best-effort)
       try {
         if (beforeFiles.length || afterFiles.length) {
           dlog('uploadOrderPhotos start', { before: beforeFiles.length, after: afterFiles.length });
@@ -6327,151 +7505,68 @@ export default function POSPage(): React.ReactElement {
       }
 
       alert('Transaksi tersimpan');
-      dlog('navigate to receipt', { orderId: order.id });
       nav(`/orders/${order.id}/receipt`, { replace: true });
     } catch (e: unknown) {
       dlog('createOrder error', e);
       const ax = e as HttpError;
       if (ax.response?.status === 403) {
-        const msg = extractServerMessage(ax.response.data)
-          ?? 'Forbidden: Anda tidak diizinkan melakukan pembayaran untuk order ini.';
+        const msg = extractServerMessage(ax.response.data) ?? 'Forbidden: Anda tidak diizinkan melakukan pembayaran untuk order ini.';
         setError(msg);
       } else if (ax.response?.status === 422) {
-        // tampilkan pesan + rincian field dari server
         const data = ax.response.data as { message?: string; errors?: Record<string, string[]> } | undefined;
-        const msg = data?.message ?? 'Validasi gagal (422)';
         console.error('[POSPage] 422 detail:', data?.errors);
-        setError(msg);
+        setError(data?.message ?? 'Validasi gagal (422)');
       } else {
-        const msg = (e as Error)?.message ?? 'Gagal menyimpan transaksi';
-        setError(msg);
+        setError((e as Error)?.message ?? 'Gagal menyimpan transaksi');
       }
     } finally {
       setLoading(false);
-      dlog('onSubmit finally: loading=false');
     }
   }
 
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <div className="space-y-3">
-        <ProductSearch onPick={addItem} />
-      </div>
-
-      <div className="space-y-3">
-        {/* Info cabang (read-only) agar kasir paham kontek transaksi */}
-        <div className="rounded-2xl border p-3">
-          <div className="text-xs text-muted-foreground">Cabang</div>
-          <div className="text-sm font-semibold">{branchId || '-'}</div>
-        </div>
-
-        <CartPanel
-          items={items}
-          onChangeQty={onChangeQty}
-          onChangeNote={onChangeNote}
-          onRemove={onRemove}
-        />
-
-        {/* Order Photos */}
-        <div className="rounded-2xl border p-3 space-y-3">
-          <div className="text-sm font-semibold">Order Photos</div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {/* BEFORE */}
-            <div className="border rounded-xl p-3">
-              <div className="text-xs font-medium mb-2">Before</div>
-              <div
-                className="border rounded-lg p-4 text-center text-xs"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const dropped = Array.from(e.dataTransfer.files || []);
-                  setBeforeFiles(prev => [...prev, ...dropped]);
-                }}
-              >
-                {isMobile ? (
-                  <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => beforeRef.current?.click()}>
-                    Buka Kamera
-                  </button>
-                ) : (
-                  <>
-                    <div className="mb-2">Drop file ke sini atau</div>
-                    <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => beforeRef.current?.click()}>
-                      Pilih File
-                    </button>
-                  </>
-                )}
-              </div>
-              <input
-                ref={beforeRef}
-                type="file"
-                accept="image/*"
-                capture={isMobile ? "environment" : undefined}
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const list = e.target.files ? Array.from(e.target.files) : [];
-                  setBeforeFiles(prev => [...prev, ...list]);
-                }}
-              />
-              {beforeFiles.length > 0 && (
-                <ul className="mt-2 text-xs list-disc pl-5">
-                  {beforeFiles.map((f, i) => <li key={i}>{f.name}</li>)}
-                </ul>
-              )}
-            </div>
-
-            {/* AFTER */}
-            <div className="border rounded-xl p-3">
-              <div className="text-xs font-medium mb-2">After</div>
-              <div
-                className="border rounded-lg p-4 text-center text-xs"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const dropped = Array.from(e.dataTransfer.files || []);
-                  setAfterFiles(prev => [...prev, ...dropped]);
-                }}
-              >
-                {isMobile ? (
-                  <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => afterRef.current?.click()}>
-                    Buka Kamera
-                  </button>
-                ) : (
-                  <>
-                    <div className="mb-2">Drop file ke sini atau</div>
-                    <button type="button" className="px-3 py-2 rounded-lg border" onClick={() => afterRef.current?.click()}>
-                      Pilih File
-                    </button>
-                  </>
-                )}
-              </div>
-              <input
-                ref={afterRef}
-                type="file"
-                accept="image/*"
-                capture={isMobile ? "environment" : undefined}
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const list = e.target.files ? Array.from(e.target.files) : [];
-                  setAfterFiles(prev => [...prev, ...list]);
-                }}
-              />
-              {afterFiles.length > 0 && (
-                <ul className="mt-2 text-xs list-disc pl-5">
-                  {afterFiles.map((f, i) => <li key={i}>{f.name}</li>)}
-                </ul>
-              )}
-            </div>
+    <div className="grid gap-4 md:grid-cols-[1fr_minmax(420px,480px)]">
+      {/* LEFT: katalog & pencarian */}
+      <section className="space-y-3">
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-sm font-semibold">Cari Layanan</h1>
+            <span className="text-[10px] text-gray-500">Ctrl+K · Enter tambah · Del hapus</span>
+          </div>
+          <div className="mt-2">
+            <ProductSearch onPick={addItem} />
           </div>
         </div>
 
-        <div className="rounded-2xl border p-3 space-y-2">
+        {/* Order Photos */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
+          <div className="text-sm font-semibold">Foto Pesanan</div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {/* BEFORE */}
+            <UploadBox
+              title="Before"
+              isMobile={isMobile}
+              inputRef={beforeRef}
+              files={beforeFiles}
+              onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
+            />
+            {/* AFTER */}
+            <UploadBox
+              title="After"
+              isMobile={isMobile}
+              inputRef={afterRef}
+              files={afterFiles}
+              onFiles={(f) => setAfterFiles((prev) => [...prev, ...f])}
+            />
+          </div>
+        </div>
+
+        {/* Form ringkas (pelanggan, voucher, diskon, catatan) */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
           <div className="grid gap-1">
             <label className="text-xs">
               Pelanggan <span className="text-red-600">*</span>
             </label>
-
             <CustomerPicker
               value={customerId}
               onChange={setCustomerId}
@@ -6479,77 +7574,119 @@ export default function POSPage(): React.ReactElement {
               requiredText="Pelanggan wajib dipilih dari data terdaftar."
             />
           </div>
-          {/* Voucher */}
+
           <div className="grid gap-1">
             <label className="text-xs">Kode Voucher</label>
             <div className="flex gap-2">
               <input
-                className="border rounded px-3 py-2 flex-1"
+                className="input px-3 py-2 flex-1"
                 placeholder="MASUKKAN-KODE"
                 value={voucherCode}
                 onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
               />
-              <span className="text-[10px] text-gray-500 self-center">
-                Voucher diterapkan saat “Simpan & Cetak”
-              </span>
+              <span className="self-center text-[10px] text-gray-500">Voucher diterapkan saat “Simpan & Cetak”</span>
             </div>
             {voucherMsg && <div className="text-xs text-gray-600">{voucherMsg}</div>}
           </div>
+
           <div className="grid gap-1">
             <label className="text-xs">Diskon</label>
             <input
               type="number"
               min={0}
-              className="border rounded px-3 py-2"
+              className="input px-3 py-2"
               value={discount}
-              onChange={(e) => {
-                const v = Number(e.target.value) || 0;
-                dlog('discount input', v);
-                setDiscount(v);
-              }}
-            />
-          </div>
-          <div className="grid gap-1">
-            <label className="text-xs">Catatan</label>
-            <textarea
-              className="border rounded px-3 py-2"
-              value={notes}
-              onChange={(e) => { dlog('notes input', e.target.value); setNotes(e.target.value); }}
+              onChange={(e) => setDiscount(Number(e.target.value) || 0)}
             />
           </div>
 
-          <div className="flex justify-between text-sm pt-2">
+          <div className="grid gap-1">
+            <label className="text-xs">Catatan</label>
+            <textarea
+              className="input px-3 py-2 min-h-[84px]"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* RIGHT: cart & pembayaran */}
+      <aside className="md:sticky md:top-4 md:h-[calc(100dvh-2rem)] md:overflow-auto space-y-3">
+        {/* Info cabang */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3">
+          <div className="text-xs text-gray-600">Cabang</div>
+          <div className="text-sm font-semibold">{branchId || '-'}</div>
+        </div>
+
+        {/* Desktop cart */}
+        <div className="hidden md:block">
+          <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
+        </div>
+
+        {/* Mobile bottom bar summary */}
+        <MobileCartBar
+          open={mobileCartOpen}
+          setOpen={setMobileCartOpen}
+          itemsCount={items.reduce((n, it) => n + it.qty, 0)}
+          total={grand}
+        >
+          {/* Cart content inside bottom sheet */}
+          <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
+        </MobileCartBar>
+
+        {/* Payment & actions */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
+          <div className="flex justify-between text-sm">
             <span>Grand Total</span>
             <span className="font-semibold">{toIDR(grand)}</span>
           </div>
 
-          {/* Pembayaran */}
-          <div className="pt-2 space-y-2">
+          {/* Mode Pembayaran */}
+          <div className="space-y-2">
             <div className="text-xs font-medium">Mode Pembayaran</div>
-            <div className="flex gap-2">
-              {(['PENDING', 'DP', 'FULL'] as const).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={`px-3 py-1 rounded border ${mode === m ? 'bg-black text-white dark:bg-white dark:text-black' : ''}`}
-                >
-                  {m}
-                </button>
-              ))}
+            <div className="inline-flex rounded-lg border border-[color:var(--color-border)] overflow-hidden">
+              {(['PENDING', 'DP', 'FULL'] as const).map((m) => {
+                const active = mode === m;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                        : 'bg-white text-[color:var(--color-text-default)] hover:bg-black/5'
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
             </div>
 
             {mode === 'FULL' && (
               <div>
                 <div className="text-xs font-medium mb-1">Metode</div>
-                {(['CASH', 'QRIS', 'TRANSFER'] as PaymentMethod[]).map(pm => (
-                  <button
-                    key={pm}
-                    onClick={() => setMethod(pm)}
-                    className={`mr-2 mb-2 px-3 py-1 rounded border ${method === pm ? 'bg-black text-white dark:bg-white dark:text-black' : ''}`}
-                  >
-                    {pm}
-                  </button>
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  {(['CASH', 'QRIS', 'TRANSFER'] as PaymentMethod[]).map((pm) => {
+                    const active = method === pm;
+                    return (
+                      <button
+                        key={pm}
+                        onClick={() => setMethod(pm)}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                          active
+                            ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                            : 'bg-white hover:bg-black/5'
+                        }`}
+                        aria-pressed={active}
+                      >
+                        {pm}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -6562,36 +7699,173 @@ export default function POSPage(): React.ReactElement {
                   max={total}
                   value={dpAmount}
                   onChange={(e) => setDpAmount(Number(e.target.value) || 0)}
-                  className="border rounded px-3 py-2 w-full"
+                  className="input px-3 py-2 w-full"
                   placeholder="Masukkan nominal DP"
                 />
-                <div className="text-xs mt-1">Dibayar sekarang: <b>{toIDR(payableNow)}</b></div>
+                <div className="text-xs mt-1">
+                  Dibayar sekarang: <b>{toIDR(payableNow)}</b>
+                </div>
               </div>
             )}
           </div>
 
-          {error && <div className="text-sm text-red-600">{error}</div>}
+          {error && (
+            <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+              {error}
+            </div>
+          )}
 
           <div className="flex gap-2">
             <button
-              disabled={loading || !canSubmit}   // <<< pakai canSubmit
-              className="rounded bg-black text-white px-3 py-2 disabled:opacity-50"
+              disabled={loading || !canSubmit}
+              className="btn-primary disabled:opacity-60"
               onClick={() => void onSubmit()}
             >
               {loading ? 'Menyimpan…' : 'Simpan & Cetak'}
             </button>
-
             <button
               type="button"
-              className="rounded border px-3 py-2"
-              onClick={() => { dlog('cancel/back clicked'); history.back(); }}
+              className="btn-outline"
+              onClick={() => {
+                dlog('cancel/back clicked');
+                history.back();
+              }}
             >
               Batal
             </button>
           </div>
         </div>
-      </div>
+      </aside>
     </div>
+  );
+}
+
+/* ------------------------
+   Subcomponents (UI)
+------------------------ */
+
+function UploadBox({
+  title,
+  isMobile,
+  inputRef,
+  files,
+  onFiles,
+}: {
+  title: string;
+  isMobile: boolean;
+  inputRef:
+    | React.RefObject<HTMLInputElement>
+    | React.MutableRefObject<HTMLInputElement | null>;
+  files: File[];
+  onFiles: (f: File[]) => void;
+}) {
+  return (
+    <div className="border border-[color:var(--color-border)] rounded-lg p-3">
+      <div className="text-xs font-medium mb-2">{title}</div>
+      <div
+        className="border border-dashed border-[color:var(--color-border)] rounded-lg p-4 text-center text-xs bg-white/70"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const dropped = Array.from(e.dataTransfer.files || []);
+          onFiles(dropped);
+        }}
+      >
+        {isMobile ? (
+          <button type="button" className="btn-outline" onClick={() => inputRef.current?.click()}>
+            Buka Kamera
+          </button>
+        ) : (
+          <>
+            <div className="mb-2 text-gray-600">Drop file ke sini atau</div>
+            <button type="button" className="btn-outline" onClick={() => inputRef.current?.click()}>
+              Pilih File
+            </button>
+          </>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture={isMobile ? 'environment' : undefined}
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const list = e.target.files ? Array.from(e.target.files) : [];
+          onFiles(list);
+        }}
+      />
+      {files.length > 0 && (
+        <ul className="mt-2 text-xs list-disc pl-5">
+          {files.map((f, i) => (
+            <li key={i}>{f.name}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MobileCartBar({
+  open,
+  setOpen,
+  itemsCount,
+  total,
+  children,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  itemsCount: number;
+  total: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      {/* sticky bottom bar on mobile */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-30">
+        <div className="mx-auto max-w-[1200px] px-3 pb-[env(safe-area-inset-bottom)]">
+          <div className="rounded-t-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] shadow-elev-2 p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-xs">
+                <div className="font-medium">{itemsCount} item</div>
+                <div className="text-gray-600">Total {toIDR(total)}</div>
+              </div>
+              <button className="btn-primary" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="mobile-cart-sheet">
+                Buka Keranjang
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* bottom sheet */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-cart-title"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            id="mobile-cart-sheet"
+            className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-[var(--color-surface)] shadow-elev-2 border border-[color:var(--color-border)] p-3 max-h-[80dvh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-[color:var(--color-border)]">
+              <div id="mobile-cart-title" className="text-sm font-semibold">
+                Keranjang
+              </div>
+              <button className="btn-outline px-2 py-1" onClick={() => setOpen(false)}>
+                Tutup
+              </button>
+            </div>
+            <div className="pt-2">{children}</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -8242,6 +9516,38 @@ export function getAllowedNext(current: OrderBackendStatus): OrderBackendStatus[
 ```
 </details>
 
+### src\utils\theme.ts
+
+- SHA: `cd5508d93cc6`  
+- Ukuran: 544 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/utils/theme.ts
+export type ThemeMode = 'light' | 'dark' | 'hc' | 'auto';
+const STORAGE_KEY = 'ui.theme';
+
+export function setTheme(mode: ThemeMode = 'auto') {
+  const html = document.documentElement;
+  if (mode === 'auto') {
+    html.removeAttribute('data-theme');
+  } else {
+    html.setAttribute('data-theme', mode);
+  }
+  localStorage.setItem(STORAGE_KEY, mode);
+}
+
+export function getTheme(): ThemeMode {
+  return (localStorage.getItem(STORAGE_KEY) as ThemeMode) ?? 'auto';
+}
+
+export function initTheme() {
+  setTheme(getTheme());
+}
+
+```
+</details>
+
 ### src\utils\wa.ts
 
 - SHA: `3a7cc9879fd0`  
@@ -8287,15 +9593,18 @@ export default function App() {
 
 ### src\main.tsx
 
-- SHA: `4d4e93b6e5e1`  
-- Ukuran: 233 B
+- SHA: `59751734a779`  
+- Ukuran: 287 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-// import './index.css'
+import { initTheme } from './utils/theme';
+import './index.css'
 import App from './App.tsx'
+
+initTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

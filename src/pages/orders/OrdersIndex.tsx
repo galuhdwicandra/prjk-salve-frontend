@@ -73,84 +73,171 @@ export default function OrdersIndex(): React.ReactElement {
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          className="border rounded px-3 py-2"
-          placeholder="Cari kode/nama/phone…"
-          value={q}
-          onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
-        />
-        <select
-          className="border rounded px-3 py-2"
-          value={status}
-          onChange={(e) => { const v = e.target.value as OrderBackendStatus | ''; dlog('status select', v); setStatus(v); }}
-        >
-          <option value="">Semua Status</option>
-          <option value="QUEUE">QUEUE</option>
-          <option value="WASHING">WASHING</option>
-          <option value="DRYING">DRYING</option>
-          <option value="IRONING">IRONING</option>
-          <option value="READY">READY</option>
-          <option value="DELIVERING">DELIVERING</option>
-          <option value="PICKED_UP">PICKED_UP</option>
-          <option value="CANCELED">CANCELED</option>
-        </select>
-        <button className="border rounded px-3 py-2" onClick={onApply}>Terapkan</button>
-        <Link to="/pos" className="ml-auto rounded bg-black text-white px-3 py-2">Buat Transaksi</Link>
-      </div>
+    <div className="space-y-4">
+      {/* FilterBar */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Filter orders"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3">
+          <label className="grid gap-1 text-sm md:col-span-2">
+            <span className="text-[color:var(--color-text-default)]">Pencarian</span>
+            <input
+              className="input px-3 py-2"
+              placeholder="Cari kode/nama/phone…"
+              value={q}
+              onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
+              aria-label="Cari pesanan"
+            />
+          </label>
 
-      {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-      {error && <div className="text-sm text-red-600">{error}</div>}
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Status</span>
+            <select
+              className="input px-3 py-2"
+              value={status}
+              onChange={(e) => { const v = e.target.value as OrderBackendStatus | ''; dlog('status select', v); setStatus(v); }}
+              aria-label="Filter status"
+            >
+              <option value="">Semua Status</option>
+              <option value="QUEUE">QUEUE</option>
+              <option value="WASHING">WASHING</option>
+              <option value="DRYING">DRYING</option>
+              <option value="IRONING">IRONING</option>
+              <option value="READY">READY</option>
+              <option value="DELIVERING">DELIVERING</option>
+              <option value="PICKED_UP">PICKED_UP</option>
+              <option value="CANCELED">CANCELED</option>
+            </select>
+          </label>
 
-      {!loading && !error && rows.length === 0 && <div className="text-sm text-muted-foreground">Data kosong</div>}
+          <div className="flex items-end gap-2">
+            <button className="btn-primary" onClick={onApply}>Terapkan</button>
+            {/* Tombol reset opsional bila ada kebutuhan nanti */}
+          </div>
 
+          <div className="flex items-end md:justify-end">
+            <Link to="/pos" className="btn-primary md:ml-auto text-[color:var(--color-brand-on)]" aria-label="Buat transaksi baru">
+              Buat Transaksi
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Loading / Error / Empty */}
+      {loading && (
+        <div className="text-sm text-gray-600">
+          Memuat…
+        </div>
+      )}
+
+      {error && (
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && rows.length === 0 && (
+        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-6 text-sm text-gray-500">
+          Data kosong
+        </div>
+      )}
+
+      {/* Table */}
       {rows.length > 0 && (
-        <div className="overflow-auto rounded border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left">Kode</th>
-                <th className="px-3 py-2 text-left">Customer</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Total</th>
-                <th className="px-3 py-2 text-left">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((o) => (
-                <tr key={o.id} className="border-t">
-                  <td className="px-3 py-2">{o.id}</td>
-                  <td className="px-3 py-2">{o.customer?.name ?? '-'}</td>
-                  <td className="px-3 py-2">{o.status}</td>
-                  <td className="px-3 py-2">{Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Link to={`/orders/${o.id}`} className="underline text-xs">Detail</Link>
-                      <button
-                        type="button"
-                        className="text-xs border rounded px-2 py-1"
-                        onClick={() => void onOpenReceipt(o.id)}
-                        title="Lihat/Cetak struk"
-                      >
-                        Receipt
-                      </button>
-                    </div>
-                  </td>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Kode</Th>
+                  <Th>Customer</Th>
+                  <Th>Status</Th>
+                  <Th>Total</Th>
+                  <Th>Aksi</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {rows.map((o) => (
+                  <tr key={o.id} className="hover:bg-black/5 transition-colors">
+                    <Td>{o.id}</Td>
+                    <Td>{o.customer?.name ?? '-'}</Td>
+                    <Td><StatusBadge status={o.status} /></Td>
+                    <Td>
+                      {Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <Link to={`/orders/${o.id}`} className="text-xs text-[color:var(--color-brand-primary)] hover:underline">
+                          Detail
+                        </Link>
+                        <button
+                          type="button"
+                          className="text-xs btn-outline px-2 py-1"
+                          onClick={() => void onOpenReceipt(o.id)}
+                          title="Lihat/Cetak struk"
+                        >
+                          Receipt
+                        </button>
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {meta && meta.last_page > 1 && (
-            <div className="flex items-center justify-end gap-2 p-2">
-              <button disabled={page <= 1} className="border rounded px-2 py-1" onClick={onPrev}>Prev</button>
-              <div className="text-xs">Page {meta.current_page} / {meta.last_page}</div>
-              <button disabled={page >= meta.last_page} className="border rounded px-2 py-1" onClick={onNext}>Next</button>
+            <div className="flex items-center justify-end gap-2 p-2 border-t border-[color:var(--color-border)]">
+              <button
+                disabled={page <= 1}
+                className="btn-outline px-2 py-1 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onPrev}
+              >
+                Prev
+              </button>
+              <div className="text-xs text-gray-600">
+                Page {meta.current_page} / {meta.last_page}
+              </div>
+              <button
+                disabled={page >= meta.last_page}
+                className="btn-outline px-2 py-1 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onNext}
+              >
+                Next
+              </button>
             </div>
           )}
         </div>
       )}
     </div>
   );
+}
+
+/* ------------------------
+   Sub-komponen presentasional
+------------------------- */
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+      {children}
+    </th>
+  );
+}
+
+function Td({ children }: { children: React.ReactNode }) {
+  return <td className="px-3 py-2 align-middle">{children}</td>;
+}
+
+function StatusBadge({ status }: { status: OrderBackendStatus }) {
+  // Murni presentasi (warna/varian), tidak mengubah logika data
+  const clsBase = 'chip text-xs';
+  const cls =
+    status === 'CANCELED'
+      ? 'chip--danger'
+      : status === 'READY' || status === 'PICKED_UP'
+      ? 'chip--solid'
+      : 'chip--subtle';
+  return <span className={`${clsBase} ${cls}`}>{status}</span>;
 }
