@@ -107,7 +107,7 @@ export default function OrderDetail(): React.ReactElement {
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold tracking-tight">Order #{row.id}</div>
+              <div className="text-sm font-semibold tracking-tight">Order {row.invoice_no ?? row.number}</div>
               <div className="text-xs text-gray-600">{row.customer?.name ?? '-'}</div>
             </div>
 
@@ -143,7 +143,7 @@ export default function OrderDetail(): React.ReactElement {
                 <button
                   type="button"
                   className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)]"
-                  onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? '')}`)}
+                  onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
                   title="Menuju halaman Piutang untuk pelunasan"
                 >
                   Pelunasan

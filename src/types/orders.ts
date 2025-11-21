@@ -50,7 +50,7 @@ export interface Order {
     id: string;
     branch_id: string;
     customer_id: string | null;
-    number: string; // ← TAMBAHKAN BARIS INI
+    number: string;
     status: OrderBackendStatus;
     subtotal: number;
     discount: number;

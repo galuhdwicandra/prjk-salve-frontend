@@ -8,6 +8,14 @@ const dlog = (...args: unknown[]) => {
   if (import.meta.env?.DEV) console.log('[OrdersIndex]', ...args);
 };
 
+const shortOrderNo = (number?: string | null, invoiceNo?: string | null): string => {
+  if (invoiceNo && invoiceNo.trim().length > 0) return invoiceNo;
+  if (!number) return '-';
+  const m = number.match(/(\d{4,})$/);
+  const tail = m?.[1] ?? number.slice(-6);
+  return `#${tail}`;
+};
+
 export default function OrdersIndex(): React.ReactElement {
   const [rows, setRows] = useState<Order[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -84,7 +92,7 @@ export default function OrdersIndex(): React.ReactElement {
             <span className="text-[color:var(--color-text-default)]">Pencarian</span>
             <input
               className="input px-3 py-2"
-              placeholder="Cari kode/nama/phone…"
+              placeholder="Cari nomor (INV…)/nama/phone…"
               value={q}
               onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
               aria-label="Cari pesanan"
@@ -150,7 +158,7 @@ export default function OrdersIndex(): React.ReactElement {
             <table className="min-w-full text-sm">
               <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
                 <tr className="divide-x divide-[color:var(--color-border)]">
-                  <Th>Kode</Th>
+                  <Th>Nomor</Th>
                   <Th>Customer</Th>
                   <Th>Status</Th>
                   <Th>Total</Th>
@@ -160,8 +168,12 @@ export default function OrdersIndex(): React.ReactElement {
               <tbody className="divide-y divide-[color:var(--color-border)]">
                 {rows.map((o) => (
                   <tr key={o.id} className="hover:bg-black/5 transition-colors">
-                    <Td>{o.id}</Td>
-                    <Td>{o.customer?.name ?? '-'}</Td>
+                    <Td className="font-medium max-w-[160px] truncate" title={(o.invoice_no ?? o.number) ?? ''}>
+                      {shortOrderNo(o.number, o.invoice_no)}
+                    </Td>
+                    <Td className="max-w-[200px] truncate" title={o.customer?.name ?? ''}>
+                      {o.customer?.name ?? '—'}
+                    </Td>
                     <Td><StatusBadge status={o.status} /></Td>
                     <Td>
                       {Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
@@ -218,16 +230,31 @@ export default function OrdersIndex(): React.ReactElement {
    Sub-komponen presentasional
 ------------------------- */
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'th'>) {
   return (
-    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+    <th
+      className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wide ${className}`}
+      {...rest}
+    >
       {children}
     </th>
   );
 }
 
-function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-3 py-2 align-middle">{children}</td>;
+function Td({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'td'>) {
+  return (
+    <td className={`px-3 py-2 align-middle ${className}`} {...rest}>
+      {children}
+    </td>
+  );
 }
 
 function StatusBadge({ status }: { status: OrderBackendStatus }) {
@@ -237,7 +264,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
     status === 'CANCELED'
       ? 'chip--danger'
       : status === 'READY' || status === 'PICKED_UP'
-      ? 'chip--solid'
-      : 'chip--subtle';
+        ? 'chip--solid'
+        : 'chip--subtle';
   return <span className={`${clsBase} ${cls}`}>{status}</span>;
 }

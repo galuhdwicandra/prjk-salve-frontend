@@ -66,7 +66,13 @@ export default function OrderReceipt(): React.ReactElement {
     );
   }
 
-  const onPrint = () => window.print();
+  const onPrint = () => {
+    const prev = document.title;
+    const nomor = order?.invoice_no ?? order?.number ?? 'Receipt';
+    document.title = `Receipt ${nomor}`;
+    window.print();
+    document.title = prev;
+  };
 
   const onSendWA = () => {
     if (!waPhone) return;
@@ -78,7 +84,7 @@ export default function OrderReceipt(): React.ReactElement {
       const name = order.customer?.name ?? 'Pelanggan';
       const nomor = order.invoice_no ?? order.number;
       const total = toIDR(order.grand_total);
-      const sisa = order.due_amount;
+      const sisa = Number(order.due_amount ?? 0);
 
       if (sisa > 0) {
         // MODE TAGIHAN / JATUH TEMPO
@@ -149,6 +155,14 @@ export default function OrderReceipt(): React.ReactElement {
           </div>
         </div>
       </div>
+
+      {/* Info ringkas sebelum preview (membantu kasir) */}
+      {order && (
+        <div className="print:hidden text-xs text-gray-700">
+          <b>No:</b> {order.invoice_no ?? order.number}{' '}
+          &middot; <b>Customer:</b> {order.customer?.name ?? '-'}
+        </div>
+      )}
 
       {/* Preview struk */}
       <div

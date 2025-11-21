@@ -14,6 +14,7 @@ type Props = {
   onLoaded?: () => void;
   /** Dipanggil saat tombol Print diklik */
   onPrint?: () => void;
+  printTitle?: string;
 };
 
 export default function ReceiptPreview({
@@ -23,17 +24,21 @@ export default function ReceiptPreview({
   className = "",
   onLoaded,
   onPrint,
+  printTitle,
 }: Props): React.ReactElement {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
 
   // srcDoc bekerja di browser modern; fallback ke Blob URL kalau perlu
+  const supportsSrcDoc = useMemo(() => {
+    const el = document.createElement("iframe");
+    return "srcdoc" in el;
+  }, []);
   const blobUrl = useMemo(() => {
-    // kalau html kosong, tidak usah buat blob
-    if (!html) return "";
+    if (!html || supportsSrcDoc) return "";
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     return URL.createObjectURL(blob);
-  }, [html]);
+  }, [html, supportsSrcDoc]);
 
   useEffect(() => {
     return () => {
@@ -48,18 +53,29 @@ export default function ReceiptPreview({
     if (autoPrint) {
       // delay kecil supaya layout stabil sebelum print
       setTimeout(() => {
-        const win = iframeRef.current?.contentWindow;
-        win?.focus();
-        win?.print();
+        const frameWin = iframeRef.current?.contentWindow;
+        // Set judul dokumen di dalam iframe (jika diminta)
+        try {
+          if (printTitle && frameWin?.document) {
+            frameWin.document.title = printTitle;
+          }
+        } catch (err) { void err; }
+        frameWin?.focus();
+        frameWin?.print();
       }, 50);
     }
   };
 
   const doPrint = () => {
     onPrint?.();
-    const win = iframeRef.current?.contentWindow;
-    win?.focus();
-    win?.print();
+    const frameWin = iframeRef.current?.contentWindow;
+    try {
+      if (printTitle && frameWin?.document) {
+        frameWin.document.title = printTitle;
+      }
+    } catch (err) { void err; }
+    frameWin?.focus();
+    frameWin?.print();
   };
 
   const openInNewTab = () => {
@@ -107,8 +123,10 @@ export default function ReceiptPreview({
           ref={iframeRef}
           title="receipt-preview"
           // srcDoc memberi isolasi style dari app utama; sebagian browser lama fallback ke src
-          srcDoc={html}
-          src={undefined /* mencegah warning React; kita set via srcDoc */}
+          srcDoc={supportsSrcDoc ? html : undefined}
+          src={supportsSrcDoc ? undefined : blobUrl}
+          // sandbox untuk keamanan, tetap izinkan script, popup (print), dan same-origin
+          sandbox="allow-same-origin allow-scripts allow-popups allow-modals"
           onLoad={handleLoad}
           style={{
             width: "100%",

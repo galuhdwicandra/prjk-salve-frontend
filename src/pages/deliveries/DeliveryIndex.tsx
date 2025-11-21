@@ -6,6 +6,7 @@ import { listDeliveries, assignCourier, updateDeliveryStatus } from '../../api/d
 import type { Delivery, DeliveryStatus } from '../../types/deliveries';
 import { useHasRole } from '../../store/useAuth';
 import { Link } from 'react-router-dom';
+import { getOrder } from '../../api/orders';
 
 const STATUSES: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED', 'FAILED', 'CANCELLED'];
 
@@ -14,7 +15,7 @@ const TAG = '[DeliveryIndex]';
 const dbg = {
   log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
   warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
-  err:  (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
+  err: (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
   group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
   groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
 };
@@ -29,6 +30,7 @@ export default function DeliveryIndex() {
   const [rows, setRows] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [orderMap, setOrderMap] = useState<Record<string, { invoice_no?: string | null; number?: string | null }>>({});
 
   const load = useCallback(async () => {
     const t0 = performance.now();
@@ -44,6 +46,29 @@ export default function DeliveryIndex() {
       const list = res.data ?? [];
       setRows(list);
       dbg.log('loaded rows:', list.length, { sample: list.slice(0, 3) });
+      try {
+        const ids = Array.from(new Set(list.map(d => d.order_id).filter(Boolean)));
+        if (ids.length) {
+          // Batasi konkuren sederhana
+          const chunkSize = 6;
+          const nextMap: Record<string, { invoice_no?: string | null; number?: string | null }> = {};
+          for (let i = 0; i < ids.length; i += chunkSize) {
+            const chunk = ids.slice(i, i + chunkSize);
+            const results = await Promise.allSettled(chunk.map((oid) => getOrder(oid)));
+            results.forEach((r) => {
+              if (r.status === 'fulfilled') {
+                const data = r.value?.data;
+                if (data?.id) {
+                  nextMap[data.id] = { invoice_no: data.invoice_no ?? null, number: data.number ?? null };
+                }
+              }
+            });
+          }
+          setOrderMap(prev => ({ ...prev, ...nextMap }));
+        }
+      } catch (e) {
+        dbg.warn('hydrate order labels failed:', e);
+      }
     } catch (e) {
       dbg.err('load() error:', e);
       setErr('Gagal memuat deliveries');
@@ -115,13 +140,28 @@ export default function DeliveryIndex() {
     }
   }, [canUpdate, load]);
 
+  // helper
+  type DeliveryWithOrderRef = Delivery & {
+    order_invoice_no?: string | null;
+    order_number?: string | null;
+  };
+  const getOrderLabel = (d: Delivery): string => {
+    const dx = d as DeliveryWithOrderRef;
+    const cached = orderMap[d.order_id];
+    return cached?.invoice_no ?? cached?.number ?? dx.order_invoice_no ?? dx.order_number ?? d.order_id;
+  };
+
   const columns = useMemo(() => {
     dbg.log('columns memo recalculated');
     return [
       { key: 'id', header: 'ID' },
       {
         key: 'order_id', header: 'Order',
-        render: (r: Delivery) => <Link className="underline" to={`/orders/${r.order_id}`}>{r.order_id}</Link>,
+        render: (r: Delivery) => (
+          <Link className="underline" to={`/orders/${r.order_id}`}>
+            {getOrderLabel(r)}
+          </Link>
+        ),
       },
       { key: 'type', header: 'Tipe' },
       { key: 'fee', header: 'Fee', render: (r: Delivery) => Number(r.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) },
@@ -154,7 +194,7 @@ export default function DeliveryIndex() {
       },
       { key: 'created_at', header: 'Dibuat' },
     ];
-  }, [canAssign, canUpdate, onAssign, advance]);
+  }, [canAssign, canUpdate, onAssign, advance, orderMap]);
 
   return (
     <div className="space-y-4">
