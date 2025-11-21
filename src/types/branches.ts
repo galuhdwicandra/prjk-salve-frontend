@@ -1,3 +1,4 @@
+// src/types/branches.ts
 export type ResetPolicy = 'monthly' | 'never';
 
 export interface Branch {
@@ -47,6 +48,7 @@ export interface InvoiceCounterUpsertPayload {
   branch_id: string;
   prefix: string;         
   reset_policy: ResetPolicy;
+  seq?: number;
 }
 
 export interface InvoiceCounterQuery {

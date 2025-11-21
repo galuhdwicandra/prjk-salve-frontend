@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-11-21 17:30:36_  
+_Dihasilkan otomatis: 2025-11-21 22:18:47_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2025\apk-web-salve\Projek Salve\prjk-salve\frontend`
 
 
@@ -2107,7 +2107,7 @@ export interface SingleResponse<T> {
 
 ### src\types\orders.ts
 
-- SHA: `5c7a23c675eb`  
+- SHA: `a05d90a1fce4`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2164,7 +2164,7 @@ export interface Order {
     id: string;
     branch_id: string;
     customer_id: string | null;
-    number: string; // ← TAMBAHKAN BARIS INI
+    number: string;
     status: OrderBackendStatus;
     subtotal: number;
     discount: number;
@@ -4124,8 +4124,8 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 
 ### src\components\ReceiptPreview.tsx
 
-- SHA: `476ee2223353`  
-- Ukuran: 3 KB
+- SHA: `9ddac89c9fcf`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -4145,6 +4145,7 @@ type Props = {
   onLoaded?: () => void;
   /** Dipanggil saat tombol Print diklik */
   onPrint?: () => void;
+  printTitle?: string;
 };
 
 export default function ReceiptPreview({
@@ -4154,17 +4155,21 @@ export default function ReceiptPreview({
   className = "",
   onLoaded,
   onPrint,
+  printTitle,
 }: Props): React.ReactElement {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
 
   // srcDoc bekerja di browser modern; fallback ke Blob URL kalau perlu
+  const supportsSrcDoc = useMemo(() => {
+    const el = document.createElement("iframe");
+    return "srcdoc" in el;
+  }, []);
   const blobUrl = useMemo(() => {
-    // kalau html kosong, tidak usah buat blob
-    if (!html) return "";
+    if (!html || supportsSrcDoc) return "";
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     return URL.createObjectURL(blob);
-  }, [html]);
+  }, [html, supportsSrcDoc]);
 
   useEffect(() => {
     return () => {
@@ -4179,18 +4184,29 @@ export default function ReceiptPreview({
     if (autoPrint) {
       // delay kecil supaya layout stabil sebelum print
       setTimeout(() => {
-        const win = iframeRef.current?.contentWindow;
-        win?.focus();
-        win?.print();
+        const frameWin = iframeRef.current?.contentWindow;
+        // Set judul dokumen di dalam iframe (jika diminta)
+        try {
+          if (printTitle && frameWin?.document) {
+            frameWin.document.title = printTitle;
+          }
+        } catch (err) { void err; }
+        frameWin?.focus();
+        frameWin?.print();
       }, 50);
     }
   };
 
   const doPrint = () => {
     onPrint?.();
-    const win = iframeRef.current?.contentWindow;
-    win?.focus();
-    win?.print();
+    const frameWin = iframeRef.current?.contentWindow;
+    try {
+      if (printTitle && frameWin?.document) {
+        frameWin.document.title = printTitle;
+      }
+    } catch (err) { void err; }
+    frameWin?.focus();
+    frameWin?.print();
   };
 
   const openInNewTab = () => {
@@ -4238,8 +4254,10 @@ export default function ReceiptPreview({
           ref={iframeRef}
           title="receipt-preview"
           // srcDoc memberi isolasi style dari app utama; sebagian browser lama fallback ke src
-          srcDoc={html}
-          src={undefined /* mencegah warning React; kita set via srcDoc */}
+          srcDoc={supportsSrcDoc ? html : undefined}
+          src={supportsSrcDoc ? undefined : blobUrl}
+          // sandbox untuk keamanan, tetap izinkan script, popup (print), dan same-origin
+          sandbox="allow-same-origin allow-scripts allow-popups allow-modals"
           onLoad={handleLoad}
           style={{
             width: "100%",
@@ -5812,8 +5830,8 @@ export default function DeliveryDetail() {
 
 ### src\pages\deliveries\DeliveryIndex.tsx
 
-- SHA: `d03dc5586fe3`  
-- Ukuran: 7 KB
+- SHA: `5bcf77df6de2`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5825,6 +5843,7 @@ import { listDeliveries, assignCourier, updateDeliveryStatus } from '../../api/d
 import type { Delivery, DeliveryStatus } from '../../types/deliveries';
 import { useHasRole } from '../../store/useAuth';
 import { Link } from 'react-router-dom';
+import { getOrder } from '../../api/orders';
 
 const STATUSES: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED', 'FAILED', 'CANCELLED'];
 
@@ -5833,7 +5852,7 @@ const TAG = '[DeliveryIndex]';
 const dbg = {
   log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
   warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
-  err:  (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
+  err: (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
   group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
   groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
 };
@@ -5848,6 +5867,7 @@ export default function DeliveryIndex() {
   const [rows, setRows] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [orderMap, setOrderMap] = useState<Record<string, { invoice_no?: string | null; number?: string | null }>>({});
 
   const load = useCallback(async () => {
     const t0 = performance.now();
@@ -5863,6 +5883,29 @@ export default function DeliveryIndex() {
       const list = res.data ?? [];
       setRows(list);
       dbg.log('loaded rows:', list.length, { sample: list.slice(0, 3) });
+      try {
+        const ids = Array.from(new Set(list.map(d => d.order_id).filter(Boolean)));
+        if (ids.length) {
+          // Batasi konkuren sederhana
+          const chunkSize = 6;
+          const nextMap: Record<string, { invoice_no?: string | null; number?: string | null }> = {};
+          for (let i = 0; i < ids.length; i += chunkSize) {
+            const chunk = ids.slice(i, i + chunkSize);
+            const results = await Promise.allSettled(chunk.map((oid) => getOrder(oid)));
+            results.forEach((r) => {
+              if (r.status === 'fulfilled') {
+                const data = r.value?.data;
+                if (data?.id) {
+                  nextMap[data.id] = { invoice_no: data.invoice_no ?? null, number: data.number ?? null };
+                }
+              }
+            });
+          }
+          setOrderMap(prev => ({ ...prev, ...nextMap }));
+        }
+      } catch (e) {
+        dbg.warn('hydrate order labels failed:', e);
+      }
     } catch (e) {
       dbg.err('load() error:', e);
       setErr('Gagal memuat deliveries');
@@ -5934,13 +5977,28 @@ export default function DeliveryIndex() {
     }
   }, [canUpdate, load]);
 
+  // helper
+  type DeliveryWithOrderRef = Delivery & {
+    order_invoice_no?: string | null;
+    order_number?: string | null;
+  };
+  const getOrderLabel = (d: Delivery): string => {
+    const dx = d as DeliveryWithOrderRef;
+    const cached = orderMap[d.order_id];
+    return cached?.invoice_no ?? cached?.number ?? dx.order_invoice_no ?? dx.order_number ?? d.order_id;
+  };
+
   const columns = useMemo(() => {
     dbg.log('columns memo recalculated');
     return [
       { key: 'id', header: 'ID' },
       {
         key: 'order_id', header: 'Order',
-        render: (r: Delivery) => <Link className="underline" to={`/orders/${r.order_id}`}>{r.order_id}</Link>,
+        render: (r: Delivery) => (
+          <Link className="underline" to={`/orders/${r.order_id}`}>
+            {getOrderLabel(r)}
+          </Link>
+        ),
       },
       { key: 'type', header: 'Tipe' },
       { key: 'fee', header: 'Fee', render: (r: Delivery) => Number(r.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) },
@@ -5973,7 +6031,7 @@ export default function DeliveryIndex() {
       },
       { key: 'created_at', header: 'Dibuat' },
     ];
-  }, [canAssign, canUpdate, onAssign, advance]);
+  }, [canAssign, canUpdate, onAssign, advance, orderMap]);
 
   return (
     <div className="space-y-4">
@@ -6593,7 +6651,7 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `37985d01f821`  
+- SHA: `10f33edd5704`  
 - Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6707,7 +6765,7 @@ export default function OrderDetail(): React.ReactElement {
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold tracking-tight">Order #{row.id}</div>
+              <div className="text-sm font-semibold tracking-tight">Order {row.invoice_no ?? row.number}</div>
               <div className="text-xs text-gray-600">{row.customer?.name ?? '-'}</div>
             </div>
 
@@ -6743,7 +6801,7 @@ export default function OrderDetail(): React.ReactElement {
                 <button
                   type="button"
                   className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)]"
-                  onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? '')}`)}
+                  onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
                   title="Menuju halaman Piutang untuk pelunasan"
                 >
                   Pelunasan
@@ -6901,8 +6959,8 @@ function Td({ children }: { children: React.ReactNode }) {
 
 ### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `8b3aedb32eb3`  
-- Ukuran: 5 KB
+- SHA: `f1902327be67`  
+- Ukuran: 6 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -6974,7 +7032,13 @@ export default function OrderReceipt(): React.ReactElement {
     );
   }
 
-  const onPrint = () => window.print();
+  const onPrint = () => {
+    const prev = document.title;
+    const nomor = order?.invoice_no ?? order?.number ?? 'Receipt';
+    document.title = `Receipt ${nomor}`;
+    window.print();
+    document.title = prev;
+  };
 
   const onSendWA = () => {
     if (!waPhone) return;
@@ -6986,7 +7050,7 @@ export default function OrderReceipt(): React.ReactElement {
       const name = order.customer?.name ?? 'Pelanggan';
       const nomor = order.invoice_no ?? order.number;
       const total = toIDR(order.grand_total);
-      const sisa = order.due_amount;
+      const sisa = Number(order.due_amount ?? 0);
 
       if (sisa > 0) {
         // MODE TAGIHAN / JATUH TEMPO
@@ -7058,6 +7122,14 @@ export default function OrderReceipt(): React.ReactElement {
         </div>
       </div>
 
+      {/* Info ringkas sebelum preview (membantu kasir) */}
+      {order && (
+        <div className="print:hidden text-xs text-gray-700">
+          <b>No:</b> {order.invoice_no ?? order.number}{' '}
+          &middot; <b>Customer:</b> {order.customer?.name ?? '-'}
+        </div>
+      )}
+
       {/* Preview struk */}
       <div
         className="bg-white rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 print:shadow-none print:border-0 print:p-0"
@@ -7075,8 +7147,8 @@ export default function OrderReceipt(): React.ReactElement {
 
 ### src\pages\orders\OrdersIndex.tsx
 
-- SHA: `8f7716c427e2`  
-- Ukuran: 9 KB
+- SHA: `e49b7a9b3fef`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7088,6 +7160,14 @@ import { Link } from 'react-router-dom';
 
 const dlog = (...args: unknown[]) => {
   if (import.meta.env?.DEV) console.log('[OrdersIndex]', ...args);
+};
+
+const shortOrderNo = (number?: string | null, invoiceNo?: string | null): string => {
+  if (invoiceNo && invoiceNo.trim().length > 0) return invoiceNo;
+  if (!number) return '-';
+  const m = number.match(/(\d{4,})$/);
+  const tail = m?.[1] ?? number.slice(-6);
+  return `#${tail}`;
 };
 
 export default function OrdersIndex(): React.ReactElement {
@@ -7166,7 +7246,7 @@ export default function OrdersIndex(): React.ReactElement {
             <span className="text-[color:var(--color-text-default)]">Pencarian</span>
             <input
               className="input px-3 py-2"
-              placeholder="Cari kode/nama/phone…"
+              placeholder="Cari nomor (INV…)/nama/phone…"
               value={q}
               onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
               aria-label="Cari pesanan"
@@ -7232,7 +7312,7 @@ export default function OrdersIndex(): React.ReactElement {
             <table className="min-w-full text-sm">
               <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
                 <tr className="divide-x divide-[color:var(--color-border)]">
-                  <Th>Kode</Th>
+                  <Th>Nomor</Th>
                   <Th>Customer</Th>
                   <Th>Status</Th>
                   <Th>Total</Th>
@@ -7242,8 +7322,12 @@ export default function OrdersIndex(): React.ReactElement {
               <tbody className="divide-y divide-[color:var(--color-border)]">
                 {rows.map((o) => (
                   <tr key={o.id} className="hover:bg-black/5 transition-colors">
-                    <Td>{o.id}</Td>
-                    <Td>{o.customer?.name ?? '-'}</Td>
+                    <Td className="font-medium max-w-[160px] truncate" title={(o.invoice_no ?? o.number) ?? ''}>
+                      {shortOrderNo(o.number, o.invoice_no)}
+                    </Td>
+                    <Td className="max-w-[200px] truncate" title={o.customer?.name ?? ''}>
+                      {o.customer?.name ?? '—'}
+                    </Td>
                     <Td><StatusBadge status={o.status} /></Td>
                     <Td>
                       {Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
@@ -7300,16 +7384,31 @@ export default function OrdersIndex(): React.ReactElement {
    Sub-komponen presentasional
 ------------------------- */
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'th'>) {
   return (
-    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+    <th
+      className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wide ${className}`}
+      {...rest}
+    >
       {children}
     </th>
   );
 }
 
-function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-3 py-2 align-middle">{children}</td>;
+function Td({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'td'>) {
+  return (
+    <td className={`px-3 py-2 align-middle ${className}`} {...rest}>
+      {children}
+    </td>
+  );
 }
 
 function StatusBadge({ status }: { status: OrderBackendStatus }) {
@@ -7319,8 +7418,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
     status === 'CANCELED'
       ? 'chip--danger'
       : status === 'READY' || status === 'PICKED_UP'
-      ? 'chip--solid'
-      : 'chip--subtle';
+        ? 'chip--solid'
+        : 'chip--subtle';
   return <span className={`${clsBase} ${cls}`}>{status}</span>;
 }
 
