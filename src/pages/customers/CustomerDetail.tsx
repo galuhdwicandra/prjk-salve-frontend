@@ -50,15 +50,11 @@ export default function CustomerDetail() {
                 }
             })();
         }
-        return () => {
-            cancelled = true;
-        };
+        return () => { cancelled = true; };
     }, [isNew, params.id]);
 
     function normalizeWa(input: string): string {
-        // Minimal-normalize: hilangkan spasi dan non-digit ( dibiarkan kalau perlu)
         const s = (input || '').trim();
-        // Contoh ringan: hilangkan spasi/tanda baca umum
         return s.replace(/[^\d]/g, '');
     }
 
@@ -86,7 +82,6 @@ export default function CustomerDetail() {
             let res: SingleResponse<Customer>;
 
             if (isNew) {
-                // SUSUN PAYLOAD MINIMAL & BERSIH — persis seperti contoh Postman
                 const basePayload = {
                     name: form.name,
                     whatsapp: normalizeWa(form.whatsapp),
@@ -95,7 +90,6 @@ export default function CustomerDetail() {
                 };
                 const cleanedBase = clean(basePayload);
 
-                // HANYA superadmin boleh mengirim branch_id secara eksplisit
                 let finalBranchId: string | undefined;
                 if (hasRole('Superadmin')) {
                     finalBranchId = form.branch_id && form.branch_id.trim() !== '' ? form.branch_id.trim() : undefined;
@@ -127,7 +121,6 @@ export default function CustomerDetail() {
                     whatsapp: normalizeWa(form.whatsapp),
                     address: form.address,
                     notes: form.notes,
-                    // Jangan kirim branch_id saat update kecuali superadmin memang mengubah cabang (kalau backendmu izinkan)
                     ...(hasRole('Superadmin') && form.branch_id && String(form.branch_id).trim() !== ''
                         ? { branch_id: String(form.branch_id).trim() }
                         : {}),
@@ -135,9 +128,7 @@ export default function CustomerDetail() {
                 const payloadUpdate: Partial<CustomerUpsertPayload> = {
                     ...(cleanedUpdate.name !== undefined ? { name: String(cleanedUpdate.name) } : {}),
                     ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
-                    ...(cleanedUpdate.address !== undefined
-                        ? { address: cleanedUpdate.address as string | null }
-                        : {}),
+                    ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
                     ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
                     ...(hasRole('Superadmin') && cleanedUpdate.branch_id !== undefined
                         ? { branch_id: String(cleanedUpdate.branch_id) }
@@ -152,7 +143,6 @@ export default function CustomerDetail() {
                 setError('Gagal menyimpan data pelanggan.');
             }
         } catch (err) {
-            // tampilkan pesan server jika ada untuk memudahkan debug
             const anyErr = err as { response?: { data?: unknown }; message?: string };
             const srv = (anyErr.response?.data as { message?: string; errors?: unknown } | undefined) || undefined;
             const msg = srv?.message ?? (srv?.errors ? JSON.stringify(srv.errors) : undefined) ?? anyErr.message;
@@ -162,66 +152,143 @@ export default function CustomerDetail() {
         }
     }
 
-    if (loading) return <div className="p-4">Loading…</div>;
-    if (error) return <div className="p-4 text-red-600">{error}</div>;
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                <div className="h-6 w-48 rounded bg-black/10 animate-pulse" />
+                <div className="card p-6 border border-[color:var(--color-border)] rounded-lg shadow-elev-1 space-y-4 max-w-2xl">
+                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="h-20 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="flex gap-2">
+                        <div className="h-10 w-28 rounded bg-black/10 animate-pulse" />
+                        <div className="h-10 w-24 rounded bg-black/10 animate-pulse" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-4 space-y-4">
-            <h1 className="text-xl font-semibold">{isNew ? 'Buat Pelanggan' : 'Detail Pelanggan'}</h1>
-            <form onSubmit={onSubmit} className="space-y-3 max-w-xl">
-                {hasRole('Superadmin') && (
-                    <input
-                        placeholder="Branch ID (Superadmin)"
-                        className="border rounded-xl px-3 py-2 w-full"
-                        value={form.branch_id ?? ''}
-                        onChange={(e) =>
-                            setForm((f) => ({
-                                ...f,
-                                branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
-                            }))
-                        }
-                    />
+        <div className="space-y-4">
+            {/* Header */}
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-lg font-semibold tracking-tight">
+                        {isNew ? 'Buat Pelanggan' : 'Detail Pelanggan'}
+                    </h1>
+                    <p className="text-xs text-gray-600">
+                        Data identitas pelanggan untuk transaksi & penjemputan
+                    </p>
+                </div>
+            </header>
+
+            {/* Error global */}
+            {error && (
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+                >
+                    {error}
+                </div>
+            )}
+
+            {/* Form */}
+            <form
+                onSubmit={onSubmit}
+                aria-busy={saving ? 'true' : 'false'}
+                className="card p-4 md:p-6 border border-[color:var(--color-border)] rounded-lg shadow-elev-1 space-y-4 max-w-2xl"
+            >
+                {/* Cabang */}
+                {hasRole('Superadmin') ? (
+                    <label className="grid gap-1 text-sm">
+                        <span>Branch ID (Superadmin)</span>
+                        <input
+                            placeholder="CTH: 019aa7... (opsional)"
+                            className="input"
+                            value={form.branch_id ?? ''}
+                            onChange={(e) =>
+                                setForm((f) => ({
+                                    ...f,
+                                    branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
+                                }))
+                            }
+                        />
+                        <span className="text-xs text-gray-500">Kosongkan untuk tidak mengubah cabang.</span>
+                    </label>
+                ) : (
+                    <div className="text-sm text-gray-600">
+                        Cabang: <span className="font-medium">{user?.branch_id ?? '-'}</span>
+                    </div>
                 )}
-                <input
-                    placeholder="Nama"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    required
-                />
-                <input
-                    placeholder="WhatsApp (08xxxxxxxxxx)"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.whatsapp}
-                    onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                    required
-                />
-                <input
-                    placeholder="Alamat"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.address ?? ''}
-                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                />
-                <textarea
-                    placeholder="Catatan"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.notes ?? ''}
-                    onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                />
-                {error && <div className="text-sm text-red-600">{error}</div>}
-                <div className="flex gap-2">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="grid gap-1 text-sm">
+                        <span>Nama</span>
+                        <input
+                            placeholder="Nama pelanggan"
+                            className="input"
+                            value={form.name}
+                            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                            required
+                            autoComplete="name"
+                        />
+                    </label>
+
+                    <label className="grid gap-1 text-sm">
+                        <span>WhatsApp</span>
+                        <input
+                            placeholder="08xxxxxxxxxx"
+                            className="input"
+                            value={form.whatsapp}
+                            onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
+                            required
+                            inputMode="tel"
+                            autoComplete="tel"
+                        />
+                        <span className="text-xs text-gray-500">Hanya angka, akan dinormalisasi saat simpan.</span>
+                    </label>
+
+                    <label className="grid gap-1 text-sm md:col-span-2">
+                        <span>Alamat</span>
+                        <input
+                            placeholder="Alamat lengkap (opsional)"
+                            className="input"
+                            value={form.address ?? ''}
+                            onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                            autoComplete="street-address"
+                        />
+                    </label>
+
+                    <label className="grid gap-1 text-sm md:col-span-2">
+                        <span>Catatan</span>
+                        <textarea
+                            placeholder="Instruksi khusus, preferensi, atau catatan lain"
+                            className="input min-h-[96px]"
+                            value={form.notes ?? ''}
+                            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                        />
+                    </label>
+                </div>
+
+                <div className="flex gap-2 pt-2">
                     <button
                         disabled={saving || !canEdit}
-                        className="px-4 py-2 rounded-xl border shadow disabled:opacity-50"
+                        className="btn-primary disabled:opacity-50"
                         type="submit"
+                        aria-label="Simpan pelanggan"
                     >
                         {saving ? 'Menyimpan…' : 'Simpan'}
                     </button>
+
                     {!isNew && entity && (
                         <button
                             type="button"
-                            className="px-4 py-2 rounded-xl border"
+                            className="btn-outline"
                             onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
+                            aria-label="Salin nomor WhatsApp"
                         >
                             Salin WA
                         </button>
