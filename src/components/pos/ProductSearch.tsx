@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type { Service } from '../../types/services';
 import { listServices } from '../../api/services';
-import { getEffectivePrice } from '../../api/servicePrices';
+import { listServicePricesByService, computeEffectivePrice } from '../../api/servicePrices';
+import type { ServicePrice } from '../../types/services';
 import { useAuth } from '../../store/useAuth';
 
 type Props = {
@@ -11,8 +12,10 @@ type Props = {
 
 export default function ProductSearch({ onPick }: Props): React.ReactElement {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
-  const branchId: string = user?.branch_id != null ? String(user.branch_id) : '';
+  const branchId: string | null = user?.branch_id != null ? String(user.branch_id) : null;
   const [q, setQ] = useState('');
+  const [base, setBase] = useState<Service[]>([]);
+  const [priceMap, setPriceMap] = useState<Record<string, ServicePrice[]>>({});
   const [rows, setRows] = useState<(Service & { price_effective: number })[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,16 +24,21 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
     setLoading(true); setError(null);
     try {
       const res = await listServices({ q, is_active: true, per_page: 10, page: 1 });
-      const base = (res.data ?? []);
-      const withPrice = await Promise.all(
-        base.map(async (s) => ({
-          ...s,
-          price_effective: branchId
-            ? await getEffectivePrice({ id: s.id, price_default: s.price_default }, branchId)
-            : Number(s.price_default),
-        }))
+      const list = (res.data ?? []) as Service[];
+      setBase(list);
+      // Ambil daftar override harga per service (sekali per service, paralel)
+      const entries = await Promise.all(
+        list.map(async (s) => [String(s.id), (await listServicePricesByService(String(s.id))).data] as const)
       );
-      setRows(withPrice);
+      const map: Record<string, ServicePrice[]> = {};
+      for (const [sid, prices] of entries) map[sid] = prices ?? [];
+      setPriceMap(map);
+      // Hitung harga efektif untuk cabang aktif saat ini (tanpa request tambahan)
+      const computed = list.map(s => ({
+        ...s,
+        price_effective: computeEffectivePrice(map[String(s.id)], branchId, s.price_default),
+      }));
+      setRows(computed);
     } catch {
       setError('Gagal memuat layanan');
     } finally {
@@ -39,6 +47,15 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
   }, [q, branchId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!base.length) return;
+    const computed = base.map(s => ({
+      ...s,
+      price_effective: computeEffectivePrice(priceMap[String(s.id)], branchId, s.price_default),
+    }));
+    setRows(computed);
+  }, [branchId, base, priceMap]);
 
   return (
     <div className="space-y-2">

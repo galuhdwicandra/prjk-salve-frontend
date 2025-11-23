@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-11-21 22:18:47_  
+_Dihasilkan otomatis: 2025-11-22 00:33:45_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2025\apk-web-salve\Projek Salve\prjk-salve\frontend`
 
 
@@ -583,42 +583,68 @@ export async function deleteExpense(id: string) {
 
 ### src\api\invoiceCounters.ts
 
-- SHA: `227c44293a22`  
-- Ukuran: 1 KB
+- SHA: `8591808346ee`  
+- Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
+// src/api/invoiceCounters.ts
 import { api } from './client';
 import type { ApiEnvelope } from './client';
 import type {
-    InvoiceCounter, InvoiceCounterUpsertPayload, InvoiceCounterQuery, PaginationMeta,
+  InvoiceCounter, InvoiceCounterUpsertPayload, InvoiceCounterQuery, PaginationMeta,
 } from '../types/branches';
 
-export async function listInvoiceCounters(params: InvoiceCounterQuery = {}) {
-    const { data } = await api.get<ApiEnvelope<InvoiceCounter[], PaginationMeta | null>>('/invoice-counters', { params });
-    return data;
+export async function listInvoiceCounters(params: InvoiceCounterQuery) {
+  const { data } = await api.get<ApiEnvelope<InvoiceCounter[], PaginationMeta | null>>(
+    '/invoice-counters',
+    { params }
+  );
+  return data;
 }
 
 export async function getInvoiceCounter(id: string) {
-    const { data } = await api.get<ApiEnvelope<InvoiceCounter, null>>(`/invoice-counters/${id}`);
-    return data;
+  const { data } = await api.get<ApiEnvelope<InvoiceCounter, null>>(`/invoice-counters/${id}`);
+  return data;
 }
 
 export async function createInvoiceCounter(payload: InvoiceCounterUpsertPayload) {
-    const { data } = await api.post<ApiEnvelope<InvoiceCounter, null>>('/invoice-counters', payload);
-    return data;
+  const { data } = await api.post<ApiEnvelope<InvoiceCounter, null>>('/invoice-counters', payload);
+  return data;
 }
 
 export async function updateInvoiceCounter(id: string, payload: Partial<InvoiceCounterUpsertPayload>) {
-    const { data } = await api.put<ApiEnvelope<InvoiceCounter, null>>(`/invoice-counters/${id}`, payload);
-    return data;
+  const { data } = await api.put<ApiEnvelope<InvoiceCounter, null>>(`/invoice-counters/${id}`, payload);
+  return data;
 }
 
 export async function deleteInvoiceCounter(id: string) {
-    const { data } = await api.delete<ApiEnvelope<null, null>>(`/invoice-counters/${id}`);
-    return data;
+  const { data } = await api.delete<ApiEnvelope<null, null>>(`/invoice-counters/${id}`);
+  return data;
 }
 
+export interface PreviewNumber {
+  number: string;     // contoh: SLV-202511-000019
+  invoice_no: string; // contoh: INV-21-11-0019
+}
+
+/** GET /invoice-counters/preview?branch_id=... */
+export async function previewNextNumber(branch_id: string) {
+  const { data } = await api.get<ApiEnvelope<PreviewNumber, null>>(
+    '/invoice-counters/preview',
+    { params: { branch_id } },
+  );
+  return data; // ApiEnvelope<PreviewNumber, null>
+}
+
+/** POST /invoice-counters/{id}/reset-now */
+export async function resetCounterNow(id: string) {
+  const { data } = await api.post<ApiEnvelope<InvoiceCounter, null>>(
+    `/invoice-counters/${id}/reset-now`,
+    {},
+  );
+  return data; // ApiEnvelope<InvoiceCounter, null>
+}
 ```
 </details>
 
@@ -1766,11 +1792,12 @@ export const router = createBrowserRouter([
 
 ### src\types\branches.ts
 
-- SHA: `217e8d700496`  
+- SHA: `4969acb7da70`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
+// src/types/branches.ts
 export type ResetPolicy = 'monthly' | 'never';
 
 export interface Branch {
@@ -1820,6 +1847,7 @@ export interface InvoiceCounterUpsertPayload {
   branch_id: string;
   prefix: string;         
   reset_policy: ResetPolicy;
+  seq?: number;
 }
 
 export interface InvoiceCounterQuery {
@@ -4707,13 +4735,17 @@ export default function BranchIndex() {
 
 ### src\pages\branches\InvoiceSettings.tsx
 
-- SHA: `92fbc8ed8cf7`  
-- Ukuran: 8 KB
+- SHA: `532eae53b231`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/branches/InvoiceSettings.tsx
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { listInvoiceCounters, createInvoiceCounter, updateInvoiceCounter, deleteInvoiceCounter } from '../../api/invoiceCounters';
+import {
+    listInvoiceCounters, createInvoiceCounter, updateInvoiceCounter, deleteInvoiceCounter,
+    previewNextNumber, resetCounterNow,
+} from '../../api/invoiceCounters';
 import { getBranch } from '../../api/branches';
 import type { Branch, InvoiceCounter, InvoiceCounterUpsertPayload, ResetPolicy } from '../../types/branches';
 import { useParams } from 'react-router-dom';
@@ -4730,11 +4762,13 @@ export default function InvoiceSettings() {
     const [rows, setRows] = useState<InvoiceCounter[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [preview, setPreview] = useState<{ number: string; invoice_no: string } | null>(null);
 
     const [form, setForm] = useState<InvoiceCounterUpsertPayload>({
         branch_id: id!,
         prefix: '',
         reset_policy: 'monthly',
+        seq: 0,
     });
     const valid = useMemo(() => form.prefix.trim().length > 0 && form.prefix.length <= 8, [form.prefix]);
 
@@ -4746,7 +4780,13 @@ export default function InvoiceSettings() {
             const res = await listInvoiceCounters({ branch_id: id, per_page: 50 });
             setRows(res.data ?? []);
             // default prefix mengikuti branch
-            setForm((f) => ({ ...f, prefix: (b.data as Branch).invoice_prefix, branch_id: id! }));
+            setForm((f) => ({
+                ...f,
+                prefix: (b.data as Branch).invoice_prefix,
+                branch_id: id!,
+                seq: (res.data?.[0]?.seq ?? 0)
+            }));
+            setPreview(null);
         } catch {
             setError('Gagal memuat konfigurasi invoice');
         } finally {
@@ -4761,12 +4801,34 @@ export default function InvoiceSettings() {
     async function onSaveNew(e: React.FormEvent) {
         e.preventDefault();
         if (!valid) { alert('Prefix wajib dan maksimal 8 karakter'); return; }
+        if (typeof form.seq !== 'number' || form.seq < 0 || form.seq > 999999) {
+            alert('Sequence harus angka 0–999999'); return;
+        }
         try {
             await createInvoiceCounter(form);
             alert('Counter ditambahkan');
             await refresh();
         } catch {
             alert('Gagal menambah counter');
+        }
+    }
+
+    async function onPreview() {
+        try {
+            const res = await previewNextNumber(id!);
+            setPreview(res.data);
+        } catch {
+            alert('Gagal preview nomor berikutnya');
+        }
+    }
+
+    async function onResetNow(counterId: string) {
+        if (!confirm('Reset sequence ke 0 untuk bulan berjalan?')) return;
+        try {
+            await resetCounterNow(counterId);
+            await refresh();
+        } catch {
+            alert('Gagal reset counter');
         }
     }
 
@@ -4809,9 +4871,17 @@ export default function InvoiceSettings() {
                                         <button
                                             className="underline text-xs mr-2"
                                             onClick={async () => {
-                                                const prefix = prompt('Prefix baru (max 8):', r.prefix) ?? r.prefix;
-                                                if (!prefix || prefix.length > 8) { alert('Prefix tidak valid'); return; }
-                                                try { await updateInvoiceCounter(r.id, { prefix }); await refresh(); } catch { alert('Gagal update'); }
+                                                const raw = prompt('Prefix baru (2–8 huruf kapital A–Z):', r.prefix) ?? r.prefix;
+                                                const prefix = (raw || '').toUpperCase().slice(0, 8);
+                                                if (!/^[A-Z]{2,8}$/.test(prefix)) { alert('Prefix tidak valid'); return; }
+                                                try {
+                                                    await updateInvoiceCounter(r.id, {
+                                                        prefix,
+                                                        reset_policy: r.reset_policy,
+                                                        seq: r.seq,
+                                                    });
+                                                    await refresh();
+                                                } catch { alert('Gagal update'); }
                                             }}
                                         >
                                             Ubah Prefix
@@ -4821,10 +4891,42 @@ export default function InvoiceSettings() {
                                             onClick={async () => {
                                                 const policy = (prompt('Reset policy (monthly/never):', r.reset_policy) ?? r.reset_policy) as ResetPolicy;
                                                 if (!['monthly', 'never'].includes(policy)) { alert('Reset policy tidak valid'); return; }
-                                                try { await updateInvoiceCounter(r.id, { reset_policy: policy }); await refresh(); } catch { alert('Gagal update'); }
+                                                try {
+                                                    await updateInvoiceCounter(r.id, {
+                                                        prefix: r.prefix,
+                                                        reset_policy: policy,
+                                                        seq: r.seq,
+                                                    });
+                                                    await refresh();
+                                                } catch { alert('Gagal update'); }
                                             }}
                                         >
                                             Ubah Reset
+                                        </button>
+                                        <button
+                                            className="underline text-xs mr-2"
+                                            onClick={async () => {
+                                                const v = prompt('Sequence baru (0–999999):', String(r.seq));
+                                                if (v == null) return;
+                                                const n = Number(v);
+                                                if (!Number.isFinite(n) || n < 0 || n > 999999) { alert('Sequence tidak valid'); return; }
+                                                try {
+                                                    await updateInvoiceCounter(r.id, {
+                                                        prefix: r.prefix,
+                                                        reset_policy: r.reset_policy,
+                                                        seq: Math.floor(n),
+                                                    });
+                                                    await refresh();
+                                                } catch { alert('Gagal update sequence'); }
+                                            }}
+                                        >
+                                            Ubah Sequence
+                                        </button>
+                                        <button
+                                            className="underline text-xs mr-2"
+                                            onClick={async () => { await onResetNow(r.id); }}
+                                        >
+                                            Reset Now
                                         </button>
                                         <button
                                             className="underline text-xs text-red-600"
@@ -4849,7 +4951,7 @@ export default function InvoiceSettings() {
                     <div className="grid gap-1">
                         <label className="text-xs">Prefix *</label>
                         <input className="border rounded px-3 py-2" value={form.prefix}
-                            onChange={(e) => setForm({ ...form, prefix: e.target.value.toUpperCase() })} />
+                            onChange={(e) => setForm({ ...form, prefix: e.target.value.toUpperCase().slice(0, 8) })} />
                     </div>
                     <div className="grid gap-1">
                         <label className="text-xs">Reset *</label>
@@ -4863,11 +4965,43 @@ export default function InvoiceSettings() {
                             {POLICIES.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                     </div>
+                    <div className="grid gap-1">
+                        <label className="text-xs">Sequence *</label>
+                        <input
+                            type="number"
+                            min={0}
+                            max={999999}
+                            step={1}
+                            className="border rounded px-3 py-2 font-mono"
+                            value={form.seq ?? 0}
+                            onChange={(e) => {
+                                const n = Number(e.target.value);
+                                const v = Number.isFinite(n) ? Math.max(0, Math.min(999999, Math.floor(n))) : 0;
+                                setForm({ ...form, seq: v });
+                            }}
+                        />
+                    </div>
                     <button className="rounded bg-black text-white px-3 py-2" disabled={!valid}>Tambah</button>
                 </form>
                 <p className="text-xs text-gray-500">
                     Kombinasi <code>branch_id + prefix</code> harus unik (lihat constraint DB). Sequence akan bertambah saat invoice dipakai.
                 </p>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={onPreview}
+                        className="rounded border px-3 py-2 text-xs"
+                        disabled={loading}
+                    >
+                        Preview nomor berikutnya
+                    </button>
+                    {preview && (
+                        <div className="text-xs">
+                            Next <code>number</code>: <strong className="font-mono">{preview.number}</strong>{' '}
+                            — <code>invoice_no</code>: <strong className="font-mono">{preview.invoice_no}</strong>
+                        </div>
+                    )}
+                </div>
             </section>
         </div>
     );

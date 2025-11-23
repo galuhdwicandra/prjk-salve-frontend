@@ -110,7 +110,7 @@ export default function ServiceForm() {
 
                 <div className="flex gap-2">
                     <button disabled={loading} className="rounded bg-black text-white px-3 py-2">{loading ? 'Menyimpan…' : 'Simpan'}</button>
-                    <button type="button" className="rounded border px-3 py-2" onClick={() => history.back()}>Batal</button>
+                    <button type="button" className="rounded border px-3 py-2" onClick={() => nav(-1)}>Batal</button>
                 </div>
             </form>
 
@@ -121,7 +121,7 @@ export default function ServiceForm() {
                     <p className="text-xs text-gray-500">
                         Harga efektif = override `service_prices` per cabang, jika tidak ada → pakai `price_default`.
                     </p>
-                    <PricePerBranchInput serviceId={service.id} defaultPrice={Number(service.price_default)} />
+                    <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
                 </section>
             )}
         </div>
