@@ -1,114 +1,114 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-11-22 00:33:45_  
-**Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2025\apk-web-salve\Projek Salve\prjk-salve\frontend`
+_Dihasilkan otomatis: 2025-11-25 14:42:56_  
+**Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
 ## Daftar Isi
 
 - [API (src/api)](#api-srcapi)
-  - [src\api\branches.ts](#file-srcapibranchests)
-  - [src\api\client.ts](#file-srcapiclientts)
-  - [src\api\customers.ts](#file-srcapicustomersts)
-  - [src\api\dashboard.ts](#file-srcapidashboardts)
-  - [src\api\deliveries.ts](#file-srcapideliveriests)
-  - [src\api\expenses.ts](#file-srcapiexpensests)
-  - [src\api\invoiceCounters.ts](#file-srcapiinvoicecountersts)
-  - [src\api\orderPhotos.ts](#file-srcapiorderphotosts)
-  - [src\api\orders.ts](#file-srcapiordersts)
-  - [src\api\receivables.ts](#file-srcapireceivablests)
-  - [src\api\serviceCategories.ts](#file-srcapiservicecategoriests)
-  - [src\api\servicePrices.ts](#file-srcapiservicepricests)
-  - [src\api\services.ts](#file-srcapiservicests)
-  - [src\api\users.ts](#file-srcapiusersts)
-  - [src\api\vouchers.ts](#file-srcapivouchersts)
+  - [src/api/branches.ts](#file-srcapibranchests)
+  - [src/api/client.ts](#file-srcapiclientts)
+  - [src/api/customers.ts](#file-srcapicustomersts)
+  - [src/api/dashboard.ts](#file-srcapidashboardts)
+  - [src/api/deliveries.ts](#file-srcapideliveriests)
+  - [src/api/expenses.ts](#file-srcapiexpensests)
+  - [src/api/invoiceCounters.ts](#file-srcapiinvoicecountersts)
+  - [src/api/orderPhotos.ts](#file-srcapiorderphotosts)
+  - [src/api/orders.ts](#file-srcapiordersts)
+  - [src/api/receivables.ts](#file-srcapireceivablests)
+  - [src/api/serviceCategories.ts](#file-srcapiservicecategoriests)
+  - [src/api/servicePrices.ts](#file-srcapiservicepricests)
+  - [src/api/services.ts](#file-srcapiservicests)
+  - [src/api/users.ts](#file-srcapiusersts)
+  - [src/api/vouchers.ts](#file-srcapivouchersts)
 
 - [Store (src/store)](#store-srcstore)
-  - [src\store\useAuth.ts](#file-srcstoreuseauthts)
+  - [src/store/useAuth.ts](#file-srcstoreuseauthts)
 
 - [layouts (src/layouts)](#layouts-srclayouts)
-  - [src\layouts\GuestLayout.tsx](#file-srclayoutsguestlayouttsx)
-  - [src\layouts\ProtectedLayout.tsx](#file-srclayoutsprotectedlayouttsx)
+  - [src/layouts/GuestLayout.tsx](#file-srclayoutsguestlayouttsx)
+  - [src/layouts/ProtectedLayout.tsx](#file-srclayoutsprotectedlayouttsx)
 
 - [router (src/reouter)](#router-srcreouter)
-  - [src\router\Guarded.tsx](#file-srcrouterguardedtsx)
-  - [src\router\index.tsx](#file-srcrouterindextsx)
+  - [src/router/Guarded.tsx](#file-srcrouterguardedtsx)
+  - [src/router/index.tsx](#file-srcrouterindextsx)
 
 - [Types (src/types)](#types-srctypes)
-  - [src\types\branches.ts](#file-srctypesbranchests)
-  - [src\types\customers.ts](#file-srctypescustomersts)
-  - [src\types\dashboard.ts](#file-srctypesdashboardts)
-  - [src\types\deliveries.ts](#file-srctypesdeliveriests)
-  - [src\types\expenses.ts](#file-srctypesexpensests)
-  - [src\types\orders.ts](#file-srctypesordersts)
-  - [src\types\payments.ts](#file-srctypespaymentsts)
-  - [src\types\receivables.ts](#file-srctypesreceivablests)
-  - [src\types\services.ts](#file-srctypesservicests)
-  - [src\types\users.ts](#file-srctypesusersts)
-  - [src\types\vouchers.ts](#file-srctypesvouchersts)
+  - [src/types/branches.ts](#file-srctypesbranchests)
+  - [src/types/customers.ts](#file-srctypescustomersts)
+  - [src/types/dashboard.ts](#file-srctypesdashboardts)
+  - [src/types/deliveries.ts](#file-srctypesdeliveriests)
+  - [src/types/expenses.ts](#file-srctypesexpensests)
+  - [src/types/orders.ts](#file-srctypesordersts)
+  - [src/types/payments.ts](#file-srctypespaymentsts)
+  - [src/types/receivables.ts](#file-srctypesreceivablests)
+  - [src/types/services.ts](#file-srctypesservicests)
+  - [src/types/users.ts](#file-srctypesusersts)
+  - [src/types/vouchers.ts](#file-srctypesvouchersts)
 
 - [Components (src/components)](#components-srccomponents)
-  - [src\components\ConfirmDialog.tsx](#file-srccomponentsconfirmdialogtsx)
-  - [src\components\customers\CustomerPicker.tsx](#file-srccomponentscustomerscustomerpickertsx)
-  - [src\components\DataTable.tsx](#file-srccomponentsdatatabletsx)
-  - [src\components\delivery\AssignCourierSelect.tsx](#file-srccomponentsdeliveryassigncourierselecttsx)
-  - [src\components\delivery\DeliveryStatusStepper.tsx](#file-srccomponentsdeliverydeliverystatussteppertsx)
-  - [src\components\Dropzone.tsx](#file-srccomponentsdropzonetsx)
-  - [src\components\FilterBar.tsx](#file-srccomponentsfilterbartsx)
-  - [src\components\LazyBoundary.tsx](#file-srccomponentslazyboundarytsx)
-  - [src\components\orders\OrderPhotos.tsx](#file-srccomponentsordersorderphotostsx)
-  - [src\components\orders\OrderPhotosGallery.tsx](#file-srccomponentsordersorderphotosgallerytsx)
-  - [src\components\orders\OrderPhotosUpload.tsx](#file-srccomponentsordersorderphotosuploadtsx)
-  - [src\components\orders\OrderStatusStepper.tsx](#file-srccomponentsordersorderstatussteppertsx)
-  - [src\components\pos\CartPanel.tsx](#file-srccomponentsposcartpaneltsx)
-  - [src\components\pos\CheckoutDialog.tsx](#file-srccomponentsposcheckoutdialogtsx)
-  - [src\components\pos\ProductSearch.tsx](#file-srccomponentsposproductsearchtsx)
-  - [src\components\ReceiptPreview.tsx](#file-srccomponentsreceiptpreviewtsx)
-  - [src\components\receivables\SettleReceivableDialog.tsx](#file-srccomponentsreceivablessettlereceivabledialogtsx)
-  - [src\components\Toast.tsx](#file-srccomponentstoasttsx)
+  - [src/components/ConfirmDialog.tsx](#file-srccomponentsconfirmdialogtsx)
+  - [src/components/customers/CustomerPicker.tsx](#file-srccomponentscustomerscustomerpickertsx)
+  - [src/components/DataTable.tsx](#file-srccomponentsdatatabletsx)
+  - [src/components/delivery/AssignCourierSelect.tsx](#file-srccomponentsdeliveryassigncourierselecttsx)
+  - [src/components/delivery/DeliveryStatusStepper.tsx](#file-srccomponentsdeliverydeliverystatussteppertsx)
+  - [src/components/Dropzone.tsx](#file-srccomponentsdropzonetsx)
+  - [src/components/FilterBar.tsx](#file-srccomponentsfilterbartsx)
+  - [src/components/LazyBoundary.tsx](#file-srccomponentslazyboundarytsx)
+  - [src/components/orders/OrderPhotos.tsx](#file-srccomponentsordersorderphotostsx)
+  - [src/components/orders/OrderPhotosGallery.tsx](#file-srccomponentsordersorderphotosgallerytsx)
+  - [src/components/orders/OrderPhotosUpload.tsx](#file-srccomponentsordersorderphotosuploadtsx)
+  - [src/components/orders/OrderStatusStepper.tsx](#file-srccomponentsordersorderstatussteppertsx)
+  - [src/components/pos/CartPanel.tsx](#file-srccomponentsposcartpaneltsx)
+  - [src/components/pos/CheckoutDialog.tsx](#file-srccomponentsposcheckoutdialogtsx)
+  - [src/components/pos/ProductSearch.tsx](#file-srccomponentsposproductsearchtsx)
+  - [src/components/ReceiptPreview.tsx](#file-srccomponentsreceiptpreviewtsx)
+  - [src/components/receivables/SettleReceivableDialog.tsx](#file-srccomponentsreceivablessettlereceivabledialogtsx)
+  - [src/components/Toast.tsx](#file-srccomponentstoasttsx)
 
 - [Pages (src/pages)](#pages-srcpages)
-  - [src\pages\branches\BranchForm.tsx](#file-srcpagesbranchesbranchformtsx)
-  - [src\pages\branches\BranchIndex.tsx](#file-srcpagesbranchesbranchindextsx)
-  - [src\pages\branches\InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
-  - [src\pages\customers\CustomerDetail.tsx](#file-srcpagescustomerscustomerdetailtsx)
-  - [src\pages\customers\CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
-  - [src\pages\dashboard\DashboardHome.tsx](#file-srcpagesdashboarddashboardhometsx)
-  - [src\pages\deliveries\DeliveryDetail.tsx](#file-srcpagesdeliveriesdeliverydetailtsx)
-  - [src\pages\deliveries\DeliveryIndex.tsx](#file-srcpagesdeliveriesdeliveryindextsx)
-  - [src\pages\expenses\ExpenseForm.tsx](#file-srcpagesexpensesexpenseformtsx)
-  - [src\pages\expenses\ExpensesIndex.tsx](#file-srcpagesexpensesexpensesindextsx)
-  - [src\pages\Login.tsx](#file-srcpageslogintsx)
-  - [src\pages\orders\OrderDetail.tsx](#file-srcpagesordersorderdetailtsx)
-  - [src\pages\orders\OrderReceipt.tsx](#file-srcpagesordersorderreceipttsx)
-  - [src\pages\orders\OrdersIndex.tsx](#file-srcpagesordersordersindextsx)
-  - [src\pages\pos\POSPage.tsx](#file-srcpagespospospagetsx)
-  - [src\pages\receivables\ReceivablesIndex.tsx](#file-srcpagesreceivablesreceivablesindextsx)
-  - [src\pages\services\CategoryIndex.tsx](#file-srcpagesservicescategoryindextsx)
-  - [src\pages\services\PricePerBranchInput.tsx](#file-srcpagesservicespriceperbranchinputtsx)
-  - [src\pages\services\ServiceForm.tsx](#file-srcpagesservicesserviceformtsx)
-  - [src\pages\services\ServiceIndex.tsx](#file-srcpagesservicesserviceindextsx)
-  - [src\pages\users\UserForm.tsx](#file-srcpagesusersuserformtsx)
-  - [src\pages\users\UsersList.tsx](#file-srcpagesusersuserslisttsx)
-  - [src\pages\vouchers\VoucherForm.tsx](#file-srcpagesvouchersvoucherformtsx)
-  - [src\pages\vouchers\VouchersIndex.tsx](#file-srcpagesvouchersvouchersindextsx)
+  - [src/pages/branches/BranchForm.tsx](#file-srcpagesbranchesbranchformtsx)
+  - [src/pages/branches/BranchIndex.tsx](#file-srcpagesbranchesbranchindextsx)
+  - [src/pages/branches/InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
+  - [src/pages/customers/CustomerDetail.tsx](#file-srcpagescustomerscustomerdetailtsx)
+  - [src/pages/customers/CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
+  - [src/pages/dashboard/DashboardHome.tsx](#file-srcpagesdashboarddashboardhometsx)
+  - [src/pages/deliveries/DeliveryDetail.tsx](#file-srcpagesdeliveriesdeliverydetailtsx)
+  - [src/pages/deliveries/DeliveryIndex.tsx](#file-srcpagesdeliveriesdeliveryindextsx)
+  - [src/pages/expenses/ExpenseForm.tsx](#file-srcpagesexpensesexpenseformtsx)
+  - [src/pages/expenses/ExpensesIndex.tsx](#file-srcpagesexpensesexpensesindextsx)
+  - [src/pages/Login.tsx](#file-srcpageslogintsx)
+  - [src/pages/orders/OrderDetail.tsx](#file-srcpagesordersorderdetailtsx)
+  - [src/pages/orders/OrderReceipt.tsx](#file-srcpagesordersorderreceipttsx)
+  - [src/pages/orders/OrdersIndex.tsx](#file-srcpagesordersordersindextsx)
+  - [src/pages/pos/POSPage.tsx](#file-srcpagespospospagetsx)
+  - [src/pages/receivables/ReceivablesIndex.tsx](#file-srcpagesreceivablesreceivablesindextsx)
+  - [src/pages/services/CategoryIndex.tsx](#file-srcpagesservicescategoryindextsx)
+  - [src/pages/services/PricePerBranchInput.tsx](#file-srcpagesservicespriceperbranchinputtsx)
+  - [src/pages/services/ServiceForm.tsx](#file-srcpagesservicesserviceformtsx)
+  - [src/pages/services/ServiceIndex.tsx](#file-srcpagesservicesserviceindextsx)
+  - [src/pages/users/UserForm.tsx](#file-srcpagesusersuserformtsx)
+  - [src/pages/users/UsersList.tsx](#file-srcpagesusersuserslisttsx)
+  - [src/pages/vouchers/VoucherForm.tsx](#file-srcpagesvouchersvoucherformtsx)
+  - [src/pages/vouchers/VouchersIndex.tsx](#file-srcpagesvouchersvouchersindextsx)
 
 - [Pages (src/utils)](#pages-srcutils)
-  - [src\utils\files.ts](#file-srcutilsfilests)
-  - [src\utils\money.ts](#file-srcutilsmoneyts)
-  - [src\utils\order-status.ts](#file-srcutilsorder-statusts)
-  - [src\utils\theme.ts](#file-srcutilsthemets)
-  - [src\utils\wa.ts](#file-srcutilswats)
+  - [src/utils/files.ts](#file-srcutilsfilests)
+  - [src/utils/money.ts](#file-srcutilsmoneyts)
+  - [src/utils/order-status.ts](#file-srcutilsorder-statusts)
+  - [src/utils/theme.ts](#file-srcutilsthemets)
+  - [src/utils/wa.ts](#file-srcutilswats)
 
 - [Entry Files](#entry-files)
-  - [src\App.tsx](#file-srcapptsx)
-  - [src\main.tsx](#file-srcmaintsx)
+  - [src/App.tsx](#file-srcapptsx)
+  - [src/main.tsx](#file-srcmaintsx)
 
 
 
 ## API (src/api)
 
-### src\api\branches.ts
+### src/api/branches.ts
 
 - SHA: `6e7bc78ba8f6`  
 - Ukuran: 1 KB
@@ -149,7 +149,7 @@ export async function deleteBranch(id: string) {
 ```
 </details>
 
-### src\api\client.ts
+### src/api/client.ts
 
 - SHA: `741c920e6df2`  
 - Ukuran: 3 KB
@@ -258,7 +258,7 @@ export { api };
 ```
 </details>
 
-### src\api\customers.ts
+### src/api/customers.ts
 
 - SHA: `55f48245371e`  
 - Ukuran: 3 KB
@@ -347,7 +347,7 @@ export async function resolveOrCreateCustomerByWA(
 ```
 </details>
 
-### src\api\dashboard.ts
+### src/api/dashboard.ts
 
 - SHA: `b5b7cbd6f727`  
 - Ukuran: 513 B
@@ -376,7 +376,7 @@ export async function getDashboardSummary(params: DashboardSummaryQuery) {
 ```
 </details>
 
-### src\api\deliveries.ts
+### src/api/deliveries.ts
 
 - SHA: `bc61a066492a`  
 - Ukuran: 2 KB
@@ -442,7 +442,7 @@ export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPa
 ```
 </details>
 
-### src\api\expenses.ts
+### src/api/expenses.ts
 
 - SHA: `366273253174`  
 - Ukuran: 4 KB
@@ -581,7 +581,7 @@ export async function deleteExpense(id: string) {
 ```
 </details>
 
-### src\api\invoiceCounters.ts
+### src/api/invoiceCounters.ts
 
 - SHA: `8591808346ee`  
 - Ukuran: 2 KB
@@ -648,7 +648,7 @@ export async function resetCounterNow(id: string) {
 ```
 </details>
 
-### src\api\orderPhotos.ts
+### src/api/orderPhotos.ts
 
 - SHA: `2c2c206554e4`  
 - Ukuran: 459 B
@@ -674,7 +674,7 @@ export async function uploadOrderPhotos(
 ```
 </details>
 
-### src\api\orders.ts
+### src/api/orders.ts
 
 - SHA: `3f13a90b4cec`  
 - Ukuran: 3 KB
@@ -771,7 +771,7 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
 ```
 </details>
 
-### src\api\receivables.ts
+### src/api/receivables.ts
 
 - SHA: `4180e50f6920`  
 - Ukuran: 2 KB
@@ -841,7 +841,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 ```
 </details>
 
-### src\api\serviceCategories.ts
+### src/api/serviceCategories.ts
 
 - SHA: `103d2837c411`  
 - Ukuran: 1 KB
@@ -875,13 +875,14 @@ export async function deleteServiceCategory(id: string) {
 ```
 </details>
 
-### src\api\servicePrices.ts
+### src/api/servicePrices.ts
 
-- SHA: `9be7e31c1cd8`  
-- Ukuran: 1014 B
+- SHA: `1f175f2f1a30`  
+- Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
+// src/api/servicePrices.ts
 import { api, type ApiEnvelope } from './client';
 import type { ServicePrice, ServicePriceSetPayload } from '../types/services';
 
@@ -896,17 +897,28 @@ export async function listServicePricesByService(service_id: string, branch_id?:
   return data;
 }
 
-/** Helper: ambil harga efektif (override jika ada, selain itu fallback ke price_default) */
+/** Helper sinkron (disarankan): hitung harga efektif dari rows yang sudah di-fetch */
+export function computeEffectivePrice(
+  rows: ServicePrice[] | undefined,
+  branch_id: string | null | undefined,
+  defaultPrice: number | string
+): number {
+  const fallback = typeof defaultPrice === 'string' ? parseFloat(defaultPrice) : (defaultPrice ?? 0);
+  if (!rows || !rows.length || !branch_id) return fallback;
+  const hit = rows.find(p => String(p.branch_id) === String(branch_id));
+  return hit ? Number(hit.price) : fallback;
+}
+
+/** Helper async (kompatibilitas): tetap ada, tetapi utamakan computeEffectivePrice di loop */
 export async function getEffectivePrice(service: { id: string; price_default: number }, branch_id: string): Promise<number> {
   const res = await listServicePricesByService(service.id, branch_id);
-  const row = (res.data ?? []).find((p) => p.branch_id === branch_id);
-  return row ? Number(row.price) : Number(service.price_default);
+  return computeEffectivePrice(res.data, branch_id, service.price_default);
 }
 
 ```
 </details>
 
-### src\api\services.ts
+### src/api/services.ts
 
 - SHA: `0ab43f358e65`  
 - Ukuran: 1001 B
@@ -940,7 +952,7 @@ export async function deleteService(id: string) {
 ```
 </details>
 
-### src\api\users.ts
+### src/api/users.ts
 
 - SHA: `c066e4f4055b`  
 - Ukuran: 2 KB
@@ -1004,7 +1016,7 @@ export async function resetUserPassword(id: string, new_password: string) {
 ```
 </details>
 
-### src\api\vouchers.ts
+### src/api/vouchers.ts
 
 - SHA: `77de151cb26f`  
 - Ukuran: 1 KB
@@ -1054,7 +1066,7 @@ export async function applyVoucherToOrder(orderId: ID, payload: ApplyVoucherPayl
 
 ## Store (src/store)
 
-### src\store\useAuth.ts
+### src/store/useAuth.ts
 
 - SHA: `8f456f8a3349`  
 - Ukuran: 3 KB
@@ -1182,7 +1194,7 @@ export function useHasRole(required: RoleName | RoleName[]): boolean {
 
 ## layouts (src/layouts)
 
-### src\layouts\GuestLayout.tsx
+### src/layouts/GuestLayout.tsx
 
 - SHA: `43899ef8ecc3`  
 - Ukuran: 319 B
@@ -1203,7 +1215,7 @@ export default function GuestLayout() {
 ```
 </details>
 
-### src\layouts\ProtectedLayout.tsx
+### src/layouts/ProtectedLayout.tsx
 
 - SHA: `256d0ca0278e`  
 - Ukuran: 8 KB
@@ -1420,7 +1432,7 @@ export function RequireRole(props: { roles: RoleName[]; children: React.ReactNod
 
 ## router (src/reouter)
 
-### src\router\Guarded.tsx
+### src/router/Guarded.tsx
 
 - SHA: `588b0d2ac55c`  
 - Ukuran: 947 B
@@ -1458,7 +1470,7 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 ```
 </details>
 
-### src\router\index.tsx
+### src/router/index.tsx
 
 - SHA: `be7db023a69b`  
 - Ukuran: 9 KB
@@ -1790,7 +1802,7 @@ export const router = createBrowserRouter([
 
 ## Types (src/types)
 
-### src\types\branches.ts
+### src/types/branches.ts
 
 - SHA: `4969acb7da70`  
 - Ukuran: 1 KB
@@ -1859,7 +1871,7 @@ export interface InvoiceCounterQuery {
 ```
 </details>
 
-### src\types\customers.ts
+### src/types/customers.ts
 
 - SHA: `a990c8398134`  
 - Ukuran: 1 KB
@@ -1917,7 +1929,7 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src\types\dashboard.ts
+### src/types/dashboard.ts
 
 - SHA: `7c56c02702aa`  
 - Ukuran: 1013 B
@@ -1973,7 +1985,7 @@ export interface DashboardSummaryMeta {
 ```
 </details>
 
-### src\types\deliveries.ts
+### src/types/deliveries.ts
 
 - SHA: `985ea24185f1`  
 - Ukuran: 2 KB
@@ -2065,7 +2077,7 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src\types\expenses.ts
+### src/types/expenses.ts
 
 - SHA: `8527b92302de`  
 - Ukuran: 1 KB
@@ -2133,7 +2145,7 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src\types\orders.ts
+### src/types/orders.ts
 
 - SHA: `a05d90a1fce4`  
 - Ukuran: 3 KB
@@ -2268,7 +2280,7 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src\types\payments.ts
+### src/types/payments.ts
 
 - SHA: `a3a68e2ecd8b`  
 - Ukuran: 410 B
@@ -2297,7 +2309,7 @@ export type Payment = {
 ```
 </details>
 
-### src\types\receivables.ts
+### src/types/receivables.ts
 
 - SHA: `77e577194255`  
 - Ukuran: 1 KB
@@ -2359,7 +2371,7 @@ export interface ReceivableSettleResult {
 ```
 </details>
 
-### src\types\services.ts
+### src/types/services.ts
 
 - SHA: `8c3c6f2e0ddb`  
 - Ukuran: 2 KB
@@ -2443,7 +2455,7 @@ export interface ServicePriceSetPayload {
 ```
 </details>
 
-### src\types\users.ts
+### src/types/users.ts
 
 - SHA: `9f576bb91d3b`  
 - Ukuran: 1 KB
@@ -2499,7 +2511,7 @@ export interface Envelope<T, M = unknown> {
 ```
 </details>
 
-### src\types\vouchers.ts
+### src/types/vouchers.ts
 
 - SHA: `40392fcaeff8`  
 - Ukuran: 1 KB
@@ -2569,7 +2581,7 @@ export type ApplyVoucherResponse = {
 
 ## Components (src/components)
 
-### src\components\ConfirmDialog.tsx
+### src/components/ConfirmDialog.tsx
 
 - SHA: `5d2261ec27f2`  
 - Ukuran: 261 B
@@ -2590,209 +2602,297 @@ export default function ConfirmDialog(props: Props) {
 ```
 </details>
 
-### src\components\customers\CustomerPicker.tsx
+### src/components/customers/CustomerPicker.tsx
 
-- SHA: `b8fa7535e8e2`  
-- Ukuran: 7 KB
+- SHA: `41ab43d06c00`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/components/customers/CustomerPicker.tsx
+import React, { useEffect, useMemo, useRef, useState, useId } from "react";
 import { listCustomers } from "../../api/customers";
 
 type Props = {
-    /** id pelanggan terpilih (untuk form/submit) */
-    value: string | "";
-    /** callback saat id berubah */
-    onChange: (id: string | "") => void;
-    /** placeholder input */
-    placeholder?: string;
-    /** opsional: tampilkan teks kecil error bila wajib */
-    requiredText?: string;
+  /** id pelanggan terpilih (untuk form/submit) */
+  value: string | "";
+  /** callback saat id berubah */
+  onChange: (id: string | "") => void;
+  /** placeholder input */
+  placeholder?: string;
+  /** opsional: tampilkan teks kecil error bila wajib */
+  requiredText?: string;
 };
 
 type CustomerLite = {
-    id: string;
-    name: string;
-    whatsapp?: string | null;
-    address?: string | null;
+  id: string;
+  name: string;
+  whatsapp?: string | null;
+  address?: string | null;
 };
 
 type UnknownObj = Record<string, unknown>;
 
 export default function CustomerPicker({
-    value,
-    onChange,
-    placeholder = "Cari nama/WA/alamat pelanggan...",
-    requiredText,
+  value,
+  onChange,
+  placeholder = "Cari nama/WA/alamat pelanggan...",
+  requiredText,
 }: Props): React.ReactElement {
-    const [query, setQuery] = useState<string>("");
-    const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [list, setList] = useState<CustomerLite[]>([]);
-    const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const [query, setQuery] = useState<string>("");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [list, setList] = useState<CustomerLite[]>([]);
+  const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
 
-    const boxRef = useRef<HTMLDivElement | null>(null);
-    const timerRef = useRef<number | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const timerRef = useRef<number | null>(null);
+  const listboxId = useId();
 
-    function isCustomerLite(u: unknown): u is CustomerLite {
-        if (!u || typeof u !== "object") return false;
-        const o = u as UnknownObj;
-        return typeof o.id === "string" && typeof o.name === "string";
+  function isCustomerLite(u: unknown): u is CustomerLite {
+    if (!u || typeof u !== "object") return false;
+    const o = u as UnknownObj;
+    return typeof o.id === "string" && typeof o.name === "string";
+  }
+
+  function extractRows(u: unknown): unknown[] {
+    if (Array.isArray(u)) return u;
+    if (u && typeof u === "object") {
+      const o = u as UnknownObj;
+      if (Array.isArray(o.data)) return o.data as unknown[];
+      if (Array.isArray(o.items)) return o.items as unknown[];
+      if (o.data && typeof o.data === "object" && Array.isArray((o.data as UnknownObj).data)) {
+        return ((o.data as UnknownObj).data as unknown[]);
+      }
     }
+    return [];
+  }
 
-    function extractRows(u: unknown): unknown[] {
-        if (Array.isArray(u)) return u;
-        if (u && typeof u === "object") {
-            const o = u as UnknownObj;
-            // bentuk umum: { data: [...] } atau { items: [...] } atau { data: { data: [...] } }
-            if (Array.isArray(o.data)) return o.data as unknown[];
-            if (Array.isArray(o.items)) return o.items as unknown[];
-            if (o.data && typeof o.data === "object" && Array.isArray((o.data as UnknownObj).data)) {
-                return ((o.data as UnknownObj).data as unknown[]);
-            }
-        }
-        return [];
+  // Tutup dropdown saat klik di luar
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!boxRef.current) return;
+      if (!boxRef.current.contains(e.target as Node)) setOpen(false);
     }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
 
-    // Tutup dropdown saat klik di luar
-    useEffect(() => {
-        function onDocClick(e: MouseEvent) {
-            if (!boxRef.current) return;
-            if (!boxRef.current.contains(e.target as Node)) setOpen(false);
-        }
-        document.addEventListener("click", onDocClick);
-        return () => document.removeEventListener("click", onDocClick);
-    }, []);
-
-    // Debounce pencarian
-    useEffect(() => {
-        if (timerRef.current) window.clearTimeout(timerRef.current);
-        if (!query || query.length < 2) {
-            setList([]);
-            return;
-        }
-        timerRef.current = window.setTimeout(async () => {
-            setLoading(true);
-            try {
-                const res = await listCustomers({ q: query, per_page: 8 });
-
-                // Normalisasi bentuk respons tanpa any
-                const rowsUnknown = extractRows(res as unknown);
-                const items: CustomerLite[] = rowsUnknown
-                    .map((r) => {
-                        if (!isCustomerLite(r)) return null;
-                        const o = r as UnknownObj;
-                        return {
-                            id: String(o.id),
-                            name: String(o.name),
-                            whatsapp: o.whatsapp ? String(o.whatsapp) : null,
-                            address: o.address ? String(o.address) : null,
-                        } as CustomerLite;
-                    })
-                    .filter((x): x is CustomerLite => x !== null);
-
-                setList(items);
-                setOpen(true);
-            } catch {
-                setList([]);
-                setOpen(false);
-            } finally {
-                setLoading(false);
-            }
-        }, 300) as unknown as number;
-    }, [query]);
-
-    // Jika parent reset value → kosongkan label
-    useEffect(() => {
-        if (!value) setSelectedLabel("");
-    }, [value]);
-
-    const showHelper = useMemo(() => !value && !!requiredText, [value, requiredText]);
-
-    function pick(c: CustomerLite) {
-        setSelectedLabel(c.name);
-        setQuery(c.name);
-        onChange(c.id);
-        setOpen(false);
+  // Debounce pencarian
+  useEffect(() => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    if (!query || query.length < 2) {
+      setList([]);
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
     }
+    timerRef.current = window.setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await listCustomers({ q: query, per_page: 8 });
+        const rowsUnknown = extractRows(res as unknown);
+        const items: CustomerLite[] = rowsUnknown
+          .map((r) => {
+            if (!isCustomerLite(r)) return null;
+            const o = r as UnknownObj;
+            return {
+              id: String(o.id),
+              name: String(o.name),
+              whatsapp: o.whatsapp ? String(o.whatsapp) : null,
+              address: o.address ? String(o.address) : null,
+            } as CustomerLite;
+          })
+          .filter((x): x is CustomerLite => x !== null);
 
-    function clearSelection() {
-        setSelectedLabel("");
-        setQuery("");
-        onChange("");
+        setList(items);
+        setOpen(true);
+        setActiveIndex(items.length > 0 ? 0 : -1);
+      } catch {
         setList([]);
         setOpen(false);
+        setActiveIndex(-1);
+      } finally {
+        setLoading(false);
+      }
+    }, 300) as unknown as number;
+  }, [query]);
+
+  // Jika parent reset value → kosongkan label
+  useEffect(() => {
+    if (!value) setSelectedLabel("");
+  }, [value]);
+
+  const showHelper = useMemo(() => !value && !!requiredText, [value, requiredText]);
+  const displayText = selectedLabel || query;
+
+  function pick(c: CustomerLite) {
+    setSelectedLabel(c.name);
+    setQuery(c.name);
+    onChange(c.id);
+    setOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  }
+
+  function clearSelection() {
+    setSelectedLabel("");
+    setQuery("");
+    onChange("");
+    setList([]);
+    setOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setOpen(true);
+      setActiveIndex((idx) => (idx === -1 && list.length ? 0 : idx));
+      return;
     }
+    if (!open) return;
 
-    const displayText = selectedLabel || query;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((prev) => (list.length ? (prev + 1) % list.length : -1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((prev) => (list.length ? (prev - 1 + list.length) % list.length : -1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (activeIndex >= 0 && list[activeIndex]) pick(list[activeIndex]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      setActiveIndex(-1);
+    }
+  }
 
-    return (
-        <div className="relative" ref={boxRef}>
-            <div className="flex items-center gap-2">
-                <input
-                    className="border rounded px-3 py-2 w-full"
-                    value={displayText}
-                    onChange={(e) => {
-                        setSelectedLabel("");
-                        onChange(""); // reset id saat user mulai mengetik lagi
-                        setQuery(e.target.value);
-                    }}
-                    placeholder={placeholder}
-                    onFocus={() => {
-                        if (list.length > 0) setOpen(true);
-                    }}
-                />
-                {value && (
-                    <button
-                        type="button"
-                        className="text-xs border rounded px-2 py-1"
-                        onClick={clearSelection}
-                        title="Bersihkan pilihan"
-                    >
-                        ×
-                    </button>
-                )}
-            </div>
-
-            {showHelper && (
-                <div className="text-[11px] text-red-600 mt-1">{requiredText}</div>
-            )}
-
-            {open && (
-                <div className="absolute z-20 mt-1 w-full rounded border bg-white shadow">
-                    {loading && <div className="px-3 py-2 text-sm opacity-70">Mencari…</div>}
-                    {!loading && list.length === 0 && (
-                        <div className="px-3 py-2 text-sm opacity-70">Tidak ada hasil</div>
-                    )}
-                    {!loading &&
-                        list.map((c) => (
-                            <button
-                                key={c.id}
-                                type="button"
-                                className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                                onClick={() => pick(c)}
-                            >
-                                <div className="text-sm font-medium">{c.name}</div>
-                                {(c.whatsapp || c.address) && (
-                                    <div className="text-[11px] opacity-70">
-                                        {c.whatsapp ? `WA: ${c.whatsapp}` : ""}
-                                        {c.whatsapp && c.address ? " • " : ""}
-                                        {c.address ? `${c.address}` : ""}
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                </div>
-            )}
+  return (
+    <div className="relative" ref={boxRef}>
+      <div className="flex items-center gap-2">
+        <div className="relative grow">
+          <input
+            ref={inputRef}
+            className="input w-full pl-9 py-2"
+            value={displayText}
+            onChange={(e) => {
+              setSelectedLabel("");
+              onChange(""); // reset id saat user mulai mengetik lagi
+              setQuery(e.target.value);
+            }}
+            placeholder={placeholder}
+            onFocus={() => { if (list.length > 0) setOpen(true); }}
+            onKeyDown={onKeyDown}
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={open ? `listbox-${listboxId}` : undefined}
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            aria-activedescendant={
+              open && activeIndex >= 0 ? `option-${listboxId}-${list[activeIndex]?.id}` : undefined
+            }
+          />
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            🔎
+          </span>
         </div>
-    );
+
+        {value && (
+          <button
+            type="button"
+            className="btn-outline text-xs px-2 py-1"
+            onClick={clearSelection}
+            title="Bersihkan pilihan"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      {showHelper && (
+        <div className="text-[11px] text-red-600 mt-1">{requiredText}</div>
+      )}
+
+      {open && (
+        <div
+          className="absolute z-20 mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white shadow-elev-2 overflow-hidden"
+          role="listbox"
+          id={`listbox-${listboxId}`}
+        >
+          {loading && (
+            <div className="px-3 py-2 text-sm flex items-center gap-2 opacity-70">
+              <span className="h-4 w-4 rounded-full border-2 border-black/20 border-t-black/60 animate-spin" />
+              Mencari…
+            </div>
+          )}
+
+          {!loading && list.length === 0 && (
+            <div className="px-3 py-2 text-sm opacity-70">Tidak ada hasil</div>
+          )}
+
+          {!loading && list.length > 0 && (
+            <ul className="max-h-64 overflow-auto">
+              {list.map((c, idx) => {
+                const active = idx === activeIndex;
+                return (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      id={`option-${listboxId}-${c.id}`}
+                      role="option"
+                      aria-selected={value === c.id || active}
+                      className={`w-full text-left px-3 py-2 transition-colors ${
+                        active ? "bg-[#E6EDFF]" : "hover:bg-black/5"
+                      }`}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onMouseDown={(e) => e.preventDefault()} // cegah blur sebelum click
+                      onClick={() => pick(c)}
+                    >
+                      <div className="text-sm font-medium">
+                        {highlight(c.name, query)}
+                      </div>
+                      {(c.whatsapp || c.address) && (
+                        <div className="text-[11px] opacity-70">
+                          {c.whatsapp ? <>WA: {highlight(c.whatsapp, query)}</> : null}
+                          {c.whatsapp && c.address ? " • " : ""}
+                          {c.address ? <>{highlight(c.address, query)}</> : null}
+                        </div>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Utils ---------- */
+function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function highlight(text?: string | null, q?: string) {
+  if (!text) return null;
+  if (!q || q.length < 2) return text;
+  const parts = text.split(new RegExp(`(${escapeRegExp(q)})`, "ig"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-[#E6EDFF] px-0.5 rounded">{part}</mark>
+      : <span key={i}>{part}</span>
+  );
 }
 
 ```
 </details>
 
-### src\components\DataTable.tsx
+### src/components/DataTable.tsx
 
 - SHA: `84c0672f24bd`  
 - Ukuran: 2 KB
@@ -2856,7 +2956,7 @@ export default function DataTable<T extends object>({
 ```
 </details>
 
-### src\components\delivery\AssignCourierSelect.tsx
+### src/components/delivery/AssignCourierSelect.tsx
 
 - SHA: `7edcd5681f24`  
 - Ukuran: 2 KB
@@ -2928,7 +3028,7 @@ export default function AssignCourierSelect({ value, onChange, disabled = false 
 ```
 </details>
 
-### src\components\delivery\DeliveryStatusStepper.tsx
+### src/components/delivery/DeliveryStatusStepper.tsx
 
 - SHA: `0cb4caba06e7`  
 - Ukuran: 793 B
@@ -2957,7 +3057,7 @@ export default function DeliveryStatusStepper({ status }: { status: DeliveryStat
 ```
 </details>
 
-### src\components\Dropzone.tsx
+### src/components/Dropzone.tsx
 
 - SHA: `1ea7e5280ea4`  
 - Ukuran: 51 B
@@ -2968,7 +3068,7 @@ export default function Dropzone() { return null; }
 ```
 </details>
 
-### src\components\FilterBar.tsx
+### src/components/FilterBar.tsx
 
 - SHA: `3605319a8f83`  
 - Ukuran: 52 B
@@ -2979,7 +3079,7 @@ export default function FilterBar() { return null; }
 ```
 </details>
 
-### src\components\LazyBoundary.tsx
+### src/components/LazyBoundary.tsx
 
 - SHA: `8ed0e79357ac`  
 - Ukuran: 470 B
@@ -3007,7 +3107,7 @@ export default function LazyBoundary({ children }: { children: ReactNode }) {
 ```
 </details>
 
-### src\components\orders\OrderPhotos.tsx
+### src/components/orders/OrderPhotos.tsx
 
 - SHA: `616c2e46ff31`  
 - Ukuran: 8 KB
@@ -3234,7 +3334,7 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
 ```
 </details>
 
-### src\components\orders\OrderPhotosGallery.tsx
+### src/components/orders/OrderPhotosGallery.tsx
 
 - SHA: `1dbf91a387b4`  
 - Ukuran: 4 KB
@@ -3343,7 +3443,7 @@ function Section({ label, items }: { label: string; items: OrderPhoto[] }) {
 ```
 </details>
 
-### src\components\orders\OrderPhotosUpload.tsx
+### src/components/orders/OrderPhotosUpload.tsx
 
 - SHA: `17221e244132`  
 - Ukuran: 7 KB
@@ -3551,7 +3651,7 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
 ```
 </details>
 
-### src\components\orders\OrderStatusStepper.tsx
+### src/components/orders/OrderStatusStepper.tsx
 
 - SHA: `77e3205182c1`  
 - Ukuran: 2 KB
@@ -3627,7 +3727,7 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
 ```
 </details>
 
-### src\components\pos\CartPanel.tsx
+### src/components/pos/CartPanel.tsx
 
 - SHA: `ae5609e46bc7`  
 - Ukuran: 4 KB
@@ -3781,7 +3881,7 @@ function QtyStepper({
 ```
 </details>
 
-### src\components\pos\CheckoutDialog.tsx
+### src/components/pos/CheckoutDialog.tsx
 
 - SHA: `61a587f4382b`  
 - Ukuran: 9 KB
@@ -4038,9 +4138,9 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
 ```
 </details>
 
-### src\components\pos\ProductSearch.tsx
+### src/components/pos/ProductSearch.tsx
 
-- SHA: `98beac76b2a9`  
+- SHA: `c83d10d31c3a`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4049,7 +4149,8 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type { Service } from '../../types/services';
 import { listServices } from '../../api/services';
-import { getEffectivePrice } from '../../api/servicePrices';
+import { listServicePricesByService, computeEffectivePrice } from '../../api/servicePrices';
+import type { ServicePrice } from '../../types/services';
 import { useAuth } from '../../store/useAuth';
 
 type Props = {
@@ -4058,8 +4159,10 @@ type Props = {
 
 export default function ProductSearch({ onPick }: Props): React.ReactElement {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
-  const branchId: string = user?.branch_id != null ? String(user.branch_id) : '';
+  const branchId: string | null = user?.branch_id != null ? String(user.branch_id) : null;
   const [q, setQ] = useState('');
+  const [base, setBase] = useState<Service[]>([]);
+  const [priceMap, setPriceMap] = useState<Record<string, ServicePrice[]>>({});
   const [rows, setRows] = useState<(Service & { price_effective: number })[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -4068,16 +4171,21 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
     setLoading(true); setError(null);
     try {
       const res = await listServices({ q, is_active: true, per_page: 10, page: 1 });
-      const base = (res.data ?? []);
-      const withPrice = await Promise.all(
-        base.map(async (s) => ({
-          ...s,
-          price_effective: branchId
-            ? await getEffectivePrice({ id: s.id, price_default: s.price_default }, branchId)
-            : Number(s.price_default),
-        }))
+      const list = (res.data ?? []) as Service[];
+      setBase(list);
+      // Ambil daftar override harga per service (sekali per service, paralel)
+      const entries = await Promise.all(
+        list.map(async (s) => [String(s.id), (await listServicePricesByService(String(s.id))).data] as const)
       );
-      setRows(withPrice);
+      const map: Record<string, ServicePrice[]> = {};
+      for (const [sid, prices] of entries) map[sid] = prices ?? [];
+      setPriceMap(map);
+      // Hitung harga efektif untuk cabang aktif saat ini (tanpa request tambahan)
+      const computed = list.map(s => ({
+        ...s,
+        price_effective: computeEffectivePrice(map[String(s.id)], branchId, s.price_default),
+      }));
+      setRows(computed);
     } catch {
       setError('Gagal memuat layanan');
     } finally {
@@ -4086,6 +4194,15 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
   }, [q, branchId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!base.length) return;
+    const computed = base.map(s => ({
+      ...s,
+      price_effective: computeEffectivePrice(priceMap[String(s.id)], branchId, s.price_default),
+    }));
+    setRows(computed);
+  }, [branchId, base, priceMap]);
 
   return (
     <div className="space-y-2">
@@ -4150,7 +4267,7 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 ```
 </details>
 
-### src\components\ReceiptPreview.tsx
+### src/components/ReceiptPreview.tsx
 
 - SHA: `9ddac89c9fcf`  
 - Ukuran: 4 KB
@@ -4302,7 +4419,7 @@ export default function ReceiptPreview({
 ```
 </details>
 
-### src\components\receivables\SettleReceivableDialog.tsx
+### src/components/receivables/SettleReceivableDialog.tsx
 
 - SHA: `bb73c1fb84f2`  
 - Ukuran: 6 KB
@@ -4448,7 +4565,7 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
 ```
 </details>
 
-### src\components\Toast.tsx
+### src/components/Toast.tsx
 
 - SHA: `6a7bcbf0b950`  
 - Ukuran: 102 B
@@ -4464,7 +4581,7 @@ export default function Toast() { return null; }
 
 ## Pages (src/pages)
 
-### src\pages\branches\BranchForm.tsx
+### src/pages/branches/BranchForm.tsx
 
 - SHA: `cc391fd8fcd7`  
 - Ukuran: 6 KB
@@ -4608,7 +4725,7 @@ export default function BranchForm() {
 ```
 </details>
 
-### src\pages\branches\BranchIndex.tsx
+### src/pages/branches/BranchIndex.tsx
 
 - SHA: `3ccc58ef5d08`  
 - Ukuran: 5 KB
@@ -4733,7 +4850,7 @@ export default function BranchIndex() {
 ```
 </details>
 
-### src\pages\branches\InvoiceSettings.tsx
+### src/pages/branches/InvoiceSettings.tsx
 
 - SHA: `532eae53b231`  
 - Ukuran: 13 KB
@@ -5010,10 +5127,10 @@ export default function InvoiceSettings() {
 ```
 </details>
 
-### src\pages\customers\CustomerDetail.tsx
+### src/pages/customers/CustomerDetail.tsx
 
-- SHA: `bed56e59faa3`  
-- Ukuran: 10 KB
+- SHA: `63f28d242227`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5069,15 +5186,11 @@ export default function CustomerDetail() {
                 }
             })();
         }
-        return () => {
-            cancelled = true;
-        };
+        return () => { cancelled = true; };
     }, [isNew, params.id]);
 
     function normalizeWa(input: string): string {
-        // Minimal-normalize: hilangkan spasi dan non-digit ( dibiarkan kalau perlu)
         const s = (input || '').trim();
-        // Contoh ringan: hilangkan spasi/tanda baca umum
         return s.replace(/[^\d]/g, '');
     }
 
@@ -5105,7 +5218,6 @@ export default function CustomerDetail() {
             let res: SingleResponse<Customer>;
 
             if (isNew) {
-                // SUSUN PAYLOAD MINIMAL & BERSIH — persis seperti contoh Postman
                 const basePayload = {
                     name: form.name,
                     whatsapp: normalizeWa(form.whatsapp),
@@ -5114,7 +5226,6 @@ export default function CustomerDetail() {
                 };
                 const cleanedBase = clean(basePayload);
 
-                // HANYA superadmin boleh mengirim branch_id secara eksplisit
                 let finalBranchId: string | undefined;
                 if (hasRole('Superadmin')) {
                     finalBranchId = form.branch_id && form.branch_id.trim() !== '' ? form.branch_id.trim() : undefined;
@@ -5146,7 +5257,6 @@ export default function CustomerDetail() {
                     whatsapp: normalizeWa(form.whatsapp),
                     address: form.address,
                     notes: form.notes,
-                    // Jangan kirim branch_id saat update kecuali superadmin memang mengubah cabang (kalau backendmu izinkan)
                     ...(hasRole('Superadmin') && form.branch_id && String(form.branch_id).trim() !== ''
                         ? { branch_id: String(form.branch_id).trim() }
                         : {}),
@@ -5154,9 +5264,7 @@ export default function CustomerDetail() {
                 const payloadUpdate: Partial<CustomerUpsertPayload> = {
                     ...(cleanedUpdate.name !== undefined ? { name: String(cleanedUpdate.name) } : {}),
                     ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
-                    ...(cleanedUpdate.address !== undefined
-                        ? { address: cleanedUpdate.address as string | null }
-                        : {}),
+                    ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
                     ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
                     ...(hasRole('Superadmin') && cleanedUpdate.branch_id !== undefined
                         ? { branch_id: String(cleanedUpdate.branch_id) }
@@ -5171,7 +5279,6 @@ export default function CustomerDetail() {
                 setError('Gagal menyimpan data pelanggan.');
             }
         } catch (err) {
-            // tampilkan pesan server jika ada untuk memudahkan debug
             const anyErr = err as { response?: { data?: unknown }; message?: string };
             const srv = (anyErr.response?.data as { message?: string; errors?: unknown } | undefined) || undefined;
             const msg = srv?.message ?? (srv?.errors ? JSON.stringify(srv.errors) : undefined) ?? anyErr.message;
@@ -5181,66 +5288,143 @@ export default function CustomerDetail() {
         }
     }
 
-    if (loading) return <div className="p-4">Loading…</div>;
-    if (error) return <div className="p-4 text-red-600">{error}</div>;
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                <div className="h-6 w-48 rounded bg-black/10 animate-pulse" />
+                <div className="card p-6 border border-[color:var(--color-border)] rounded-lg shadow-elev-1 space-y-4 max-w-2xl">
+                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="h-20 w-full rounded bg-black/10 animate-pulse" />
+                    <div className="flex gap-2">
+                        <div className="h-10 w-28 rounded bg-black/10 animate-pulse" />
+                        <div className="h-10 w-24 rounded bg-black/10 animate-pulse" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-4 space-y-4">
-            <h1 className="text-xl font-semibold">{isNew ? 'Buat Pelanggan' : 'Detail Pelanggan'}</h1>
-            <form onSubmit={onSubmit} className="space-y-3 max-w-xl">
-                {hasRole('Superadmin') && (
-                    <input
-                        placeholder="Branch ID (Superadmin)"
-                        className="border rounded-xl px-3 py-2 w-full"
-                        value={form.branch_id ?? ''}
-                        onChange={(e) =>
-                            setForm((f) => ({
-                                ...f,
-                                branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
-                            }))
-                        }
-                    />
+        <div className="space-y-4">
+            {/* Header */}
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-lg font-semibold tracking-tight">
+                        {isNew ? 'Buat Pelanggan' : 'Detail Pelanggan'}
+                    </h1>
+                    <p className="text-xs text-gray-600">
+                        Data identitas pelanggan untuk transaksi & penjemputan
+                    </p>
+                </div>
+            </header>
+
+            {/* Error global */}
+            {error && (
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+                >
+                    {error}
+                </div>
+            )}
+
+            {/* Form */}
+            <form
+                onSubmit={onSubmit}
+                aria-busy={saving ? 'true' : 'false'}
+                className="card p-4 md:p-6 border border-[color:var(--color-border)] rounded-lg shadow-elev-1 space-y-4 max-w-2xl"
+            >
+                {/* Cabang */}
+                {hasRole('Superadmin') ? (
+                    <label className="grid gap-1 text-sm">
+                        <span>Branch ID (Superadmin)</span>
+                        <input
+                            placeholder="CTH: 019aa7... (opsional)"
+                            className="input"
+                            value={form.branch_id ?? ''}
+                            onChange={(e) =>
+                                setForm((f) => ({
+                                    ...f,
+                                    branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
+                                }))
+                            }
+                        />
+                        <span className="text-xs text-gray-500">Kosongkan untuk tidak mengubah cabang.</span>
+                    </label>
+                ) : (
+                    <div className="text-sm text-gray-600">
+                        Cabang: <span className="font-medium">{user?.branch_id ?? '-'}</span>
+                    </div>
                 )}
-                <input
-                    placeholder="Nama"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    required
-                />
-                <input
-                    placeholder="WhatsApp (08xxxxxxxxxx)"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.whatsapp}
-                    onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                    required
-                />
-                <input
-                    placeholder="Alamat"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.address ?? ''}
-                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                />
-                <textarea
-                    placeholder="Catatan"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={form.notes ?? ''}
-                    onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                />
-                {error && <div className="text-sm text-red-600">{error}</div>}
-                <div className="flex gap-2">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="grid gap-1 text-sm">
+                        <span>Nama</span>
+                        <input
+                            placeholder="Nama pelanggan"
+                            className="input"
+                            value={form.name}
+                            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                            required
+                            autoComplete="name"
+                        />
+                    </label>
+
+                    <label className="grid gap-1 text-sm">
+                        <span>WhatsApp</span>
+                        <input
+                            placeholder="08xxxxxxxxxx"
+                            className="input"
+                            value={form.whatsapp}
+                            onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
+                            required
+                            inputMode="tel"
+                            autoComplete="tel"
+                        />
+                        <span className="text-xs text-gray-500">Hanya angka, akan dinormalisasi saat simpan.</span>
+                    </label>
+
+                    <label className="grid gap-1 text-sm md:col-span-2">
+                        <span>Alamat</span>
+                        <input
+                            placeholder="Alamat lengkap (opsional)"
+                            className="input"
+                            value={form.address ?? ''}
+                            onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                            autoComplete="street-address"
+                        />
+                    </label>
+
+                    <label className="grid gap-1 text-sm md:col-span-2">
+                        <span>Catatan</span>
+                        <textarea
+                            placeholder="Instruksi khusus, preferensi, atau catatan lain"
+                            className="input min-h-[96px]"
+                            value={form.notes ?? ''}
+                            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                        />
+                    </label>
+                </div>
+
+                <div className="flex gap-2 pt-2">
                     <button
                         disabled={saving || !canEdit}
-                        className="px-4 py-2 rounded-xl border shadow disabled:opacity-50"
+                        className="btn-primary disabled:opacity-50"
                         type="submit"
+                        aria-label="Simpan pelanggan"
                     >
                         {saving ? 'Menyimpan…' : 'Simpan'}
                     </button>
+
                     {!isNew && entity && (
                         <button
                             type="button"
-                            className="px-4 py-2 rounded-xl border"
+                            className="btn-outline"
                             onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
+                            aria-label="Salin nomor WhatsApp"
                         >
                             Salin WA
                         </button>
@@ -5254,10 +5438,10 @@ export default function CustomerDetail() {
 ```
 </details>
 
-### src\pages\customers\CustomersIndex.tsx
+### src/pages/customers/CustomersIndex.tsx
 
-- SHA: `c8d40334c515`  
-- Ukuran: 6 KB
+- SHA: `af40c6549b43`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5269,20 +5453,17 @@ import { useAuth, useHasRole } from '../../store/useAuth';
 import { Link } from 'react-router-dom';
 
 export default function CustomersIndex() {
+    // Snapshot auth store (sesuai pola Anda)
     function useAuthSnapshot() {
         const store = useAuth;
         const [, force] = useState(0);
         useEffect(() => {
-            // subscribe() mengembalikan function yg saat dipanggil return boolean.
-            // Cleanup React wajib kembalikan void, jadi bungkus dulu.
             const unsubscribe = store.subscribe(() => force((x) => x + 1));
-            return () => {
-                // panggil, tapi JANGAN return nilai boolean-nya
-                unsubscribe();
-            };
+            return () => { unsubscribe(); };
         }, [store]);
         return store;
     }
+
     const auth = useAuthSnapshot();
     const user = auth.user;
     const canManage = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
@@ -5320,77 +5501,154 @@ export default function CustomersIndex() {
                 if (!cancelled) setLoading(false);
             }
         })();
-        return () => {
-            cancelled = true;
-        };
+        return () => { cancelled = true; };
     }, [query, search, branchIdForScope]);
 
     return (
-        <div className="p-4 space-y-4">
+        <div className="space-y-4">
+            {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold">Customers</h1>
+                <div>
+                    <h1 className="text-lg font-semibold tracking-tight">Customers</h1>
+                    <p className="text-xs text-gray-600">Kelola data pelanggan & histori transaksi</p>
+                </div>
                 {canManage && (
-                    <Link to="/customers/new" className="px-3 py-2 rounded-xl shadow border text-sm">New Customer</Link>
+                    <Link
+                        to="/customers/new"
+                        className="btn-primary"
+                        aria-label="Tambah pelanggan baru"
+                    >
+                        New Customer
+                    </Link>
                 )}
             </div>
 
-            <div className="flex gap-2">
-                <input
-                    placeholder="Cari nama/WA/alamat…"
-                    className="border rounded-xl px-3 py-2 w-full"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-                <select
-                    className="border rounded-xl px-3 py-2"
-                    value={query.per_page ?? 10}
-                    onChange={(e) => setQuery((q) => ({ ...q, per_page: Number(e.target.value), page: 1 }))}
+            {/* Toolbar (FilterBar) */}
+            <section
+                className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+                aria-label="Toolbar pencarian pelanggan"
+            >
+                <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                    <label className="sr-only" htmlFor="cari">Pencarian</label>
+                    <div className="relative">
+                        <input
+                            id="cari"
+                            placeholder="Cari nama/WA/alamat…"
+                            className="input w-full pl-9 py-2"
+                            value={search}
+                            onChange={(e) => {
+                                setQuery((q) => ({ ...q, page: 1 }));
+                                setSearch(e.target.value);
+                            }}
+                            aria-label="Cari pelanggan"
+                        />
+                        {/* Ikon search (dekoratif) */}
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            🔎
+                        </span>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2">
+                        <label className="text-sm text-gray-600" htmlFor="perpage">Per page</label>
+                        <select
+                            id="perpage"
+                            className="input w-[88px] py-2"
+                            value={query.per_page ?? 10}
+                            onChange={(e) =>
+                                setQuery((q) => ({ ...q, per_page: Number(e.target.value), page: 1 }))
+                            }
+                            aria-label="Jumlah baris per halaman"
+                        >
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            {/* Alert error */}
+            {error && (
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
                 >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                </select>
-            </div>
-
-            {loading && <div className="animate-pulse text-sm text-gray-500">Loading…</div>}
-            {error && <div className="text-sm text-red-600">{error}</div>}
-            {!loading && !error && rows && rows.data.length === 0 && (
-                <div className="text-sm text-gray-500">Belum ada data pelanggan.</div>
-            )}
-
-            {!loading && !error && rows && rows.data.length > 0 && (
-                <div className="overflow-auto rounded-xl border">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="text-left p-3">Nama</th>
-                                <th className="text-left p-3">WhatsApp</th>
-                                <th className="text-left p-3">Alamat</th>
-                                <th className="text-left p-3">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.data.map((c) => (
-                                <tr key={c.id} className="border-t">
-                                    <td className="p-3">{c.name}</td>
-                                    <td className="p-3">{c.whatsapp}</td>
-                                    <td className="p-3">{c.address ?? '-'}</td>
-                                    <td className="p-3">
-                                        <Link to={`/customers/${String(c.id)}`} className="underline">Detail</Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    {error}
                 </div>
             )}
 
+            {/* Empty state */}
+            {!loading && !error && rows && rows.data.length === 0 && (
+                <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+                    Belum ada data pelanggan.
+                </div>
+            )}
+
+            {/* Table */}
+            <section aria-busy={loading ? 'true' : 'false'}>
+                <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+                    <div className="overflow-auto">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                                <tr className="divide-x divide-[color:var(--color-border)]">
+                                    <Th>Nama</Th>
+                                    <Th>WhatsApp</Th>
+                                    <Th>Alamat</Th>
+                                    <Th className="text-right pr-4">Aksi</Th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="divide-y divide-[color:var(--color-border)]">
+                                {loading ? (
+                                    <>
+                                        <RowSkeleton />
+                                        <RowSkeleton />
+                                        <RowSkeleton />
+                                        <RowSkeleton />
+                                        <RowSkeleton />
+                                        <RowSkeleton />
+                                    </>
+                                ) : (
+                                    rows?.data.map((c) => (
+                                        <tr key={c.id} className="hover:bg-black/5 transition-colors">
+                                            <Td>
+                                                <span className="line-clamp-1 font-medium">{c.name}</span>
+                                            </Td>
+                                            <Td>
+                                                <span className="tabular-nums">{c.whatsapp}</span>
+                                            </Td>
+                                            <Td>
+                                                <span className="line-clamp-2 max-w-[48ch]">{c.address ?? '-'}</span>
+                                            </Td>
+                                            <Td className="text-right">
+                                                <Link
+                                                    to={`/customers/${String(c.id)}`}
+                                                    className="btn-outline"
+                                                    aria-label={`Lihat detail pelanggan ${c.name}`}
+                                                >
+                                                    Detail
+                                                </Link>
+                                            </Td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            {/* Pagination */}
             {!loading && rows && rows.meta.last_page > 1 && (
-                <div className="flex items-center gap-2 justify-end">
+                <nav
+                    className="flex items-center gap-2 justify-end"
+                    aria-label="Navigasi halaman"
+                >
                     <button
                         disabled={(rows.meta.current_page ?? 1) <= 1}
                         onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) - 1 }))}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
+                        className="btn-outline disabled:opacity-50"
                     >
                         Prev
                     </button>
@@ -5400,20 +5658,42 @@ export default function CustomersIndex() {
                     <button
                         disabled={rows.meta.current_page >= rows.meta.last_page}
                         onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
+                        className="btn-outline disabled:opacity-50"
                     >
                         Next
                     </button>
-                </div>
+                </nav>
             )}
         </div>
+    );
+}
+
+/* ---------- Subcomponents ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+            {children}
+        </th>
+    );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+    return (
+        <tr>
+            <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+            <td className="px-3 py-3"><div className="h-4 w-32 rounded bg-black/10 animate-pulse" /></td>
+            <td className="px-3 py-3"><div className="h-4 w-64 rounded bg-black/10 animate-pulse" /></td>
+            <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-20 rounded bg-black/10 animate-pulse" /></td>
+        </tr>
     );
 }
 
 ```
 </details>
 
-### src\pages\dashboard\DashboardHome.tsx
+### src/pages/dashboard/DashboardHome.tsx
 
 - SHA: `33e53e367992`  
 - Ukuran: 12 KB
@@ -5772,7 +6052,7 @@ function SimpleTable(props: {
 ```
 </details>
 
-### src\pages\deliveries\DeliveryDetail.tsx
+### src/pages/deliveries/DeliveryDetail.tsx
 
 - SHA: `e8f0c3c5c22c`  
 - Ukuran: 8 KB
@@ -5962,7 +6242,7 @@ export default function DeliveryDetail() {
 ```
 </details>
 
-### src\pages\deliveries\DeliveryIndex.tsx
+### src/pages/deliveries/DeliveryIndex.tsx
 
 - SHA: `5bcf77df6de2`  
 - Ukuran: 9 KB
@@ -6227,7 +6507,7 @@ export default function DeliveryIndex() {
 ```
 </details>
 
-### src\pages\expenses\ExpenseForm.tsx
+### src/pages/expenses/ExpenseForm.tsx
 
 - SHA: `53cf31566e56`  
 - Ukuran: 7 KB
@@ -6391,7 +6671,7 @@ export default function ExpenseForm() {
 ```
 </details>
 
-### src\pages\expenses\ExpensesIndex.tsx
+### src/pages/expenses/ExpensesIndex.tsx
 
 - SHA: `fdbd00d25868`  
 - Ukuran: 9 KB
@@ -6576,7 +6856,7 @@ export default function ExpensesIndex() {
 ```
 </details>
 
-### src\pages\Login.tsx
+### src/pages/Login.tsx
 
 - SHA: `90dee148deeb`  
 - Ukuran: 7 KB
@@ -6783,7 +7063,7 @@ export default function LoginPage() {
 ```
 </details>
 
-### src\pages\orders\OrderDetail.tsx
+### src/pages/orders/OrderDetail.tsx
 
 - SHA: `10f33edd5704`  
 - Ukuran: 11 KB
@@ -7091,7 +7371,7 @@ function Td({ children }: { children: React.ReactNode }) {
 ```
 </details>
 
-### src\pages\orders\OrderReceipt.tsx
+### src/pages/orders/OrderReceipt.tsx
 
 - SHA: `f1902327be67`  
 - Ukuran: 6 KB
@@ -7279,7 +7559,7 @@ export default function OrderReceipt(): React.ReactElement {
 ```
 </details>
 
-### src\pages\orders\OrdersIndex.tsx
+### src/pages/orders/OrdersIndex.tsx
 
 - SHA: `e49b7a9b3fef`  
 - Ukuran: 10 KB
@@ -7560,7 +7840,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 ```
 </details>
 
-### src\pages\pos\POSPage.tsx
+### src/pages/pos/POSPage.tsx
 
 - SHA: `a3076e7526f0`  
 - Ukuran: 20 KB
@@ -8105,7 +8385,7 @@ function MobileCartBar({
 ```
 </details>
 
-### src\pages\receivables\ReceivablesIndex.tsx
+### src/pages/receivables/ReceivablesIndex.tsx
 
 - SHA: `b4c99f795109`  
 - Ukuran: 8 KB
@@ -8306,115 +8586,210 @@ export default function ReceivablesIndex() {
 ```
 </details>
 
-### src\pages\services\CategoryIndex.tsx
+### src/pages/services/CategoryIndex.tsx
 
-- SHA: `29d11020eb4d`  
-- Ukuran: 4 KB
+- SHA: `0a8f9b35fe18`  
+- Ukuran: 6 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/services/CategoryIndex.tsx
 import { useEffect, useState, useCallback } from 'react';
 import DataTable from '../../components/DataTable';
 import type { ServiceCategory, PaginationMeta } from '../../types/services';
-import { listServiceCategories, createServiceCategory, updateServiceCategory, deleteServiceCategory } from '../../api/serviceCategories';
+import {
+  listServiceCategories,
+  createServiceCategory,
+  updateServiceCategory,
+  deleteServiceCategory,
+} from '../../api/serviceCategories';
 
 export default function CategoryIndex() {
-    const [rows, setRows] = useState<ServiceCategory[]>([]);
-    const [meta, setMeta] = useState<PaginationMeta | null>(null);
-    const [q, setQ] = useState('');
-    const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const perPage = 10;
+  const [rows, setRows] = useState<ServiceCategory[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const perPage = 10;
 
-    const refresh = useCallback(async (p = 1) => {
-        setLoading(true); setError(null);
-        try {
-            const res = await listServiceCategories({ q, page: p, per_page: perPage });
-            setRows(res.data ?? []);
-            setMeta((res.meta as PaginationMeta) ?? null);
-        } catch {
-            setError('Gagal memuat kategori');
-        } finally {
-            setLoading(false);
-        }
-    }, [q, perPage]);
+  const refresh = useCallback(
+    async (p = 1) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await listServiceCategories({ q, page: p, per_page: perPage });
+        setRows(res.data ?? []);
+        setMeta((res.meta as PaginationMeta) ?? null);
+      } catch {
+        setError('Gagal memuat kategori');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [q, perPage],
+  );
 
-    useEffect(() => { void refresh(page); }, [page, refresh]);
-    useEffect(() => {
-        const t = setTimeout(() => { void refresh(1); setPage(1); }, 300);
-        return () => clearTimeout(t);
-    }, [q, refresh]);
+  useEffect(() => { void refresh(page); }, [page, refresh]);
+  useEffect(() => {
+    const t = setTimeout(() => { void refresh(1); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [q, refresh]);
 
-    return (
-        <div className="space-y-4">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold">Service Categories</h1>
-                    <p className="text-xs text-gray-500">Kelola kategori untuk mengelompokkan layanan.</p>
-                </div>
-                <button
-                    className="rounded border px-3 py-2 text-sm"
-                    onClick={async () => {
-                        const name = prompt('Nama kategori:')?.trim();
-                        if (!name) return;
-                        try { await createServiceCategory({ name, is_active: true }); await refresh(page); } catch { alert('Gagal membuat kategori'); }
-                    }}
-                >
-                    New Category
-                </button>
-            </header>
-
-            <div className="flex items-center gap-2">
-                <input className="border rounded px-3 py-2 text-sm" placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} />
-            </div>
-
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
-            <DataTable<ServiceCategory>
-                columns={[
-                    { key: 'name', header: 'Nama' },
-                    { key: 'is_active', header: 'Status', render: (r) => (r.is_active ? 'Active' : 'Inactive') },
-                    {
-                        key: 'actions', header: 'Aksi', render: (r) => (
-                            <div className="flex gap-2">
-                                <button className="underline text-xs" onClick={async () => {
-                                    const name = prompt('Ubah nama kategori:', r.name)?.trim();
-                                    if (!name) return;
-                                    try { await updateServiceCategory(r.id, { name }); await refresh(page); } catch { alert('Gagal update'); }
-                                }}>Edit</button>
-                                <button className="underline text-xs text-red-600" onClick={async () => {
-                                    if (!confirm(`Hapus kategori ${r.name}?`)) return;
-                                    try { await deleteServiceCategory(r.id); await refresh(page); } catch { alert('Gagal hapus'); }
-                                }}>Delete</button>
-                            </div>
-                        )
-                    },
-                ]}
-                rows={rows}
-                loading={loading}
-                emptyText="Belum ada kategori"
-            />
-
-            <div className="flex items-center gap-2">
-                <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded border px-2 py-1 text-xs">Prev</button>
-                <div className="text-xs text-gray-600">Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}</div>
-                <button disabled={!!meta && page >= (meta.last_page ?? 1)} onClick={() => setPage((p) => p + 1)} className="rounded border px-2 py-1 text-xs">Next</button>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Service Categories</h1>
+          <p className="text-xs text-gray-600">Kelola kategori untuk mengelompokkan layanan.</p>
         </div>
-    );
+        <button
+          className="btn-primary"
+          onClick={async () => {
+            const name = prompt('Nama kategori:')?.trim();
+            if (!name) return;
+            try {
+              await createServiceCategory({ name, is_active: true });
+              await refresh(page);
+            } catch {
+              alert('Gagal membuat kategori');
+            }
+          }}
+          aria-label="Tambah kategori layanan"
+        >
+          + New Category
+        </button>
+      </header>
+
+      {/* Toolbar */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Toolbar filter kategori"
+      >
+        <div className="p-3">
+          <div className="relative max-w-xl">
+            <label htmlFor="search-cat" className="sr-only">Cari kategori</label>
+            <input
+              id="search-cat"
+              className="input w-full pl-9 py-2"
+              placeholder="Cari nama…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Cari nama kategori"
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Error */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Table */}
+      <div aria-busy={loading ? 'true' : 'false'}>
+        <DataTable<ServiceCategory>
+          columns={[
+            { key: 'name', header: 'Nama' },
+            {
+              key: 'is_active',
+              header: 'Status',
+              render: (r) =>
+                r.is_active ? (
+                  <span className="chip chip--solid">Active</span>
+                ) : (
+                  <span className="chip chip--danger">Inactive</span>
+                ),
+            },
+            {
+              key: 'actions',
+              header: 'Aksi',
+              render: (r) => (
+                <div className="flex gap-2 justify-end">
+                  <button
+                    className="btn-outline text-xs px-3 py-1"
+                    onClick={async () => {
+                      const name = prompt('Ubah nama kategori:', r.name)?.trim();
+                      if (!name) return;
+                      try {
+                        await updateServiceCategory(r.id, { name });
+                        await refresh(page);
+                      } catch {
+                        alert('Gagal update');
+                      }
+                    }}
+                    aria-label={`Ubah kategori ${r.name}`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn-outline text-xs px-3 py-1 text-red-600"
+                    onClick={async () => {
+                      if (!confirm(`Hapus kategori ${r.name}?`)) return;
+                      try {
+                        await deleteServiceCategory(r.id);
+                        await refresh(page);
+                      } catch {
+                        alert('Gagal hapus');
+                      }
+                    }}
+                    aria-label={`Hapus kategori ${r.name}`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+          rows={rows}
+          loading={loading}
+          emptyText="Belum ada kategori"
+        />
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center gap-2 justify-end">
+        <button
+          disabled={page <= 1}
+          onClick={() => setPage((p) => p - 1)}
+          className="btn-outline disabled:opacity-50"
+        >
+          Prev
+        </button>
+        <div className="text-sm">
+          Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
+        </div>
+        <button
+          disabled={!!meta && page >= (meta.last_page ?? 1)}
+          onClick={() => setPage((p) => p + 1)}
+          className="btn-outline disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
 }
 
 ```
 </details>
 
-### src\pages\services\PricePerBranchInput.tsx
+### src/pages/services/PricePerBranchInput.tsx
 
-- SHA: `f3e11cfefab2`  
-- Ukuran: 5 KB
+- SHA: `1eb89a6ea0c1`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/services/PricePerBranchInput.tsx
 import { useEffect, useRef, useState } from 'react';
 import type { Branch } from '../../types/branches';
 import type { ServicePrice, ServicePriceSetPayload } from '../../types/services';
@@ -8422,110 +8797,317 @@ import { listBranches } from '../../api/branches';
 import { listServicePricesByService, setServicePrice } from '../../api/servicePrices';
 
 interface Props {
-    serviceId: string;
-    defaultPrice: number;
+  serviceId: string;
+  defaultPrice: number;
 }
-type Row = Branch & { override?: ServicePrice | null; effective: number; };
+type Row = Branch & { override?: ServicePrice | null; effective: number };
+
+function toStr(x: unknown) {
+  return x == null ? '' : String(x);
+}
+function toNum(x: unknown, fallback = 0) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : fallback;
+}
+function toIDR(n: number) {
+  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+}
 
 export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) {
-    const [rows, setRows] = useState<Row[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [saving, setSaving] = useState<string | null>(null);
 
-    useEffect(() => {
-        (async () => {
-            setLoading(true); setError(null);
-            try {
-                const branches = await listBranches({ per_page: 100 });
-                const overrides = await listServicePricesByService(serviceId);
-                const map = new Map((overrides.data ?? []).map((p) => [p.branch_id, p]));
-                const merged: Row[] = (branches.data ?? []).map((b) => {
-                    const ov = map.get(b.id) ?? null;
-                    return { ...b, override: ov, effective: ov ? Number(ov.price) : Number(defaultPrice) };
-                });
-                setRows(merged);
-            } catch {
-                setError('Gagal memuat harga per cabang');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [serviceId, defaultPrice]);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      setNotice(null);
 
-    async function onSaveOne(branch_id: string, price: number) {
-        const payload: ServicePriceSetPayload = { service_id: serviceId, branch_id, price };
-        try {
-            await setServicePrice(payload);
-            // refresh baris lokal
-            setRows((prev) => prev.map((r) => r.id === branch_id ? { ...r, override: { id: r.override?.id ?? 'tmp', service_id: serviceId, branch_id, price } as ServicePrice, effective: price } : r));
-            alert('Harga cabang diperbarui');
-        } catch {
-            alert('Gagal menyimpan harga cabang');
-        }
+      console.groupCollapsed('[PricePerBranchInput] LOAD');
+      console.log('serviceId:', serviceId);
+      console.log('defaultPrice:', defaultPrice);
+
+      try {
+        const branchesRes = await listBranches({ per_page: 100 });
+        const branchesRaw: unknown = (branchesRes)?.data ?? branchesRes;
+        const branches: Branch[] = Array.isArray(branchesRaw) ? branchesRaw : [];
+        console.log('branches (raw):', branchesRes);
+        console.log('branches (parsed):', branches);
+
+        const overridesRes = await listServicePricesByService(serviceId);
+        const overridesData: unknown = (overridesRes)?.data ?? overridesRes;
+        const overrides: ServicePrice[] = Array.isArray(overridesData) ? overridesData : [];
+        console.log('overrides (raw):', overridesRes);
+        console.log('overrides (parsed):', overrides);
+
+        const map = new Map<string, ServicePrice>(
+          overrides.map((p) => [toStr(p.branch_id), p])
+        );
+
+        const merged: Row[] = branches.map((b) => {
+          const key = toStr(b.id);
+          const ov = map.get(key) ?? null;
+          const eff = ov ? toNum(ov.price, Number(defaultPrice)) : Number(defaultPrice);
+          return { ...b, override: ov, effective: eff };
+        });
+
+        console.log('merged rows:', merged);
+        setRows(merged);
+      } catch (e) {
+        console.error('LOAD error:', e);
+        setError('Gagal memuat harga per cabang.');
+      } finally {
+        console.groupEnd();
+        setLoading(false);
+      }
+    })();
+  }, [serviceId, defaultPrice]);
+
+  async function onSaveOne(branch_id_raw: string | number, price_raw: number) {
+    const branch_id = toStr(branch_id_raw);
+    const price = toNum(price_raw);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      setNotice(null);
+      setError('Harga tidak valid.');
+      return;
     }
 
-    if (loading) return <div className="text-sm text-gray-500">Memuat harga cabang…</div>;
-    if (error) return <div className="text-sm text-red-600">{error}</div>;
-    if (!rows.length) return <div className="text-sm text-gray-500">Belum ada cabang</div>;
+    const payload: ServicePriceSetPayload = { service_id: serviceId, branch_id, price };
 
+    console.groupCollapsed('[PricePerBranchInput] SAVE ONE');
+    console.log('payload:', payload);
+
+    try {
+      setSaving(branch_id);
+      setError(null);
+      setNotice(null);
+
+      const res = await setServicePrice(payload);
+      console.log('response (raw):', res);
+      const updated: ServicePrice = (res && (res).data ? (res).data : res) as ServicePrice;
+      console.log('response (parsed row):', updated);
+
+      if (!updated || !updated.id) {
+        console.warn('No updated row returned, skip UI update.');
+      } else {
+        setRows((prev) =>
+          prev.map((r) =>
+            toStr(r.id) === branch_id
+              ? {
+                  ...r,
+                  override: updated,
+                  effective: toNum(updated.price, r.effective),
+                }
+              : r
+          )
+        );
+
+        const ref = inputRefs.current[branch_id];
+        if (ref) ref.value = toStr(updated.price);
+      }
+
+      setNotice('Harga cabang diperbarui.');
+    } catch (e) {
+      console.error('SAVE error:', e);
+      setError('Gagal menyimpan harga cabang.');
+    } finally {
+      setSaving(null);
+      console.groupEnd();
+    }
+  }
+
+  /* ---------------- UI ---------------- */
+
+  if (loading) {
     return (
-        <div className="overflow-auto rounded border">
-            <table className="min-w-full text-sm">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-3 py-2 text-left">Cabang</th>
-                        <th className="px-3 py-2 text-left">Harga Efektif</th>
-                        <th className="px-3 py-2 text-left">Override</th>
-                        <th className="px-3 py-2 text-left">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((r) => (
-                        <tr key={r.id} className="border-t">
-                            <td className="px-3 py-2">{r.code} — {r.name}</td>
-                            <td className="px-3 py-2">{r.effective.toLocaleString('id-ID')}</td>
-                            <td className="px-3 py-2">
-                                <input
-                                    type="number"
-                                    min={0}
-                                    step="100"
-                                    className="border rounded px-2 py-1 w-36"
-                                    defaultValue={r.override?.price ?? ''}
-                                    placeholder={`Default ${defaultPrice}`}
-                                    ref={(el) => { inputRefs.current[r.id] = el; }}
-                                />
-                            </td>
-                            <td className="px-3 py-2">
-                                <button
-                                    className="underline text-xs"
-                                    onClick={() => {
-                                        const val = Number(inputRefs.current[r.id]?.value ?? NaN);
-                                        if (!Number.isFinite(val) || val <= 0) { alert('Harga tidak valid'); return; }
-                                        void onSaveOne(r.id, val);
-                                    }}
-                                >
-                                    Simpan
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
+        <div className="flex items-center gap-3 text-sm text-gray-500">
+          <span className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
+          Memuat harga cabang…
         </div>
+      </div>
     );
+  }
+  if (error && !rows.length) {
+    return (
+      <div
+        role="alert"
+        aria-live="polite"
+        className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+      >
+        {error}
+      </div>
+    );
+  }
+  if (!rows.length) {
+    return <div className="text-sm text-gray-500">Belum ada cabang.</div>;
+  }
+
+  return (
+    <section className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--color-border)]">
+        <div>
+          <h2 className="text-sm font-semibold">Harga Per Cabang</h2>
+          <p className="text-xs text-gray-600">
+            Default harga layanan: <span className="font-medium">{toIDR(Number(defaultPrice))}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Alerts */}
+      {notice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mx-4 mt-3 rounded-md border border-[color:var(--color-border)] bg-[#E6EDFF] text-[color:var(--color-text-default)] text-sm px-3 py-2"
+        >
+          {notice}
+        </div>
+      )}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="mx-4 mt-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="overflow-auto mt-3">
+        <table className="min-w-[720px] w-full text-sm">
+          <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+            <tr className="divide-x divide-[color:var(--color-border)]">
+              <Th>Cabang</Th>
+              <Th>Harga Efektif</Th>
+              <Th>Override</Th>
+              <Th className="text-right pr-4">Aksi</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[color:var(--color-border)]">
+            {rows.map((r) => {
+              const key = toStr(r.id);
+              const isSaving = saving === key;
+              return (
+                <tr key={key} className="hover:bg-black/5 transition-colors">
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{r.code}</span>
+                      <span className="text-gray-500">— {r.name}</span>
+                    </div>
+                  </Td>
+                  <Td>
+                    <span className="font-medium">{toIDR(r.effective)}</span>
+                  </Td>
+                  <Td>
+                    <input
+                      type="number"
+                      min={0}
+                      step="100"
+                      className="input w-40 text-right"
+                      defaultValue={r.override?.price ?? ''}
+                      placeholder={`Default ${toIDR(Number(defaultPrice))}`}
+                      ref={(el) => { inputRefs.current[key] = el; }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const raw = inputRefs.current[key]?.value;
+                          const val = toNum(raw, NaN);
+                          if (!Number.isFinite(val) || val <= 0) {
+                            setError('Harga tidak valid.');
+                            setNotice(null);
+                            return;
+                          }
+                          void onSaveOne(key, val);
+                        }
+                      }}
+                      aria-label={`Harga override untuk cabang ${r.name}`}
+                    />
+                  </Td>
+                  <Td className="text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <button
+                        className="btn-primary disabled:opacity-50"
+                        disabled={isSaving}
+                        onClick={() => {
+                          const raw = inputRefs.current[key]?.value;
+                          const val = toNum(raw, NaN);
+                          if (!Number.isFinite(val) || val <= 0) {
+                            setError('Harga tidak valid.');
+                            setNotice(null);
+                            return;
+                          }
+                          void onSaveOne(key, val);
+                        }}
+                        aria-label={`Simpan harga cabang ${r.name}`}
+                      >
+                        {isSaving ? 'Menyimpan…' : 'Simpan'}
+                      </button>
+
+                      <button
+                        className="btn-outline"
+                        onClick={() => {
+                          // reset field ke kosong -> berarti pakai default saat berikutnya dihitung server
+                          const ref = inputRefs.current[key];
+                          if (ref) ref.value = '';
+                          setRows((prev) =>
+                            prev.map((x) =>
+                              toStr(x.id) === key
+                                ? { ...x, override: null, effective: Number(defaultPrice) }
+                                : x
+                            )
+                          );
+                          setNotice('Override dihapus (kembali ke default). Belum tersimpan ke server.');
+                        }}
+                        aria-label={`Kosongkan override cabang ${r.name}`}
+                      >
+                        Reset Field
+                      </button>
+                    </div>
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="px-4 py-3 border-t border-[color:var(--color-border)] text-xs text-gray-500">
+        Tip: Tekan <kbd className="px-1 py-0.5 border rounded">Enter</kbd> pada kolom harga untuk menyimpan cepat.
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Subcomponents UI ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
 }
 
 ```
 </details>
 
-### src\pages\services\ServiceForm.tsx
+### src/pages/services/ServiceForm.tsx
 
-- SHA: `796b9554cd71`  
-- Ukuran: 6 KB
+- SHA: `e77813d6f06e`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/customers/ServiceForm.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Service, ServiceUpsertPayload, ServiceCategory } from '../../types/services';
@@ -8534,251 +9116,516 @@ import { listServiceCategories } from '../../api/serviceCategories';
 import PricePerBranchInput from './PricePerBranchInput';
 
 export default function ServiceForm() {
-    const { id } = useParams<{ id: string }>();
-    const nav = useNavigate();
-    const editing = Boolean(id);
+  const { id } = useParams<{ id: string }>();
+  const nav = useNavigate();
+  const editing = Boolean(id);
 
-    const [cats, setCats] = useState<ServiceCategory[]>([]);
-    const [form, setForm] = useState<ServiceUpsertPayload>({
-        category_id: '',
-        name: '',
-        unit: 'ITEM',
-        price_default: 0,
-        is_active: true,
-    });
-    const [service, setService] = useState<Service | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [cats, setCats] = useState<ServiceCategory[]>([]);
+  const [form, setForm] = useState<ServiceUpsertPayload>({
+    category_id: '',
+    name: '',
+    unit: 'ITEM',
+    price_default: 0,
+    is_active: true,
+  });
+  const [service, setService] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-    useEffect(() => {
-        (async () => {
-            setLoading(true); setError(null);
-            try {
-                const sc = await listServiceCategories({ per_page: 100 });
-                setCats(sc.data ?? []);
-                if (editing) {
-                    const res = await getService(id!);
-                    const s = res.data as Service;
-                    setService(s);
-                    setForm({
-                        category_id: s.category_id,
-                        name: s.name,
-                        unit: s.unit,
-                        price_default: Number(s.price_default),
-                        is_active: s.is_active,
-                    });
-                }
-            } catch {
-                setError('Gagal memuat data');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [editing, id]);
-
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true); setError(null); setFieldErrors({});
-        if (!form.category_id || !form.name.trim() || !form.unit.trim() || Number(form.price_default) <= 0) {
-            setLoading(false); setError('Kategori, Nama, Unit, dan Harga Default wajib diisi'); return;
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const sc = await listServiceCategories({ per_page: 100 });
+        setCats(sc.data ?? []);
+        if (editing) {
+          const res = await getService(id!);
+          const s = res.data as Service;
+          setService(s);
+          setForm({
+            category_id: s.category_id,
+            name: s.name,
+            unit: s.unit,
+            price_default: Number(s.price_default),
+            is_active: s.is_active,
+          });
         }
-        try {
-            if (editing) await updateService(id!, form);
-            else await createService(form);
-            alert('Tersimpan'); nav('/services', { replace: true });
-        } catch (err: unknown) {
-            const withResp = err as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
-            const fe = withResp.response?.data?.errors ?? {};
-            if (fe && typeof fe === 'object') setFieldErrors(fe);
-            setError(withResp.response?.data?.message ?? 'Gagal menyimpan');
-        } finally {
-            setLoading(false);
-        }
+      } catch {
+        setError('Gagal memuat data');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [editing, id]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setFieldErrors({});
+
+    if (!form.category_id || !form.name.trim() || !form.unit.trim() || Number(form.price_default) <= 0) {
+      setLoading(false);
+      setError('Kategori, Nama, Unit, dan Harga Default wajib diisi');
+      return;
     }
 
-    return (
-        <div className="space-y-6">
-            <form className="max-w-xl space-y-3" onSubmit={onSubmit}>
-                <h1 className="text-lg font-semibold">{editing ? 'Edit Service' : 'New Service'}</h1>
-                {error && <div className="text-sm text-red-600">{error}</div>}
+    try {
+      if (editing) await updateService(id!, form);
+      else await createService(form);
+      alert('Tersimpan');
+      nav('/services', { replace: true });
+    } catch (err: unknown) {
+      const withResp = err as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+      const fe = withResp.response?.data?.errors ?? {};
+      if (fe && typeof fe === 'object') setFieldErrors(fe);
+      setError(withResp.response?.data?.message ?? 'Gagal menyimpan');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-                <div className="grid gap-1">
-                    <label className="text-xs">Kategori *</label>
-                    <select className="border rounded px-3 py-2" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
-                        <option value="">Pilih kategori</option>
-                        {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    {fieldErrors.category_id && <p className="text-xs text-red-600">{fieldErrors.category_id.join(', ')}</p>}
-                </div>
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <header>
+        <h1 className="text-lg font-semibold tracking-tight">
+          {editing ? 'Edit Service' : 'New Service'}
+        </h1>
+        <p className="text-xs text-gray-600">Definisikan layanan, unit, dan harga default.</p>
+      </header>
 
-                <div className="grid gap-1">
-                    <label className="text-xs">Nama *</label>
-                    <input className="border rounded px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                    {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>}
-                </div>
-
-                <div className="grid gap-1">
-                    <label className="text-xs">Unit *</label>
-                    <input className="border rounded px-3 py-2" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })} />
-                    {fieldErrors.unit && <p className="text-xs text-red-600">{fieldErrors.unit.join(', ')}</p>}
-                </div>
-
-                <div className="grid gap-1">
-                    <label className="text-xs">Harga Default *</label>
-                    <input type="number" min={0} step="100" className="border rounded px-3 py-2" value={form.price_default}
-                        onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })} />
-                    {fieldErrors.price_default && <p className="text-xs text-red-600">{fieldErrors.price_default.join(', ')}</p>}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <input id="is_active" type="checkbox" checked={!!form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
-                    <label htmlFor="is_active" className="text-sm">Active</label>
-                </div>
-
-                <div className="flex gap-2">
-                    <button disabled={loading} className="rounded bg-black text-white px-3 py-2">{loading ? 'Menyimpan…' : 'Simpan'}</button>
-                    <button type="button" className="rounded border px-3 py-2" onClick={() => history.back()}>Batal</button>
-                </div>
-            </form>
-
-            {/* Harga per cabang (override) — tampil saat edit atau saat new sudah tersimpan */}
-            {editing && service && (
-                <section className="max-w-3xl space-y-2">
-                    <h2 className="font-medium">Harga per Cabang</h2>
-                    <p className="text-xs text-gray-500">
-                        Harga efektif = override `service_prices` per cabang, jika tidak ada → pakai `price_default`.
-                    </p>
-                    <PricePerBranchInput serviceId={service.id} defaultPrice={Number(service.price_default)} />
-                </section>
-            )}
+      {/* Alert error global */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
         </div>
-    );
+      )}
+
+      {/* Form utama */}
+      <form
+        className="card max-w-xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-4"
+        onSubmit={onSubmit}
+        aria-busy={loading ? 'true' : 'false'}
+      >
+        {/* Kategori */}
+        <div className="grid gap-1">
+          <label htmlFor="category_id" className="text-sm font-medium">
+            Kategori <span className="text-red-600">*</span>
+          </label>
+          <select
+            id="category_id"
+            className="input"
+            value={form.category_id}
+            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+            disabled={loading}
+            aria-invalid={Boolean(fieldErrors.category_id)}
+            aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}
+          >
+            <option value="">Pilih kategori</option>
+            {cats.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {fieldErrors.category_id && (
+            <p id="err-category_id" className="text-xs text-red-600">
+              {fieldErrors.category_id.join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Nama */}
+        <div className="grid gap-1">
+          <label htmlFor="name" className="text-sm font-medium">
+            Nama <span className="text-red-600">*</span>
+          </label>
+          <input
+            id="name"
+            className="input"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            disabled={loading}
+            aria-invalid={Boolean(fieldErrors.name)}
+            aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+            placeholder="Contoh: Cuci Sepatu Premium"
+          />
+          {fieldErrors.name && (
+            <p id="err-name" className="text-xs text-red-600">
+              {fieldErrors.name.join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Unit */}
+        <div className="grid gap-1">
+          <label htmlFor="unit" className="text-sm font-medium">
+            Unit <span className="text-red-600">*</span>
+          </label>
+          <input
+            id="unit"
+            className="input"
+            value={form.unit}
+            onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })}
+            disabled={loading}
+            aria-invalid={Boolean(fieldErrors.unit)}
+            aria-describedby={fieldErrors.unit ? 'err-unit' : undefined}
+            placeholder="ITEM / PASANG / KG"
+          />
+          {fieldErrors.unit && (
+            <p id="err-unit" className="text-xs text-red-600">
+              {fieldErrors.unit.join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Harga Default */}
+        <div className="grid gap-1">
+          <label htmlFor="price_default" className="text-sm font-medium">
+            Harga Default <span className="text-red-600">*</span>
+          </label>
+          <input
+            id="price_default"
+            type="number"
+            min={0}
+            step="100"
+            className="input"
+            value={form.price_default}
+            onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+            disabled={loading}
+            aria-invalid={Boolean(fieldErrors.price_default)}
+            aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
+            placeholder="Contoh: 25000"
+          />
+          {!fieldErrors.price_default && (
+            <p id="hint-price_default" className="text-xs text-gray-500">
+              Gunakan kelipatan 100 untuk memudahkan kasir.
+            </p>
+          )}
+          {fieldErrors.price_default && (
+            <p id="err-price_default" className="text-xs text-red-600">
+              {fieldErrors.price_default.join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Active */}
+        <div className="flex items-center gap-2">
+          <input
+            id="is_active"
+            type="checkbox"
+            checked={!!form.is_active}
+            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+            disabled={loading}
+          />
+          <label htmlFor="is_active" className="text-sm">
+            Active
+          </label>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button
+            disabled={loading}
+            className="btn-primary disabled:opacity-60"
+            aria-label="Simpan layanan"
+          >
+            {loading ? 'Menyimpan…' : 'Simpan'}
+          </button>
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={() => nav(-1)}
+            aria-label="Batalkan dan kembali"
+          >
+            Batal
+          </button>
+        </div>
+      </form>
+
+      {/* Harga per cabang (override) — tampil saat edit */}
+      {editing && service && (
+        <section className="card max-w-3xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-2">
+          <h2 className="text-sm font-semibold">Harga per Cabang</h2>
+          <p className="text-xs text-gray-500">
+            Harga efektif = override <code>service_prices</code> per cabang, jika tidak ada akan memakai{' '}
+            <code>price_default</code>.
+          </p>
+          <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
+        </section>
+      )}
+    </div>
+  );
 }
 
 ```
 </details>
 
-### src\pages\services\ServiceIndex.tsx
+### src/pages/services/ServiceIndex.tsx
 
-- SHA: `ae6636c59a1e`  
-- Ukuran: 5 KB
+- SHA: `00584f89c425`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/services/ServiceIndex.tsx
 import { useEffect, useState, useCallback } from 'react';
 import DataTable from '../../components/DataTable';
 import type { Service, PaginationMeta, ServiceCategory } from '../../types/services';
 import { listServices, deleteService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
 import { useNavigate, Link } from 'react-router-dom';
+import { toIDR } from '../../utils/money';
 
 export default function ServiceIndex() {
-    const nav = useNavigate();
-    const [rows, setRows] = useState<Service[]>([]);
-    const [meta, setMeta] = useState<PaginationMeta | null>(null);
-    const [cats, setCats] = useState<ServiceCategory[]>([]);
-    const [q, setQ] = useState('');
-    const [category_id, setCategoryId] = useState<string>('');
-    const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const perPage = 10;
+  const nav = useNavigate();
+  const [rows, setRows] = useState<Service[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [cats, setCats] = useState<ServiceCategory[]>([]);
+  const [q, setQ] = useState('');
+  const [category_id, setCategoryId] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const perPage = 10;
 
-    const loadCats = useCallback(async () => {
-        try {
-            const sc = await listServiceCategories({ per_page: 100 });
-            setCats(sc.data ?? []);
-        } catch {
-            // optional: tampilkan toast/log, tapi jangan hentikan flow services
-        }
-    }, []);
+  const loadCats = useCallback(async () => {
+    try {
+      const sc = await listServiceCategories({ per_page: 100 });
+      setCats(sc.data ?? []);
+    } catch {
+      // optional: tampilkan toast/log, tapi jangan hentikan flow services
+    }
+  }, []);
 
-    const refresh = useCallback(async (p = 1) => {
-        setLoading(true); setError(null);
-        try {
-            const res = await listServices({
-                q,
-                category_id: category_id || undefined,
-                page: p,
-                per_page: perPage
-            });
-            setRows(res.data ?? []);
-            setMeta((res.meta as PaginationMeta) ?? null);
-        } catch {
-            setError('Gagal memuat layanan');
-        } finally {
-            setLoading(false);
-        }
-    }, [q, category_id, perPage]);
+  const refresh = useCallback(
+    async (p = 1) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await listServices({
+          q,
+          category_id: category_id || undefined,
+          page: p,
+          per_page: perPage,
+        });
+        setRows(res.data ?? []);
+        setMeta((res.meta as PaginationMeta) ?? null);
+      } catch {
+        setError('Gagal memuat layanan');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [q, category_id, perPage],
+  );
 
-    useEffect(() => { if (!cats.length) void loadCats(); }, [cats.length, loadCats]);
-    useEffect(() => { void refresh(page); }, [page, refresh]);
-    useEffect(() => {
-        const t = setTimeout(() => { void refresh(1); setPage(1); }, 300);
-        return () => clearTimeout(t);
-    }, [q, category_id, refresh]);
+  useEffect(() => {
+    if (!cats.length) void loadCats();
+  }, [cats.length, loadCats]);
 
-    return (
-        <div className="space-y-4">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold">Services</h1>
-                    <p className="text-xs text-gray-500">Kelola layanan & harga per cabang.</p>
-                </div>
-                <div className="space-x-2">
-                    <Link to="/service-categories" className="rounded border px-3 py-2 text-sm">Categories</Link>
-                    <button className="rounded border px-3 py-2 text-sm" onClick={() => nav('/services/new')}>New Service</button>
-                </div>
-            </header>
+  useEffect(() => {
+    void refresh(page);
+  }, [page, refresh]);
 
-            <div className="flex flex-wrap items-center gap-2">
-                <input className="border rounded px-3 py-2 text-sm" placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} />
-                <select className="border rounded px-3 py-2 text-sm" value={category_id} onChange={(e) => setCategoryId(e.target.value)}>
-                    <option value="">Semua kategori</option>
-                    {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-            </div>
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void refresh(1);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q, category_id, refresh]);
 
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
-            <DataTable<Service>
-                columns={[
-                    { key: 'name', header: 'Nama' },
-                    { key: 'category', header: 'Kategori', render: (s) => s.category?.name ?? '-' },
-                    { key: 'unit', header: 'Unit' },
-                    { key: 'price_default', header: 'Harga Default', render: (s) => Number(s.price_default).toLocaleString('id-ID') },
-                    { key: 'is_active', header: 'Status', render: (s) => s.is_active ? 'Active' : 'Inactive' },
-                    {
-                        key: 'actions', header: 'Aksi', render: (s) => (
-                            <div className="flex gap-2">
-                                <button className="underline text-xs" onClick={() => nav(`/services/${s.id}/edit`)}>Edit</button>
-                                <button className="underline text-xs text-red-600" onClick={async () => {
-                                    if (!confirm(`Hapus layanan ${s.name}?`)) return;
-                                    try { await deleteService(s.id); await refresh(page); } catch { alert('Gagal hapus'); }
-                                }}>Delete</button>
-                            </div>
-                        )
-                    },
-                ]}
-                rows={rows}
-                loading={loading}
-                emptyText="Belum ada layanan"
-            />
-
-            <div className="flex items-center gap-2">
-                <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded border px-2 py-1 text-xs">Prev</button>
-                <div className="text-xs text-gray-600">Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}</div>
-                <button disabled={!!meta && page >= (meta.last_page ?? 1)} onClick={() => setPage((p) => p + 1)} className="rounded border px-2 py-1 text-xs">Next</button>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Services</h1>
+          <p className="text-xs text-gray-600">Kelola layanan & harga per cabang.</p>
         </div>
-    );
+        <div className="flex gap-2">
+          <Link to="/service-categories" className="btn-outline" aria-label="Kelola kategori">
+            Categories
+          </Link>
+          <button className="btn-primary" onClick={() => nav('/services/new')} aria-label="Tambah layanan baru">
+            New Service
+          </button>
+        </div>
+      </header>
+
+      {/* FilterBar */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Filter layanan"
+      >
+        <div className="p-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="relative">
+              <label htmlFor="q" className="sr-only">
+                Pencarian layanan
+              </label>
+              <input
+                id="q"
+                className="input w-full pl-9 py-2"
+                placeholder="Cari nama layanan…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                aria-label="Cari layanan"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+            </div>
+
+            <div>
+              <label htmlFor="cat" className="sr-only">
+                Filter kategori
+              </label>
+              <select
+                id="cat"
+                className="input w-full py-2"
+                value={category_id}
+                onChange={(e) => setCategoryId(e.target.value)}
+                aria-label="Pilih kategori layanan"
+              >
+                <option value="">Semua kategori</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => {
+                setQ('');
+                setCategoryId('');
+              }}
+              aria-label="Reset filter"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Error */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* DataTable dalam card */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <DataTable<Service>
+              columns={[
+                { key: 'name', header: 'Nama' },
+                { key: 'category', header: 'Kategori', render: (s) => s.category?.name ?? '-' },
+                { key: 'unit', header: 'Unit' },
+                {
+                  key: 'price_default',
+                  header: 'Harga Default',
+                  render: (s) => toIDR(Number(s.price_default)),
+                },
+                {
+                  key: 'is_active',
+                  header: 'Status',
+                  render: (s) => (
+                    <span
+                      className={`chip ${
+                        s.is_active ? 'chip--solid' : 'chip--subtle'
+                      }`}
+                      aria-label={s.is_active ? 'Aktif' : 'Nonaktif'}
+                    >
+                      {s.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'actions',
+                  header: 'Aksi',
+                  render: (s) => (
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="btn-outline"
+                        onClick={() => nav(`/services/${s.id}/edit`)}
+                        aria-label={`Edit layanan ${s.name}`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn-outline text-red-600"
+                        onClick={async () => {
+                          if (!confirm(`Hapus layanan ${s.name}?`)) return;
+                          try {
+                            await deleteService(s.id);
+                            await refresh(page);
+                          } catch {
+                            alert('Gagal hapus');
+                          }
+                        }}
+                        aria-label={`Hapus layanan ${s.name}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ),
+                },
+              ]}
+              rows={rows}
+              loading={loading}
+              emptyText="Belum ada layanan"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Pagination */}
+      <div className="flex items-center gap-2 justify-end">
+        <button
+          disabled={page <= 1}
+          onClick={() => setPage((p) => p - 1)}
+          className="btn-outline disabled:opacity-50"
+        >
+          Prev
+        </button>
+        <div className="text-sm">
+          Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
+        </div>
+        <button
+          disabled={!!meta && page >= (meta.last_page ?? 1)}
+          onClick={() => setPage((p) => p + 1)}
+          className="btn-outline disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
 }
 
 ```
 </details>
 
-### src\pages\users\UserForm.tsx
+### src/pages/users/UserForm.tsx
 
 - SHA: `e2fc73fe263b`  
 - Ukuran: 15 KB
@@ -9137,7 +9984,7 @@ export default function UserForm() {
 ```
 </details>
 
-### src\pages\users\UsersList.tsx
+### src/pages/users/UsersList.tsx
 
 - SHA: `329047e98e9e`  
 - Ukuran: 10 KB
@@ -9364,7 +10211,7 @@ export default function UsersList() {
 ```
 </details>
 
-### src\pages\vouchers\VoucherForm.tsx
+### src/pages/vouchers/VoucherForm.tsx
 
 - SHA: `104b591d9807`  
 - Ukuran: 7 KB
@@ -9535,7 +10382,7 @@ export default function VoucherForm() {
 ```
 </details>
 
-### src\pages\vouchers\VouchersIndex.tsx
+### src/pages/vouchers/VouchersIndex.tsx
 
 - SHA: `76887826eeb5`  
 - Ukuran: 7 KB
@@ -9688,7 +10535,7 @@ export default function VouchersIndex() {
 
 ## Pages (src/utils)
 
-### src\utils\files.ts
+### src/utils/files.ts
 
 - SHA: `b56d905529c2`  
 - Ukuran: 332 B
@@ -9707,7 +10554,7 @@ export function fileUrl(path?: string | null): string {
 ```
 </details>
 
-### src\utils\money.ts
+### src/utils/money.ts
 
 - SHA: `9de3e1039356`  
 - Ukuran: 169 B
@@ -9721,7 +10568,7 @@ export function toIDR(n: number): string {
 ```
 </details>
 
-### src\utils\order-status.ts
+### src/utils/order-status.ts
 
 - SHA: `7da4ce0c9d21`  
 - Ukuran: 568 B
@@ -9749,7 +10596,7 @@ export function getAllowedNext(current: OrderBackendStatus): OrderBackendStatus[
 ```
 </details>
 
-### src\utils\theme.ts
+### src/utils/theme.ts
 
 - SHA: `cd5508d93cc6`  
 - Ukuran: 544 B
@@ -9781,7 +10628,7 @@ export function initTheme() {
 ```
 </details>
 
-### src\utils\wa.ts
+### src/utils/wa.ts
 
 - SHA: `3a7cc9879fd0`  
 - Ukuran: 424 B
@@ -9808,7 +10655,7 @@ export function buildWhatsAppLink(phone: string, message: string): string {
 
 ## Entry Files
 
-### src\App.tsx
+### src/App.tsx
 
 - SHA: `82cfea01d538`  
 - Ukuran: 165 B
@@ -9824,7 +10671,7 @@ export default function App() {
 ```
 </details>
 
-### src\main.tsx
+### src/main.tsx
 
 - SHA: `59751734a779`  
 - Ukuran: 287 B
