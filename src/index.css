@@ -32,3 +32,37 @@
     background-clip: padding-box;
   }
 }
+
+@layer components {
+  /* (Opsional) Base .btn bila Anda ingin pakai "btn btn-primary" di markup */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-3 py-2
+           text-sm font-medium transition-transform duration-150;
+  }
+  .btn:active { transform: scale(.98); }
+
+  /* Varian langsung lengkap — tidak memanggil .btn */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg px-3 py-2
+           text-sm font-medium transition-transform duration-150
+           text-[color:var(--color-brand-on)];
+    background: var(--color-brand-primary);
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center rounded-lg px-3 py-2
+           text-sm font-medium transition-transform duration-150
+           border border-[color:var(--color-border)] bg-white
+           text-[color:var(--color-text-default)];
+  }
+
+  .input {
+    @apply w-full rounded-md border border-[color:var(--color-border)] bg-white
+           text-[color:var(--color-text-default)] placeholder:text-gray-500
+           focus:outline-none focus:ring-0 focus:border-[color:var(--color-brand-primary)];
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+}

@@ -1,7 +1,7 @@
 // src/pages/orders/OrderReceipt.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getOrderReceiptHtml, getOrder } from '../../api/orders';
+import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
 import { buildWhatsAppLink } from '../../utils/wa';
 import type { Order } from '../../types/orders';
 import { toIDR } from '../../utils/money';
@@ -19,6 +19,7 @@ export default function OrderReceipt(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [waPhone, setWaPhone] = useState<string>('');
   const [order, setOrder] = useState<Order | null>(null);
+  const [shareUrl, setShareUrl] = useState<string>('');
 
   const [paper, setPaper] = useState<Paper>('58');
   const [zoom, setZoom] = useState<number>(1); // 1 = 100%
@@ -40,6 +41,10 @@ export default function OrderReceipt(): React.ReactElement {
             if (wa) setWaPhone(wa);
           }
         } catch { /* lanjutkan */ }
+        try {
+          const link = await createOrderShareLink(id);
+          setShareUrl(link);
+        } catch { /* abaikan, tetap bisa cetak manual */ }
       } catch (e: unknown) {
         setError((e as Error).message || 'Gagal memuat struk');
       } finally {
@@ -104,27 +109,41 @@ export default function OrderReceipt(): React.ReactElement {
 
   // ====== WhatsApp helpers ======
   const buildWAMessage = () => {
-    let message = 'Halo, berikut struk transaksi Anda. Terima kasih 🙏';
-    if (order) {
-      const name = order.customer?.name ?? 'Pelanggan';
-      const nomor = order.invoice_no ?? order.number;
-      const total = toIDR(order.grand_total);
-      const sisa = Number(order.due_amount ?? 0);
-      message = sisa > 0
-        ? [`Halo ${name},`,`Ini tagihan laundry Anda dengan nomor ${nomor}.`,`Total: ${total}.`,`Sisa tagihan: ${toIDR(sisa)}.`,`Mohon melakukan pelunasan sebelum jatuh tempo. Terima kasih 🙏`].join('\n')
-        : [`Halo ${name},`,`Ini kuitansi pelunasan transaksi laundry Anda dengan nomor ${nomor}.`,`Total dibayar: ${total}.`,`Terima kasih telah menggunakan layanan kami 🙏`].join('\n');
+    const nomor = order?.invoice_no ?? order?.number ?? '-';
+    const total = toIDR(Number(order?.grand_total ?? 0));
+    const kwitansi = shareUrl || '';
+    const name = order?.customer?.name ?? 'Pelanggan';
+    const isUnpaid = Number(order?.due_amount ?? 0) > 0;
+
+    if (isUnpaid) {
+      return [
+        `Halo ${name},`,
+        'Berikut tagihan laundry Anda.',
+        `Kwitansi: ${kwitansi}`,
+        `No: ${nomor}`,
+        `Total: ${total}`,
+        'Mohon melakukan pembayaran.',
+        '— Salve Laundry',
+      ].join('\n');
     }
-    return message;
+
+    return [
+      'Terima kasih atas pembayarannya.',
+      `Kwitansi: ${kwitansi}`,
+      `No: ${nomor}`,
+      `Total: ${total}`,
+      '— Salve Laundry',
+    ].join('\n');
   };
 
   const onSendWA = () => {
-    if (!waPhone) return;
+    if (!waPhone || !shareUrl) return;
     window.open(buildWhatsAppLink(waPhone, buildWAMessage()), '_blank');
   };
 
   const onCopyWAText = async () => {
     try {
-      await navigator.clipboard?.writeText(buildWAMessage());
+      await navigator.clipboard?.writeText(shareUrl || '');
     } catch { /* abaikan */ }
   };
 
@@ -282,7 +301,7 @@ export default function OrderReceipt(): React.ReactElement {
             <div className="flex gap-2">
               <button
                 className="btn-primary disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onSendWA} disabled={!waPhone} aria-label="Kirim WhatsApp"
+                onClick={onSendWA} disabled={!waPhone || !shareUrl} aria-label="Kirim WhatsApp"
               >
                 Kirim WA
               </button>
@@ -302,11 +321,11 @@ export default function OrderReceipt(): React.ReactElement {
       <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-0 print:shadow-none print:border-0 print:p-0">
         {/* Background grid halus agar preview terasa seperti kanvas */}
         <div className="w-full overflow-auto rounded-lg"
-             style={{
-               backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+          style={{
+            backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px),
                                  linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)`,
-               backgroundSize: '16px 16px',
-             }}>
+            backgroundSize: '16px 16px',
+          }}>
           <div className="min-h-[320px] py-6 grid place-items-start justify-center">
             <iframe
               key={frameKey}

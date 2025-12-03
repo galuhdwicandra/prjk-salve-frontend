@@ -85,3 +85,13 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
     throw err;
   }
 }
+
+type ShareLinkPayload = { share_url: string; expires_in_minutes: number };
+export async function createOrderShareLink(id: string): Promise<string> {
+  const { data } = await api.post<SingleResponse<ShareLinkPayload>>(
+    `/orders/${encodeURIComponent(id)}/share-link`
+  );
+  const url = data?.data?.share_url;
+  if (!url) throw new Error('Share link tidak tersedia dari server');
+  return url;
+}
