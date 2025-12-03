@@ -1,9 +1,12 @@
 // src/components/receivables/SettleReceivableDialog.tsx
 import { useEffect, useMemo, useState } from "react";
-import type { Receivable } from "../../types/receivables";
+import type { Receivable, ReceivableSettleResult } from "../../types/receivables";
 import type { PaymentMethod } from "../../types/payments";
 import { settleReceivable } from "../../api/receivables";
 import { toIDR } from "../../utils/money";
+import { openOrderReceipt } from "../../api/orders";
+import type { Order } from "../../types/orders";
+import { buildWhatsAppLink } from "../../utils/wa";
 
 type Props = {
     open: boolean;
@@ -13,6 +16,31 @@ type Props = {
 };
 
 const METHODS: PaymentMethod[] = ["CASH", "QRIS", "TRANSFER"];
+
+function extractOrderId(
+    order: Order | { order: Order;[k: string]: unknown } | undefined
+): string | null {
+    if (!order) return null;
+    if ("id" in order && typeof (order as Order).id === "string") {
+        return (order as Order).id;
+    }
+    if ("order" in (order as { order: Order })) {
+        return (order as { order: Order }).order?.id ?? null;
+    }
+    return null;
+}
+
+function buildReceiptMessage(receivable: Receivable, receiptUrl: string): string {
+    const inv = receivable.order?.invoice_no ?? "-";
+    const total = toIDR(receivable.order?.grand_total ?? 0);
+    return [
+        "Terima kasih atas pembayarannya.",
+        `Kwitansi: ${receiptUrl}`,
+        `No: ${inv}`,
+        `Total: ${total}`,
+        "— Salve Laundry"
+    ].join("\n");
+}
 
 export default function SettleReceivableDialog({ open, receivable, onClose, onSettled }: Props) {
     const [amount, setAmount] = useState<number>(0);
@@ -37,9 +65,15 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
         return amount <= 0 || amount > receivable.remaining_amount || loading;
     }, [amount, loading, receivable]);
 
+    const customerPhone =
+        receivable?.order?.customer?.phone ||
+        receivable?.order?.customer?.whatsapp ||
+        "";
+    const canWhatsApp = Boolean(customerPhone);
+
     if (!open || !receivable) return null;
 
-    const onSubmit = async () => {
+    const onSubmit = async (withWA = false) => {
         if (!receivable) return;
         setLoading(true);
         setErr("");
@@ -50,7 +84,26 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
                 paid_at: paidAt ? new Date(paidAt).toISOString() : undefined,
                 note: note || undefined,
             });
-            const next = res.data.data.receivable;
+            const payload = res.data.data as ReceivableSettleResult;
+            const next = payload.receivable;
+
+            if (next.status === "SETTLED") {
+                const orderId = payload.order_id ?? extractOrderId(payload.order as any);
+                if (orderId && !withWA) {
+                    await openOrderReceipt(orderId, true);
+                }
+                const receiptUrl =
+                    payload.share_url /* prioritas: link publik */
+                    ?? payload.receipt_url
+                    ?? (orderId ? `${import.meta.env.VITE_API_BASE_URL}/orders/${orderId}/receipt` : "");
+
+                if (withWA && receiptUrl && customerPhone) {
+                    const msg = buildReceiptMessage(receivable, receiptUrl);
+                    const wa = buildWhatsAppLink(customerPhone, msg);
+                    window.open(wa, "_blank");
+                }
+            }
+
             onSettled?.(next);
             onClose();
         } catch {
@@ -122,12 +175,22 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
                 <div className="mt-6 flex justify-end gap-2">
                     <button onClick={onClose} className="rounded-xl border px-4 py-2">Batal</button>
                     <button
-                        onClick={onSubmit}
+                        onClick={() => onSubmit(false)}
                         disabled={disabled}
                         className="rounded-xl bg-black px-4 py-2 text-white disabled:opacity-50"
                     >
                         {loading ? "Memproses..." : "Lunasi"}
                     </button>
+                    {canWhatsApp && (
+                        <button
+                            onClick={() => onSubmit(true)}
+                            disabled={disabled}
+                            title="Lunasi dan kirim link kwitansi via WhatsApp"
+                            className="rounded-xl bg-green-600 px-4 py-2 text-white disabled:opacity-50"
+                        >
+                            {loading ? "Memproses..." : "Lunasi & Kirim WA"}
+                        </button>
+                    )}
                 </div>
             </div >
         </div >

@@ -2,7 +2,7 @@
 import type { PaymentMethod, Payment } from "../types/payments";
 import type { Order } from "../types/orders";
 
-export type ReceivableStatus = "OPEN" | "PARTIAL" | "SETTLED" | "OVERDUE";
+export type ReceivableStatus = "OPEN" | "PARTIAL" | "SETTLED" | "OVERDUE" | "CANCELLED";
 
 export interface Receivable {
     id: string;
@@ -23,7 +23,12 @@ export interface Receivable {
         status: string;
         payment_status: string;
         created_at: string;
-        customer?: { id: string; name: string | null } | null;
+        customer?: {
+            id: string;
+            name: string | null;
+            phone?: string | null;
+            whatsapp?: string | null;
+        } | null;
     } | null;
 }
 
@@ -46,6 +51,9 @@ export interface ReceivableSettlePayload {
 
 export interface ReceivableSettleResult {
     receivable: Receivable;
-    order: Order;
+    order: Order | { order: Order;[k: string]: unknown };
     payment?: Payment | null;
+    order_id?: string;
+    receipt_url?: string | null;
+    share_url?: string | null;
 }

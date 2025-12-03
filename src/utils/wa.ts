@@ -1,3 +1,4 @@
+// src/utils/wa.ts
 function normPhoneID(wa: string): string {
     const digits = (wa || '').replace(/\D/g, '');
     if (digits.startsWith('62')) return digits;
