@@ -123,16 +123,18 @@ export default function OrderReceipt(): React.ReactElement {
         `No: ${nomor}`,
         `Total: ${total}`,
         'Mohon melakukan pembayaran.',
-        '— Salve Laundry',
+        'Salve Laundry',
       ].join('\n');
     }
 
     return [
+      `Halo ${name},`,
       'Terima kasih atas pembayarannya.',
       `Kwitansi: ${kwitansi}`,
       `No: ${nomor}`,
       `Total: ${total}`,
-      '— Salve Laundry',
+      'Terima Kasih Sudah Menggunakan Layanan.',
+      'Salve Laundry',
     ].join('\n');
   };
 

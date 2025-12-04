@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-04 01:44:39_  
+_Dihasilkan otomatis: 2025-12-04 18:32:36_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -676,7 +676,7 @@ export async function uploadOrderPhotos(
 
 ### src/api/orders.ts
 
-- SHA: `3f13a90b4cec`  
+- SHA: `cbc7ad31f765`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -767,6 +767,16 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
     w.close();
     throw err;
   }
+}
+
+type ShareLinkPayload = { share_url: string; expires_in_minutes: number };
+export async function createOrderShareLink(id: string): Promise<string> {
+  const { data } = await api.post<SingleResponse<ShareLinkPayload>>(
+    `/orders/${encodeURIComponent(id)}/share-link`
+  );
+  const url = data?.data?.share_url;
+  if (!url) throw new Error('Share link tidak tersedia dari server');
+  return url;
 }
 ```
 </details>
@@ -7186,8 +7196,8 @@ export default function LoginPage() {
 
 ### src/pages/orders/OrderDetail.tsx
 
-- SHA: `10f33edd5704`  
-- Ukuran: 11 KB
+- SHA: `3b694aad56bb`  
+- Ukuran: 23 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7199,6 +7209,11 @@ import {
   getOrderReceiptHtml,
   openOrderReceipt,
 } from '../../api/orders';
+import { updateOrder } from '../../api/orders'; // PUT /orders/{id}:contentReference[oaicite:1]{index=1}
+import type { OrderUpdatePayload } from '../../types/orders'; // tipe payload edit【1:Frontend_Docs.md†L91-L96】
+
+import CustomerPicker from '../../components/customers/CustomerPicker'; // path sesuai struktur Anda
+import ProductSearch from '../../components/pos/ProductSearch';
 import ReceiptPreview from '../../components/ReceiptPreview';
 import type { Order, OrderBackendStatus } from '../../types/orders';
 import OrderStatusStepper from '../../components/orders/OrderStatusStepper';
@@ -7219,6 +7234,25 @@ export default function OrderDetail(): React.ReactElement {
   const [row, setRow] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
+
+  type DraftItem = {
+    id?: string;              // jika ada
+    service_id: string;
+    service_name?: string;    // untuk UI
+    price?: number;           // untuk hitung preview subtotal
+    qty: number;
+    note?: string | null;
+  };
+  type Draft = {
+    customer_id: string | null;
+    notes: string | null;
+    discount?: number; // aktifkan bila backend menerima 'discount'
+    items: DraftItem[];
+  };
+  const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
 
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptHtml, setReceiptHtml] = useState<string>('');
@@ -7254,6 +7288,50 @@ export default function OrderDetail(): React.ReactElement {
   }, [id]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!row) return;
+    setDraft({
+      customer_id: row.customer?.id ?? row.customer_id ?? null,
+      notes: row.notes ?? null,
+      // Catatan: backend akan HAPUS & TULIS ULANG items saat update,
+      // jadi kita harus mengirim ULANG SELURUH items saat simpan【13:Backend_Docs.md†L41-L47】.
+      items: (row.items ?? []).map(it => ({
+        id: it.id,
+        service_id: it.service_id,
+        service_name: it.service?.name,
+        price: Number(it.price),
+        qty: Number(it.qty),
+        note: it.note ?? null,
+      })),
+      // discount: row.discount ?? 0, // aktifkan jika rule backend sdh mendukung
+    });
+  }, [row]);
+
+  const changeQty = useCallback((serviceId: string, qty: number) => {
+    setDraft(d => ({ ...d, items: d.items.map(it => it.service_id === serviceId ? { ...it, qty: Math.max(1, qty) } : it) }));
+  }, []);
+  const changeNote = useCallback((serviceId: string, note: string) => {
+    setDraft(d => ({ ...d, items: d.items.map(it => it.service_id === serviceId ? { ...it, note } : it) }));
+  }, []);
+  const removeItem = useCallback((serviceId: string) => {
+    setDraft(d => ({ ...d, items: d.items.filter(it => it.service_id !== serviceId) }));
+  }, []);
+  const addItemFromSearch = useCallback((svc: { id: string; name: string; unit: string; price_effective: number }) => {
+    setDraft(d => {
+      const found = d.items.find(it => it.service_id === svc.id);
+      if (found) {
+        return {
+          ...d,
+          items: d.items.map(it => it.service_id === svc.id ? { ...it, qty: it.qty + 1, price: svc.price_effective } : it),
+        };
+      }
+      return {
+        ...d,
+        items: [...d.items, { service_id: svc.id, service_name: svc.name, price: svc.price_effective, qty: 1, note: null }],
+      };
+    });
+  }, []);
 
   const onTransit = useCallback(async (next: OrderBackendStatus) => {
     if (!id) return;
@@ -7305,6 +7383,74 @@ export default function OrderDetail(): React.ReactElement {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {!isEditing && (
+                <button
+                  type="button"
+                  className="btn-outline px-3 py-1.5 text-xs"
+                  onClick={() => setIsEditing(true)}
+                  title="Edit order"
+                >
+                  Edit
+                </button>
+              )}
+              {isEditing && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-outline px-3 py-1.5 text-xs"
+                    onClick={() => { setIsEditing(false); setFieldErr({}); /* reset draft -> useEffect(row) sudah cover */ }}
+                    title="Batalkan perubahan"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)] disabled:opacity-50"
+                    onClick={async () => {
+                      if (!id) return;
+                      setSaving(true); setFieldErr({});
+                      try {
+                        // Siapkan payload — kirim seluruh items (lihat catatan hapus-tulis ulang)【13:Backend_Docs.md†L41-L47】
+                        const payload: OrderUpdatePayload = {
+                          customer_id: draft.customer_id ?? null,
+                          notes: (draft.notes ?? '') || null,
+                          items: draft.items.map(it => ({
+                            service_id: it.service_id,
+                            qty: it.qty,
+                            note: (it.note ?? '') || null,
+                          })),
+                          // discount: draft.discount ?? 0, // aktifkan bila rule backend sdh mendukung
+                        };
+                        await updateOrder(id, payload);
+                        await refresh();
+                        setIsEditing(false);
+                      } catch (e: unknown) {
+                        let msg = 'Gagal menyimpan';
+                        if (isAxiosError<ApiErrorResponse>(e)) {
+                          const api = e.response?.data;
+                          msg = api?.message ?? msg;
+                          // petakan error field sederhana ke state fieldErr
+                          const map: Record<string, string> = {};
+                          const errMap = api?.errors;
+                          if (errMap) {
+                            Object.entries(errMap).forEach(([k, v]) => {
+                              map[k] = Array.isArray(v) ? String(v[0]) : String(v ?? '');
+                            });
+                            setFieldErr(map);
+                          }
+                        }
+                        alert(msg);
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    disabled={saving || (draft.items.length === 0)}
+                    title="Simpan perubahan"
+                  >
+                    {saving ? 'Menyimpan…' : 'Simpan'}
+                  </button>
+                </>
+              )}
               {/* Buka struk tab baru */}
               <button
                 type="button"
@@ -7348,55 +7494,160 @@ export default function OrderDetail(): React.ReactElement {
             </div>
           </div>
 
-          {/* Items table */}
-          <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                  <tr className="divide-x divide-[color:var(--color-border)]">
-                    <Th>Layanan</Th>
-                    <Th>Qty</Th>
-                    <Th>Harga</Th>
-                    <Th>Total</Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[color:var(--color-border)]">
-                  {(row.items ?? []).map((it) => (
-                    <tr key={it.id} className="hover:bg-black/5 transition-colors">
-                      <Td>{it.service?.name ?? it.service_id}</Td>
-                      <Td>{it.qty}</Td>
-                      <Td>
-                        {Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
-                      </Td>
-                      <Td>
-                        {Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {isEditing && (
+            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs font-medium mb-1">Pelanggan</div>
+                  <CustomerPicker
+                    value={draft.customer_id ?? ''}
+                    onChange={(id) => setDraft(d => ({ ...d, customer_id: id || null }))}
+                  />
+                  {fieldErr['customer_id'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['customer_id']}</div>}
+                </div>
+                <div>
+                  <div className="text-xs font-medium mb-1">Catatan</div>
+                  <textarea
+                    className="input w-full px-2 py-2 text-sm"
+                    placeholder="Catatan order (opsional)"
+                    value={draft.notes ?? ''}
+                    onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
+                  />
+                  {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
+                </div>
+              </div>
             </div>
+          )}
 
-            {/* Totals */}
-            <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-              <div>
-                <span className="text-gray-600">Subtotal</span>{' '}
-                <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
+          {/* Items table */}
+          {!isEditing && (
+            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+              <div className="overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                    <tr className="divide-x divide-[color:var(--color-border)]">
+                      <Th>Layanan</Th>
+                      <Th>Qty</Th>
+                      <Th>Harga</Th>
+                      <Th>Total</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[color:var(--color-border)]">
+                    {(row.items ?? []).map((it) => (
+                      <tr key={it.id} className="hover:bg-black/5 transition-colors">
+                        <Td>{it.service?.name ?? it.service_id}</Td>
+                        <Td>{it.qty}</Td>
+                        <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                        <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div>
-                <span className="text-gray-600">Diskon</span>{' '}
-                <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
-              </div>
-              <div>
-                <span className="text-gray-600">Grand</span>{' '}
-                <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
-              </div>
-              <div>
-                <span className="text-gray-600">Sisa</span>{' '}
-                <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b>
+              {/* Totals read-only */}
+              <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
+                <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
               </div>
             </div>
-          </div>
+          )}
+
+          {isEditing && (
+            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+              {/* Tambah layanan */}
+              <div className="p-3">
+                <ProductSearch onPick={addItemFromSearch} />
+                {fieldErr['items'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['items']}</div>}
+              </div>
+              <div className="overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                    <tr className="divide-x divide-[color:var(--color-border)]">
+                      <Th>Layanan</Th>
+                      <Th>Qty</Th>
+                      <Th>Harga</Th>
+                      <Th>Total</Th>
+                      <Th>Aksi</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[color:var(--color-border)]">
+                    {draft.items.length === 0 && (
+                      <tr>
+                        <Td colSpan={5} >
+                          <span className="text-xs text-gray-600">Belum ada item. Tambahkan layanan di atas.</span>
+                        </Td>
+                      </tr>
+                    )}
+                    {draft.items.map((it) => {
+                      const harga = Number(
+                        it.price ??
+                        (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
+                        0
+                      );
+                      const total = harga * Number(it.qty || 0);
+                      return (
+                        <tr key={it.service_id} className="hover:bg-black/5 transition-colors">
+                          <Td>
+                            <div className="font-medium">{it.service_name ?? it.service_id}</div>
+                            <input
+                              className="input mt-1 px-2 py-1 text-xs w-full"
+                              placeholder="Catatan item (opsional)"
+                              value={it.note ?? ''}
+                              onChange={(e) => changeNote(it.service_id, e.target.value)}
+                            />
+                            {fieldErr[`items.${it.service_id}.note`] && (
+                              <div className="text-[11px] text-red-600 mt-1">{fieldErr[`items.${it.service_id}.note`]}</div>
+                            )}
+                          </Td>
+                          <Td>
+                            <input
+                              type="number"
+                              min={1}
+                              className="input w-24 px-2 py-1 text-xs"
+                              value={it.qty}
+                              onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
+                            />
+                          </Td>
+                          <Td>{harga ? harga.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '—'}</Td>
+                          <Td>{(total || 0).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                          <Td>
+                            <button
+                              type="button"
+                              className="btn-outline px-2 py-1 text-xs"
+                              onClick={() => removeItem(it.service_id)}
+                              title="Hapus baris"
+                            >
+                              Hapus
+                            </button>
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {/* Preview total lokal (informasi; total final dihitung backend) */}
+              <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
+                <div>
+                  <span className="text-gray-600">Subtotal (preview)</span>{' '}
+                  <b>{
+                    draft.items
+                      .reduce((s, it) => {
+                        const harga = Number(
+                          it.price ??
+                          (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
+                          0
+                        );
+                        return s + Number(it.qty || 0) * harga;
+                      }, 0)
+                      .toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })
+                  }</b>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Photos */}
           <OrderPhotosGallery
@@ -7478,15 +7729,28 @@ export default function OrderDetail(): React.ReactElement {
    Sub-komponen presentasional (UI-only)
 ------------------------- */
 
-function Th({ children }: { children: React.ReactNode }) {
+type ThProps = React.ThHTMLAttributes<HTMLTableHeaderCellElement>;
+function Th({ children, className, ...rest }: ThProps) {
   return (
-    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">
+    <th
+      className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wide ${className ?? ''}`}
+      {...rest}
+    >
       {children}
     </th>
   );
 }
-function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-3 py-2 align-middle">{children}</td>;
+
+type TdProps = React.TdHTMLAttributes<HTMLTableCellElement>;
+function Td({ children, className, ...rest }: TdProps) {
+  return (
+    <td
+      className={`px-3 py-2 align-middle ${className ?? ''}`}
+      {...rest}
+    >
+      {children}
+    </td>
+  );
 }
 
 ```
@@ -7494,7 +7758,7 @@ function Td({ children }: { children: React.ReactNode }) {
 
 ### src/pages/orders/OrderReceipt.tsx
 
-- SHA: `ee21bf9450b2`  
+- SHA: `23ef4d934de3`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7502,7 +7766,7 @@ function Td({ children }: { children: React.ReactNode }) {
 // src/pages/orders/OrderReceipt.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getOrderReceiptHtml, getOrder } from '../../api/orders';
+import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
 import { buildWhatsAppLink } from '../../utils/wa';
 import type { Order } from '../../types/orders';
 import { toIDR } from '../../utils/money';
@@ -7520,6 +7784,7 @@ export default function OrderReceipt(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [waPhone, setWaPhone] = useState<string>('');
   const [order, setOrder] = useState<Order | null>(null);
+  const [shareUrl, setShareUrl] = useState<string>('');
 
   const [paper, setPaper] = useState<Paper>('58');
   const [zoom, setZoom] = useState<number>(1); // 1 = 100%
@@ -7541,6 +7806,10 @@ export default function OrderReceipt(): React.ReactElement {
             if (wa) setWaPhone(wa);
           }
         } catch { /* lanjutkan */ }
+        try {
+          const link = await createOrderShareLink(id);
+          setShareUrl(link);
+        } catch { /* abaikan, tetap bisa cetak manual */ }
       } catch (e: unknown) {
         setError((e as Error).message || 'Gagal memuat struk');
       } finally {
@@ -7605,27 +7874,41 @@ export default function OrderReceipt(): React.ReactElement {
 
   // ====== WhatsApp helpers ======
   const buildWAMessage = () => {
-    let message = 'Halo, berikut struk transaksi Anda. Terima kasih 🙏';
-    if (order) {
-      const name = order.customer?.name ?? 'Pelanggan';
-      const nomor = order.invoice_no ?? order.number;
-      const total = toIDR(order.grand_total);
-      const sisa = Number(order.due_amount ?? 0);
-      message = sisa > 0
-        ? [`Halo ${name},`,`Ini tagihan laundry Anda dengan nomor ${nomor}.`,`Total: ${total}.`,`Sisa tagihan: ${toIDR(sisa)}.`,`Mohon melakukan pelunasan sebelum jatuh tempo. Terima kasih 🙏`].join('\n')
-        : [`Halo ${name},`,`Ini kuitansi pelunasan transaksi laundry Anda dengan nomor ${nomor}.`,`Total dibayar: ${total}.`,`Terima kasih telah menggunakan layanan kami 🙏`].join('\n');
+    const nomor = order?.invoice_no ?? order?.number ?? '-';
+    const total = toIDR(Number(order?.grand_total ?? 0));
+    const kwitansi = shareUrl || '';
+    const name = order?.customer?.name ?? 'Pelanggan';
+    const isUnpaid = Number(order?.due_amount ?? 0) > 0;
+
+    if (isUnpaid) {
+      return [
+        `Halo ${name},`,
+        'Berikut tagihan laundry Anda.',
+        `Kwitansi: ${kwitansi}`,
+        `No: ${nomor}`,
+        `Total: ${total}`,
+        'Mohon melakukan pembayaran.',
+        '— Salve Laundry',
+      ].join('\n');
     }
-    return message;
+
+    return [
+      'Terima kasih atas pembayarannya.',
+      `Kwitansi: ${kwitansi}`,
+      `No: ${nomor}`,
+      `Total: ${total}`,
+      '— Salve Laundry',
+    ].join('\n');
   };
 
   const onSendWA = () => {
-    if (!waPhone) return;
+    if (!waPhone || !shareUrl) return;
     window.open(buildWhatsAppLink(waPhone, buildWAMessage()), '_blank');
   };
 
   const onCopyWAText = async () => {
     try {
-      await navigator.clipboard?.writeText(buildWAMessage());
+      await navigator.clipboard?.writeText(shareUrl || '');
     } catch { /* abaikan */ }
   };
 
@@ -7783,7 +8066,7 @@ export default function OrderReceipt(): React.ReactElement {
             <div className="flex gap-2">
               <button
                 className="btn-primary disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onSendWA} disabled={!waPhone} aria-label="Kirim WhatsApp"
+                onClick={onSendWA} disabled={!waPhone || !shareUrl} aria-label="Kirim WhatsApp"
               >
                 Kirim WA
               </button>
@@ -7803,11 +8086,11 @@ export default function OrderReceipt(): React.ReactElement {
       <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-0 print:shadow-none print:border-0 print:p-0">
         {/* Background grid halus agar preview terasa seperti kanvas */}
         <div className="w-full overflow-auto rounded-lg"
-             style={{
-               backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+          style={{
+            backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px),
                                  linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)`,
-               backgroundSize: '16px 16px',
-             }}>
+            backgroundSize: '16px 16px',
+          }}>
           <div className="min-h-[320px] py-6 grid place-items-start justify-center">
             <iframe
               key={frameKey}
