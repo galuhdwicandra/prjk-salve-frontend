@@ -77,9 +77,8 @@ export default function LoginPage() {
       <section
         aria-labelledby="auth-title"
         className="
-          w-full max-w-[420px] rounded-2xl border
-          border-[color:var(--color-border)]
-          bg-[color:var(--color-bg)]
+          w-full max-w-[420px] rounded-2xl
+          bg-[color:var(--color-surface)]
           p-6 sm:p-8 shadow-[var(--shadow-2)]
         "
       >
