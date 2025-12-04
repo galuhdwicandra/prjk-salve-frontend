@@ -154,7 +154,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
     );
   }
   if (!rows.length) {
-    return <div className="text-sm text-gray-500">Belum ada cabang.</div>;
+    return <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-4 text-sm text-gray-500">Belum ada cabang.</div>;
   }
 
   return (
@@ -189,14 +189,14 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
         </div>
       )}
 
-      {/* Table */}
+      {/* Table — konsisten dengan Customers */}
       <div className="overflow-auto mt-3">
         <table className="min-w-[720px] w-full text-sm">
           <thead className="bg-[#E6EDFF] sticky top-0 z-10">
             <tr className="divide-x divide-[color:var(--color-border)]">
               <Th>Cabang</Th>
-              <Th>Harga Efektif</Th>
-              <Th>Override</Th>
+              <Th className="text-right">Harga Efektif</Th>
+              <Th className="text-right">Override</Th>
               <Th className="text-right pr-4">Aksi</Th>
             </tr>
           </thead>
@@ -212,15 +212,17 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       <span className="text-gray-500">— {r.name}</span>
                     </div>
                   </Td>
-                  <Td>
+
+                  <Td className="text-right">
                     <span className="font-medium">{toIDR(r.effective)}</span>
                   </Td>
-                  <Td>
+
+                  <Td className="text-right">
                     <input
                       type="number"
                       min={0}
                       step="100"
-                      className="input w-40 text-right"
+                      className="input w-44 text-right"
                       defaultValue={r.override?.price ?? ''}
                       placeholder={`Default ${toIDR(Number(defaultPrice))}`}
                       ref={(el) => { inputRefs.current[key] = el; }}
@@ -239,6 +241,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       aria-label={`Harga override untuk cabang ${r.name}`}
                     />
                   </Td>
+
                   <Td className="text-right">
                     <div className="inline-flex items-center gap-2">
                       <button
@@ -262,7 +265,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       <button
                         className="btn-outline"
                         onClick={() => {
-                          // reset field ke kosong -> berarti pakai default saat berikutnya dihitung server
+                          // Reset field (lokal) -> kembali ke default (server belum diubah)
                           const ref = inputRefs.current[key];
                           if (ref) ref.value = '';
                           setRows((prev) =>
@@ -294,7 +297,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
   );
 }
 
-/* ---------- Subcomponents UI ---------- */
+/* ---------- Subcomponents UI (konsisten dengan Customers) ---------- */
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>

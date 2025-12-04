@@ -97,7 +97,15 @@ export default function DeliveryDetail() {
         try {
             if (!row) { dbg.warn('blocked: no row'); return; }
             if (!canUpdate) { dbg.warn('blocked: no permission'); return; }
-            await updateDeliveryStatus(row.id, { status, handover_photo: file });
+            let photo: File | null = null;
+            if (status === 'HANDOVER' && file) {
+                if (file.size > 4 * 1024 * 1024) { // 4MB
+                    dbg.warn('blocked: file too large (>4MB)');
+                    return;
+                }
+                photo = file;
+            }
+            await updateDeliveryStatus(row.id, { status, note: null, photo });
             if (fileRef.current) {
                 fileRef.current.value = '';
                 dbg.log('file input cleared');
@@ -117,63 +125,117 @@ export default function DeliveryDetail() {
 
     return (
         <div className="space-y-4">
-            <header>
-                <h1 className="text-lg font-semibold">Delivery Detail</h1>
-                <div className="text-xs text-gray-600">ID: {row.id}</div>
+            {/* Header */}
+            <header className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-lg font-semibold tracking-tight">Delivery Detail</h1>
+                    <div className="text-xs text-gray-600">ID: {row.id}</div>
+                </div>
+                <span className={statusChipClass(row.status)} aria-label={`Status: ${row.status}`}>
+                    {row.status}
+                </span>
             </header>
 
-            <div className="rounded-xl border p-4 space-y-3">
-                <div className="flex flex-wrap gap-6 items-center">
-                    <div><span className="text-xs">Order:</span> <span className="text-sm font-medium">{row.order_id}</span></div>
-                    <div><span className="text-xs">Tipe:</span> <span className="text-sm">{row.type}</span></div>
-                    <div><span className="text-xs">Fee:</span> <span className="text-sm">{Number(row.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</span></div>
-                </div>
+            {/* Card: Info utama */}
+            <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
+                <div className="p-4 grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                        <InfoLine label="Order">
+                            <span className="font-medium">{row.order_id}</span>
+                        </InfoLine>
+                        <InfoLine label="Tipe">
+                            <span>{row.type}</span>
+                        </InfoLine>
+                        <InfoLine label="Fee">
+                            <span className="tabular-nums">
+                                {Number(row.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                            </span>
+                        </InfoLine>
+                    </div>
 
-                <div className="flex items-center gap-3">
-                    <span className="text-xs">Kurir</span>
-                    <AssignCourierSelect value={row.assigned_to ?? null} onChange={onAssign} disabled={!canAssign} />
-                </div>
-
-                <div className="space-y-2">
-                    <DeliveryStatusStepper status={row.status} />
-                    <div className="flex items-center gap-2">
-                        <select
-                            className="border rounded px-2 py-1 text-sm"
-                            defaultValue={row.status}
-                            onChange={(e) => {
-                                const next = e.target.value as DeliveryStatus;
-                                dbg.log('status select changed', { from: row.status, to: next });
-                                void onUpdateStatus(next);
-                            }}
-                            disabled={!canUpdate}
-                        >
-                            {(['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED', 'FAILED', 'CANCELLED'] as DeliveryStatus[])
-                                .map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/*"
-                            className="text-xs"
-                            title="Foto serah-terima (opsional; dipakai saat DELIVERED)"
-                            onChange={() => {
-                                const f = fileRef.current?.files?.[0] ?? null;
-                                dbg.log('file selected', f ? { name: f.name, size: f.size, type: f.type } : '(none)');
-                            }}
+                    <div className="grid gap-2">
+                        <label className="text-xs text-gray-600">Kurir</label>
+                        <AssignCourierSelect
+                            value={row.assigned_to ?? null}
+                            onChange={onAssign}
+                            disabled={!canAssign}
                         />
                     </div>
-                    {row.handover_photo && (
-                        <a
-                            href={(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '') + '/' + String(row.handover_photo).replace(/^\/+/, '')}
-                            target="_blank" rel="noopener noreferrer"
-                            className="text-xs underline"
-                            onClick={() => dbg.log('open proof clicked', { url: row.handover_photo })}
-                        >
-                            Lihat bukti serah-terima
-                        </a>
-                    )}
                 </div>
-            </div>
+            </section>
+
+            {/* Card: Progress & aksi */}
+            <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
+                <div className="p-4 space-y-3">
+                    <DeliveryStatusStepper status={row.status} />
+
+                    <div className="grid gap-3 md:grid-cols-[240px_1fr] items-center">
+                        <div className="grid gap-1">
+                            <label htmlFor="status" className="text-xs text-gray-600">Ubah status</label>
+                            <select
+                                id="status"
+                                className="input py-2"
+                                value={row.status}
+                                onChange={(e) => {
+                                    const next = e.target.value as DeliveryStatus;
+                                    dbg.log('status select changed', { from: row.status, to: next });
+                                    void onUpdateStatus(next);
+                                }}
+                                disabled={!canUpdate}
+                            >
+                                {(['CREATED', 'ASSIGNED', 'ON_THE_WAY', 'PICKED', 'HANDOVER', 'COMPLETED', 'FAILED', 'CANCELLED'] as DeliveryStatus[])
+                                    .map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="grid gap-1">
+                            <label htmlFor="proof" className="text-xs text-gray-600">
+                                Bukti serah-terima (opsional; digunakan saat HANDOVER, maks. 4MB)
+                            </label>
+                            <input
+                                id="proof"
+                                ref={fileRef}
+                                type="file"
+                                accept="image/*"
+                                className="input py-1.5"
+                                onChange={() => {
+                                    const f = fileRef.current?.files?.[0] ?? null;
+                                    dbg.log('file selected', f ? { name: f.name, size: f.size, type: f.type } : '(none)');
+                                }}
+                            />
+                            {row.handover_photo && (
+                                <div className="pt-1">
+                                    <a
+                                        href={(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '') + '/' + String(row.handover_photo).replace(/^\/+/, '')}
+                                        target="_blank" rel="noopener noreferrer"
+                                        className="btn-outline inline-flex"
+                                        onClick={() => dbg.log('open proof clicked', { url: row.handover_photo })}
+                                    >
+                                        Lihat bukti serah-terima
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     );
+}
+
+/* ---------- Sub UI ---------- */
+function InfoLine({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-gray-600">{label}</span>
+            <div className="text-sm">{children}</div>
+        </div>
+    );
+}
+
+function statusChipClass(s: DeliveryStatus) {
+    // Progress aktif = solid brand; selesai = subtle; batal/error = danger
+    if (s === 'COMPLETED') return 'chip chip--subtle';
+    if (s === 'FAILED' || s === 'CANCELLED') return 'chip chip--danger';
+    return 'chip chip--solid';
 }

@@ -4,9 +4,10 @@ export type DeliveryType = 'pickup' | 'delivery' | 'return';
 export type DeliveryStatus =
   | 'CREATED'
   | 'ASSIGNED'
-  | 'PICKED_UP'
-  | 'ON_ROUTE'
-  | 'DELIVERED'
+  | 'ON_THE_WAY'
+  | 'PICKED'
+  | 'HANDOVER'
+  | 'COMPLETED'
   | 'FAILED'
   | 'CANCELLED';
 
@@ -46,8 +47,9 @@ export interface DeliveryAssignPayload {
 
 export interface DeliveryStatusPayload {
   status: DeliveryStatus;
-  note?: string | null
-  handover_photo?: File | null;
+  note?: string | null;
+  /** Optional; hanya diperlukan saat HANDOVER */
+  photo?: File | null;
 }
 
 export interface DeliveryQuery {

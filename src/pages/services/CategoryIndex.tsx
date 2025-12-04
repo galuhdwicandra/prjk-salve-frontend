@@ -1,6 +1,5 @@
 // src/pages/services/CategoryIndex.tsx
 import { useEffect, useState, useCallback } from 'react';
-import DataTable from '../../components/DataTable';
 import type { ServiceCategory, PaginationMeta } from '../../types/services';
 import {
   listServiceCategories,
@@ -36,6 +35,7 @@ export default function CategoryIndex() {
   );
 
   useEffect(() => { void refresh(page); }, [page, refresh]);
+
   useEffect(() => {
     const t = setTimeout(() => { void refresh(1); setPage(1); }, 300);
     return () => clearTimeout(t);
@@ -99,66 +99,90 @@ export default function CategoryIndex() {
         </div>
       )}
 
-      {/* Table */}
-      <div aria-busy={loading ? 'true' : 'false'}>
-        <DataTable<ServiceCategory>
-          columns={[
-            { key: 'name', header: 'Nama' },
-            {
-              key: 'is_active',
-              header: 'Status',
-              render: (r) =>
-                r.is_active ? (
-                  <span className="chip chip--solid">Active</span>
+      {/* Empty state */}
+      {!loading && !error && rows.length === 0 && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada kategori
+        </div>
+      )}
+
+      {/* Table (konsisten dengan Customers) */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Nama</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
                 ) : (
-                  <span className="chip chip--danger">Inactive</span>
-                ),
-            },
-            {
-              key: 'actions',
-              header: 'Aksi',
-              render: (r) => (
-                <div className="flex gap-2 justify-end">
-                  <button
-                    className="btn-outline text-xs px-3 py-1"
-                    onClick={async () => {
-                      const name = prompt('Ubah nama kategori:', r.name)?.trim();
-                      if (!name) return;
-                      try {
-                        await updateServiceCategory(r.id, { name });
-                        await refresh(page);
-                      } catch {
-                        alert('Gagal update');
-                      }
-                    }}
-                    aria-label={`Ubah kategori ${r.name}`}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn-outline text-xs px-3 py-1 text-red-600"
-                    onClick={async () => {
-                      if (!confirm(`Hapus kategori ${r.name}?`)) return;
-                      try {
-                        await deleteServiceCategory(r.id);
-                        await refresh(page);
-                      } catch {
-                        alert('Gagal hapus');
-                      }
-                    }}
-                    aria-label={`Hapus kategori ${r.name}`}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ),
-            },
-          ]}
-          rows={rows}
-          loading={loading}
-          emptyText="Belum ada kategori"
-        />
-      </div>
+                  rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <Td>
+                        <span className="line-clamp-1 font-medium">{r.name}</span>
+                      </Td>
+                      <Td>
+                        {r.is_active ? (
+                          <span className="chip chip--solid">Active</span>
+                        ) : (
+                          <span className="chip chip--danger">Inactive</span>
+                        )}
+                      </Td>
+                      <Td className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            className="btn-outline text-xs px-3 py-1"
+                            onClick={async () => {
+                              const name = prompt('Ubah nama kategori:', r.name)?.trim();
+                              if (!name) return;
+                              try {
+                                await updateServiceCategory(r.id, { name });
+                                await refresh(page);
+                              } catch {
+                                alert('Gagal update');
+                              }
+                            }}
+                            aria-label={`Ubah kategori ${r.name}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn-outline text-xs px-3 py-1 text-red-600"
+                            onClick={async () => {
+                              if (!confirm(`Hapus kategori ${r.name}?`)) return;
+                              try {
+                                await deleteServiceCategory(r.id);
+                                await refresh(page);
+                              } catch {
+                                alert('Gagal hapus');
+                              }
+                            }}
+                            aria-label={`Hapus kategori ${r.name}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       {/* Pagination */}
       <div className="flex items-center gap-2 justify-end">
@@ -181,5 +205,26 @@ export default function CategoryIndex() {
         </button>
       </div>
     </div>
+  );
+}
+
+/* ---------- Subcomponents (konsisten) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
   );
 }

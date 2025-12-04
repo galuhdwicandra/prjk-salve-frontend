@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-05 01:31:46_  
+_Dihasilkan otomatis: 2025-12-05 02:22:11_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -3057,8 +3057,8 @@ export default function AssignCourierSelect({ value, onChange, disabled = false 
 
 ### src/components/delivery/DeliveryStatusStepper.tsx
 
-- SHA: `0cb4caba06e7`  
-- Ukuran: 793 B
+- SHA: `433ca0e83965`  
+- Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3068,16 +3068,49 @@ import type { DeliveryStatus } from '../../types/deliveries';
 const FLOW: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED'];
 
 export default function DeliveryStatusStepper({ status }: { status: DeliveryStatus }) {
+    // Logika asli dipertahankan
     const activeIdx = Math.max(0, FLOW.indexOf(status));
+
     return (
-        <div className="flex items-center gap-2 text-xs">
-            {FLOW.map((s, i) => (
-                <div key={s} className="flex items-center gap-2">
-                    <div className={`px-2 py-1 rounded ${i <= activeIdx ? 'bg-black text-white' : 'border'}`}>{s}</div>
-                    {i < FLOW.length - 1 && <div className="w-6 h-px bg-muted" />}
-                </div>
-            ))}
-        </div>
+        <ol
+            className="flex items-center flex-wrap gap-2 text-xs"
+            aria-label="Status pengiriman"
+            role="list"
+        >
+            {FLOW.map((s, i) => {
+                const isDone = i < activeIdx;
+                const isActive = i === activeIdx;
+                const pillBase =
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition duration-150 ease-out';
+                const pillClass = isActive
+                    ? // Langkah aktif: solid brand, teks on-brand, ring ringan + micro-scale
+                    `${pillBase} bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)] shadow-elev-1 scale-[1.02]`
+                    : isDone
+                        ? // Sudah lewat: subtle brand (mirip chip--subtle pada table Customers)
+                        `${pillBase} text-[var(--color-brand-primary)] bg-[#E6EDFF]`
+                        : // Belum: outline halus
+                        `${pillBase} border border-[color:var(--color-border)] text-gray-700 bg-white/80`;
+
+                return (
+                    <li key={s} className="flex items-center gap-2" aria-current={isActive ? 'step' : undefined}>
+                        <span className={pillClass}>
+                            {/* Bullet/ikon sederhana: ✔ untuk selesai, • untuk lain */}
+                            <span aria-hidden="true">{isDone ? '✔' : '•'}</span>
+                            <span className="tracking-wide">{s}</span>
+                        </span>
+
+                        {/* Connector antar step */}
+                        {i < FLOW.length - 1 && (
+                            <span
+                                className={`h-px w-6 md:w-8 ${i < activeIdx ? 'bg-[var(--color-brand-primary)]' : 'bg-[color:var(--color-border)]'
+                                    }`}
+                                aria-hidden="true"
+                            />
+                        )}
+                    </li>
+                );
+            })}
+        </ol>
     );
 }
 
@@ -4758,143 +4791,234 @@ export default function Toast() { return null; }
 
 ### src/pages/branches/BranchForm.tsx
 
-- SHA: `cc391fd8fcd7`  
-- Ukuran: 6 KB
+- SHA: `62d2f1a2ad8c`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/branches/BranchForm.tsx
 import { useEffect, useState } from 'react';
 import { createBranch, getBranch, updateBranch } from '../../api/branches';
 import type { Branch, BranchUpsertPayload, ResetPolicy } from '../../types/branches';
 import { useNavigate, useParams } from 'react-router-dom';
 
 function toResetPolicy(value: string): ResetPolicy {
-    return value === 'never' ? 'never' : 'monthly';
+  return value === 'never' ? 'never' : 'monthly';
 }
-
 const POLICIES: ResetPolicy[] = ['monthly', 'never'];
 
 export default function BranchForm() {
-    const { id } = useParams<{ id: string }>();
-    const nav = useNavigate();
-    const editing = Boolean(id);
+  const { id } = useParams<{ id: string }>();
+  const nav = useNavigate();
+  const editing = Boolean(id);
 
-    const [form, setForm] = useState<BranchUpsertPayload>({
-        code: '',
-        name: '',
-        address: '',
-        invoice_prefix: 'SLV',
-        reset_policy: 'monthly',
-    });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [form, setForm] = useState<BranchUpsertPayload>({
+    code: '',
+    name: '',
+    address: '',
+    invoice_prefix: 'SLV',
+    reset_policy: 'monthly',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-    useEffect(() => {
-        (async () => {
-            if (!editing) return;
-            setLoading(true);
-            try {
-                const res = await getBranch(id!);
-                const b = res.data as Branch;
-                setForm({
-                    code: b.code,
-                    name: b.name,
-                    address: b.address ?? '',
-                    invoice_prefix: b.invoice_prefix,
-                    reset_policy: b.reset_policy,
-                });
-            } catch {
-                setError('Gagal memuat data cabang');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [editing, id]);
+  useEffect(() => {
+    (async () => {
+      if (!editing) return;
+      setLoading(true);
+      try {
+        const res = await getBranch(id!);
+        const b = res.data as Branch;
+        setForm({
+          code: b.code,
+          name: b.name,
+          address: b.address ?? '',
+          invoice_prefix: b.invoice_prefix,
+          reset_policy: b.reset_policy,
+        });
+      } catch {
+        setError('Gagal memuat data cabang');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [editing, id]);
 
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true); setError(null); setFieldErrors({});
-        // Validasi ringan sisi UI
-        if (!form.code.trim() || !form.name.trim() || !form.invoice_prefix.trim()) {
-            setLoading(false);
-            setError('Kode, Nama, dan Prefix wajib diisi');
-            return;
-        }
-        if (form.invoice_prefix.length > 8) {
-            setLoading(false);
-            setError('Panjang prefix maksimal 8 karakter');
-            return;
-        }
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true); setError(null); setFieldErrors({});
 
-        try {
-            if (editing) await updateBranch(id!, form);
-            else await createBranch(form);
-            alert('Tersimpan');
-            nav('/branches', { replace: true });
-        } catch (err: unknown) {
-            // Narrowing aman tanpa any
-            const withResp = err as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
-            const fe = withResp.response?.data?.errors ?? {};
-            if (fe && typeof fe === 'object') setFieldErrors(fe);
-            setError(withResp.response?.data?.message ?? 'Gagal menyimpan');
-        } finally {
-            setLoading(false);
-        }
+    // Validasi ringan sisi UI
+    if (!form.code.trim() || !form.name.trim() || !form.invoice_prefix.trim()) {
+      setLoading(false);
+      setError('Kode, Nama, dan Prefix wajib diisi');
+      return;
+    }
+    if (form.invoice_prefix.length > 8) {
+      setLoading(false);
+      setError('Panjang prefix maksimal 8 karakter');
+      return;
     }
 
-    return (
-        <form className="max-w-xl space-y-3" onSubmit={onSubmit}>
-            <h1 className="text-lg font-semibold">{editing ? 'Edit Branch' : 'New Branch'}</h1>
-            {error && <div className="text-sm text-red-600">{error}</div>}
+    try {
+      if (editing) await updateBranch(id!, form);
+      else await createBranch(form);
+      alert('Tersimpan');
+      nav('/branches', { replace: true });
+    } catch (err: unknown) {
+      const withResp = err as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+      const fe = withResp.response?.data?.errors ?? {};
+      if (fe && typeof fe === 'object') setFieldErrors(fe);
+      setError(withResp.response?.data?.message ?? 'Gagal menyimpan');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-            <div className="grid gap-1">
-                <label className="text-xs">Kode *</label>
-                <input className="border rounded px-3 py-2" value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value })} />
-                {fieldErrors.code && <p className="text-xs text-red-600">{fieldErrors.code.join(', ')}</p>}
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header>
+        <h1 className="text-lg font-semibold tracking-tight">
+          {editing ? 'Edit Branch' : 'New Branch'}
+        </h1>
+        <p className="text-xs text-gray-600">
+          Lengkapi informasi cabang untuk penomoran invoice & identitas struk.
+        </p>
+      </header>
 
-            <div className="grid gap-1">
-                <label className="text-xs">Nama *</label>
-                <input className="border rounded px-3 py-2" value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>}
-            </div>
+      {/* Alert error global */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
 
-            <div className="grid gap-1">
-                <label className="text-xs">Alamat</label>
-                <input className="border rounded px-3 py-2" value={form.address ?? ''}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </div>
+      {/* Form Card */}
+      <form onSubmit={onSubmit} className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 max-w-xl">
+        <div className="p-4 grid gap-4">
+          {/* Kode */}
+          <div className="grid gap-1">
+            <label htmlFor="code" className="text-xs font-medium">
+              Kode <span className="text-red-600">*</span>
+            </label>
+            <input
+              id="code"
+              className="input"
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+              aria-invalid={Boolean(fieldErrors.code)}
+              aria-describedby={fieldErrors.code ? 'err-code' : undefined}
+            />
+            {fieldErrors.code && (
+              <p id="err-code" className="text-xs text-red-600">{fieldErrors.code.join(', ')}</p>
+            )}
+          </div>
 
-            <div className="grid gap-1">
-                <label className="text-xs">Prefix Invoice (max 8) *</label>
-                <input className="border rounded px-3 py-2" value={form.invoice_prefix}
-                    onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value.toUpperCase() })} />
-                {fieldErrors.invoice_prefix && <p className="text-xs text-red-600">{fieldErrors.invoice_prefix.join(', ')}</p>}
-            </div>
+          {/* Nama */}
+          <div className="grid gap-1">
+            <label htmlFor="name" className="text-xs font-medium">
+              Nama <span className="text-red-600">*</span>
+            </label>
+            <input
+              id="name"
+              className="input"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+            />
+            {fieldErrors.name && (
+              <p id="err-name" className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>
+            )}
+          </div>
 
-            <div className="grid gap-1">
-                <label className="text-xs">Kebijakan Reset *</label>
-                <select
-                    className="border rounded px-3 py-2"
-                    value={form.reset_policy}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setForm({ ...form, reset_policy: toResetPolicy(e.target.value) })
-                    }
-                >
-                    {POLICIES.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-                {fieldErrors.reset_policy && <p className="text-xs text-red-600">{fieldErrors.reset_policy.join(', ')}</p>}
-            </div>
+          {/* Alamat */}
+          <div className="grid gap-1">
+            <label htmlFor="address" className="text-xs font-medium">Alamat</label>
+            <input
+              id="address"
+              className="input"
+              value={form.address ?? ''}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+          </div>
 
-            <div className="flex gap-2">
-                <button disabled={loading} className="rounded bg-black text-white px-3 py-2">{loading ? 'Menyimpan…' : 'Simpan'}</button>
-                <button type="button" className="rounded border px-3 py-2" onClick={() => history.back()}>Batal</button>
-            </div>
-        </form>
-    );
+          {/* Prefix Invoice */}
+          <div className="grid gap-1">
+            <label htmlFor="prefix" className="text-xs font-medium">
+              Prefix Invoice (max 8) <span className="text-red-600">*</span>
+            </label>
+            <input
+              id="prefix"
+              className="input"
+              value={form.invoice_prefix}
+              maxLength={8}
+              onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value.toUpperCase() })}
+              aria-invalid={Boolean(fieldErrors.invoice_prefix)}
+              aria-describedby={fieldErrors.invoice_prefix ? 'err-prefix' : undefined}
+            />
+            {fieldErrors.invoice_prefix && (
+              <p id="err-prefix" className="text-xs text-red-600">{fieldErrors.invoice_prefix.join(', ')}</p>
+            )}
+            <p className="text-[11px] text-gray-500">
+              Contoh: <span className="font-mono">SLV</span>, <span className="font-mono">BRN</span>. Gunakan huruf/angka tanpa spasi.
+            </p>
+          </div>
+
+          {/* Kebijakan Reset */}
+          <div className="grid gap-1">
+            <label htmlFor="reset" className="text-xs font-medium">
+              Kebijakan Reset <span className="text-red-600">*</span>
+            </label>
+            <select
+              id="reset"
+              className="input"
+              value={form.reset_policy}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setForm({ ...form, reset_policy: toResetPolicy(e.target.value) })
+              }
+              aria-invalid={Boolean(fieldErrors.reset_policy)}
+              aria-describedby={fieldErrors.reset_policy ? 'err-reset' : undefined}
+            >
+              {POLICIES.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+            {fieldErrors.reset_policy && (
+              <p id="err-reset" className="text-xs text-red-600">{fieldErrors.reset_policy.join(', ')}</p>
+            )}
+            <p className="text-[11px] text-gray-500">
+              <span className="font-medium">monthly</span>: penomoran invoice direset setiap bulan. <span className="font-medium">never</span>: tidak pernah direset.
+            </p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="border-t border-[color:var(--color-border)] px-4 py-3 flex items-center gap-2">
+          <button
+            disabled={loading}
+            className="btn-primary disabled:opacity-60"
+            aria-busy={loading ? 'true' : 'false'}
+          >
+            {loading ? 'Menyimpan…' : 'Simpan'}
+          </button>
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={() => history.back()}
+          >
+            Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 ```
@@ -4902,124 +5026,234 @@ export default function BranchForm() {
 
 ### src/pages/branches/BranchIndex.tsx
 
-- SHA: `3ccc58ef5d08`  
-- Ukuran: 5 KB
+- SHA: `7b8bc435f5cc`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/branches/BranchIndex.tsx
 import { useCallback, useEffect, useState } from 'react';
-import DataTable from '../../components/DataTable';
 import { useNavigate } from 'react-router-dom';
 import { listBranches, deleteBranch } from '../../api/branches';
 import type { Branch, PaginationMeta } from '../../types/branches';
 import { useHasRole } from '../../store/useAuth';
 
 export default function BranchIndex() {
-    const canManage = useHasRole(['Superadmin']);
-    const nav = useNavigate();
-    const [rows, setRows] = useState<Branch[]>([]);
-    const [meta, setMeta] = useState<PaginationMeta | null>(null);
-    const [q, setQ] = useState('');
-    const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const perPage = 10;
+  const canManage = useHasRole(['Superadmin']);
+  const nav = useNavigate();
 
-    const fetchPage = useCallback(async (p = 1) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await listBranches({ q, page: p, per_page: perPage });
-            setRows(res.data ?? []);
-            setMeta((res.meta as PaginationMeta) ?? null);
-        } catch {
-            setError('Gagal memuat data cabang');
-        } finally {
-            setLoading(false);
-        }
-    }, [q]);
+  const [rows, setRows] = useState<Branch[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const perPage = 10;
 
-    // Load saat halaman berubah
-    useEffect(() => {
-        void fetchPage(page);
-    }, [fetchPage, page]);
+  const fetchPage = useCallback(async (p = 1) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await listBranches({ q, page: p, per_page: perPage });
+      setRows(res.data ?? []);
+      setMeta((res.meta as PaginationMeta) ?? null);
+    } catch {
+      setError('Gagal memuat data cabang');
+    } finally {
+      setLoading(false);
+    }
+  }, [q]);
 
-    // Debounce pencarian (reset ke page 1)
-    useEffect(() => {
-        const t = setTimeout(() => {
-            void fetchPage(1);
-            setPage(1);
-        }, 300);
-        return () => clearTimeout(t);
-    }, [fetchPage, q]);
+  useEffect(() => { void fetchPage(page); }, [fetchPage, page]);
 
-    return (
-        <div className="space-y-4">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold">Branches</h1>
-                    <p className="text-xs text-gray-500">Kelola cabang & konfigurasi penomoran faktur.</p>
-                </div>
-                {canManage && (
-                    <div className="space-x-2">
-                        <button className="rounded border px-3 py-2 text-sm" onClick={() => nav('/branches/new')}>New Branch</button>
-                    </div>
-                )}
-            </header>
+  // Debounce pencarian (reset ke page 1)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void fetchPage(1);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [fetchPage, q]);
 
-            <div className="flex items-center gap-2">
-                <input
-                    className="border rounded px-3 py-2 text-sm"
-                    placeholder="Cari nama/kode…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                />
-            </div>
-
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
-            <DataTable<Branch>
-                columns={[
-                    { key: 'code', header: 'Kode' },
-                    { key: 'name', header: 'Nama' },
-                    { key: 'invoice_prefix', header: 'Prefix Invoice' },
-                    { key: 'reset_policy', header: 'Reset' },
-                    {
-                        key: 'actions',
-                        header: 'Aksi',
-                        render: (b) => (
-                            <div className="flex gap-2">
-                                <button className="underline text-xs" onClick={() => nav(`/branches/${b.id}/edit`)}>Edit</button>
-                                <button className="underline text-xs" onClick={() => nav(`/branches/${b.id}/invoice-settings`)}>Invoice</button>
-                                {canManage && (
-                                    <button
-                                        className="underline text-xs text-red-600"
-                                        onClick={async () => {
-                                            if (!confirm(`Hapus cabang ${b.name}?`)) return;
-                                            try { await deleteBranch(b.id); await fetchPage(page); } catch { alert('Gagal menghapus'); }
-                                        }}
-                                    >
-                                        Delete
-                                    </button>
-                                )}
-                            </div>
-                        ),
-                    },
-                ]}
-                rows={rows}
-                loading={loading}
-                emptyText="Belum ada data cabang"
-            />
-
-            <div className="flex items-center gap-2">
-                <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded border px-2 py-1 text-xs">Prev</button>
-                <div className="text-xs text-gray-600">
-                    Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
-                </div>
-                <button disabled={!!meta && page >= (meta.last_page ?? 1)} onClick={() => setPage((p) => p + 1)} className="rounded border px-2 py-1 text-xs">Next</button>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Branches</h1>
+          <p className="text-xs text-gray-500">Kelola cabang & konfigurasi penomoran faktur.</p>
         </div>
-    );
+        {canManage && (
+          <div className="space-x-2">
+            <button className="btn-primary" onClick={() => nav('/branches/new')}>
+              New Branch
+            </button>
+          </div>
+        )}
+      </header>
+
+      {/* Toolbar (search) */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Toolbar pencarian cabang"
+      >
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+          <label className="sr-only" htmlFor="search-branch">Pencarian</label>
+          <div className="relative">
+            <input
+              id="search-branch"
+              className="input w-full pl-9 py-2"
+              placeholder="Cari nama/kode…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Cari cabang"
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Alert error */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !error && rows.length === 0 && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada data cabang.
+        </div>
+      )}
+
+      {/* Table (konsisten dengan Customers) */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Kode</Th>
+                  <Th>Nama</Th>
+                  <Th>Prefix Invoice</Th>
+                  <Th>Reset</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : (
+                  rows.map((b) => (
+                    <tr key={b.id} className="hover:bg-black/5 transition-colors">
+                      <Td><span className="font-medium">{b.code}</span></Td>
+                      <Td><span className="line-clamp-1">{b.name}</span></Td>
+                      <Td>{b.invoice_prefix ?? '—'}</Td>
+                      <Td className="uppercase">{b.reset_policy ?? '—'}</Td>
+                      <Td className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            className="btn-outline px-2 py-1 text-xs"
+                            onClick={() => nav(`/branches/${b.id}/edit`)}
+                            aria-label={`Edit cabang ${b.name}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn-outline px-2 py-1 text-xs"
+                            onClick={() => nav(`/branches/${b.id}/invoice-settings`)}
+                            aria-label={`Pengaturan invoice cabang ${b.name}`}
+                          >
+                            Invoice
+                          </button>
+                          {canManage && (
+                            <button
+                              className="btn-outline px-2 py-1 text-xs text-red-600"
+                              onClick={async () => {
+                                if (!confirm(`Hapus cabang ${b.name}?`)) return;
+                                try {
+                                  await deleteBranch(b.id);
+                                  await fetchPage(page);
+                                } catch {
+                                  alert('Gagal menghapus');
+                                }
+                              }}
+                              aria-label={`Hapus cabang ${b.name}`}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Pagination (konsisten) */}
+      {!loading && meta && meta.last_page > 1 && (
+        <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
+          <button
+            disabled={(meta.current_page ?? 1) <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span className="text-sm">
+            Page {meta.current_page} / {meta.last_page}
+          </span>
+          <button
+            disabled={meta.current_page >= meta.last_page}
+            onClick={() => setPage((p) => p + 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Next
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Subcomponents (konsisten dgn Customers) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right">
+        <div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" />
+      </td>
+    </tr>
+  );
 }
 
 ```
@@ -5027,7 +5261,7 @@ export default function BranchIndex() {
 
 ### src/pages/branches/InvoiceSettings.tsx
 
-- SHA: `532eae53b231`  
+- SHA: `f26e77ae11b8`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -5035,268 +5269,320 @@ export default function BranchIndex() {
 // src/pages/branches/InvoiceSettings.tsx
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-    listInvoiceCounters, createInvoiceCounter, updateInvoiceCounter, deleteInvoiceCounter,
-    previewNextNumber, resetCounterNow,
+  listInvoiceCounters, createInvoiceCounter, updateInvoiceCounter, deleteInvoiceCounter,
+  previewNextNumber, resetCounterNow,
 } from '../../api/invoiceCounters';
 import { getBranch } from '../../api/branches';
 import type { Branch, InvoiceCounter, InvoiceCounterUpsertPayload, ResetPolicy } from '../../types/branches';
 import { useParams } from 'react-router-dom';
 
 function toResetPolicy(value: string): ResetPolicy {
-    return value === 'never' ? 'never' : 'monthly';
+  return value === 'never' ? 'never' : 'monthly';
 }
-
 const POLICIES: ResetPolicy[] = ['monthly', 'never'];
 
 export default function InvoiceSettings() {
-    const { id } = useParams<{ id: string }>(); // branch id
-    const [branch, setBranch] = useState<Branch | null>(null);
-    const [rows, setRows] = useState<InvoiceCounter[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [preview, setPreview] = useState<{ number: string; invoice_no: string } | null>(null);
+  const { id } = useParams<{ id: string }>(); // branch id
 
-    const [form, setForm] = useState<InvoiceCounterUpsertPayload>({
+  const [branch, setBranch] = useState<Branch | null>(null);
+  const [rows, setRows] = useState<InvoiceCounter[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ number: string; invoice_no: string } | null>(null);
+
+  const [form, setForm] = useState<InvoiceCounterUpsertPayload>({
+    branch_id: id!,
+    prefix: '',
+    reset_policy: 'monthly',
+    seq: 0,
+  });
+  const valid = useMemo(() => form.prefix.trim().length > 0 && form.prefix.length <= 8, [form.prefix]);
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const b = await getBranch(id!);
+      setBranch(b.data as Branch);
+      const res = await listInvoiceCounters({ branch_id: id, per_page: 50 });
+      setRows(res.data ?? []);
+      // default prefix mengikuti branch
+      setForm((f) => ({
+        ...f,
+        prefix: (b.data as Branch).invoice_prefix,
         branch_id: id!,
-        prefix: '',
-        reset_policy: 'monthly',
-        seq: 0,
-    });
-    const valid = useMemo(() => form.prefix.trim().length > 0 && form.prefix.length <= 8, [form.prefix]);
-
-    const refresh = useCallback(async () => {
-        setLoading(true); setError(null);
-        try {
-            const b = await getBranch(id!);
-            setBranch(b.data as Branch);
-            const res = await listInvoiceCounters({ branch_id: id, per_page: 50 });
-            setRows(res.data ?? []);
-            // default prefix mengikuti branch
-            setForm((f) => ({
-                ...f,
-                prefix: (b.data as Branch).invoice_prefix,
-                branch_id: id!,
-                seq: (res.data?.[0]?.seq ?? 0)
-            }));
-            setPreview(null);
-        } catch {
-            setError('Gagal memuat konfigurasi invoice');
-        } finally {
-            setLoading(false);
-        }
-    }, [id]);
-
-    useEffect(() => {
-        void refresh();
-    }, [refresh]);
-
-    async function onSaveNew(e: React.FormEvent) {
-        e.preventDefault();
-        if (!valid) { alert('Prefix wajib dan maksimal 8 karakter'); return; }
-        if (typeof form.seq !== 'number' || form.seq < 0 || form.seq > 999999) {
-            alert('Sequence harus angka 0–999999'); return;
-        }
-        try {
-            await createInvoiceCounter(form);
-            alert('Counter ditambahkan');
-            await refresh();
-        } catch {
-            alert('Gagal menambah counter');
-        }
+        seq: (res.data?.[0]?.seq ?? 0),
+      }));
+      setPreview(null);
+    } catch {
+      setError('Gagal memuat konfigurasi invoice');
+    } finally {
+      setLoading(false);
     }
+  }, [id]);
 
-    async function onPreview() {
-        try {
-            const res = await previewNextNumber(id!);
-            setPreview(res.data);
-        } catch {
-            alert('Gagal preview nomor berikutnya');
-        }
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  async function onSaveNew(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valid) { alert('Prefix wajib dan maksimal 8 karakter'); return; }
+    if (typeof form.seq !== 'number' || form.seq < 0 || form.seq > 999999) {
+      alert('Sequence harus angka 0–999999'); return;
     }
-
-    async function onResetNow(counterId: string) {
-        if (!confirm('Reset sequence ke 0 untuk bulan berjalan?')) return;
-        try {
-            await resetCounterNow(counterId);
-            await refresh();
-        } catch {
-            alert('Gagal reset counter');
-        }
+    try {
+      await createInvoiceCounter(form);
+      alert('Counter ditambahkan');
+      await refresh();
+    } catch {
+      alert('Gagal menambah counter');
     }
+  }
 
-    return (
-        <div className="space-y-4 max-w-2xl">
-            <header>
-                <h1 className="text-lg font-semibold">Invoice Settings</h1>
-                <p className="text-xs text-gray-600">
-                    Branch: <strong>{branch?.code}</strong> — {branch?.name}
-                </p>
-            </header>
+  async function onPreview() {
+    try {
+      const res = await previewNextNumber(id!);
+      setPreview(res.data);
+    } catch {
+      alert('Gagal preview nomor berikutnya');
+    }
+  }
 
-            {error && <div className="text-sm text-red-600">{error}</div>}
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
+  async function onResetNow(counterId: string) {
+    if (!confirm('Reset sequence ke 0 untuk bulan berjalan?')) return;
+    try {
+      await resetCounterNow(counterId);
+      await refresh();
+    } catch {
+      alert('Gagal reset counter');
+    }
+  }
 
-            <section className="space-y-2">
-                <h2 className="font-medium">Daftar Counter</h2>
-                <div className="overflow-auto rounded border">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-3 py-2 text-left">Prefix</th>
-                                <th className="px-3 py-2 text-left">Reset</th>
-                                <th className="px-3 py-2 text-left">Sequence</th>
-                                <th className="px-3 py-2 text-left">Last Month</th>
-                                <th className="px-3 py-2 text-left">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.length === 0 && (
-                                <tr><td className="px-3 py-3 text-gray-500" colSpan={5}>Belum ada counter</td></tr>
-                            )}
-                            {rows.map((r) => (
-                                <tr key={r.id} className="border-t">
-                                    <td className="px-3 py-2">{r.prefix}</td>
-                                    <td className="px-3 py-2">{r.reset_policy}</td>
-                                    <td className="px-3 py-2">{r.seq}</td>
-                                    <td className="px-3 py-2">{r.last_reset_month ?? '-'}</td>
-                                    <td className="px-3 py-2">
-                                        <button
-                                            className="underline text-xs mr-2"
-                                            onClick={async () => {
-                                                const raw = prompt('Prefix baru (2–8 huruf kapital A–Z):', r.prefix) ?? r.prefix;
-                                                const prefix = (raw || '').toUpperCase().slice(0, 8);
-                                                if (!/^[A-Z]{2,8}$/.test(prefix)) { alert('Prefix tidak valid'); return; }
-                                                try {
-                                                    await updateInvoiceCounter(r.id, {
-                                                        prefix,
-                                                        reset_policy: r.reset_policy,
-                                                        seq: r.seq,
-                                                    });
-                                                    await refresh();
-                                                } catch { alert('Gagal update'); }
-                                            }}
-                                        >
-                                            Ubah Prefix
-                                        </button>
-                                        <button
-                                            className="underline text-xs mr-2"
-                                            onClick={async () => {
-                                                const policy = (prompt('Reset policy (monthly/never):', r.reset_policy) ?? r.reset_policy) as ResetPolicy;
-                                                if (!['monthly', 'never'].includes(policy)) { alert('Reset policy tidak valid'); return; }
-                                                try {
-                                                    await updateInvoiceCounter(r.id, {
-                                                        prefix: r.prefix,
-                                                        reset_policy: policy,
-                                                        seq: r.seq,
-                                                    });
-                                                    await refresh();
-                                                } catch { alert('Gagal update'); }
-                                            }}
-                                        >
-                                            Ubah Reset
-                                        </button>
-                                        <button
-                                            className="underline text-xs mr-2"
-                                            onClick={async () => {
-                                                const v = prompt('Sequence baru (0–999999):', String(r.seq));
-                                                if (v == null) return;
-                                                const n = Number(v);
-                                                if (!Number.isFinite(n) || n < 0 || n > 999999) { alert('Sequence tidak valid'); return; }
-                                                try {
-                                                    await updateInvoiceCounter(r.id, {
-                                                        prefix: r.prefix,
-                                                        reset_policy: r.reset_policy,
-                                                        seq: Math.floor(n),
-                                                    });
-                                                    await refresh();
-                                                } catch { alert('Gagal update sequence'); }
-                                            }}
-                                        >
-                                            Ubah Sequence
-                                        </button>
-                                        <button
-                                            className="underline text-xs mr-2"
-                                            onClick={async () => { await onResetNow(r.id); }}
-                                        >
-                                            Reset Now
-                                        </button>
-                                        <button
-                                            className="underline text-xs text-red-600"
-                                            onClick={async () => {
-                                                if (!confirm('Hapus counter ini?')) return;
-                                                try { await deleteInvoiceCounter(r.id); await refresh(); } catch { alert('Gagal hapus'); }
-                                            }}
-                                        >
-                                            Hapus
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section className="space-y-2">
-                <h2 className="font-medium">Tambah Counter</h2>
-                <form className="flex flex-wrap items-end gap-2" onSubmit={onSaveNew}>
-                    <div className="grid gap-1">
-                        <label className="text-xs">Prefix *</label>
-                        <input className="border rounded px-3 py-2" value={form.prefix}
-                            onChange={(e) => setForm({ ...form, prefix: e.target.value.toUpperCase().slice(0, 8) })} />
-                    </div>
-                    <div className="grid gap-1">
-                        <label className="text-xs">Reset *</label>
-                        <select
-                            className="border rounded px-3 py-2"
-                            value={form.reset_policy}
-                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                                setForm({ ...form, reset_policy: toResetPolicy(e.target.value) })
-                            }
-                        >
-                            {POLICIES.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                    </div>
-                    <div className="grid gap-1">
-                        <label className="text-xs">Sequence *</label>
-                        <input
-                            type="number"
-                            min={0}
-                            max={999999}
-                            step={1}
-                            className="border rounded px-3 py-2 font-mono"
-                            value={form.seq ?? 0}
-                            onChange={(e) => {
-                                const n = Number(e.target.value);
-                                const v = Number.isFinite(n) ? Math.max(0, Math.min(999999, Math.floor(n))) : 0;
-                                setForm({ ...form, seq: v });
-                            }}
-                        />
-                    </div>
-                    <button className="rounded bg-black text-white px-3 py-2" disabled={!valid}>Tambah</button>
-                </form>
-                <p className="text-xs text-gray-500">
-                    Kombinasi <code>branch_id + prefix</code> harus unik (lihat constraint DB). Sequence akan bertambah saat invoice dipakai.
-                </p>
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={onPreview}
-                        className="rounded border px-3 py-2 text-xs"
-                        disabled={loading}
-                    >
-                        Preview nomor berikutnya
-                    </button>
-                    {preview && (
-                        <div className="text-xs">
-                            Next <code>number</code>: <strong className="font-mono">{preview.number}</strong>{' '}
-                            — <code>invoice_no</code>: <strong className="font-mono">{preview.invoice_no}</strong>
-                        </div>
-                    )}
-                </div>
-            </section>
+  return (
+    <div className="space-y-4 max-w-4xl">
+      {/* Header */}
+      <header className="flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Invoice Settings</h1>
+          <p className="text-xs text-gray-600">
+            Branch: <strong>{branch?.code}</strong> — {branch?.name}
+          </p>
         </div>
-    );
+        <div className="text-xs text-gray-500">
+          Prefix default: <span className="font-mono">{branch?.invoice_prefix ?? '—'}</span>
+        </div>
+      </header>
+
+      {/* Error & Loading */}
+      {error && (
+        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {error}
+        </div>
+      )}
+      {loading && !rows.length && (
+        <div className="text-sm text-gray-500">Memuat…</div>
+      )}
+
+      {/* Daftar Counter */}
+      <section className="space-y-2">
+        <h2 className="font-medium">Daftar Counter</h2>
+
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Prefix</Th>
+                  <Th>Reset</Th>
+                  <Th>Sequence</Th>
+                  <Th>Last Month</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading && rows.length === 0 ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-4 text-center text-gray-500">Belum ada counter</td>
+                  </tr>
+                ) : (
+                  rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <Td><span className="font-medium">{r.prefix}</span></Td>
+                      <Td className="uppercase">{r.reset_policy}</Td>
+                      <Td className="tabular-nums">{r.seq}</Td>
+                      <Td>{r.last_reset_month ?? '-'}</Td>
+                      <Td className="text-right">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          <button
+                            className="btn-outline text-xs"
+                            onClick={async () => {
+                              const raw = prompt('Prefix baru (2–8 huruf kapital A–Z):', r.prefix) ?? r.prefix;
+                              const prefix = (raw || '').toUpperCase().slice(0, 8);
+                              if (!/^[A-Z]{2,8}$/.test(prefix)) { alert('Prefix tidak valid'); return; }
+                              try {
+                                await updateInvoiceCounter(r.id, { prefix, reset_policy: r.reset_policy, seq: r.seq });
+                                await refresh();
+                              } catch { alert('Gagal update'); }
+                            }}
+                          >
+                            Ubah Prefix
+                          </button>
+                          <button
+                            className="btn-outline text-xs"
+                            onClick={async () => {
+                              const policy = (prompt('Reset policy (monthly/never):', r.reset_policy) ?? r.reset_policy) as ResetPolicy;
+                              if (!['monthly', 'never'].includes(policy)) { alert('Reset policy tidak valid'); return; }
+                              try {
+                                await updateInvoiceCounter(r.id, { prefix: r.prefix, reset_policy: policy, seq: r.seq });
+                                await refresh();
+                              } catch { alert('Gagal update'); }
+                            }}
+                          >
+                            Ubah Reset
+                          </button>
+                          <button
+                            className="btn-outline text-xs"
+                            onClick={async () => {
+                              const v = prompt('Sequence baru (0–999999):', String(r.seq));
+                              if (v == null) return;
+                              const n = Number(v);
+                              if (!Number.isFinite(n) || n < 0 || n > 999999) { alert('Sequence tidak valid'); return; }
+                              try {
+                                await updateInvoiceCounter(r.id, { prefix: r.prefix, reset_policy: r.reset_policy, seq: Math.floor(n) });
+                                await refresh();
+                              } catch { alert('Gagal update sequence'); }
+                            }}
+                          >
+                            Ubah Sequence
+                          </button>
+                          <button
+                            className="btn-outline text-xs"
+                            onClick={async () => { await onResetNow(r.id); }}
+                          >
+                            Reset Now
+                          </button>
+                          <button
+                            className="btn-outline text-xs !text-red-600"
+                            onClick={async () => {
+                              if (!confirm('Hapus counter ini?')) return;
+                              try { await deleteInvoiceCounter(r.id); await refresh(); } catch { alert('Gagal hapus'); }
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Tambah Counter */}
+      <section className="space-y-2">
+        <h2 className="font-medium">Tambah Counter</h2>
+
+        <form className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-3 grid sm:grid-cols-4 gap-3 items-end" onSubmit={onSaveNew}>
+          <div className="grid gap-1">
+            <label className="text-xs" htmlFor="prefix">Prefix *</label>
+            <input
+              id="prefix"
+              className="input font-mono uppercase"
+              value={form.prefix}
+              onChange={(e) => setForm({ ...form, prefix: e.target.value.toUpperCase().slice(0, 8) })}
+              placeholder="INV"
+              aria-invalid={!valid}
+            />
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-xs" htmlFor="reset">Reset *</label>
+            <select
+              id="reset"
+              className="input"
+              value={form.reset_policy}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setForm({ ...form, reset_policy: toResetPolicy(e.target.value) })
+              }
+            >
+              {POLICIES.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-xs" htmlFor="seq">Sequence *</label>
+            <input
+              id="seq"
+              type="number"
+              min={0}
+              max={999999}
+              step={1}
+              className="input font-mono"
+              value={form.seq ?? 0}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                const v = Number.isFinite(n) ? Math.max(0, Math.min(999999, Math.floor(n))) : 0;
+                setForm({ ...form, seq: v });
+              }}
+            />
+          </div>
+
+          <div className="flex items-end gap-2">
+            <button className="btn-primary" disabled={!valid}>Tambah</button>
+            <button
+              type="button"
+              onClick={onPreview}
+              className="btn-outline text-xs"
+              disabled={loading}
+            >
+              Preview nomor berikutnya
+            </button>
+          </div>
+        </form>
+
+        {preview && (
+          <div className="text-xs">
+            Next <code>number</code>: <strong className="font-mono">{preview.number}</strong>
+            {' '}— <code>invoice_no</code>: <strong className="font-mono">{preview.invoice_no}</strong>
+          </div>
+        )}
+
+        <p className="text-xs text-gray-500">
+          Kombinasi <code>branch_id + prefix</code> harus unik (constraint DB). Sequence bertambah saat invoice dipakai.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+/* ---------- Subcomponents (konsisten dengan Customers) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-40 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
+  );
 }
 
 ```
@@ -6229,7 +6515,7 @@ function SimpleTable(props: {
 
 ### src/pages/deliveries/DeliveryDetail.tsx
 
-- SHA: `e8f0c3c5c22c`  
+- SHA: `b1114ece0d74`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6246,172 +6532,226 @@ import { useHasRole } from '../../store/useAuth';
 /* eslint-disable no-console */
 const TAG = '[DeliveryDetail]';
 const dbg = {
-    log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
-    warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
-    err: (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
-    group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
-    groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
+  log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
+  warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
+  err:  (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
+  group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
+  groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
 };
 /* eslint-enable no-console */
 
 export default function DeliveryDetail() {
-    const { id } = useParams();
-    const [row, setRow] = useState<Delivery | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string | null>(null);
-    const fileRef = useRef<HTMLInputElement>(null);
+  const { id } = useParams();
+  const [row, setRow] = useState<Delivery | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-    const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
-    const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
+  const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
 
-    const load = useCallback(async () => {
-        dbg.group('load() start');
-        dbg.log('params', { id });
-        if (!id) {
-            dbg.warn('no id in params; abort load');
-            dbg.groupEnd();
-            return;
-        }
-        const t0 = performance.now();
-        setLoading(true); setErr(null);
-        try {
-            const res = await listDeliveries({ q: id, per_page: 1 });
-            const list = res.data ?? [];
-            const found = list.find(d => String(d.id) === String(id)) ?? null;
-            setRow(found);
-            if (!found) {
-                setErr('Delivery tidak ditemukan');
-                dbg.warn('not found');
-            } else {
-                dbg.log('found row', { id: found.id, status: found.status, assigned_to: found.assigned_to });
-            }
-        } catch (e) {
-            dbg.err('load() error:', e);
-            setErr('Gagal memuat delivery');
-        } finally {
-            setLoading(false);
-            const dt = (performance.now() - t0).toFixed(1);
-            dbg.log(`load() done in ${dt}ms`);
-            dbg.groupEnd();
-        }
-    }, [id]);
-
-    useEffect(() => {
-        dbg.log('mount');
-        void load();
-        return () => { dbg.log('unmount'); };
-    }, [load]);
-
-    async function onAssign(user_id: string | number | null) {
-        dbg.group('onAssign');
-        dbg.log('attempt', { page_id: id, row_id: row?.id, user_id, canAssign });
-        try {
-            if (!row) { dbg.warn('blocked: no row'); return; }
-            if (!canAssign) { dbg.warn('blocked: no permission'); return; }
-            if (!user_id) { dbg.warn('skipped: user_id empty'); return; }
-            await assignCourier(row.id, { user_id });
-            dbg.log('assign success → reload');
-            await load();
-        } catch (e) {
-            dbg.err('assign error:', e);
-        } finally {
-            dbg.groupEnd();
-        }
+  const load = useCallback(async () => {
+    dbg.group('load() start');
+    dbg.log('params', { id });
+    if (!id) {
+      dbg.warn('no id in params; abort load');
+      dbg.groupEnd();
+      return;
     }
-
-    async function onUpdateStatus(status: DeliveryStatus) {
-        dbg.group('onUpdateStatus');
-        const file = fileRef.current?.files?.[0] ?? null;
-        dbg.log('attempt', {
-            page_id: id,
-            row_id: row?.id,
-            from: row?.status,
-            to: status,
-            hasFile: !!file,
-            canUpdate,
-        });
-        try {
-            if (!row) { dbg.warn('blocked: no row'); return; }
-            if (!canUpdate) { dbg.warn('blocked: no permission'); return; }
-            await updateDeliveryStatus(row.id, { status, handover_photo: file });
-            if (fileRef.current) {
-                fileRef.current.value = '';
-                dbg.log('file input cleared');
-            }
-            dbg.log('status updated → reload');
-            await load();
-        } catch (e) {
-            dbg.err('update status error:', e);
-        } finally {
-            dbg.groupEnd();
-        }
+    const t0 = performance.now();
+    setLoading(true); setErr(null);
+    try {
+      const res = await listDeliveries({ q: id, per_page: 1 });
+      const list = res.data ?? [];
+      const found = list.find(d => String(d.id) === String(id)) ?? null;
+      setRow(found);
+      if (!found) {
+        setErr('Delivery tidak ditemukan');
+        dbg.warn('not found');
+      } else {
+        dbg.log('found row', { id: found.id, status: found.status, assigned_to: found.assigned_to });
+      }
+    } catch (e) {
+      dbg.err('load() error:', e);
+      setErr('Gagal memuat delivery');
+    } finally {
+      setLoading(false);
+      const dt = (performance.now() - t0).toFixed(1);
+      dbg.log(`load() done in ${dt}ms`);
+      dbg.groupEnd();
     }
+  }, [id]);
 
-    if (loading) return <div className="text-sm text-gray-500">Memuat…</div>;
-    if (err) return <div className="text-sm text-red-600">{err}</div>;
-    if (!row) return null;
+  useEffect(() => {
+    dbg.log('mount');
+    void load();
+    return () => { dbg.log('unmount'); };
+  }, [load]);
 
-    return (
-        <div className="space-y-4">
-            <header>
-                <h1 className="text-lg font-semibold">Delivery Detail</h1>
-                <div className="text-xs text-gray-600">ID: {row.id}</div>
-            </header>
+  async function onAssign(user_id: string | number | null) {
+    dbg.group('onAssign');
+    dbg.log('attempt', { page_id: id, row_id: row?.id, user_id, canAssign });
+    try {
+      if (!row) { dbg.warn('blocked: no row'); return; }
+      if (!canAssign) { dbg.warn('blocked: no permission'); return; }
+      if (!user_id) { dbg.warn('skipped: user_id empty'); return; }
+      await assignCourier(row.id, { user_id });
+      dbg.log('assign success → reload');
+      await load();
+    } catch (e) {
+      dbg.err('assign error:', e);
+    } finally {
+      dbg.groupEnd();
+    }
+  }
 
-            <div className="rounded-xl border p-4 space-y-3">
-                <div className="flex flex-wrap gap-6 items-center">
-                    <div><span className="text-xs">Order:</span> <span className="text-sm font-medium">{row.order_id}</span></div>
-                    <div><span className="text-xs">Tipe:</span> <span className="text-sm">{row.type}</span></div>
-                    <div><span className="text-xs">Fee:</span> <span className="text-sm">{Number(row.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</span></div>
-                </div>
+  async function onUpdateStatus(status: DeliveryStatus) {
+    dbg.group('onUpdateStatus');
+    const file = fileRef.current?.files?.[0] ?? null;
+    dbg.log('attempt', {
+      page_id: id,
+      row_id: row?.id,
+      from: row?.status,
+      to: status,
+      hasFile: !!file,
+      canUpdate,
+    });
+    try {
+      if (!row) { dbg.warn('blocked: no row'); return; }
+      if (!canUpdate) { dbg.warn('blocked: no permission'); return; }
+      await updateDeliveryStatus(row.id, { status, handover_photo: file });
+      if (fileRef.current) {
+        fileRef.current.value = '';
+        dbg.log('file input cleared');
+      }
+      dbg.log('status updated → reload');
+      await load();
+    } catch (e) {
+      dbg.err('update status error:', e);
+    } finally {
+      dbg.groupEnd();
+    }
+  }
 
-                <div className="flex items-center gap-3">
-                    <span className="text-xs">Kurir</span>
-                    <AssignCourierSelect value={row.assigned_to ?? null} onChange={onAssign} disabled={!canAssign} />
-                </div>
+  if (loading) return <div className="text-sm text-gray-500">Memuat…</div>;
+  if (err) return <div className="text-sm text-red-600">{err}</div>;
+  if (!row) return null;
 
-                <div className="space-y-2">
-                    <DeliveryStatusStepper status={row.status} />
-                    <div className="flex items-center gap-2">
-                        <select
-                            className="border rounded px-2 py-1 text-sm"
-                            defaultValue={row.status}
-                            onChange={(e) => {
-                                const next = e.target.value as DeliveryStatus;
-                                dbg.log('status select changed', { from: row.status, to: next });
-                                void onUpdateStatus(next);
-                            }}
-                            disabled={!canUpdate}
-                        >
-                            {(['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED', 'FAILED', 'CANCELLED'] as DeliveryStatus[])
-                                .map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/*"
-                            className="text-xs"
-                            title="Foto serah-terima (opsional; dipakai saat DELIVERED)"
-                            onChange={() => {
-                                const f = fileRef.current?.files?.[0] ?? null;
-                                dbg.log('file selected', f ? { name: f.name, size: f.size, type: f.type } : '(none)');
-                            }}
-                        />
-                    </div>
-                    {row.handover_photo && (
-                        <a
-                            href={(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '') + '/' + String(row.handover_photo).replace(/^\/+/, '')}
-                            target="_blank" rel="noopener noreferrer"
-                            className="text-xs underline"
-                            onClick={() => dbg.log('open proof clicked', { url: row.handover_photo })}
-                        >
-                            Lihat bukti serah-terima
-                        </a>
-                    )}
-                </div>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Delivery Detail</h1>
+          <div className="text-xs text-gray-600">ID: {row.id}</div>
         </div>
-    );
+        <span className={statusChipClass(row.status)} aria-label={`Status: ${row.status}`}>
+          {row.status}
+        </span>
+      </header>
+
+      {/* Card: Info utama */}
+      <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
+        <div className="p-4 grid gap-4 md:grid-cols-2">
+          <div className="grid gap-2">
+            <InfoLine label="Order">
+              <span className="font-medium">{row.order_id}</span>
+            </InfoLine>
+            <InfoLine label="Tipe">
+              <span>{row.type}</span>
+            </InfoLine>
+            <InfoLine label="Fee">
+              <span className="tabular-nums">
+                {Number(row.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+              </span>
+            </InfoLine>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-xs text-gray-600">Kurir</label>
+            <AssignCourierSelect
+              value={row.assigned_to ?? null}
+              onChange={onAssign}
+              disabled={!canAssign}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Card: Progress & aksi */}
+      <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
+        <div className="p-4 space-y-3">
+          <DeliveryStatusStepper status={row.status} />
+
+          <div className="grid gap-3 md:grid-cols-[240px_1fr] items-center">
+            <div className="grid gap-1">
+              <label htmlFor="status" className="text-xs text-gray-600">Ubah status</label>
+              <select
+                id="status"
+                className="input py-2"
+                defaultValue={row.status}
+                onChange={(e) => {
+                  const next = e.target.value as DeliveryStatus;
+                  dbg.log('status select changed', { from: row.status, to: next });
+                  void onUpdateStatus(next);
+                }}
+                disabled={!canUpdate}
+              >
+                {(['CREATED','ASSIGNED','PICKED_UP','ON_ROUTE','DELIVERED','FAILED','CANCELLED'] as DeliveryStatus[])
+                  .map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div className="grid gap-1">
+              <label htmlFor="proof" className="text-xs text-gray-600">
+                Bukti serah-terima (opsional; dipakai saat DELIVERED)
+              </label>
+              <input
+                id="proof"
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="input py-1.5"
+                onChange={() => {
+                  const f = fileRef.current?.files?.[0] ?? null;
+                  dbg.log('file selected', f ? { name: f.name, size: f.size, type: f.type } : '(none)');
+                }}
+              />
+              {row.handover_photo && (
+                <div className="pt-1">
+                  <a
+                    href={(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '') + '/' + String(row.handover_photo).replace(/^\/+/, '')}
+                    target="_blank" rel="noopener noreferrer"
+                    className="btn-outline inline-flex"
+                    onClick={() => dbg.log('open proof clicked', { url: row.handover_photo })}
+                  >
+                    Lihat bukti serah-terima
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ---------- Sub UI ---------- */
+function InfoLine({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-xs text-gray-600">{label}</span>
+      <div className="text-sm">{children}</div>
+    </div>
+  );
+}
+
+function statusChipClass(s: DeliveryStatus) {
+  // Progress aktif = solid brand; selesai = subtle; batal/error = danger
+  if (s === 'DELIVERED') return 'chip chip--subtle';
+  if (s === 'FAILED' || s === 'CANCELLED') return 'chip chip--danger';
+  return 'chip chip--solid';
 }
 
 ```
@@ -6419,14 +6759,14 @@ export default function DeliveryDetail() {
 
 ### src/pages/deliveries/DeliveryIndex.tsx
 
-- SHA: `5bcf77df6de2`  
-- Ukuran: 9 KB
+- SHA: `3aecc5f6f262`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/deliveries/DeliveryIndex.tsx
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import DataTable from '../../components/DataTable';
+import { useCallback, useEffect, useState } from 'react';
+// import DataTable from '../../components/DataTable'; // tidak dipakai karena menggunakan tabel konsisten Customers
 import AssignCourierSelect from '../../components/delivery/AssignCourierSelect';
 import { listDeliveries, assignCourier, updateDeliveryStatus } from '../../api/deliveries';
 import type { Delivery, DeliveryStatus } from '../../types/deliveries';
@@ -6441,7 +6781,7 @@ const TAG = '[DeliveryIndex]';
 const dbg = {
   log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
   warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
-  err: (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
+  err:  (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
   group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
   groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
 };
@@ -6451,11 +6791,11 @@ export default function DeliveryIndex() {
   const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
   const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
 
-  const [status, setStatus] = useState<DeliveryStatus | ''>('');
+  const [status, setStatus]   = useState<DeliveryStatus | ''>('');
   const [courier, setCourier] = useState<string | number | ''>('');
-  const [rows, setRows] = useState<Delivery[]>([]);
+  const [rows, setRows]       = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr]         = useState<string | null>(null);
   const [orderMap, setOrderMap] = useState<Record<string, { invoice_no?: string | null; number?: string | null }>>({});
 
   const load = useCallback(async () => {
@@ -6472,10 +6812,11 @@ export default function DeliveryIndex() {
       const list = res.data ?? [];
       setRows(list);
       dbg.log('loaded rows:', list.length, { sample: list.slice(0, 3) });
+
+      // Hydrate label order
       try {
         const ids = Array.from(new Set(list.map(d => d.order_id).filter(Boolean)));
         if (ids.length) {
-          // Batasi konkuren sederhana
           const chunkSize = 6;
           const nextMap: Record<string, { invoice_no?: string | null; number?: string | null }> = {};
           for (let i = 0; i < ids.length; i += chunkSize) {
@@ -6507,28 +6848,15 @@ export default function DeliveryIndex() {
     }
   }, [status, courier]);
 
-  useEffect(() => {
-    dbg.log('mount');
-    return () => { dbg.log('unmount'); };
-  }, []);
-
-  useEffect(() => {
-    dbg.log('effect load() — dependencies changed', { status, courier });
-    void load();
-  }, [load, status, courier]);
+  useEffect(() => { dbg.log('mount'); return () => { dbg.log('unmount'); }; }, []);
+  useEffect(() => { dbg.log('effect load() — dependencies changed', { status, courier }); void load(); }, [load, status, courier]);
 
   const onAssign = useCallback(async (d: Delivery, user_id: string | number | null) => {
     dbg.group('onAssign');
     dbg.log('attempt', { delivery_id: d.id, user_id, canAssign });
     try {
-      if (!canAssign) {
-        dbg.warn('blocked: no permission to assign');
-        return;
-      }
-      if (!user_id) {
-        dbg.warn('skipped: user_id is null/empty');
-        return;
-      }
+      if (!canAssign) { dbg.warn('blocked: no permission to assign'); return; }
+      if (!user_id)   { dbg.warn('skipped: user_id is null/empty');   return; }
       await assignCourier(d.id, { user_id });
       dbg.log('assign success → reload');
       await load();
@@ -6543,10 +6871,7 @@ export default function DeliveryIndex() {
     dbg.group('advance');
     dbg.log('attempt', { delivery_id: d.id, from: d.status, canUpdate });
     try {
-      if (!canUpdate) {
-        dbg.warn('blocked: no permission to update status');
-        return;
-      }
+      if (!canUpdate) { dbg.warn('blocked: no permission to update status'); return; }
       const flow: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED'];
       const i = Math.max(0, flow.indexOf(d.status));
       const next = flow[Math.min(i + 1, flow.length - 1)];
@@ -6567,116 +6892,182 @@ export default function DeliveryIndex() {
   }, [canUpdate, load]);
 
   // helper
-  type DeliveryWithOrderRef = Delivery & {
-    order_invoice_no?: string | null;
-    order_number?: string | null;
-  };
+  type DeliveryWithOrderRef = Delivery & { order_invoice_no?: string | null; order_number?: string | null; };
   const getOrderLabel = (d: Delivery): string => {
     const dx = d as DeliveryWithOrderRef;
     const cached = orderMap[d.order_id];
     return cached?.invoice_no ?? cached?.number ?? dx.order_invoice_no ?? dx.order_number ?? d.order_id;
   };
 
-  const columns = useMemo(() => {
-    dbg.log('columns memo recalculated');
-    return [
-      { key: 'id', header: 'ID' },
-      {
-        key: 'order_id', header: 'Order',
-        render: (r: Delivery) => (
-          <Link className="underline" to={`/orders/${r.order_id}`}>
-            {getOrderLabel(r)}
-          </Link>
-        ),
-      },
-      { key: 'type', header: 'Tipe' },
-      { key: 'fee', header: 'Fee', render: (r: Delivery) => Number(r.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) },
-      {
-        key: 'assigned_to', header: 'Kurir',
-        render: (r: Delivery) => (
-          <AssignCourierSelect
-            value={r.assigned_to ?? null}
-            onChange={(v) => onAssign(r, v)}
-            disabled={!canAssign}
-          />
-        ),
-      },
-      {
-        key: 'status', header: 'Status',
-        render: (r: Delivery) => (
-          <div className="flex items-center gap-2">
-            <span className="text-xs rounded px-2 py-1 border">{r.status}</span>
-            <button
-              type="button"
-              className="text-xs px-2 py-1 border rounded"
-              onClick={() => void advance(r)}
-              disabled={!canUpdate || r.status === 'DELIVERED' || r.status === 'FAILED' || r.status === 'CANCELLED'}
-              title="Majukan status"
-            >
-              Next
-            </button>
-          </div>
-        ),
-      },
-      { key: 'created_at', header: 'Dibuat' },
-    ];
-  }, [canAssign, canUpdate, onAssign, advance, orderMap]);
-
   return (
     <div className="space-y-4">
+      {/* Header */}
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">Deliveries</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Deliveries</h1>
           <p className="text-xs text-gray-600">Auto-assign & tracking</p>
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2 items-end">
-        <div className="flex flex-col">
-          <label className="text-xs mb-1">Status</label>
-          <select
-            className="border rounded px-2 py-1 text-sm"
-            value={status}
-            onChange={(e) => {
-              dbg.log('filter change: status →', e.target.value || '(all)');
-              setStatus(e.target.value as DeliveryStatus | '');
-            }}
-          >
-            <option value="">— Semua —</option>
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs mb-1">Kurir</label>
-          <AssignCourierSelect
-            value={courier || null}
-            onChange={(v) => {
-              dbg.log('filter change: courier →', v ?? '(all)');
-              setCourier(v ?? '');
-            }}
-          />
-        </div>
-        <button
-          type="button"
-          className="border rounded px-3 py-2 text-sm"
-          onClick={() => {
-            dbg.log('filters reset');
-            setStatus('');
-            setCourier('');
-          }}
-        >
-          Reset
-        </button>
-      </div>
+      {/* FilterBar */}
+      <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1" aria-label="Filter deliveries">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] gap-3">
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Status</span>
+            <select
+              className="input py-2"
+              value={status}
+              onChange={(e) => { dbg.log('filter change: status →', e.target.value || '(all)'); setStatus(e.target.value as DeliveryStatus | ''); }}
+              aria-label="Filter status"
+            >
+              <option value="">— Semua —</option>
+              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
 
-      <DataTable<Delivery>
-        columns={columns}
-        rows={rows}
-        loading={loading}
-        emptyText={err ?? 'Belum ada data'}
-      />
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Kurir</span>
+            <AssignCourierSelect
+              value={courier || null}
+              onChange={(v) => { dbg.log('filter change: courier →', v ?? '(all)'); setCourier(v ?? ''); }}
+            />
+          </label>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => { dbg.log('filters reset'); setStatus(''); setCourier(''); }}
+              aria-label="Reset filter"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Error */}
+      {err && (
+        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {err}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !err && rows.length === 0 && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada data.
+        </div>
+      )}
+
+      {/* Table (konsisten dengan Customers) */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>ID</Th>
+                  <Th>Order</Th>
+                  <Th>Tipe</Th>
+                  <Th className="text-right">Fee</Th>
+                  <Th>Kurir</Th>
+                  <Th>Status</Th>
+                  <Th>Dibuat</Th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : (
+                  rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <Td><span className="font-mono">{r.id}</span></Td>
+                      <Td>
+                        <Link className="underline" to={`/orders/${r.order_id}`}>
+                          {getOrderLabel(r)}
+                        </Link>
+                      </Td>
+                      <Td>{r.type}</Td>
+                      <Td className="text-right">
+                        {Number(r.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                      </Td>
+                      <Td>
+                        <AssignCourierSelect
+                          value={r.assigned_to ?? null}
+                          onChange={(v) => onAssign(r, v)}
+                          disabled={!canAssign}
+                        />
+                      </Td>
+                      <Td>
+                        <div className="flex items-center gap-2">
+                          <span className={chipClass(r.status)}>{r.status}</span>
+                          <button
+                            type="button"
+                            className="btn-outline text-xs px-2 py-1"
+                            onClick={() => void advance(r)}
+                            disabled={!canUpdate || r.status === 'DELIVERED' || r.status === 'FAILED' || r.status === 'CANCELLED'}
+                            title="Majukan status"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </Td>
+                      <Td>{r.created_at}</Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
   );
+}
+
+/* ---------- Subcomponents & helpers (konsisten dengan Customers) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-8 w-36 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-6 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
+  );
+}
+
+/** Map status ke gaya chip konsisten */
+function chipClass(s: DeliveryStatus) {
+  if (s === 'FAILED' || s === 'CANCELLED') {
+    return 'inline-flex items-center rounded-full px-2.5 py-1 text-xs text-white bg-[color:var(--color-status-danger)]';
+  }
+  if (s === 'DELIVERED') {
+    return 'inline-flex items-center rounded-full px-2.5 py-1 text-xs text-[color:var(--color-brand-primary)] bg-[#E6EDFF]';
+  }
+  // progress statuses
+  return 'inline-flex items-center rounded-full px-2.5 py-1 text-xs text-[color:var(--color-brand-on)] bg-[color:var(--color-brand-primary)]';
 }
 
 ```
@@ -9340,14 +9731,13 @@ export default function ReceivablesIndex() {
 
 ### src/pages/services/CategoryIndex.tsx
 
-- SHA: `0a8f9b35fe18`  
-- Ukuran: 6 KB
+- SHA: `5b3df37ade9c`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/services/CategoryIndex.tsx
 import { useEffect, useState, useCallback } from 'react';
-import DataTable from '../../components/DataTable';
 import type { ServiceCategory, PaginationMeta } from '../../types/services';
 import {
   listServiceCategories,
@@ -9383,6 +9773,7 @@ export default function CategoryIndex() {
   );
 
   useEffect(() => { void refresh(page); }, [page, refresh]);
+
   useEffect(() => {
     const t = setTimeout(() => { void refresh(1); setPage(1); }, 300);
     return () => clearTimeout(t);
@@ -9446,66 +9837,90 @@ export default function CategoryIndex() {
         </div>
       )}
 
-      {/* Table */}
-      <div aria-busy={loading ? 'true' : 'false'}>
-        <DataTable<ServiceCategory>
-          columns={[
-            { key: 'name', header: 'Nama' },
-            {
-              key: 'is_active',
-              header: 'Status',
-              render: (r) =>
-                r.is_active ? (
-                  <span className="chip chip--solid">Active</span>
+      {/* Empty state */}
+      {!loading && !error && rows.length === 0 && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada kategori
+        </div>
+      )}
+
+      {/* Table (konsisten dengan Customers) */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Nama</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
                 ) : (
-                  <span className="chip chip--danger">Inactive</span>
-                ),
-            },
-            {
-              key: 'actions',
-              header: 'Aksi',
-              render: (r) => (
-                <div className="flex gap-2 justify-end">
-                  <button
-                    className="btn-outline text-xs px-3 py-1"
-                    onClick={async () => {
-                      const name = prompt('Ubah nama kategori:', r.name)?.trim();
-                      if (!name) return;
-                      try {
-                        await updateServiceCategory(r.id, { name });
-                        await refresh(page);
-                      } catch {
-                        alert('Gagal update');
-                      }
-                    }}
-                    aria-label={`Ubah kategori ${r.name}`}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn-outline text-xs px-3 py-1 text-red-600"
-                    onClick={async () => {
-                      if (!confirm(`Hapus kategori ${r.name}?`)) return;
-                      try {
-                        await deleteServiceCategory(r.id);
-                        await refresh(page);
-                      } catch {
-                        alert('Gagal hapus');
-                      }
-                    }}
-                    aria-label={`Hapus kategori ${r.name}`}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ),
-            },
-          ]}
-          rows={rows}
-          loading={loading}
-          emptyText="Belum ada kategori"
-        />
-      </div>
+                  rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <Td>
+                        <span className="line-clamp-1 font-medium">{r.name}</span>
+                      </Td>
+                      <Td>
+                        {r.is_active ? (
+                          <span className="chip chip--solid">Active</span>
+                        ) : (
+                          <span className="chip chip--danger">Inactive</span>
+                        )}
+                      </Td>
+                      <Td className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            className="btn-outline text-xs px-3 py-1"
+                            onClick={async () => {
+                              const name = prompt('Ubah nama kategori:', r.name)?.trim();
+                              if (!name) return;
+                              try {
+                                await updateServiceCategory(r.id, { name });
+                                await refresh(page);
+                              } catch {
+                                alert('Gagal update');
+                              }
+                            }}
+                            aria-label={`Ubah kategori ${r.name}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn-outline text-xs px-3 py-1 text-red-600"
+                            onClick={async () => {
+                              if (!confirm(`Hapus kategori ${r.name}?`)) return;
+                              try {
+                                await deleteServiceCategory(r.id);
+                                await refresh(page);
+                              } catch {
+                                alert('Gagal hapus');
+                              }
+                            }}
+                            aria-label={`Hapus kategori ${r.name}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       {/* Pagination */}
       <div className="flex items-center gap-2 justify-end">
@@ -9531,12 +9946,33 @@ export default function CategoryIndex() {
   );
 }
 
+/* ---------- Subcomponents (konsisten) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
+  );
+}
+
 ```
 </details>
 
 ### src/pages/services/PricePerBranchInput.tsx
 
-- SHA: `1eb89a6ea0c1`  
+- SHA: `2c3a82f52d87`  
 - Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -9697,7 +10133,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
     );
   }
   if (!rows.length) {
-    return <div className="text-sm text-gray-500">Belum ada cabang.</div>;
+    return <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-4 text-sm text-gray-500">Belum ada cabang.</div>;
   }
 
   return (
@@ -9732,14 +10168,14 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
         </div>
       )}
 
-      {/* Table */}
+      {/* Table — konsisten dengan Customers */}
       <div className="overflow-auto mt-3">
         <table className="min-w-[720px] w-full text-sm">
           <thead className="bg-[#E6EDFF] sticky top-0 z-10">
             <tr className="divide-x divide-[color:var(--color-border)]">
               <Th>Cabang</Th>
-              <Th>Harga Efektif</Th>
-              <Th>Override</Th>
+              <Th className="text-right">Harga Efektif</Th>
+              <Th className="text-right">Override</Th>
               <Th className="text-right pr-4">Aksi</Th>
             </tr>
           </thead>
@@ -9755,15 +10191,17 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       <span className="text-gray-500">— {r.name}</span>
                     </div>
                   </Td>
-                  <Td>
+
+                  <Td className="text-right">
                     <span className="font-medium">{toIDR(r.effective)}</span>
                   </Td>
-                  <Td>
+
+                  <Td className="text-right">
                     <input
                       type="number"
                       min={0}
                       step="100"
-                      className="input w-40 text-right"
+                      className="input w-44 text-right"
                       defaultValue={r.override?.price ?? ''}
                       placeholder={`Default ${toIDR(Number(defaultPrice))}`}
                       ref={(el) => { inputRefs.current[key] = el; }}
@@ -9782,6 +10220,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       aria-label={`Harga override untuk cabang ${r.name}`}
                     />
                   </Td>
+
                   <Td className="text-right">
                     <div className="inline-flex items-center gap-2">
                       <button
@@ -9805,7 +10244,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       <button
                         className="btn-outline"
                         onClick={() => {
-                          // reset field ke kosong -> berarti pakai default saat berikutnya dihitung server
+                          // Reset field (lokal) -> kembali ke default (server belum diubah)
                           const ref = inputRefs.current[key];
                           if (ref) ref.value = '';
                           setRows((prev) =>
@@ -9837,7 +10276,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
   );
 }
 
-/* ---------- Subcomponents UI ---------- */
+/* ---------- Subcomponents UI (konsisten dengan Customers) ---------- */
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
@@ -9854,18 +10293,20 @@ function Td({ children, className = '' }: { children: React.ReactNode; className
 
 ### src/pages/services/ServiceForm.tsx
 
-- SHA: `e77813d6f06e`  
-- Ukuran: 9 KB
+- SHA: `e0793284789a`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/customers/ServiceForm.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Service, ServiceUpsertPayload, ServiceCategory } from '../../types/services';
 import { createService, getService, updateService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
 import PricePerBranchInput from './PricePerBranchInput';
+
+const UNIT_PRESETS = ['ITEM', 'PASANG', 'KG'] as const;
 
 export default function ServiceForm() {
   const { id } = useParams<{ id: string }>();
@@ -9884,6 +10325,23 @@ export default function ServiceForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  // Keyboard shortcuts: Ctrl/Cmd+S submit, Esc back
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        const el = document.getElementById('btn-submit') as HTMLButtonElement | null;
+        el?.click();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        nav(-1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [nav]);
 
   useEffect(() => {
     (async () => {
@@ -9911,6 +10369,11 @@ export default function ServiceForm() {
       }
     })();
   }, [editing, id]);
+
+  const errorList = useMemo(() => {
+    const all = Object.entries(fieldErrors).flatMap(([k, v]) => v.map(msg => `${k}: ${msg}`));
+    return all;
+  }, [fieldErrors]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -9946,10 +10409,12 @@ export default function ServiceForm() {
         <h1 className="text-lg font-semibold tracking-tight">
           {editing ? 'Edit Service' : 'New Service'}
         </h1>
-        <p className="text-xs text-gray-600">Definisikan layanan, unit, dan harga default.</p>
+        <p className="text-xs text-gray-600">
+          Definisikan layanan, unit, dan harga default. Tekan <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> untuk simpan.
+        </p>
       </header>
 
-      {/* Alert error global */}
+      {/* Error global */}
       {error && (
         <div
           role="alert"
@@ -9957,6 +10422,11 @@ export default function ServiceForm() {
           className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
         >
           {error}
+          {errorList.length > 0 && (
+            <ul className="mt-1 list-disc ms-5">
+              {errorList.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          )}
         </div>
       )}
 
@@ -9977,6 +10447,7 @@ export default function ServiceForm() {
             value={form.category_id}
             onChange={(e) => setForm({ ...form, category_id: e.target.value })}
             disabled={loading}
+            aria-required="true"
             aria-invalid={Boolean(fieldErrors.category_id)}
             aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}
           >
@@ -10005,9 +10476,11 @@ export default function ServiceForm() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             disabled={loading}
+            aria-required="true"
             aria-invalid={Boolean(fieldErrors.name)}
             aria-describedby={fieldErrors.name ? 'err-name' : undefined}
             placeholder="Contoh: Cuci Sepatu Premium"
+            autoFocus
           />
           {fieldErrors.name && (
             <p id="err-name" className="text-xs text-red-600">
@@ -10016,21 +10489,51 @@ export default function ServiceForm() {
           )}
         </div>
 
-        {/* Unit */}
+        {/* Unit + presets */}
         <div className="grid gap-1">
           <label htmlFor="unit" className="text-sm font-medium">
             Unit <span className="text-red-600">*</span>
           </label>
+
+          {/* Segmented presets */}
+          <div className="flex flex-wrap gap-2">
+            {UNIT_PRESETS.map(u => {
+              const active = form.unit.toUpperCase() === u;
+              return (
+                <button
+                  type="button"
+                  key={u}
+                  onClick={() => setForm({ ...form, unit: u })}
+                  className={
+                    active
+                      ? 'chip chip--solid'
+                      : 'chip chip--subtle hover:opacity-90'
+                  }
+                  aria-pressed={active}
+                >
+                  {u}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Free text */}
           <input
             id="unit"
             className="input"
             value={form.unit}
             onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })}
             disabled={loading}
+            aria-required="true"
             aria-invalid={Boolean(fieldErrors.unit)}
-            aria-describedby={fieldErrors.unit ? 'err-unit' : undefined}
+            aria-describedby={fieldErrors.unit ? 'err-unit' : 'hint-unit'}
             placeholder="ITEM / PASANG / KG"
           />
+          {!fieldErrors.unit && (
+            <p id="hint-unit" className="text-xs text-gray-500">
+              Pilih salah satu atau ketik unit kustom (akan otomatis UPPERCASE).
+            </p>
+          )}
           {fieldErrors.unit && (
             <p id="err-unit" className="text-xs text-red-600">
               {fieldErrors.unit.join(', ')}
@@ -10038,27 +10541,32 @@ export default function ServiceForm() {
           )}
         </div>
 
-        {/* Harga Default */}
+        {/* Harga Default (Rp prefix) */}
         <div className="grid gap-1">
           <label htmlFor="price_default" className="text-sm font-medium">
             Harga Default <span className="text-red-600">*</span>
           </label>
-          <input
-            id="price_default"
-            type="number"
-            min={0}
-            step="100"
-            className="input"
-            value={form.price_default}
-            onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
-            disabled={loading}
-            aria-invalid={Boolean(fieldErrors.price_default)}
-            aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
-            placeholder="Contoh: 25000"
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 select-none">Rp</span>
+            <input
+              id="price_default"
+              type="number"
+              min={0}
+              step="100"
+              className="input pl-10"
+              value={form.price_default}
+              onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+              disabled={loading}
+              aria-required="true"
+              aria-invalid={Boolean(fieldErrors.price_default)}
+              aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
+              placeholder="Contoh: 25000"
+              inputMode="numeric"
+            />
+          </div>
           {!fieldErrors.price_default && (
             <p id="hint-price_default" className="text-xs text-gray-500">
-              Gunakan kelipatan 100 untuk memudahkan kasir.
+              Gunakan kelipatan 100 agar kasir cepat input.
             </p>
           )}
           {fieldErrors.price_default && (
@@ -10077,14 +10585,13 @@ export default function ServiceForm() {
             onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             disabled={loading}
           />
-          <label htmlFor="is_active" className="text-sm">
-            Active
-          </label>
+          <label htmlFor="is_active" className="text-sm">Active</label>
         </div>
 
         {/* Actions */}
         <div className="flex gap-2">
           <button
+            id="btn-submit"
             disabled={loading}
             className="btn-primary disabled:opacity-60"
             aria-label="Simpan layanan"
@@ -10102,13 +10609,12 @@ export default function ServiceForm() {
         </div>
       </form>
 
-      {/* Harga per cabang (override) — tampil saat edit */}
+      {/* Harga per cabang (override) — hanya saat edit */}
       {editing && service && (
         <section className="card max-w-3xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-2">
           <h2 className="text-sm font-semibold">Harga per Cabang</h2>
           <p className="text-xs text-gray-500">
-            Harga efektif = override <code>service_prices</code> per cabang, jika tidak ada akan memakai{' '}
-            <code>price_default</code>.
+            Harga efektif = override <code>service_prices</code> per cabang, jika tidak ada akan memakai <code>price_default</code>.
           </p>
           <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
         </section>
@@ -10122,14 +10628,13 @@ export default function ServiceForm() {
 
 ### src/pages/services/ServiceIndex.tsx
 
-- SHA: `00584f89c425`  
-- Ukuran: 8 KB
+- SHA: `8cb2ed62c7ff`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/services/ServiceIndex.tsx
 import { useEffect, useState, useCallback } from 'react';
-import DataTable from '../../components/DataTable';
 import type { Service, PaginationMeta, ServiceCategory } from '../../types/services';
 import { listServices, deleteService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
@@ -10221,9 +10726,7 @@ export default function ServiceIndex() {
         <div className="p-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="relative">
-              <label htmlFor="q" className="sr-only">
-                Pencarian layanan
-              </label>
+              <label htmlFor="q" className="sr-only">Pencarian layanan</label>
               <input
                 id="q"
                 className="input w-full pl-9 py-2"
@@ -10236,9 +10739,7 @@ export default function ServiceIndex() {
             </div>
 
             <div>
-              <label htmlFor="cat" className="sr-only">
-                Filter kategori
-              </label>
+              <label htmlFor="cat" className="sr-only">Filter kategori</label>
               <select
                 id="cat"
                 className="input w-full py-2"
@@ -10248,9 +10749,7 @@ export default function ServiceIndex() {
               >
                 <option value="">Semua kategori</option>
                 {cats.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    {c.name}
-                  </option>
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -10283,69 +10782,85 @@ export default function ServiceIndex() {
         </div>
       )}
 
-      {/* DataTable dalam card */}
+      {/* Empty state */}
+      {!loading && !error && rows && rows.length === 0 && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada layanan.
+        </div>
+      )}
+
+      {/* Table (konsisten dengan Customers) */}
       <section aria-busy={loading ? 'true' : 'false'}>
         <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
           <div className="overflow-auto">
-            <DataTable<Service>
-              columns={[
-                { key: 'name', header: 'Nama' },
-                { key: 'category', header: 'Kategori', render: (s) => s.category?.name ?? '-' },
-                { key: 'unit', header: 'Unit' },
-                {
-                  key: 'price_default',
-                  header: 'Harga Default',
-                  render: (s) => toIDR(Number(s.price_default)),
-                },
-                {
-                  key: 'is_active',
-                  header: 'Status',
-                  render: (s) => (
-                    <span
-                      className={`chip ${
-                        s.is_active ? 'chip--solid' : 'chip--subtle'
-                      }`}
-                      aria-label={s.is_active ? 'Aktif' : 'Nonaktif'}
-                    >
-                      {s.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'actions',
-                  header: 'Aksi',
-                  render: (s) => (
-                    <div className="flex justify-end gap-2">
-                      <button
-                        className="btn-outline"
-                        onClick={() => nav(`/services/${s.id}/edit`)}
-                        aria-label={`Edit layanan ${s.name}`}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn-outline text-red-600"
-                        onClick={async () => {
-                          if (!confirm(`Hapus layanan ${s.name}?`)) return;
-                          try {
-                            await deleteService(s.id);
-                            await refresh(page);
-                          } catch {
-                            alert('Gagal hapus');
-                          }
-                        }}
-                        aria-label={`Hapus layanan ${s.name}`}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ),
-                },
-              ]}
-              rows={rows}
-              loading={loading}
-              emptyText="Belum ada layanan"
-            />
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Nama</Th>
+                  <Th>Kategori</Th>
+                  <Th>Unit</Th>
+                  <Th className="text-right">Harga Default</Th>
+                  <Th className="text-right pr-4">Status</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : (
+                  rows.map((s) => (
+                    <tr key={s.id} className="hover:bg-black/5 transition-colors">
+                      <Td><span className="line-clamp-1 font-medium">{s.name}</span></Td>
+                      <Td><span className="line-clamp-1">{s.category?.name ?? '-'}</span></Td>
+                      <Td>{s.unit}</Td>
+                      <Td className="text-right tabular-nums">{toIDR(Number(s.price_default))}</Td>
+                      <Td className="text-right">
+                        <span
+                          className={`chip ${s.is_active ? 'chip--solid' : 'chip--subtle'}`}
+                          aria-label={s.is_active ? 'Aktif' : 'Nonaktif'}
+                        >
+                          {s.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </Td>
+                      <Td className="text-right">
+                        <div className="inline-flex justify-end gap-2">
+                          <button
+                            className="btn-outline"
+                            onClick={() => nav(`/services/${s.id}/edit`)}
+                            aria-label={`Edit layanan ${s.name}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn-outline text-red-600"
+                            onClick={async () => {
+                              if (!confirm(`Hapus layanan ${s.name}?`)) return;
+                              try {
+                                await deleteService(s.id);
+                                await refresh(page);
+                              } catch {
+                                alert('Gagal hapus');
+                              }
+                            }}
+                            aria-label={`Hapus layanan ${s.name}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -10374,16 +10889,41 @@ export default function ServiceIndex() {
   );
 }
 
+/* ---------- Subcomponents (konsisten dengan Customers) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-32 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse ml-auto" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
+  );
+}
+
 ```
 </details>
 
 ### src/pages/users/UserForm.tsx
 
-- SHA: `3c42bfdecb4b`  
+- SHA: `793159a6f4ec`  
 - Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/users/UserForm.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { createUser, getUser, updateUser, setUserRoles, resetUserPassword } from '../../api/users';
 import type { UserUpsertPayload } from '../../types/users';
@@ -10396,367 +10936,418 @@ import { isAxiosError } from 'axios';
 
 const ALL_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir'];
 function allowedRoles(isSuperadmin: boolean): RoleName[] {
-    return isSuperadmin ? ALL_ROLES : (ALL_ROLES.filter(r => r !== 'Superadmin') as RoleName[]);
+  return isSuperadmin ? ALL_ROLES : (ALL_ROLES.filter(r => r !== 'Superadmin') as RoleName[]);
 }
 
 type ApiErrBody = { message?: string; errors?: Record<string, string[]> };
 function getHttpStatus(err: unknown): number | null {
-    return isAxiosError<ApiErrBody>(err) ? (err.response?.status ?? null) : null;
+  return isAxiosError<ApiErrBody>(err) ? (err.response?.status ?? null) : null;
 }
 function getFieldErrors(err: unknown): Record<string, string[]> {
-    return isAxiosError<ApiErrBody>(err) && err.response?.data?.errors
-        ? err.response.data.errors
-        : {};
+  return isAxiosError<ApiErrBody>(err) && err.response?.data?.errors
+    ? err.response.data.errors
+    : {};
 }
 function getMessage(err: unknown, fallback = 'Terjadi kesalahan'): string {
-    return isAxiosError<ApiErrBody>(err) && err.response?.data?.message
-        ? err.response.data.message
-        : fallback;
+  return isAxiosError<ApiErrBody>(err) && err.response?.data?.message
+    ? err.response.data.message
+    : fallback;
 }
 
 export default function UserForm() {
-    const { id } = useParams<{ id: string }>();
-    const editing = Boolean(id);
-    const nav = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const editing = Boolean(id);
+  const nav = useNavigate();
 
-    const me = useAuth.user;
-    const isSuperadmin = useHasRole('Superadmin');
-    const isAdminCabang = useHasRole('Admin Cabang');
-    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const me = useAuth.user;
+  const isSuperadmin = useHasRole('Superadmin');
+  const isAdminCabang = useHasRole('Admin Cabang');
+  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
 
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [form, setForm] = useState<UserUpsertPayload>({
-        name: '',
-        username: '',
-        email: '',
-        branch_id: isSuperadmin ? null : (me?.branch_id ? String(me.branch_id) : '' as unknown as null),
-        is_active: true,
-        roles: [],
-        password: '',
-    });
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [form, setForm] = useState<UserUpsertPayload>({
+    name: '',
+    username: '',
+    email: '',
+    branch_id: isSuperadmin ? null : (me?.branch_id ? String(me.branch_id) : ('' as unknown as null)),
+    is_active: true,
+    roles: [],
+    password: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-    // debug awal
-    console.log('[UserForm] mount:', { editing, id, me, isSuperadmin, isAdminCabang, canManage });
+  // debug awal (dipertahankan)
+  console.log('[UserForm] mount:', { editing, id, me, isSuperadmin, isAdminCabang, canManage });
 
-    const v = useMemo(() => ({
-        name: form.name ?? '',
-        username: form.username ?? '',
-        email: form.email ?? '',
-        password: form.password ?? '',
-        branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
-        is_active: !!form.is_active,
-        roles: Array.isArray(form.roles) ? form.roles : [],
-    }), [form]);
+  const v = useMemo(() => ({
+    name: form.name ?? '',
+    username: form.username ?? '',
+    email: form.email ?? '',
+    password: form.password ?? '',
+    branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
+    is_active: !!form.is_active,
+    roles: Array.isArray(form.roles) ? form.roles : [],
+  }), [form]);
 
-    useEffect(() => {
-        (async () => {
-            console.log('[UserForm] useEffect triggered', { editing, id });
+  useEffect(() => {
+    (async () => {
+      console.log('[UserForm] useEffect triggered', { editing, id });
 
-            try {
-                const br = await listBranches({ per_page: 100 });
-                console.log('[UserForm] fetched branches:', br.data);
-                setBranches(br.data ?? []);
-            } catch (err) {
-                console.warn('[UserForm] gagal load branches:', err);
-            }
+      try {
+        const br = await listBranches({ per_page: 100 });
+        console.log('[UserForm] fetched branches:', br.data);
+        setBranches(br.data ?? []);
+      } catch (err) {
+        console.warn('[UserForm] gagal load branches:', err);
+      }
 
-            if (editing) {
-                setLoading(true);
-                try {
-                    const res = await getUser(id!);
-                    const u = res.data;
-                    console.log('[UserForm] fetched user for edit:', u);
-
-                    setForm({
-                        name: u?.name ?? '',
-                        username: u?.username ?? '',
-                        email: u?.email ?? '',
-                        branch_id: (u?.branch_id ?? null),
-                        is_active: typeof u?.is_active === 'boolean' ? u.is_active : true,
-                        roles: Array.isArray(u?.roles) ? (u.roles as RoleName[]) : [],
-                        password: '',
-                    });
-                } catch (err: unknown) {
-                    console.error('[UserForm] gagal load user:', err);
-                    const status = getHttpStatus(err);
-                    if (status === 403) {
-                        setError('Anda tidak berhak melihat user ini (beda cabang).');
-                    } else if (status === 404) {
-                        setError('User tidak ditemukan.');
-                    } else {
-                        setError(getMessage(err, 'Gagal memuat user'));
-                    }
-                } finally {
-                    setLoading(false);
-                }
-            } else {
-                if (!isSuperadmin && me?.branch_id) {
-                    console.log('[UserForm] new user mode, auto-assign branch_id:', me.branch_id);
-                    setForm((f) => ({ ...f, branch_id: String(me.branch_id) }));
-                }
-            }
-        })();
-    }, [editing, id, isSuperadmin, me?.branch_id]);
-
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        if (!canManage) {
-            console.warn('[UserForm] submit blocked, user tidak punya akses');
-            return;
-        }
-
-        console.log('[UserForm] submitting...', { editing, v });
-
-        setSaving(true);
-        setError(null);
-        setFieldErrors({});
-
+      if (editing) {
+        setLoading(true);
         try {
-            if (editing) {
-                const payload: Partial<UserUpsertPayload> = {
-                    name: v.name,
-                    username: v.username,
-                    email: v.email,
-                    branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
-                    is_active: v.is_active,
-                };
-                console.log('[UserForm] updateUser payload:', payload);
-                await updateUser(id!, payload);
+          const res = await getUser(id!);
+          const u = res.data;
+          console.log('[UserForm] fetched user for edit:', u);
 
-                if (!editing && v.roles.length === 0) {
-                    console.warn('[UserForm] role kosong saat update');
-                    setFieldErrors({ roles: ['Pilih minimal satu role'] });
-                    return;
-                }
-
-                try {
-                    console.log('[UserForm] setUserRoles', v.roles);
-                    await setUserRoles(id!, v.roles ?? []);
-                } catch (err: unknown) {
-                    console.error('[UserForm] gagal setUserRoles:', err);
-                    if (getHttpStatus(err) === 403) {
-                        alert('Perubahan roles ditolak (kewenangan/cabang tidak sesuai). Data lain tetap tersimpan.');
-                    } else throw err;
-                }
-            } else {
-                if (v.roles.length === 0) {
-                    console.warn('[UserForm] role kosong saat create');
-                    setFieldErrors({ roles: ['Pilih minimal satu role'] });
-                    setSaving(false);
-                    return;
-                }
-
-                const primaryRole = v.roles[0] as RoleName;
-                const payload: UserUpsertPayload = {
-                    name: v.name,
-                    username: v.username,
-                    email: v.email,
-                    password: v.password,
-                    branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
-                    is_active: v.is_active,
-                    role: primaryRole,
-                };
-                console.log('[UserForm] createUser payload:', payload);
-
-                const created = await createUser(payload);
-                const newUserId = String(created.data.id);
-                console.log('[UserForm] created user:', created.data);
-
-                try {
-                    console.log('[UserForm] setUserRoles (after create):', v.roles);
-                    await setUserRoles(newUserId, v.roles);
-                } catch (err: unknown) {
-                    console.error('[UserForm] gagal setUserRoles setelah create:', err);
-                    if (getHttpStatus(err) === 403) {
-                        alert('User berhasil dibuat, tetapi perubahan roles sebagian ditolak (kewenangan/cabang).');
-                    } else throw err;
-                }
-            }
-
-            alert('Tersimpan');
-            console.log('[UserForm] selesai simpan, redirect ke /users');
-            nav('/users', { replace: true });
+          setForm({
+            name: u?.name ?? '',
+            username: u?.username ?? '',
+            email: u?.email ?? '',
+            branch_id: (u?.branch_id ?? null),
+            is_active: typeof u?.is_active === 'boolean' ? u.is_active : true,
+            roles: Array.isArray(u?.roles) ? (u.roles as RoleName[]) : [],
+            password: '',
+          });
         } catch (err: unknown) {
-            console.error('[UserForm] error saat submit:', err);
-            setFieldErrors(getFieldErrors(err));
-            setError(getMessage(err, 'Gagal menyimpan'));
+          console.error('[UserForm] gagal load user:', err);
+          const status = getHttpStatus(err);
+          if (status === 403) {
+            setError('Anda tidak berhak melihat user ini (beda cabang).');
+          } else if (status === 404) {
+            setError('User tidak ditemukan.');
+          } else {
+            setError(getMessage(err, 'Gagal memuat user'));
+          }
         } finally {
-            console.log('[UserForm] submit selesai');
-            setSaving(false);
+          setLoading(false);
         }
+      } else {
+        if (!isSuperadmin && me?.branch_id) {
+          console.log('[UserForm] new user mode, auto-assign branch_id:', me.branch_id);
+          setForm((f) => ({ ...f, branch_id: String(me.branch_id) }));
+        }
+      }
+    })();
+  }, [editing, id, isSuperadmin, me?.branch_id]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canManage) {
+      console.warn('[UserForm] submit blocked, user tidak punya akses');
+      return;
     }
 
-    return (
-        <form className="max-w-xl space-y-3" onSubmit={onSubmit}>
-            <h1 className="text-lg font-semibold">{editing ? 'Edit User' : 'New User'}</h1>
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-            {error && <div className="text-sm text-red-600">{error}</div>}
+    console.log('[UserForm] submitting...', { editing, v });
 
-            <div className="grid gap-1">
-                <label className="text-xs">Nama *</label>
-                <input
-                    className="border rounded px-3 py-2"
-                    value={v.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                />
-                {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>}
-            </div>
+    setSaving(true);
+    setError(null);
+    setFieldErrors({});
 
-            <div className="grid gap-1">
-                <label className="text-xs">Username{!editing ? ' *' : ''}</label>
-                <input
-                    type="text"
-                    className="border rounded px-3 py-2"
-                    value={v.username}
-                    onChange={(e) =>
-                        setForm({
-                            ...form,
-                            // normalisasi ringan ke lowercase; backend juga memutarkan ke lowercase
-                            username: e.target.value.toLowerCase(),
-                        })
-                    }
-                    autoComplete="username"
-                    pattern="^[a-z0-9_.]{3,50}$"
-                    title="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
-                    required={!editing}
-                />
-                {fieldErrors.username && <p className="text-xs text-red-600">{fieldErrors.username.join(', ')}</p>}
-            </div>
+    try {
+      if (editing) {
+        const payload: Partial<UserUpsertPayload> = {
+          name: v.name,
+          username: v.username,
+          email: v.email,
+          branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
+          is_active: v.is_active,
+        };
+        console.log('[UserForm] updateUser payload:', payload);
+        await updateUser(id!, payload);
 
-            <div className="grid gap-1">
-                <label className="text-xs">Email *</label>
-                <input
-                    type="email"
-                    className="border rounded px-3 py-2"
-                    value={v.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
-                />
-                {fieldErrors.email && <p className="text-xs text-red-600">{fieldErrors.email.join(', ')}</p>}
-            </div>
+        if (!editing && v.roles.length === 0) {
+          console.warn('[UserForm] role kosong saat update');
+          setFieldErrors({ roles: ['Pilih minimal satu role'] });
+          return;
+        }
 
-            {!editing && (
-                <div className="grid gap-1">
-                    <label className="text-xs">Password *</label>
-                    <input
-                        type="password"
-                        className="border rounded px-3 py-2"
-                        value={v.password}
-                        onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        required
-                    />
-                    {fieldErrors.password && <p className="text-xs text-red-600">{fieldErrors.password.join(', ')}</p>}
-                </div>
+        try {
+          console.log('[UserForm] setUserRoles', v.roles);
+          await setUserRoles(id!, v.roles ?? []);
+        } catch (err: unknown) {
+          console.error('[UserForm] gagal setUserRoles:', err);
+          if (getHttpStatus(err) === 403) {
+            alert('Perubahan roles ditolak (kewenangan/cabang tidak sesuai). Data lain tetap tersimpan.');
+          } else throw err;
+        }
+      } else {
+        if (v.roles.length === 0) {
+          console.warn('[UserForm] role kosong saat create');
+          setFieldErrors({ roles: ['Pilih minimal satu role'] });
+          setSaving(false);
+          return;
+        }
+
+        const primaryRole = v.roles[0] as RoleName;
+        const payload: UserUpsertPayload = {
+          name: v.name,
+          username: v.username,
+          email: v.email,
+          password: v.password,
+          branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
+          is_active: v.is_active,
+          role: primaryRole,
+        };
+        console.log('[UserForm] createUser payload:', payload);
+
+        const created = await createUser(payload);
+        const newUserId = String(created.data.id);
+        console.log('[UserForm] created user:', created.data);
+
+        try {
+          console.log('[UserForm] setUserRoles (after create):', v.roles);
+          await setUserRoles(newUserId, v.roles);
+        } catch (err: unknown) {
+          console.error('[UserForm] gagal setUserRoles setelah create:', err);
+          if (getHttpStatus(err) === 403) {
+            alert('User berhasil dibuat, tetapi perubahan roles sebagian ditolak (kewenangan/cabang).');
+          } else throw err;
+        }
+      }
+
+      alert('Tersimpan');
+      console.log('[UserForm] selesai simpan, redirect ke /users');
+      nav('/users', { replace: true });
+    } catch (err: unknown) {
+      console.error('[UserForm] error saat submit:', err);
+      setFieldErrors(getFieldErrors(err));
+      setError(getMessage(err, 'Gagal menyimpan'));
+    } finally {
+      console.log('[UserForm] submit selesai');
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">{editing ? 'Edit User' : 'New User'}</h1>
+          <p className="text-xs text-gray-600">Kelola identitas, peran (multi-role), dan status aktif</p>
+        </div>
+      </header>
+
+      {/* Error/Loading info */}
+      {loading && <div className="text-sm text-gray-500">Memuat…</div>}
+      {error && (
+        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {/* Form card */}
+      <form className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1" onSubmit={onSubmit}>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Nama */}
+          <div className="grid gap-1">
+            <label className="text-xs font-medium" htmlFor="name">Nama *</label>
+            <input
+              id="name"
+              className="input"
+              value={v.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              aria-invalid={!!fieldErrors.name}
+              aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+            />
+            {fieldErrors.name && (
+              <p id="err-name" className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>
             )}
+          </div>
 
-            <div className="grid gap-1">
-                <label className="text-xs">Branch</label>
-                <select
-                    className="border rounded px-3 py-2"
-                    value={v.branch_id} // '' == null
-                    onChange={(e) =>
-                        setForm({
-                            ...form,
-                            branch_id: isSuperadmin ? (e.target.value || null) : (me?.branch_id ? String(me.branch_id) : null),
-                        })
-                    }
-                    disabled={!isSuperadmin} // Admin Cabang tidak boleh ganti cabang
-                >
-                    {isSuperadmin && <option value="">(Tanpa branch)</option>}
-                    {branches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                            {b.code} — {b.name}
-                        </option>
-                    ))}
-                </select>
-                {fieldErrors.branch_id && <p className="text-xs text-red-600">{fieldErrors.branch_id.join(', ')}</p>}
-            </div>
-
-            <div className="grid gap-1">
-                <label className="text-xs">Status</label>
-                <label className="inline-flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        checked={v.is_active}
-                        onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                    />
-                    Aktif
-                </label>
-            </div>
-
-            {canManage && (
-                <div className="grid gap-1">
-                    <label className="text-xs">Roles *</label>
-                    <select
-                        multiple
-                        className="border rounded px-3 py-2 min-h-28"
-                        value={v.roles}
-                        onChange={(e) => {
-                            const values = Array.from(e.target.selectedOptions)
-                                .map(o => (o.value || '').trim() as RoleName)
-                                .filter(Boolean);
-                            const uniq = Array.from(new Set(values)) as RoleName[];
-                            setForm({ ...form, roles: uniq });
-                        }}
-                        required
-                    >
-                        {allowedRoles(isSuperadmin).map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                        ))}
-                    </select>
-
-                    {/* ⬇️ Tambahkan indikator TERLETAK DI SINI, persis di bawah </select> */}
-                    {v.roles.length > 0 && (
-                        <p className="text-[11px] text-green-700">Dipilih: {v.roles.join(', ')}</p>
-                    )}
-
-                    <p className="text-[11px] text-gray-500">Tahan Ctrl / Cmd untuk memilih lebih dari satu.</p>
-                    {fieldErrors.roles && <p className="text-xs text-red-600">{fieldErrors.roles.join(', ')}</p>}
-
-                    {Object.keys(fieldErrors).length > 0 && (
-                        <pre className="text-[11px] text-red-700 bg-red-50 p-2 rounded">
-                            {JSON.stringify(fieldErrors, null, 2)}
-                        </pre>
-                    )}
-                </div>
+          {/* Username */}
+          <div className="grid gap-1">
+            <label className="text-xs font-medium" htmlFor="username">Username{!editing ? ' *' : ''}</label>
+            <input
+              id="username"
+              type="text"
+              className="input"
+              value={v.username}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  username: e.target.value.toLowerCase(), // normalisasi ringan
+                })
+              }
+              autoComplete="username"
+              pattern="^[a-z0-9_.]{3,50}$"
+              title="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
+              required={!editing}
+              aria-invalid={!!fieldErrors.username}
+              aria-describedby={fieldErrors.username ? 'err-username' : undefined}
+            />
+            {fieldErrors.username && (
+              <p id="err-username" className="text-xs text-red-600">{fieldErrors.username.join(', ')}</p>
             )}
+          </div>
 
-            <div className="flex gap-2">
-                <button disabled={saving} className="rounded bg-black text-white px-3 py-2">
-                    {saving ? 'Menyimpan…' : 'Simpan'}
-                </button>
+          {/* Email */}
+          <div className="grid gap-1">
+            <label className="text-xs font-medium" htmlFor="email">Email *</label>
+            <input
+              id="email"
+              type="email"
+              className="input"
+              value={v.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? 'err-email' : undefined}
+            />
+            {fieldErrors.email && (
+              <p id="err-email" className="text-xs text-red-600">{fieldErrors.email.join(', ')}</p>
+            )}
+          </div>
 
-                <button
-                    type="button"
-                    className="rounded border px-3 py-2"
-                    onClick={() => nav('/users')}
-                >
-                    Batal
-                </button>
-
-                {editing && (
-                    <button
-                        type="button"
-                        className="rounded border px-3 py-2"
-                        onClick={async () => {
-                            if (!isSuperadmin && !isAdminCabang) return;
-                            const p1 = prompt('Password baru (min 8, mix-case+angka)'); if (!p1) return;
-                            const p2 = prompt('Konfirmasi password baru'); if (p2 !== p1) { alert('Konfirmasi tidak cocok'); return; }
-                            try { await resetUserPassword(id!, p1); alert('Password direset'); }
-                            catch { alert('Gagal reset password'); }
-                        }}
-                    >
-                        Reset Password
-                    </button>
-                )}
+          {/* Password (create only) */}
+          {!editing && (
+            <div className="grid gap-1">
+              <label className="text-xs font-medium" htmlFor="password">Password *</label>
+              <input
+                id="password"
+                type="password"
+                className="input"
+                value={v.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+                aria-invalid={!!fieldErrors.password}
+                aria-describedby={fieldErrors.password ? 'err-password' : undefined}
+              />
+              {fieldErrors.password && (
+                <p id="err-password" className="text-xs text-red-600">{fieldErrors.password.join(', ')}</p>
+              )}
             </div>
-        </form>
-    );
+          )}
+
+          {/* Branch */}
+          <div className="grid gap-1">
+            <label className="text-xs font-medium" htmlFor="branch">Branch</label>
+            <select
+              id="branch"
+              className="input"
+              value={v.branch_id} // '' == null
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  branch_id: isSuperadmin ? (e.target.value || null) : (me?.branch_id ? String(me.branch_id) : null),
+                })
+              }
+              disabled={!isSuperadmin} // Admin Cabang tidak boleh ganti cabang
+              aria-invalid={!!fieldErrors.branch_id}
+              aria-describedby={fieldErrors.branch_id ? 'err-branch' : undefined}
+            >
+              {isSuperadmin && <option value="">(Tanpa branch)</option>}
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.code} — {b.name}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.branch_id && (
+              <p id="err-branch" className="text-xs text-red-600">{fieldErrors.branch_id.join(', ')}</p>
+            )}
+          </div>
+
+          {/* Status aktif */}
+          <div className="grid gap-1">
+            <label className="text-xs font-medium">Status</label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={v.is_active}
+                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+              />
+              Aktif
+            </label>
+          </div>
+
+          {/* Roles (full width) */}
+          {canManage && (
+            <div className="md:col-span-2 grid gap-1">
+              <label className="text-xs font-medium" htmlFor="roles">Roles *</label>
+              <select
+                id="roles"
+                multiple
+                className="input min-h-28"
+                value={v.roles}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions)
+                    .map(o => (o.value || '').trim() as RoleName)
+                    .filter(Boolean);
+                  const uniq = Array.from(new Set(values)) as RoleName[];
+                  setForm({ ...form, roles: uniq });
+                }}
+                required
+                aria-invalid={!!fieldErrors.roles}
+                aria-describedby={fieldErrors.roles ? 'err-roles' : undefined}
+              >
+                {allowedRoles(isSuperadmin).map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+
+              {v.roles.length > 0 && (
+                <p className="text-[11px] text-green-700">Dipilih: {v.roles.join(', ')}</p>
+              )}
+              <p className="text-[11px] text-gray-500">Tahan Ctrl / Cmd untuk memilih lebih dari satu.</p>
+
+              {fieldErrors.roles && (
+                <p id="err-roles" className="text-xs text-red-600">{fieldErrors.roles.join(', ')}</p>
+              )}
+
+              {Object.keys(fieldErrors).length > 0 && (
+                <pre className="text-[11px] text-red-700 bg-red-50 p-2 rounded">{JSON.stringify(fieldErrors, null, 2)}</pre>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="border-t border-[color:var(--color-border)] p-4 flex flex-wrap gap-2">
+          <button disabled={saving} className="btn-primary">
+            {saving ? 'Menyimpan…' : 'Simpan'}
+          </button>
+
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={() => nav('/users')}
+          >
+            Batal
+          </button>
+
+          {editing && (
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={async () => {
+                if (!isSuperadmin && !isAdminCabang) return;
+                const p1 = prompt('Password baru (min 8, mix-case+angka)'); if (!p1) return;
+                const p2 = prompt('Konfirmasi password baru'); if (p2 !== p1) { alert('Konfirmasi tidak cocok'); return; }
+                try { await resetUserPassword(id!, p1); alert('Password direset'); }
+                catch { alert('Gagal reset password'); }
+              }}
+            >
+              Reset Password
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
 }
 
 ```
@@ -10764,11 +11355,12 @@ export default function UserForm() {
 
 ### src/pages/users/UsersList.tsx
 
-- SHA: `6c3eff8cca4c`  
-- Ukuran: 10 KB
+- SHA: `873c151fac5b`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/users/UsersList.tsx
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listUsers, deleteUser, setUserActive } from '../../api/users';
 import type { User, PaginationMeta, UserQuery } from '../../types/users';
@@ -10776,216 +11368,290 @@ import { Link } from 'react-router-dom';
 import { useAuth, useHasRole } from '../../store/useAuth';
 
 export default function UsersList() {
-    const me = useAuth.user; // akses user login (branch_id, roles)
-    const isSuperadmin = useHasRole('Superadmin');
-    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const me = useAuth.user; // akses user login (branch_id, roles)
+  const isSuperadmin = useHasRole('Superadmin');
+  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
 
-    const [rows, setRows] = useState<User[]>([]);
-    const [meta, setMeta] = useState<PaginationMeta | null>(null);
-    const [q, setQ] = useState('');
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(10);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<User[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    // Guard per-baris agar UI tidak men-trigger 403
-    const canEditRow = useCallback(
-        (row: User) => {
-            if (isSuperadmin) return true;
-            // Admin Cabang: hanya boleh edit user di cabangnya dan bukan Superadmin
-            const sameBranch = String(row.branch_id ?? '') === String(me?.branch_id ?? '');
-            const rowHasSuperadmin = (row.roles ?? []).includes('Superadmin');
-            return sameBranch && !rowHasSuperadmin;
-        },
-        [isSuperadmin, me?.branch_id]
-    );
+  // Guard per-baris agar UI tidak men-trigger 403
+  const canEditRow = useCallback(
+    (row: User) => {
+      if (isSuperadmin) return true;
+      const sameBranch = String(row.branch_id ?? '') === String(me?.branch_id ?? '');
+      const rowHasSuperadmin = (row.roles ?? []).includes('Superadmin');
+      return sameBranch && !rowHasSuperadmin;
+    },
+    [isSuperadmin, me?.branch_id]
+  );
 
-    const canToggleActive = canEditRow; // atur kebijakan sama dengan edit
-    const canDeleteRow = useCallback(
-        (row: User) => {
-            if (isSuperadmin) return true; // Superadmin boleh
-            // Admin Cabang: boleh hapus user di cabangnya dan bukan Superadmin
-            const sameBranch = String(row.branch_id ?? '') === String(me?.branch_id ?? '');
-            const rowHasSuperadmin = (row.roles ?? []).includes('Superadmin');
-            return sameBranch && !rowHasSuperadmin;
-        },
-        [isSuperadmin, me?.branch_id]
-    );
+  const canToggleActive = canEditRow;
+  const canDeleteRow = useCallback(
+    (row: User) => {
+      if (isSuperadmin) return true;
+      const sameBranch = String(row.branch_id ?? '') === String(me?.branch_id ?? '');
+      const rowHasSuperadmin = (row.roles ?? []).includes('Superadmin');
+      return sameBranch && !rowHasSuperadmin;
+    },
+    [isSuperadmin, me?.branch_id]
+  );
 
-    const refresh = useCallback(
-        async (p = page) => {
-            setLoading(true);
-            setError(null);
-            try {
-                const query: UserQuery = { q, page: p, per_page: perPage };
-                // Admin Cabang: paksa filter berdasarkan cabang login
-                if (!isSuperadmin && me?.branch_id) {
-                    (query).branch_id = String(me.branch_id);
-                }
-                const res = await listUsers(query);
-                setRows(res.data ?? []);
-                setMeta((res.meta as PaginationMeta) ?? null);
-            } catch {
-                setError('Gagal memuat data user');
-            } finally {
-                setLoading(false);
-            }
-        },
-        [page, q, perPage, isSuperadmin, me?.branch_id]
-    );
+  const refresh = useCallback(
+    async (p = page) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const query: UserQuery = { q, page: p, per_page: perPage };
+        if (!isSuperadmin && me?.branch_id) query.branch_id = String(me.branch_id);
+        const res = await listUsers(query);
+        setRows(res.data ?? []);
+        setMeta((res.meta as PaginationMeta) ?? null);
+      } catch {
+        setError('Gagal memuat data user');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, q, perPage, isSuperadmin, me?.branch_id]
+  );
 
-    // Reset ke halaman 1 ketika q/perPage berubah
-    useEffect(() => {
-        setPage(1);
-    }, [q, perPage]);
+  useEffect(() => { setPage(1); }, [q, perPage]);
+  useEffect(() => { void refresh(page); }, [page, refresh]);
 
-    useEffect(() => {
-        void refresh(page);
-    }, [page, refresh]);
+  const handleToggleActive = useCallback(
+    async (u: User) => {
+      if (!canManage || !canToggleActive(u)) return;
+      try {
+        await setUserActive(String(u.id), !u.is_active);
+        await refresh();
+      } catch {
+        alert('Gagal set status');
+      }
+    },
+    [canManage, canToggleActive, refresh]
+  );
 
-    const handleToggleActive = useCallback(
-        async (u: User) => {
-            if (!canManage || !canToggleActive(u)) return;
-            try {
-                await setUserActive(String(u.id), !u.is_active);
-                await refresh();
-            } catch {
-                alert('Gagal set status');
-            }
-        },
-        [canManage, canToggleActive, refresh]
-    );
+  const handleDelete = useCallback(
+    async (u: User) => {
+      if (!canManage || !canDeleteRow(u)) return;
+      if (!confirm(`Hapus user ${u.username || u.email}?`)) return;
+      try {
+        await deleteUser(String(u.id));
+        await refresh();
+      } catch {
+        alert('Gagal menghapus');
+      }
+    },
+    [canManage, canDeleteRow, refresh]
+  );
 
-    const handleDelete = useCallback(
-        async (u: User) => {
-            if (!canManage || !canDeleteRow(u)) return;
-            if (!confirm(`Hapus user ${u.username || u.email}?`)) return;
-            try {
-                await deleteUser(String(u.id));
-                await refresh();
-            } catch {
-                alert('Gagal menghapus');
-            }
-        },
-        [canManage, canDeleteRow, refresh]
-    );
+  const isEmpty = useMemo(() => !loading && rows.length === 0, [loading, rows.length]);
 
-    const isEmpty = useMemo(() => !loading && rows.length === 0, [loading, rows.length]);
-
-    return (
-        <div className="space-y-4">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold">Users</h1>
-                    <p className="text-xs text-gray-500">Kelola akun, role, dan status aktif.</p>
-                </div>
-                {canManage && <Link to="/users/new" className="rounded border px-3 py-2 text-sm">New User</Link>}
-            </header>
-
-            <div className="flex gap-2">
-                <input
-                    className="border rounded px-3 py-2 text-sm w-full"
-                    placeholder="Cari nama/username/email…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                />
-                <select
-                    className="border rounded px-3 py-2 text-sm"
-                    value={perPage}
-                    onChange={(e) => setPerPage(Number(e.target.value))}
-                >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                </select>
-            </div>
-
-            {error && <div className="text-sm text-red-600">{error}</div>}
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-            {isEmpty && <div className="text-sm text-gray-500">Belum ada user</div>}
-
-            {!loading && rows.length > 0 && (
-                <div className="overflow-auto rounded border">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-3 py-2 text-left">Nama</th>
-                                <th className="px-3 py-2 text-left">Username</th>
-                                <th className="px-3 py-2 text-left">Email</th>
-                                <th className="px-3 py-2 text-left">Branch</th>
-                                <th className="px-3 py-2 text-left">Roles</th>
-                                <th className="px-3 py-2 text-left">Status</th>
-                                <th className="px-3 py-2 text-left">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((u) => {
-                                const allowEdit = canEditRow(u);
-                                const allowToggle = canToggleActive(u);
-                                const allowDelete = canDeleteRow(u);
-
-                                return (
-                                    <tr key={u.id} className="border-t">
-                                        <td className="px-3 py-2">{u.name}</td>
-                                        <td className="px-3 py-2">{u.username}</td>
-                                        <td className="px-3 py-2">{u.email}</td>
-                                        <td className="px-3 py-2">{u.branch_id ?? '-'}</td>
-                                        <td className="px-3 py-2">{(u.roles ?? []).join(', ')}</td>
-                                        <td className="px-3 py-2">
-                                            <span className={`px-2 py-1 rounded text-xs ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                                                {u.is_active ? 'Active' : 'Inactive'}
-                                            </span>
-                                        </td>
-                                        <td className="px-3 py-2 space-x-2">
-                                            {allowEdit && (
-                                                <Link className="underline text-xs" to={`/users/${String(u.id)}/edit`}>
-                                                    Edit
-                                                </Link>
-                                            )}
-
-                                            {canManage && (
-                                                <>
-                                                    <button
-                                                        className={`underline text-xs ${allowToggle ? '' : 'opacity-40 cursor-not-allowed'}`}
-                                                        disabled={!allowToggle}
-                                                        onClick={() => handleToggleActive(u)}
-                                                    >
-                                                        {u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                                                    </button>
-
-                                                    <button
-                                                        className={`underline text-xs text-red-600 ${allowDelete ? '' : 'opacity-40 cursor-not-allowed'}`}
-                                                        disabled={!allowDelete}
-                                                        onClick={() => handleDelete(u)}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {meta && meta.last_page > 1 && (
-                <div className="flex items-center gap-2">
-                    <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded border px-2 py-1 text-xs">
-                        Prev
-                    </button>
-                    <div className="text-xs text-gray-600">
-                        Hal {meta.current_page} / {meta.last_page}
-                    </div>
-                    <button disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)} className="rounded border px-2 py-1 text-xs">
-                        Next
-                    </button>
-                </div>
-            )}
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Users</h1>
+          <p className="text-xs text-gray-500">Kelola akun, role, dan status aktif.</p>
         </div>
-    );
+        {canManage && (
+          <Link to="/users/new" className="btn-primary" aria-label="Tambah user baru">
+            New User
+          </Link>
+        )}
+      </header>
+
+      {/* Toolbar */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Toolbar pencarian user"
+      >
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+          <div className="relative">
+            <label htmlFor="q" className="sr-only">Pencarian</label>
+            <input
+              id="q"
+              className="input w-full pl-9 py-2"
+              placeholder="Cari nama/username/email…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Cari user"
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <label htmlFor="per" className="text-sm text-gray-600">Per page</label>
+            <select
+              id="per"
+              className="input w-[88px] py-2"
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              aria-label="Jumlah baris per halaman"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {/* Alerts */}
+      {error && (
+        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {error}
+        </div>
+      )}
+      {isEmpty && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada user.
+        </div>
+      )}
+
+      {/* Table */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Nama</Th>
+                  <Th>Username</Th>
+                  <Th>Email</Th>
+                  <Th>Branch</Th>
+                  <Th>Roles</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : (
+                  rows.map((u) => {
+                    const allowEdit = canEditRow(u);
+                    const allowToggle = canToggleActive(u);
+                    const allowDelete = canDeleteRow(u);
+                    return (
+                      <tr key={u.id} className="hover:bg-black/5 transition-colors">
+                        <Td><span className="font-medium">{u.name}</span></Td>
+                        <Td>{u.username}</Td>
+                        <Td className="break-all">{u.email}</Td>
+                        <Td>{u.branch_id ?? '-'}</Td>
+                        <Td>
+                          <div className="flex flex-wrap gap-1">
+                            {(u.roles ?? []).map((r) => (
+                              <span key={r} className="chip chip--subtle">
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        </Td>
+                        <Td>
+                          <span className={`chip ${u.is_active ? 'chip--solid' : 'chip--subtle'}`}>
+                            {u.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </Td>
+                        <Td className="text-right space-x-2">
+                          {allowEdit && (
+                            <Link
+                              className="btn-outline"
+                              to={`/users/${String(u.id)}/edit`}
+                              aria-label={`Edit user ${u.username ?? u.email}`}
+                            >
+                              Edit
+                            </Link>
+                          )}
+                          {canManage && (
+                            <>
+                              <button
+                                className={`btn-outline ${allowToggle ? '' : 'opacity-40 cursor-not-allowed'}`}
+                                disabled={!allowToggle}
+                                onClick={() => handleToggleActive(u)}
+                              >
+                                {u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                              </button>
+                              <button
+                                className={`btn-outline text-red-600 ${allowDelete ? '' : 'opacity-40 cursor-not-allowed'}`}
+                                disabled={!allowDelete}
+                                onClick={() => handleDelete(u)}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </Td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Pagination */}
+      {meta && meta.last_page > 1 && (
+        <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span className="text-sm">Hal {meta.current_page} / {meta.last_page}</span>
+          <button
+            disabled={page >= meta.last_page}
+            onClick={() => setPage((p) => p + 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Next
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Subcomponents ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-56 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-36 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-6 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
+  );
 }
 
 ```

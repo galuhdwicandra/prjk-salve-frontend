@@ -33,16 +33,15 @@ export async function assignCourier(id: string, payload: DeliveryAssignPayload) 
 
 /** Update status (+ opsional upload bukti serah-terima) */
 export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPayload) {
-  const hasFile = !!payload.handover_photo;
+  const hasFile = !!payload.photo;
   if (hasFile) {
     const fd = new FormData();
     fd.append('status', payload.status);
     if (payload.note) fd.append('note', payload.note);
-    if (payload.handover_photo) fd.append('handover_photo', payload.handover_photo);
+    if (payload.photo) fd.append('photo', payload.photo);
     const { data } = await api.put<SingleResponse<Delivery>>(
       `/deliveries/${encodeURIComponent(id)}/status`,
-      fd,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      fd
     );
     return data;
   }
