@@ -4,6 +4,7 @@ import type { RoleName } from '../api/client';
 export interface User {
     id: string;
     name: string;
+    username: string;
     email: string;
     branch_id: string | null;
     is_active: boolean;
@@ -14,6 +15,7 @@ export interface User {
 
 export interface UserUpsertPayload {
     name: string;
+    username?: string;
     email: string;
     password?: string;
     branch_id?: string | null;

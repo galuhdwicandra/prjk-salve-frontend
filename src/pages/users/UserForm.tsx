@@ -41,6 +41,7 @@ export default function UserForm() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [form, setForm] = useState<UserUpsertPayload>({
         name: '',
+        username: '',
         email: '',
         branch_id: isSuperadmin ? null : (me?.branch_id ? String(me.branch_id) : '' as unknown as null),
         is_active: true,
@@ -57,6 +58,7 @@ export default function UserForm() {
 
     const v = useMemo(() => ({
         name: form.name ?? '',
+        username: form.username ?? '',
         email: form.email ?? '',
         password: form.password ?? '',
         branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
@@ -85,6 +87,7 @@ export default function UserForm() {
 
                     setForm({
                         name: u?.name ?? '',
+                        username: u?.username ?? '',
                         email: u?.email ?? '',
                         branch_id: (u?.branch_id ?? null),
                         is_active: typeof u?.is_active === 'boolean' ? u.is_active : true,
@@ -130,6 +133,7 @@ export default function UserForm() {
             if (editing) {
                 const payload: Partial<UserUpsertPayload> = {
                     name: v.name,
+                    username: v.username,
                     email: v.email,
                     branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
                     is_active: v.is_active,
@@ -163,6 +167,7 @@ export default function UserForm() {
                 const primaryRole = v.roles[0] as RoleName;
                 const payload: UserUpsertPayload = {
                     name: v.name,
+                    username: v.username,
                     email: v.email,
                     password: v.password,
                     branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
@@ -214,6 +219,27 @@ export default function UserForm() {
                     required
                 />
                 {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>}
+            </div>
+
+            <div className="grid gap-1">
+                <label className="text-xs">Username{!editing ? ' *' : ''}</label>
+                <input
+                    type="text"
+                    className="border rounded px-3 py-2"
+                    value={v.username}
+                    onChange={(e) =>
+                        setForm({
+                            ...form,
+                            // normalisasi ringan ke lowercase; backend juga memutarkan ke lowercase
+                            username: e.target.value.toLowerCase(),
+                        })
+                    }
+                    autoComplete="username"
+                    pattern="^[a-z0-9_.]{3,50}$"
+                    title="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
+                    required={!editing}
+                />
+                {fieldErrors.username && <p className="text-xs text-red-600">{fieldErrors.username.join(', ')}</p>}
             </div>
 
             <div className="grid gap-1">

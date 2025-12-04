@@ -29,7 +29,7 @@ export default function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();
 
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
 
@@ -41,7 +41,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const me = await useAuth.login({ email, password });
+      const me = await useAuth.login({ login: loginId.trim(), password });
       const profile = await useAuth.fetchMe();
       const from = (loc.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
       const fallback = homePathByRole(profile?.roles ?? me?.roles ?? []);
@@ -105,17 +105,17 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={onSubmit} aria-busy={loading} className="space-y-4">
-          {/* Email */}
+          {/* Email atau Username */}
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <label htmlFor="login" className="text-sm font-medium">Email atau Username</label>
             <input
-              id="email"
+              id="login"
               required
-              type="email"
-              placeholder="nama@domain.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              type="text"
+              placeholder="email atau username"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              autoComplete="username"
               disabled={loading}
               aria-invalid={!!error}
               className="

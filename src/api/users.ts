@@ -10,7 +10,7 @@ export async function listUsers(params: UserQuery = {}) {
 }
 
 export async function getUser(id: string) {
-    const { data } = await api.get<{ data: User }>(`/users/${encodeURIComponent(id)}`);
+    const { data } = await api.get<Envelope<User, null>>(`/users/${encodeURIComponent(id)}`);
     return data;
 }
 

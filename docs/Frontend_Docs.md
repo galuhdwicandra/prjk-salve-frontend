@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-04 23:41:48_  
+_Dihasilkan otomatis: 2025-12-05 01:31:46_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -152,7 +152,7 @@ export async function deleteBranch(id: string) {
 
 ### src/api/client.ts
 
-- SHA: `741c920e6df2`  
+- SHA: `7b0531c076a2`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -181,7 +181,7 @@ export interface ApiEnvelope<T = unknown, M = unknown> {
     message: string | null;
     errors: Record<string, string[]> | null;
 }
-export interface LoginPayload { email: string; password: string; }
+export interface LoginPayload { login: string; password: string; }
 type LoginResp = ApiEnvelope<{ user: MeUser }, { token: string }>;
 type MeResp = ApiEnvelope<{ user: MeUser }, null>;
 type LogoutResp = ApiEnvelope<null, null>;
@@ -965,7 +965,7 @@ export async function deleteService(id: string) {
 
 ### src/api/users.ts
 
-- SHA: `c066e4f4055b`  
+- SHA: `0bcc8ef09c29`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -982,7 +982,7 @@ export async function listUsers(params: UserQuery = {}) {
 }
 
 export async function getUser(id: string) {
-    const { data } = await api.get<{ data: User }>(`/users/${encodeURIComponent(id)}`);
+    const { data } = await api.get<Envelope<User, null>>(`/users/${encodeURIComponent(id)}`);
     return data;
 }
 
@@ -2482,7 +2482,7 @@ export interface ServicePriceSetPayload {
 
 ### src/types/users.ts
 
-- SHA: `9f576bb91d3b`  
+- SHA: `cc5d6364bed5`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2493,6 +2493,7 @@ import type { RoleName } from '../api/client';
 export interface User {
     id: string;
     name: string;
+    username: string;
     email: string;
     branch_id: string | null;
     is_active: boolean;
@@ -2503,6 +2504,7 @@ export interface User {
 
 export interface UserUpsertPayload {
     name: string;
+    username?: string;
     email: string;
     password?: string;
     branch_id?: string | null;
@@ -7031,7 +7033,7 @@ export default function ExpensesIndex() {
 
 ### src/pages/Login.tsx
 
-- SHA: `90dee148deeb`  
+- SHA: `2cb6522ccef7`  
 - Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7067,7 +7069,7 @@ export default function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();
 
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
 
@@ -7079,7 +7081,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const me = await useAuth.login({ email, password });
+      const me = await useAuth.login({ login: loginId.trim(), password });
       const profile = await useAuth.fetchMe();
       const from = (loc.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
       const fallback = homePathByRole(profile?.roles ?? me?.roles ?? []);
@@ -7143,17 +7145,17 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={onSubmit} aria-busy={loading} className="space-y-4">
-          {/* Email */}
+          {/* Email atau Username */}
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <label htmlFor="login" className="text-sm font-medium">Email atau Username</label>
             <input
-              id="email"
+              id="login"
               required
-              type="email"
-              placeholder="nama@domain.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              type="text"
+              placeholder="email atau username"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              autoComplete="username"
               disabled={loading}
               aria-invalid={!!error}
               className="
@@ -10377,8 +10379,8 @@ export default function ServiceIndex() {
 
 ### src/pages/users/UserForm.tsx
 
-- SHA: `e2fc73fe263b`  
-- Ukuran: 15 KB
+- SHA: `3c42bfdecb4b`  
+- Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -10425,6 +10427,7 @@ export default function UserForm() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [form, setForm] = useState<UserUpsertPayload>({
         name: '',
+        username: '',
         email: '',
         branch_id: isSuperadmin ? null : (me?.branch_id ? String(me.branch_id) : '' as unknown as null),
         is_active: true,
@@ -10441,6 +10444,7 @@ export default function UserForm() {
 
     const v = useMemo(() => ({
         name: form.name ?? '',
+        username: form.username ?? '',
         email: form.email ?? '',
         password: form.password ?? '',
         branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
@@ -10469,6 +10473,7 @@ export default function UserForm() {
 
                     setForm({
                         name: u?.name ?? '',
+                        username: u?.username ?? '',
                         email: u?.email ?? '',
                         branch_id: (u?.branch_id ?? null),
                         is_active: typeof u?.is_active === 'boolean' ? u.is_active : true,
@@ -10514,6 +10519,7 @@ export default function UserForm() {
             if (editing) {
                 const payload: Partial<UserUpsertPayload> = {
                     name: v.name,
+                    username: v.username,
                     email: v.email,
                     branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
                     is_active: v.is_active,
@@ -10547,6 +10553,7 @@ export default function UserForm() {
                 const primaryRole = v.roles[0] as RoleName;
                 const payload: UserUpsertPayload = {
                     name: v.name,
+                    username: v.username,
                     email: v.email,
                     password: v.password,
                     branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
@@ -10598,6 +10605,27 @@ export default function UserForm() {
                     required
                 />
                 {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>}
+            </div>
+
+            <div className="grid gap-1">
+                <label className="text-xs">Username{!editing ? ' *' : ''}</label>
+                <input
+                    type="text"
+                    className="border rounded px-3 py-2"
+                    value={v.username}
+                    onChange={(e) =>
+                        setForm({
+                            ...form,
+                            // normalisasi ringan ke lowercase; backend juga memutarkan ke lowercase
+                            username: e.target.value.toLowerCase(),
+                        })
+                    }
+                    autoComplete="username"
+                    pattern="^[a-z0-9_.]{3,50}$"
+                    title="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
+                    required={!editing}
+                />
+                {fieldErrors.username && <p className="text-xs text-red-600">{fieldErrors.username.join(', ')}</p>}
             </div>
 
             <div className="grid gap-1">
@@ -10736,7 +10764,7 @@ export default function UserForm() {
 
 ### src/pages/users/UsersList.tsx
 
-- SHA: `329047e98e9e`  
+- SHA: `6c3eff8cca4c`  
 - Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -10831,7 +10859,7 @@ export default function UsersList() {
     const handleDelete = useCallback(
         async (u: User) => {
             if (!canManage || !canDeleteRow(u)) return;
-            if (!confirm(`Hapus user ${u.email}?`)) return;
+            if (!confirm(`Hapus user ${u.username || u.email}?`)) return;
             try {
                 await deleteUser(String(u.id));
                 await refresh();
@@ -10857,7 +10885,7 @@ export default function UsersList() {
             <div className="flex gap-2">
                 <input
                     className="border rounded px-3 py-2 text-sm w-full"
-                    placeholder="Cari nama/email…"
+                    placeholder="Cari nama/username/email…"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                 />
@@ -10882,6 +10910,7 @@ export default function UsersList() {
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-3 py-2 text-left">Nama</th>
+                                <th className="px-3 py-2 text-left">Username</th>
                                 <th className="px-3 py-2 text-left">Email</th>
                                 <th className="px-3 py-2 text-left">Branch</th>
                                 <th className="px-3 py-2 text-left">Roles</th>
@@ -10898,6 +10927,7 @@ export default function UsersList() {
                                 return (
                                     <tr key={u.id} className="border-t">
                                         <td className="px-3 py-2">{u.name}</td>
+                                        <td className="px-3 py-2">{u.username}</td>
                                         <td className="px-3 py-2">{u.email}</td>
                                         <td className="px-3 py-2">{u.branch_id ?? '-'}</td>
                                         <td className="px-3 py-2">{(u.roles ?? []).join(', ')}</td>

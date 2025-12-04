@@ -22,7 +22,7 @@ export interface ApiEnvelope<T = unknown, M = unknown> {
     message: string | null;
     errors: Record<string, string[]> | null;
 }
-export interface LoginPayload { email: string; password: string; }
+export interface LoginPayload { login: string; password: string; }
 type LoginResp = ApiEnvelope<{ user: MeUser }, { token: string }>;
 type MeResp = ApiEnvelope<{ user: MeUser }, null>;
 type LogoutResp = ApiEnvelope<null, null>;

@@ -88,7 +88,7 @@ export default function UsersList() {
     const handleDelete = useCallback(
         async (u: User) => {
             if (!canManage || !canDeleteRow(u)) return;
-            if (!confirm(`Hapus user ${u.email}?`)) return;
+            if (!confirm(`Hapus user ${u.username || u.email}?`)) return;
             try {
                 await deleteUser(String(u.id));
                 await refresh();
@@ -114,7 +114,7 @@ export default function UsersList() {
             <div className="flex gap-2">
                 <input
                     className="border rounded px-3 py-2 text-sm w-full"
-                    placeholder="Cari nama/email…"
+                    placeholder="Cari nama/username/email…"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                 />
@@ -139,6 +139,7 @@ export default function UsersList() {
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-3 py-2 text-left">Nama</th>
+                                <th className="px-3 py-2 text-left">Username</th>
                                 <th className="px-3 py-2 text-left">Email</th>
                                 <th className="px-3 py-2 text-left">Branch</th>
                                 <th className="px-3 py-2 text-left">Roles</th>
@@ -155,6 +156,7 @@ export default function UsersList() {
                                 return (
                                     <tr key={u.id} className="border-t">
                                         <td className="px-3 py-2">{u.name}</td>
+                                        <td className="px-3 py-2">{u.username}</td>
                                         <td className="px-3 py-2">{u.email}</td>
                                         <td className="px-3 py-2">{u.branch_id ?? '-'}</td>
                                         <td className="px-3 py-2">{(u.roles ?? []).join(', ')}</td>
