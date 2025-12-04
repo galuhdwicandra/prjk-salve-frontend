@@ -257,6 +257,7 @@ export default function OrderReceipt(): React.ReactElement {
                   onClick={() => setPaper('A4')}
                   aria-pressed={paper === 'A4'}>A4</button>
               </div>
+              <div className="text-[10px] text-gray-500 mt-1">Saat ini: {paperLabel}</div>
             </div>
 
             <div className="flex items-center gap-2">
