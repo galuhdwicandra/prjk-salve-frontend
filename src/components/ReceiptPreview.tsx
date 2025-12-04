@@ -1,5 +1,5 @@
 // src/components/ReceiptPreview.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 type Props = {
   /** HTML struk lengkap dari backend (GET /orders/{id}/receipt) */
@@ -32,6 +32,7 @@ export default function ReceiptPreview({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<PreviewWidth>("auto");
+  const STYLE_ID = "__receipt_preview_print_style";
 
   // srcDoc bekerja di browser modern; fallback ke Blob URL kalau perlu
   const supportsSrcDoc = useMemo(() => {
@@ -50,9 +51,38 @@ export default function ReceiptPreview({
     };
   }, [blobUrl]);
 
+  useEffect(() => {
+    setLoaded(false);
+  }, [html]);
+
+  // Injeksi / update style ukuran kertas di dalam iframe
+  const applyPaperStyles = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    // Hapus style lama (jika ada)
+    const prev = doc.getElementById(STYLE_ID);
+    if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+    // Auto: biarkan CSS dari server/HTML apa adanya
+    if (previewWidth === "auto") return;
+    const mm = previewWidth === "58" ? 58 : 80;
+    const style = doc.createElement("style");
+    style.id = STYLE_ID;
+    style.type = "text/css";
+    // Minimal & non-intrusif: hanya set ukuran kertas & margin nol saat print
+    // Tidak mengubah layout screen/preview server.
+    style.textContent = `
+      @media print {
+        @page { size: ${mm}mm auto; margin: 0; }
+        html, body { width: ${mm}mm !important; }
+      }
+    `;
+    doc.head.appendChild(style);
+  }, [previewWidth]);
+
   const handleLoad = () => {
     setLoaded(true);
     onLoaded?.();
+    try { applyPaperStyles(); } catch { /* no-op */ }
 
     if (autoPrint) {
       // delay kecil supaya layout stabil sebelum print
@@ -66,6 +96,11 @@ export default function ReceiptPreview({
       }, 50);
     }
   };
+
+  useEffect(() => {
+    if (!loaded) return;
+    try { applyPaperStyles(); } catch { /* no-op */ }
+  }, [loaded, applyPaperStyles]);
 
   const doPrint = () => {
     onPrint?.();
@@ -94,8 +129,8 @@ export default function ReceiptPreview({
     previewWidth === "58"
       ? "w-[240px]" // kira-kira 58mm untuk pratinjau layar
       : previewWidth === "80"
-      ? "w-[320px]" // kira-kira 80mm untuk pratinjau layar
-      : "w-full";
+        ? "w-[320px]" // kira-kira 80mm untuk pratinjau layar
+        : "w-full";
 
   return (
     <div

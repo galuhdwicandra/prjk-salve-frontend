@@ -63,6 +63,27 @@ export default function POSPage() {
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
+  // Tanggal masuk & selesai
+  // Simpan dalam ISO string (UTC) agar konsisten dengan backend (cast datetime)
+  const [receivedAt, setReceivedAt] = useState<string>(() => new Date().toISOString());
+  const [readyAt, setReadyAt] = useState<string | null>(null);
+
+  // Helper konversi untuk input[type=datetime-local]
+  function toLocalInputValue(iso?: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+  function fromLocalInputValue(v: string): string | null {
+    if (!v) return null;
+    return new Date(v).toISOString();
+  }
+
   // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
@@ -73,6 +94,12 @@ export default function POSPage() {
   }, [mode, dpAmount, total]);
   const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
+  const dateErr = useMemo(() => {
+    if (!readyAt) return null;
+    return new Date(readyAt).getTime() >= new Date(receivedAt).getTime()
+      ? null
+      : 'Tanggal selesai harus ≥ tanggal masuk.';
+  }, [receivedAt, readyAt]);
 
   // logs
   useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
@@ -106,6 +133,7 @@ export default function POSPage() {
     if (items.length === 0) return setError('Keranjang kosong');
     if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) return setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
     if (!customerId) return setError('Pelanggan wajib dipilih.');
+    if (dateErr) return setError(dateErr);
     if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) return setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
     if (mode === 'FULL' && payableNow <= 0) return setError('Nominal pembayaran harus > 0 untuk mode FULL.');
 
@@ -118,6 +146,8 @@ export default function POSPage() {
         items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
         discount: discount || 0,
         notes: notes || null,
+        received_at: receivedAt || null,
+        ready_at: readyAt || null,
       };
       dlog('createOrder payload', payload);
       const res = await createOrder(payload);
@@ -138,8 +168,8 @@ export default function POSPage() {
             (ax.response?.status === 422
               ? 'Voucher tidak valid / syarat tidak terpenuhi'
               : ax.response?.status === 404
-              ? 'Kode voucher tidak ditemukan'
-              : 'Gagal menerapkan voucher');
+                ? 'Kode voucher tidak ditemukan'
+                : 'Gagal menerapkan voucher');
           setVoucherMsg(msg);
         }
       }
@@ -239,6 +269,29 @@ export default function POSPage() {
             />
           </div>
 
+          {/* Tanggal Masuk & Selesai */}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1">
+              <label className="text-xs">Tanggal Masuk</label>
+              <input
+                type="datetime-local"
+                className="input px-3 py-2"
+                value={toLocalInputValue(receivedAt)}
+                onChange={(e) => setReceivedAt(fromLocalInputValue(e.target.value) || new Date().toISOString())}
+              />
+            </div>
+            <div className="grid gap-1">
+              <label className="text-xs">Tanggal Selesai (opsional)</label>
+              <input
+                type="datetime-local"
+                className="input px-3 py-2"
+                value={toLocalInputValue(readyAt)}
+                onChange={(e) => setReadyAt(fromLocalInputValue(e.target.value))}
+              />
+              {dateErr && <div className="text-[11px] text-red-600 mt-1">{dateErr}</div>}
+            </div>
+          </div>
+
           <div className="grid gap-1">
             <label className="text-xs">Kode Voucher</label>
             <div className="flex gap-2">
@@ -316,11 +369,10 @@ export default function POSPage() {
                   <button
                     key={m}
                     onClick={() => setMode(m)}
-                    className={`px-3 py-1.5 text-sm transition-colors ${
-                      active
-                        ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
-                        : 'bg-white text-[color:var(--color-text-default)] hover:bg-black/5'
-                    }`}
+                    className={`px-3 py-1.5 text-sm transition-colors ${active
+                      ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                      : 'bg-white text-[color:var(--color-text-default)] hover:bg-black/5'
+                      }`}
                     aria-pressed={active}
                   >
                     {m}
@@ -339,11 +391,10 @@ export default function POSPage() {
                       <button
                         key={pm}
                         onClick={() => setMethod(pm)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          active
-                            ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
-                            : 'bg-white hover:bg-black/5'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${active
+                          ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                          : 'bg-white hover:bg-black/5'
+                          }`}
                         aria-pressed={active}
                       >
                         {pm}
@@ -418,8 +469,8 @@ function UploadBox({
   title: string;
   isMobile: boolean;
   inputRef:
-    | React.RefObject<HTMLInputElement>
-    | React.MutableRefObject<HTMLInputElement | null>;
+  | React.RefObject<HTMLInputElement>
+  | React.MutableRefObject<HTMLInputElement | null>;
   files: File[];
   onFiles: (f: File[]) => void;
 }) {

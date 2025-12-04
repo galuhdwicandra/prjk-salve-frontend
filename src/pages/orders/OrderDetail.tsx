@@ -27,6 +27,24 @@ type ApiErrorResponse = {
   errors?: Record<string, string[] | string>;
 };
 
+// Helpers konversi datetime-local <-> ISO string
+function toLocalInputValue(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+function fromLocalInputValue(v: string): string | null {
+  if (!v) return null;
+  // interpretasi local time → ISO
+  const d = new Date(v);
+  return d.toISOString();
+}
+
 export default function OrderDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -48,8 +66,10 @@ export default function OrderDetail(): React.ReactElement {
   type Draft = {
     customer_id: string | null;
     notes: string | null;
-    discount?: number; // aktifkan bila backend menerima 'discount'
+    discount?: number;
     items: DraftItem[];
+    received_at?: string | null;
+    ready_at?: string | null;
   };
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
 
@@ -93,8 +113,8 @@ export default function OrderDetail(): React.ReactElement {
     setDraft({
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
-      // Catatan: backend akan HAPUS & TULIS ULANG items saat update,
-      // jadi kita harus mengirim ULANG SELURUH items saat simpan【13:Backend_Docs.md†L41-L47】.
+      received_at: row.received_at ?? null,
+      ready_at: row.ready_at ?? null,
       items: (row.items ?? []).map(it => ({
         id: it.id,
         service_id: it.service_id,
@@ -244,6 +264,8 @@ export default function OrderDetail(): React.ReactElement {
                             qty: it.qty,
                             note: (it.note ?? '') || null,
                           })),
+                          received_at: draft.received_at ?? null,
+                          ready_at: draft.ready_at ?? null,
                           // discount: draft.discount ?? 0, // aktifkan bila rule backend sdh mendukung
                         };
                         await updateOrder(id, payload);
@@ -350,43 +372,78 @@ export default function OrderDetail(): React.ReactElement {
                   />
                   {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
                 </div>
+                <div>
+                  <div className="text-xs font-medium mb-1">Tanggal Masuk</div>
+                  <input
+                    type="datetime-local"
+                    className="input w-full px-2 py-2 text-sm"
+                    value={toLocalInputValue(draft.received_at ?? null)}
+                    onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+                  />
+                  {fieldErr['received_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['received_at']}</div>}
+                </div>
+                <div>
+                  <div className="text-xs font-medium mb-1">Tanggal Selesai</div>
+                  <input
+                    type="datetime-local"
+                    className="input w-full px-2 py-2 text-sm"
+                    value={toLocalInputValue(draft.ready_at ?? null)}
+                    onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+                  />
+                  {fieldErr['ready_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['ready_at']}</div>}
+                </div>
               </div>
             </div>
           )}
 
           {/* Items table */}
           {!isEditing && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-              <div className="overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                    <tr className="divide-x divide-[color:var(--color-border)]">
-                      <Th>Layanan</Th>
-                      <Th>Qty</Th>
-                      <Th>Harga</Th>
-                      <Th>Total</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--color-border)]">
-                    {(row.items ?? []).map((it) => (
-                      <tr key={it.id} className="hover:bg-black/5 transition-colors">
-                        <Td>{it.service?.name ?? it.service_id}</Td>
-                        <Td>{it.qty}</Td>
-                        <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                        <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+            <>
+              {/* Ringkasan tanggal masuk/selesai (read-only) */}
+              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 text-sm">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <span className="text-gray-600">Tgl Masuk</span>{' '}
+                    <b>{row.received_at ? new Date(row.received_at).toLocaleString('id-ID') : '—'}</b>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Tgl Selesai</span>{' '}
+                    <b>{row.ready_at ? new Date(row.ready_at).toLocaleString('id-ID') : '—'}</b>
+                  </div>
+                </div>
+              </div>
+              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+                <div className="overflow-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                      <tr className="divide-x divide-[color:var(--color-border)]">
+                        <Th>Layanan</Th>
+                        <Th>Qty</Th>
+                        <Th>Harga</Th>
+                        <Th>Total</Th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-[color:var(--color-border)]">
+                      {(row.items ?? []).map((it) => (
+                        <tr key={it.id} className="hover:bg-black/5 transition-colors">
+                          <Td>{it.service?.name ?? it.service_id}</Td>
+                          <Td>{it.qty}</Td>
+                          <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                          <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Totals read-only */}
+                <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
+                  <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                  <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                  <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                  <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                </div>
               </div>
-              {/* Totals read-only */}
-              <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-                <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-              </div>
-            </div>
+            </>
           )}
 
           {isEditing && (

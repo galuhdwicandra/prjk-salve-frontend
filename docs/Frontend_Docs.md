@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-04 18:32:36_  
+_Dihasilkan otomatis: 2025-12-04 23:41:48_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -97,6 +97,7 @@ _Dihasilkan otomatis: 2025-12-04 18:32:36_
   - [src/utils/files.ts](#file-srcutilsfilests)
   - [src/utils/money.ts](#file-srcutilsmoneyts)
   - [src/utils/order-status.ts](#file-srcutilsorder-statusts)
+  - [src/utils/receipt-wa.ts](#file-srcutilsreceipt-wats)
   - [src/utils/theme.ts](#file-srcutilsthemets)
   - [src/utils/wa.ts](#file-srcutilswats)
 
@@ -2157,7 +2158,7 @@ export interface SingleResponse<T> {
 
 ### src/types/orders.ts
 
-- SHA: `a05d90a1fce4`  
+- SHA: `723bf44f6706`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2222,11 +2223,13 @@ export interface Order {
     due_amount: number;
     notes: string | null;
     payment_status: 'PENDING' | 'DP' | 'PAID' | 'UNPAID' | 'SETTLED';
-    dp_amount: number;     // str
+    dp_amount: number;
     paid_amount: number;
     paid_at: string | null;
+    received_at: string | null;
+    ready_at: string | null;
     invoice_no: string | null;
-    total: number;        // str (grand_total)
+    total: number;
     created_at: string | null;
     updated_at: string | null;
     customer?: Customer | null;
@@ -2249,6 +2252,8 @@ export interface OrderCreatePayload {
     items: OrderItemInput[];
     discount?: number;
     notes?: string | null;
+    received_at?: string | null;
+    ready_at?: string | null;
 }
 
 export interface OrderUpdatePayload {
@@ -2256,6 +2261,8 @@ export interface OrderUpdatePayload {
     items?: OrderItemInput[];
     discount?: number;
     notes?: string | null;
+    received_at?: string | null;
+    ready_at?: string | null;
 }
 
 export interface OrderQuery {
@@ -4287,13 +4294,13 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 
 ### src/components/ReceiptPreview.tsx
 
-- SHA: `5e4cdccae89d`  
-- Ukuran: 6 KB
+- SHA: `18bf2c4f8876`  
+- Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/ReceiptPreview.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 type Props = {
   /** HTML struk lengkap dari backend (GET /orders/{id}/receipt) */
@@ -4326,6 +4333,7 @@ export default function ReceiptPreview({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<PreviewWidth>("auto");
+  const STYLE_ID = "__receipt_preview_print_style";
 
   // srcDoc bekerja di browser modern; fallback ke Blob URL kalau perlu
   const supportsSrcDoc = useMemo(() => {
@@ -4344,9 +4352,38 @@ export default function ReceiptPreview({
     };
   }, [blobUrl]);
 
+  useEffect(() => {
+    setLoaded(false);
+  }, [html]);
+
+  // Injeksi / update style ukuran kertas di dalam iframe
+  const applyPaperStyles = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    // Hapus style lama (jika ada)
+    const prev = doc.getElementById(STYLE_ID);
+    if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+    // Auto: biarkan CSS dari server/HTML apa adanya
+    if (previewWidth === "auto") return;
+    const mm = previewWidth === "58" ? 58 : 80;
+    const style = doc.createElement("style");
+    style.id = STYLE_ID;
+    style.type = "text/css";
+    // Minimal & non-intrusif: hanya set ukuran kertas & margin nol saat print
+    // Tidak mengubah layout screen/preview server.
+    style.textContent = `
+      @media print {
+        @page { size: ${mm}mm auto; margin: 0; }
+        html, body { width: ${mm}mm !important; }
+      }
+    `;
+    doc.head.appendChild(style);
+  }, [previewWidth]);
+
   const handleLoad = () => {
     setLoaded(true);
     onLoaded?.();
+    try { applyPaperStyles(); } catch { /* no-op */ }
 
     if (autoPrint) {
       // delay kecil supaya layout stabil sebelum print
@@ -4360,6 +4397,11 @@ export default function ReceiptPreview({
       }, 50);
     }
   };
+
+  useEffect(() => {
+    if (!loaded) return;
+    try { applyPaperStyles(); } catch { /* no-op */ }
+  }, [loaded, applyPaperStyles]);
 
   const doPrint = () => {
     onPrint?.();
@@ -4388,8 +4430,8 @@ export default function ReceiptPreview({
     previewWidth === "58"
       ? "w-[240px]" // kira-kira 58mm untuk pratinjau layar
       : previewWidth === "80"
-      ? "w-[320px]" // kira-kira 80mm untuk pratinjau layar
-      : "w-full";
+        ? "w-[320px]" // kira-kira 80mm untuk pratinjau layar
+        : "w-full";
 
   return (
     <div
@@ -7196,8 +7238,8 @@ export default function LoginPage() {
 
 ### src/pages/orders/OrderDetail.tsx
 
-- SHA: `3b694aad56bb`  
-- Ukuran: 23 KB
+- SHA: `a8af02930ec0`  
+- Ukuran: 26 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7209,10 +7251,10 @@ import {
   getOrderReceiptHtml,
   openOrderReceipt,
 } from '../../api/orders';
-import { updateOrder } from '../../api/orders'; // PUT /orders/{id}:contentReference[oaicite:1]{index=1}
-import type { OrderUpdatePayload } from '../../types/orders'; // tipe payload edit【1:Frontend_Docs.md†L91-L96】
-
-import CustomerPicker from '../../components/customers/CustomerPicker'; // path sesuai struktur Anda
+import { updateOrder } from '../../api/orders';
+import { createOrderShareLink } from '../../api/orders';
+import type { OrderUpdatePayload } from '../../types/orders';
+import CustomerPicker from '../../components/customers/CustomerPicker';
 import ProductSearch from '../../components/pos/ProductSearch';
 import ReceiptPreview from '../../components/ReceiptPreview';
 import type { Order, OrderBackendStatus } from '../../types/orders';
@@ -7222,11 +7264,31 @@ import OrderPhotosUpload from '../../components/orders/OrderPhotosUpload';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
 import { isAxiosError } from 'axios';
+import { buildWhatsAppLink } from '../../utils/wa';
+import { buildReceiptMessage } from '../../utils/receipt-wa';
 
 type ApiErrorResponse = {
   message?: string;
   errors?: Record<string, string[] | string>;
 };
+
+// Helpers konversi datetime-local <-> ISO string
+function toLocalInputValue(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+function fromLocalInputValue(v: string): string | null {
+  if (!v) return null;
+  // interpretasi local time → ISO
+  const d = new Date(v);
+  return d.toISOString();
+}
 
 export default function OrderDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
@@ -7249,8 +7311,10 @@ export default function OrderDetail(): React.ReactElement {
   type Draft = {
     customer_id: string | null;
     notes: string | null;
-    discount?: number; // aktifkan bila backend menerima 'discount'
+    discount?: number;
     items: DraftItem[];
+    received_at?: string | null;
+    ready_at?: string | null;
   };
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
 
@@ -7294,8 +7358,8 @@ export default function OrderDetail(): React.ReactElement {
     setDraft({
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
-      // Catatan: backend akan HAPUS & TULIS ULANG items saat update,
-      // jadi kita harus mengirim ULANG SELURUH items saat simpan【13:Backend_Docs.md†L41-L47】.
+      received_at: row.received_at ?? null,
+      ready_at: row.ready_at ?? null,
       items: (row.items ?? []).map(it => ({
         id: it.id,
         service_id: it.service_id,
@@ -7359,6 +7423,32 @@ export default function OrderDetail(): React.ReactElement {
     }
   }, [id, refresh]);
 
+  const onSendWA = useCallback(async () => {
+    if (!row) return;
+    const wa =
+      (row as any)?.customer?.whatsapp ||
+      (row as any)?.customer?.phone ||
+      '';
+    if (!wa) {
+      alert('Nomor WhatsApp pelanggan belum tersedia.');
+      return;
+    }
+    try {
+      const link = await createOrderShareLink(row.id);
+      const shareUrl =
+        typeof link === 'string' ? link : (link as any)?.share_url || (link as any)?.url || '';
+      if (!shareUrl) {
+        alert('Gagal menghasilkan tautan kwitansi.');
+        return;
+      }
+      const msg = buildReceiptMessage(row as unknown as Order, shareUrl);
+      const url = buildWhatsAppLink(wa, msg);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      alert('Gagal menyiapkan pesan WhatsApp.');
+    }
+  }, [row]);
+
   return (
     <div className="space-y-4">
       {loading && <div className="text-sm text-gray-600">Memuat…</div>}
@@ -7419,6 +7509,8 @@ export default function OrderDetail(): React.ReactElement {
                             qty: it.qty,
                             note: (it.note ?? '') || null,
                           })),
+                          received_at: draft.received_at ?? null,
+                          ready_at: draft.ready_at ?? null,
                           // discount: draft.discount ?? 0, // aktifkan bila rule backend sdh mendukung
                         };
                         await updateOrder(id, payload);
@@ -7477,6 +7569,16 @@ export default function OrderDetail(): React.ReactElement {
                 {receiptOpen ? 'Tutup Preview' : 'Preview Receipt'}
               </button>
 
+              {/* Kirim WhatsApp */}
+              <button
+                type="button"
+                className="btn-outline px-3 py-1.5 text-xs"
+                onClick={onSendWA}
+                title="Kirim kwitansi via WhatsApp"
+              >
+                Kirim WA
+              </button>
+
               {/* Shortcut pelunasan bila masih ada sisa */}
               {(row.due_amount ?? 0) > 0 && (
                 <button
@@ -7515,43 +7617,78 @@ export default function OrderDetail(): React.ReactElement {
                   />
                   {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
                 </div>
+                <div>
+                  <div className="text-xs font-medium mb-1">Tanggal Masuk</div>
+                  <input
+                    type="datetime-local"
+                    className="input w-full px-2 py-2 text-sm"
+                    value={toLocalInputValue(draft.received_at ?? null)}
+                    onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+                  />
+                  {fieldErr['received_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['received_at']}</div>}
+                </div>
+                <div>
+                  <div className="text-xs font-medium mb-1">Tanggal Selesai</div>
+                  <input
+                    type="datetime-local"
+                    className="input w-full px-2 py-2 text-sm"
+                    value={toLocalInputValue(draft.ready_at ?? null)}
+                    onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+                  />
+                  {fieldErr['ready_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['ready_at']}</div>}
+                </div>
               </div>
             </div>
           )}
 
           {/* Items table */}
           {!isEditing && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-              <div className="overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                    <tr className="divide-x divide-[color:var(--color-border)]">
-                      <Th>Layanan</Th>
-                      <Th>Qty</Th>
-                      <Th>Harga</Th>
-                      <Th>Total</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--color-border)]">
-                    {(row.items ?? []).map((it) => (
-                      <tr key={it.id} className="hover:bg-black/5 transition-colors">
-                        <Td>{it.service?.name ?? it.service_id}</Td>
-                        <Td>{it.qty}</Td>
-                        <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                        <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+            <>
+              {/* Ringkasan tanggal masuk/selesai (read-only) */}
+              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 text-sm">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <span className="text-gray-600">Tgl Masuk</span>{' '}
+                    <b>{row.received_at ? new Date(row.received_at).toLocaleString('id-ID') : '—'}</b>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Tgl Selesai</span>{' '}
+                    <b>{row.ready_at ? new Date(row.ready_at).toLocaleString('id-ID') : '—'}</b>
+                  </div>
+                </div>
+              </div>
+              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+                <div className="overflow-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+                      <tr className="divide-x divide-[color:var(--color-border)]">
+                        <Th>Layanan</Th>
+                        <Th>Qty</Th>
+                        <Th>Harga</Th>
+                        <Th>Total</Th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-[color:var(--color-border)]">
+                      {(row.items ?? []).map((it) => (
+                        <tr key={it.id} className="hover:bg-black/5 transition-colors">
+                          <Td>{it.service?.name ?? it.service_id}</Td>
+                          <Td>{it.qty}</Td>
+                          <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                          <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Totals read-only */}
+                <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
+                  <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                  <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                  <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                  <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
+                </div>
               </div>
-              {/* Totals read-only */}
-              <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-                <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-              </div>
-            </div>
+            </>
           )}
 
           {isEditing && (
@@ -7758,7 +7895,7 @@ function Td({ children, className, ...rest }: TdProps) {
 
 ### src/pages/orders/OrderReceipt.tsx
 
-- SHA: `23ef4d934de3`  
+- SHA: `d63d244dc3b8`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7888,16 +8025,18 @@ export default function OrderReceipt(): React.ReactElement {
         `No: ${nomor}`,
         `Total: ${total}`,
         'Mohon melakukan pembayaran.',
-        '— Salve Laundry',
+        'Salve Laundry',
       ].join('\n');
     }
 
     return [
+      `Halo ${name},`,
       'Terima kasih atas pembayarannya.',
       `Kwitansi: ${kwitansi}`,
       `No: ${nomor}`,
       `Total: ${total}`,
-      '— Salve Laundry',
+      'Terima Kasih Sudah Menggunakan Layanan.',
+      'Salve Laundry',
     ].join('\n');
   };
 
@@ -8020,6 +8159,7 @@ export default function OrderReceipt(): React.ReactElement {
                   onClick={() => setPaper('A4')}
                   aria-pressed={paper === 'A4'}>A4</button>
               </div>
+              <div className="text-[10px] text-gray-500 mt-1">Saat ini: {paperLabel}</div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -8401,8 +8541,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `a3076e7526f0`  
-- Ukuran: 20 KB
+- SHA: `6bb115ef1d13`  
+- Ukuran: 22 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -8471,6 +8611,27 @@ export default function POSPage() {
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
+  // Tanggal masuk & selesai
+  // Simpan dalam ISO string (UTC) agar konsisten dengan backend (cast datetime)
+  const [receivedAt, setReceivedAt] = useState<string>(() => new Date().toISOString());
+  const [readyAt, setReadyAt] = useState<string | null>(null);
+
+  // Helper konversi untuk input[type=datetime-local]
+  function toLocalInputValue(iso?: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+  function fromLocalInputValue(v: string): string | null {
+    if (!v) return null;
+    return new Date(v).toISOString();
+  }
+
   // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
@@ -8481,6 +8642,12 @@ export default function POSPage() {
   }, [mode, dpAmount, total]);
   const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
+  const dateErr = useMemo(() => {
+    if (!readyAt) return null;
+    return new Date(readyAt).getTime() >= new Date(receivedAt).getTime()
+      ? null
+      : 'Tanggal selesai harus ≥ tanggal masuk.';
+  }, [receivedAt, readyAt]);
 
   // logs
   useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
@@ -8514,6 +8681,7 @@ export default function POSPage() {
     if (items.length === 0) return setError('Keranjang kosong');
     if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) return setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
     if (!customerId) return setError('Pelanggan wajib dipilih.');
+    if (dateErr) return setError(dateErr);
     if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) return setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
     if (mode === 'FULL' && payableNow <= 0) return setError('Nominal pembayaran harus > 0 untuk mode FULL.');
 
@@ -8526,6 +8694,8 @@ export default function POSPage() {
         items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
         discount: discount || 0,
         notes: notes || null,
+        received_at: receivedAt || null,
+        ready_at: readyAt || null,
       };
       dlog('createOrder payload', payload);
       const res = await createOrder(payload);
@@ -8546,8 +8716,8 @@ export default function POSPage() {
             (ax.response?.status === 422
               ? 'Voucher tidak valid / syarat tidak terpenuhi'
               : ax.response?.status === 404
-              ? 'Kode voucher tidak ditemukan'
-              : 'Gagal menerapkan voucher');
+                ? 'Kode voucher tidak ditemukan'
+                : 'Gagal menerapkan voucher');
           setVoucherMsg(msg);
         }
       }
@@ -8647,6 +8817,29 @@ export default function POSPage() {
             />
           </div>
 
+          {/* Tanggal Masuk & Selesai */}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1">
+              <label className="text-xs">Tanggal Masuk</label>
+              <input
+                type="datetime-local"
+                className="input px-3 py-2"
+                value={toLocalInputValue(receivedAt)}
+                onChange={(e) => setReceivedAt(fromLocalInputValue(e.target.value) || new Date().toISOString())}
+              />
+            </div>
+            <div className="grid gap-1">
+              <label className="text-xs">Tanggal Selesai (opsional)</label>
+              <input
+                type="datetime-local"
+                className="input px-3 py-2"
+                value={toLocalInputValue(readyAt)}
+                onChange={(e) => setReadyAt(fromLocalInputValue(e.target.value))}
+              />
+              {dateErr && <div className="text-[11px] text-red-600 mt-1">{dateErr}</div>}
+            </div>
+          </div>
+
           <div className="grid gap-1">
             <label className="text-xs">Kode Voucher</label>
             <div className="flex gap-2">
@@ -8724,11 +8917,10 @@ export default function POSPage() {
                   <button
                     key={m}
                     onClick={() => setMode(m)}
-                    className={`px-3 py-1.5 text-sm transition-colors ${
-                      active
-                        ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
-                        : 'bg-white text-[color:var(--color-text-default)] hover:bg-black/5'
-                    }`}
+                    className={`px-3 py-1.5 text-sm transition-colors ${active
+                      ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                      : 'bg-white text-[color:var(--color-text-default)] hover:bg-black/5'
+                      }`}
                     aria-pressed={active}
                   >
                     {m}
@@ -8747,11 +8939,10 @@ export default function POSPage() {
                       <button
                         key={pm}
                         onClick={() => setMethod(pm)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          active
-                            ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
-                            : 'bg-white hover:bg-black/5'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${active
+                          ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)]'
+                          : 'bg-white hover:bg-black/5'
+                          }`}
                         aria-pressed={active}
                       >
                         {pm}
@@ -8826,8 +9017,8 @@ function UploadBox({
   title: string;
   isMobile: boolean;
   inputRef:
-    | React.RefObject<HTMLInputElement>
-    | React.MutableRefObject<HTMLInputElement | null>;
+  | React.RefObject<HTMLInputElement>
+  | React.MutableRefObject<HTMLInputElement | null>;
   files: File[];
   onFiles: (f: File[]) => void;
 }) {
@@ -11150,6 +11341,62 @@ export const ALLOWED_NEXT: Record<OrderBackendStatus, OrderBackendStatus[]> = {
 
 export function getAllowedNext(current: OrderBackendStatus): OrderBackendStatus[] {
   return ALLOWED_NEXT[current] ?? [];
+}
+
+```
+</details>
+
+### src/utils/receipt-wa.ts
+
+- SHA: `2a1968aa5ccb`  
+- Ukuran: 1 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/utils/receipt-wa.ts
+import type { Order } from '../types/orders';
+
+export function formatIDR(n: number): string {
+    try {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+        }).format(n ?? 0);
+    } catch {
+        return `Rp ${Math.round(n ?? 0).toLocaleString('id-ID')}`;
+    }
+}
+
+export function buildReceiptMessage(order: Order, shareUrl: string): string {
+    const name = order?.customer?.name || 'Pelanggan';
+    const nomor = (order as any)?.invoice_no || (order as any)?.number || '';
+    const total = formatIDR(Number((order as any)?.grand_total ?? (order as any)?.total ?? 0));
+
+    const status = (order as any)?.payment_status;
+    const isLunas = status === 'PAID' || status === 'SETTLED';
+
+    const lines = isLunas
+        ? [
+            `Halo ${name},`,
+            'Terima kasih atas pembayarannya.',
+            `Kwitansi: ${shareUrl}`,
+            `No: ${nomor}`,
+            `Total: ${total}`,
+            'Terima Kasih Sudah Menggunakan Layanan.',
+            'Salve Laundry',
+        ]
+        : [
+            `Halo ${name},`,
+            'Berikut tagihan laundry Anda.',
+            `Kwitansi: ${shareUrl}`,
+            `No: ${nomor}`,
+            `Total: ${total}`,
+            'Mohon melakukan pembayaran.',
+            'Salve Laundry',
+        ];
+
+    return lines.join('\n');
 }
 
 ```

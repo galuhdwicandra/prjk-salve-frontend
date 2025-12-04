@@ -58,11 +58,13 @@ export interface Order {
     due_amount: number;
     notes: string | null;
     payment_status: 'PENDING' | 'DP' | 'PAID' | 'UNPAID' | 'SETTLED';
-    dp_amount: number;     // str
+    dp_amount: number;
     paid_amount: number;
     paid_at: string | null;
+    received_at: string | null;
+    ready_at: string | null;
     invoice_no: string | null;
-    total: number;        // str (grand_total)
+    total: number;
     created_at: string | null;
     updated_at: string | null;
     customer?: Customer | null;
@@ -85,6 +87,8 @@ export interface OrderCreatePayload {
     items: OrderItemInput[];
     discount?: number;
     notes?: string | null;
+    received_at?: string | null;
+    ready_at?: string | null;
 }
 
 export interface OrderUpdatePayload {
@@ -92,6 +96,8 @@ export interface OrderUpdatePayload {
     items?: OrderItemInput[];
     discount?: number;
     notes?: string | null;
+    received_at?: string | null;
+    ready_at?: string | null;
 }
 
 export interface OrderQuery {
