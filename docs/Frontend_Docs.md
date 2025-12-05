@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-05 18:07:23_  
+_Dihasilkan otomatis: 2025-12-05 19:07:59_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -9263,7 +9263,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `1c032902d458`  
+- SHA: `3fec7e40e879`  
 - Ukuran: 25 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -9350,23 +9350,26 @@ export default function POSPage() {
   }, [customerId, branchId, loyRefreshKey]);
 
   // Tanggal masuk & selesai
-  const [receivedAt, setReceivedAt] = useState<string>(() => new Date().toISOString());
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const nowLocal = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+  };
+  const [receivedAt, setReceivedAt] = useState<string>(() => nowLocal());
   const [readyAt, setReadyAt] = useState<string | null>(null);
 
   // Helper konversi untuk input[type=datetime-local]
-  function toLocalInputValue(iso?: string | null): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  function toLocalInputValue(v?: string | null): string {
+    if (!v) return '';
+    const s = String(v).trim();
+    // Terima "YYYY-MM-DD HH:mm[:ss]" atau "YYYY-MM-DDTHH:mm[:ss][Z]"
+    if (s.includes('T')) return s.replace('Z', '').slice(0, 16); // "YYYY-MM-DDTHH:mm"
+    return s.replace(' ', 'T').slice(0, 16);
   }
   function fromLocalInputValue(v: string): string | null {
     if (!v) return null;
-    return new Date(v).toISOString();
+    // Kembalikan sebagai "YYYY-MM-DD HH:mm:ss" (lokal-naif)
+    return v.trim().replace('T', ' ') + ':00';
   }
 
   // totals
@@ -9392,9 +9395,14 @@ export default function POSPage() {
     [subtotal, discount, loyaltyPreview.discount]
   );
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
+  const parseForCompare = (s?: string | null) => {
+    if (!s) return NaN;
+    const t = s.includes('T') ? s : s.replace(' ', 'T'); // jadikan ISO-like untuk parsing JS
+    return Date.parse(t);
+  };
   const dateErr = useMemo(() => {
     if (!readyAt) return null;
-    return new Date(readyAt).getTime() >= new Date(receivedAt).getTime()
+    return parseForCompare(readyAt) >= parseForCompare(receivedAt)
       ? null
       : 'Tanggal selesai harus ≥ tanggal masuk.';
   }, [receivedAt, readyAt]);
@@ -9477,8 +9485,8 @@ export default function POSPage() {
       if (canPay && mode !== 'PENDING') {
         const payPayload: PaymentCreatePayload =
           mode === 'DP'
-            ? { method: 'DP', amount: adjustedPayNow, paid_at: new Date().toISOString() }
-            : { method, amount: adjustedPayNow, paid_at: new Date().toISOString() };
+            ? { method: 'DP', amount: adjustedPayNow, paid_at: nowLocal() }
+            : { method, amount: adjustedPayNow, paid_at: nowLocal() };
 
         dlog('createOrderPayment payload', payPayload);
         const payRes = await createOrderPayment(order.id, payPayload);
@@ -9576,7 +9584,7 @@ export default function POSPage() {
                 type="datetime-local"
                 className="input px-3 py-2"
                 value={toLocalInputValue(receivedAt)}
-                onChange={(e) => setReceivedAt(fromLocalInputValue(e.target.value) || new Date().toISOString())}
+                onChange={(e) => setReceivedAt(fromLocalInputValue(e.target.value) || nowLocal())}
               />
             </div>
             <div className="grid gap-1">
