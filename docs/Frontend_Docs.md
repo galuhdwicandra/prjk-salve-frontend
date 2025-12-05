@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-05 20:11:42_  
+_Dihasilkan otomatis: 2025-12-05 22:31:04_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -18,6 +18,7 @@ _Dihasilkan otomatis: 2025-12-05 20:11:42_
   - [src/api/orderPhotos.ts](#file-srcapiorderphotosts)
   - [src/api/orders.ts](#file-srcapiordersts)
   - [src/api/receivables.ts](#file-srcapireceivablests)
+  - [src/api/reports.ts](#file-srcapireportsts)
   - [src/api/serviceCategories.ts](#file-srcapiservicecategoriests)
   - [src/api/servicePrices.ts](#file-srcapiservicepricests)
   - [src/api/services.ts](#file-srcapiservicests)
@@ -86,6 +87,7 @@ _Dihasilkan otomatis: 2025-12-05 20:11:42_
   - [src/pages/orders/OrdersIndex.tsx](#file-srcpagesordersordersindextsx)
   - [src/pages/pos/POSPage.tsx](#file-srcpagespospospagetsx)
   - [src/pages/receivables/ReceivablesIndex.tsx](#file-srcpagesreceivablesreceivablesindextsx)
+  - [src/pages/reports/ReportsIndex.tsx](#file-srcpagesreportsreportsindextsx)
   - [src/pages/services/CategoryIndex.tsx](#file-srcpagesservicescategoryindextsx)
   - [src/pages/services/PricePerBranchInput.tsx](#file-srcpagesservicespriceperbranchinputtsx)
   - [src/pages/services/ServiceForm.tsx](#file-srcpagesservicesserviceformtsx)
@@ -876,6 +878,55 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 ```
 </details>
 
+### src/api/reports.ts
+
+- SHA: `82b7ef90fc44`  
+- Ukuran: 1 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/api/reports.ts
+import { api } from './client';
+import type { ApiEnvelope } from './client';
+
+export type ReportKind = 'sales' | 'payments' | 'orders' | 'receivables' | 'expenses';
+
+export interface ReportQuery {
+    from: string; // 'YYYY-MM-DD'
+    to: string;   // 'YYYY-MM-DD'
+    branch_id?: string | null;
+    method?: string | null; // sales
+    status?: string | null; // orders/receivables
+    per_page?: number;
+}
+
+export interface PaginatedMeta {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+    kind: ReportKind;
+    columns: string[];
+}
+
+type PreviewResp = ApiEnvelope<any[], PaginatedMeta>;
+
+export async function getReportPreview(kind: ReportKind, params: ReportQuery): Promise<PreviewResp> {
+    const { data } = await api.get<PreviewResp>(`/reports/${kind}`, { params });
+    return data;
+}
+
+export async function exportReport(kind: ReportKind, params: ReportQuery & { format?: 'csv' | 'xlsx', delimiter?: 'comma' | 'semicolon' | 'tab' }) {
+    const { data } = await api.get(`/reports/${kind}/export`, {
+        params,
+        responseType: 'blob',
+    });
+    return data as Blob;
+}
+
+```
+</details>
+
 ### src/api/serviceCategories.ts
 
 - SHA: `103d2837c411`  
@@ -1253,7 +1304,7 @@ export default function GuestLayout() {
 
 ### src/layouts/ProtectedLayout.tsx
 
-- SHA: `256d0ca0278e`  
+- SHA: `5bcd28db4d1e`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1295,6 +1346,7 @@ export default function ProtectedLayout() {
     { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
     { label: 'Vouchers', to: '/vouchers', roles: ['Superadmin', 'Admin Cabang'], show: FF.vouchers },
+    { label: 'Reports', to: '/reports', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
   ];
 
   const VISIBLE = MENU.filter(
@@ -1508,7 +1560,7 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src/router/index.tsx
 
-- SHA: `be7db023a69b`  
+- SHA: `e85e7b79bc34`  
 - Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1544,6 +1596,7 @@ const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesInde
 const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
+const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 
 export const router = createBrowserRouter([
   {
@@ -1559,6 +1612,16 @@ export const router = createBrowserRouter([
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
             <LazyBoundary>
               <DashboardHome />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/reports',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <ReportsIndex />
             </LazyBoundary>
           </Guarded>
         ),
@@ -1795,37 +1858,37 @@ export const router = createBrowserRouter([
       },
       ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
         ? [
-            {
-              path: '/vouchers',
-              element: (
-                <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                  <LazyBoundary>
-                    <VouchersIndex />
-                  </LazyBoundary>
-                </Guarded>
-              ),
-            },
-            {
-              path: '/vouchers/new',
-              element: (
-                <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                  <LazyBoundary>
-                    <VoucherForm />
-                  </LazyBoundary>
-                </Guarded>
-              ),
-            },
-            {
-              path: '/vouchers/:id/edit',
-              element: (
-                <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                  <LazyBoundary>
-                    <VoucherForm />
-                  </LazyBoundary>
-                </Guarded>
-              ),
-            },
-          ]
+          {
+            path: '/vouchers',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <VouchersIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/vouchers/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <VoucherForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/vouchers/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <VoucherForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+        ]
         : []),
     ],
   },
@@ -10218,6 +10281,171 @@ function renderStatusChip(s?: ReceivableStatus) {
     default:
       return <span className="text-gray-600">-</span>;
   }
+}
+
+```
+</details>
+
+### src/pages/reports/ReportsIndex.tsx
+
+- SHA: `2f42027127d5`  
+- Ukuran: 7 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import { getReportPreview, exportReport, type ReportKind } from '../../api/reports';
+import { listBranches } from '../../api/branches';
+
+type Branch = { id: string; name: string };
+
+const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses'];
+
+export default function ReportsIndex() {
+    const [kind, setKind] = useState<ReportKind>('sales');
+    const [from, setFrom] = useState<string>(() => new Date().toISOString().slice(0, 10));
+    const [to, setTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
+    const [branchId, setBranchId] = useState<string | null>(null);
+    const [method, setMethod] = useState<string>('');
+    const [status, setStatus] = useState<string>('');
+
+    const [columns, setColumns] = useState<string[]>([]);
+    const [rows, setRows] = useState<any[]>([]);
+    const [pageInfo, setPageInfo] = useState({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        // ambil daftar cabang (khusus superadmin akan tampil; implementasi auth di komponen lain)
+        listBranches({ per_page: 100 }).then((res) => {
+            const list = Array.isArray(res.data) ? res.data : [];
+            setBranches(list.map((b: any) => ({ id: b.id, name: b.name })));
+        }).catch(() => { });
+    }, []);
+
+    const params = useMemo(() => ({
+        from, to,
+        branch_id: branchId || undefined,
+        method: kind === 'sales' && method ? method : undefined,
+        status: (kind === 'orders' || kind === 'receivables') && status ? status : undefined,
+        per_page: 20,
+    }), [from, to, branchId, method, status, kind]);
+
+    async function load() {
+        setLoading(true);
+        try {
+            const resp = await getReportPreview(kind, params);
+            setColumns(resp.meta.columns);
+            setRows(resp.data);
+            setPageInfo({
+                current_page: resp.meta.current_page,
+                last_page: resp.meta.last_page,
+                per_page: resp.meta.per_page,
+                total: resp.meta.total,
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => { load(); /* auto-load on mount & kind change */ }, [kind]);
+
+    async function onExport(format: 'csv' | 'xlsx' = 'csv') {
+        const blob = await exportReport(kind, { ...params, format, delimiter: 'semicolon' });
+        const fname = `${kind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.${format}`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    return (
+        <div className="p-4 space-y-4">
+            <h1 className="text-xl font-semibold">Reports</h1>
+
+            {/* Tabs */}
+            <div className="flex gap-2">
+                {KINDS.map(k => (
+                    <button
+                        key={k}
+                        onClick={() => setKind(k)}
+                        className={`px-3 py-1 rounded ${k === kind ? 'bg-black text-white' : 'bg-gray-200'}`}
+                    >
+                        {k.toUpperCase()}
+                    </button>
+                ))}
+            </div>
+
+            {/* Filter bar */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+                <div>
+                    <label className="block text-sm">Dari Tanggal</label>
+                    <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border p-2 rounded w-full" />
+                </div>
+                <div>
+                    <label className="block text-sm">Sampai Tanggal</label>
+                    <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border p-2 rounded w-full" />
+                </div>
+                <div>
+                    <label className="block text-sm">Cabang</label>
+                    <select value={branchId ?? ''} onChange={e => setBranchId(e.target.value || null)} className="border p-2 rounded w-full">
+                        <option value="">(Semua)</option>
+                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                </div>
+                {kind === 'sales' && (
+                    <div>
+                        <label className="block text-sm">Metode</label>
+                        <select value={method} onChange={e => setMethod(e.target.value)} className="border p-2 rounded w-full">
+                            <option value="">(Semua)</option>
+                            <option value="CASH">CASH</option>
+                            <option value="QRIS">QRIS</option>
+                            <option value="TRANSFER">TRANSFER</option>
+                            <option value="PENDING">PENDING</option>
+                        </select>
+                    </div>
+                )}
+                {(kind === 'orders' || kind === 'receivables') && (
+                    <div>
+                        <label className="block text-sm">Status</label>
+                        <input value={status} onChange={e => setStatus(e.target.value)} className="border p-2 rounded w-full" placeholder="cth: OPEN / PARTIAL / ..." />
+                    </div>
+                )}
+                <div className="flex gap-2">
+                    <button onClick={load} className="px-3 py-2 bg-blue-600 text-white rounded">Terapkan</button>
+                    <button onClick={() => onExport('csv')} className="px-3 py-2 bg-green-600 text-white rounded">Export CSV</button>
+                    {/* XLSX opsional nanti */}
+                </div>
+            </div>
+
+            {/* Preview table */}
+            <div className="overflow-auto border rounded">
+                <table className="min-w-full text-sm">
+                    <thead className="bg-gray-100">
+                        <tr>{columns.map(c => <th key={c} className="text-left p-2">{c}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td className="p-3" colSpan={columns.length}>Loading…</td></tr>
+                        ) : rows.length === 0 ? (
+                            <tr><td className="p-3" colSpan={columns.length}>Tidak ada data</td></tr>
+                        ) : rows.map((r, i) => (
+                            <tr key={i} className="border-t">
+                                {columns.map(col => {
+                                    const key = col.toLowerCase().replaceAll(' ', '_');
+                                    return <td key={col} className="p-2">{String(r[key] ?? '')}</td>;
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="text-xs text-gray-600">
+                Hal {pageInfo.current_page} dari {pageInfo.last_page} • Total {pageInfo.total}
+            </div>
+        </div>
+    );
 }
 
 ```
