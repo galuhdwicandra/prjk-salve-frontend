@@ -28,23 +28,23 @@ type ApiErrorResponse = {
 };
 
 // Helpers konversi datetime-local <-> ISO string
-function toLocalInputValue(iso?: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+function toLocalInputValue(v?: string | null): string {
+  if (!v) return '';
+  const s = String(v).trim();
+  // Terima "YYYY-MM-DD HH:mm[:ss]" atau "YYYY-MM-DDTHH:mm[:ss][Z]"
+  if (s.includes('T')) {
+    // Buang 'Z' bila ada, pangkas ke menit untuk <input type="datetime-local">
+    return s.replace('Z', '').slice(0, 16);
+  }
+  // Spasi → 'T', pangkas ke menit
+  return s.replace(' ', 'T').slice(0, 16);
 }
 function fromLocalInputValue(v: string): string | null {
   if (!v) return null;
-  // interpretasi local time → ISO
-  const d = new Date(v);
-  return d.toISOString();
+  // Kirim sebagai string lokal "naif": "YYYY-MM-DD HH:mm:ss"
+  const s = v.trim(); // format input selalu "YYYY-MM-DDTHH:mm"
+  return s.replace('T', ' ') + ':00';
 }
-
 export default function OrderDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -404,11 +404,11 @@ export default function OrderDetail(): React.ReactElement {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <span className="text-gray-600">Tgl Masuk</span>{' '}
-                    <b>{row.received_at ? new Date(row.received_at).toLocaleString('id-ID') : '—'}</b>
+                    <b>{row.received_at ? row.received_at.replace('T',' ').slice(0,16) : '—'}</b>
                   </div>
                   <div>
                     <span className="text-gray-600">Tgl Selesai</span>{' '}
-                    <b>{row.ready_at ? new Date(row.ready_at).toLocaleString('id-ID') : '—'}</b>
+                    <b>{row.ready_at ? row.ready_at.replace('T',' ').slice(0,16) : '—'}</b>
                   </div>
                 </div>
               </div>
