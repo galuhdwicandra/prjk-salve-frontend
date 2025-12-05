@@ -7,12 +7,12 @@ export interface TopServiceRow {
 }
 
 export interface OmzetDailyPoint {
-  date: string;      // YYYY-MM-DD
+  date: string;
   amount: number;
 }
 
 export interface OmzetMonthlyPoint {
-  month: string;     // YYYY-MM
+  month: string;
   amount: number;
 }
 
@@ -34,12 +34,15 @@ export interface DashboardSummary {
   receivables_open_count: number;
   receivables_open_amount: number;
 
+  dp_outstanding_count: number;
+  dp_outstanding_amount: number;
+
   omzet_daily: OmzetDailyPoint[];
   omzet_monthly: OmzetMonthlyPoint[];
 }
 
 export interface DashboardSummaryMeta {
-  from: string;               // YYYY-MM-DD
-  to: string;                 // YYYY-MM-DD
+  from: string;
+  to: string;
   branch_id?: string | null;  // UUID cabang atau null/undefined = semua
 }

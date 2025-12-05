@@ -178,6 +178,11 @@ export default function DashboardHome() {
           value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
           loading={loading}
         />
+        <KpiCard
+          title="Outstanding DP"
+          value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
+          loading={loading}
+        />
       </section>
 
       {/* Top Layanan */}

@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-05 19:07:59_  
+_Dihasilkan otomatis: 2025-12-05 19:46:53_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -1967,8 +1967,8 @@ export interface SingleResponse<T> {
 
 ### src/types/dashboard.ts
 
-- SHA: `7c56c02702aa`  
-- Ukuran: 1013 B
+- SHA: `fb03c8625a8d`  
+- Ukuran: 987 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -1981,12 +1981,12 @@ export interface TopServiceRow {
 }
 
 export interface OmzetDailyPoint {
-  date: string;      // YYYY-MM-DD
+  date: string;
   amount: number;
 }
 
 export interface OmzetMonthlyPoint {
-  month: string;     // YYYY-MM
+  month: string;
   amount: number;
 }
 
@@ -2008,13 +2008,16 @@ export interface DashboardSummary {
   receivables_open_count: number;
   receivables_open_amount: number;
 
+  dp_outstanding_count: number;
+  dp_outstanding_amount: number;
+
   omzet_daily: OmzetDailyPoint[];
   omzet_monthly: OmzetMonthlyPoint[];
 }
 
 export interface DashboardSummaryMeta {
-  from: string;               // YYYY-MM-DD
-  to: string;                 // YYYY-MM-DD
+  from: string;
+  to: string;
   branch_id?: string | null;  // UUID cabang atau null/undefined = semua
 }
 
@@ -6269,7 +6272,7 @@ function RowSkeleton() {
 
 ### src/pages/dashboard/DashboardHome.tsx
 
-- SHA: `33e53e367992`  
+- SHA: `b2436ebb0226`  
 - Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6452,6 +6455,11 @@ export default function DashboardHome() {
         <KpiCard
           title="Piutang Terbuka"
           value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
+          loading={loading}
+        />
+        <KpiCard
+          title="Outstanding DP"
+          value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
           loading={loading}
         />
       </section>
