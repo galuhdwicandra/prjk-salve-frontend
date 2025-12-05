@@ -29,6 +29,7 @@ const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesInde
 const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
+const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +45,16 @@ export const router = createBrowserRouter([
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
             <LazyBoundary>
               <DashboardHome />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/reports',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <ReportsIndex />
             </LazyBoundary>
           </Guarded>
         ),
@@ -280,37 +291,37 @@ export const router = createBrowserRouter([
       },
       ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
         ? [
-            {
-              path: '/vouchers',
-              element: (
-                <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                  <LazyBoundary>
-                    <VouchersIndex />
-                  </LazyBoundary>
-                </Guarded>
-              ),
-            },
-            {
-              path: '/vouchers/new',
-              element: (
-                <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                  <LazyBoundary>
-                    <VoucherForm />
-                  </LazyBoundary>
-                </Guarded>
-              ),
-            },
-            {
-              path: '/vouchers/:id/edit',
-              element: (
-                <Guarded roles={['Superadmin', 'Admin Cabang']}>
-                  <LazyBoundary>
-                    <VoucherForm />
-                  </LazyBoundary>
-                </Guarded>
-              ),
-            },
-          ]
+          {
+            path: '/vouchers',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <VouchersIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/vouchers/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <VoucherForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/vouchers/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <VoucherForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+        ]
         : []),
     ],
   },

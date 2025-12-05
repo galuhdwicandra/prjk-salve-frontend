@@ -35,6 +35,7 @@ export default function ProtectedLayout() {
     { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
     { label: 'Vouchers', to: '/vouchers', roles: ['Superadmin', 'Admin Cabang'], show: FF.vouchers },
+    { label: 'Reports', to: '/reports', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
   ];
 
   const VISIBLE = MENU.filter(
