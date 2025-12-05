@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-05 02:22:11_  
+_Dihasilkan otomatis: 2025-12-05 15:36:41_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -14,6 +14,7 @@ _Dihasilkan otomatis: 2025-12-05 02:22:11_
   - [src/api/deliveries.ts](#file-srcapideliveriests)
   - [src/api/expenses.ts](#file-srcapiexpensests)
   - [src/api/invoiceCounters.ts](#file-srcapiinvoicecountersts)
+  - [src/api/loyalty.ts](#file-srcapiloyaltyts)
   - [src/api/orderPhotos.ts](#file-srcapiorderphotosts)
   - [src/api/orders.ts](#file-srcapiordersts)
   - [src/api/receivables.ts](#file-srcapireceivablests)
@@ -40,6 +41,7 @@ _Dihasilkan otomatis: 2025-12-05 02:22:11_
   - [src/types/dashboard.ts](#file-srctypesdashboardts)
   - [src/types/deliveries.ts](#file-srctypesdeliveriests)
   - [src/types/expenses.ts](#file-srctypesexpensests)
+  - [src/types/loyalty.ts](#file-srctypesloyaltyts)
   - [src/types/orders.ts](#file-srctypesordersts)
   - [src/types/payments.ts](#file-srctypespaymentsts)
   - [src/types/receivables.ts](#file-srctypesreceivablests)
@@ -379,7 +381,7 @@ export async function getDashboardSummary(params: DashboardSummaryQuery) {
 
 ### src/api/deliveries.ts
 
-- SHA: `bc61a066492a`  
+- SHA: `4a338c480c40`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -419,16 +421,15 @@ export async function assignCourier(id: string, payload: DeliveryAssignPayload) 
 
 /** Update status (+ opsional upload bukti serah-terima) */
 export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPayload) {
-  const hasFile = !!payload.handover_photo;
+  const hasFile = !!payload.photo;
   if (hasFile) {
     const fd = new FormData();
     fd.append('status', payload.status);
     if (payload.note) fd.append('note', payload.note);
-    if (payload.handover_photo) fd.append('handover_photo', payload.handover_photo);
+    if (payload.photo) fd.append('photo', payload.photo);
     const { data } = await api.put<SingleResponse<Delivery>>(
       `/deliveries/${encodeURIComponent(id)}/status`,
-      fd,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      fd
     );
     return data;
   }
@@ -645,6 +646,29 @@ export async function resetCounterNow(id: string) {
     {},
   );
   return data; // ApiEnvelope<InvoiceCounter, null>
+}
+```
+</details>
+
+### src/api/loyalty.ts
+
+- SHA: `3460dc811e86`  
+- Ukuran: 621 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/api/loyalty.ts
+import { api, type ApiEnvelope } from './client';
+import type { LoyaltySummary } from '../types/loyalty';
+
+export async function getLoyaltySummary(customerId: string, branchId?: string) {
+    const { data } = await api.get<ApiEnvelope<LoyaltySummary, null>>(
+        `/loyalty/${encodeURIComponent(customerId)}`,
+        // kirim branch_id agar backend membaca akun loyalti pada cabang aktif
+        branchId ? { params: { branch_id: branchId } } : undefined
+    );
+    // Ikuti pola modul lain yang mengembalikan envelope (lihat branches.ts).
+    return data; // ApiEnvelope<LoyaltySummary, null>
 }
 ```
 </details>
@@ -1207,17 +1231,18 @@ export function useHasRole(required: RoleName | RoleName[]): boolean {
 
 ### src/layouts/GuestLayout.tsx
 
-- SHA: `43899ef8ecc3`  
-- Ukuran: 319 B
+- SHA: `5ff6840caa9a`  
+- Ukuran: 394 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/layouts/GuestLayout.tsx
 import { Outlet } from 'react-router-dom';
 
 export default function GuestLayout() {
     return (
         <main className="min-h-dvh grid place-items-center p-6">
-            <div className="w-full max-w-sm rounded-xl border p-6 shadow-sm bg-white">
+            <div className="w-full max-w-[420px] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow-2)] bg-[color:var(--color-surface)]">
                 <Outlet />
             </div>
         </main>
@@ -1998,7 +2023,7 @@ export interface DashboardSummaryMeta {
 
 ### src/types/deliveries.ts
 
-- SHA: `985ea24185f1`  
+- SHA: `fb09a36e6ca4`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2009,9 +2034,10 @@ export type DeliveryType = 'pickup' | 'delivery' | 'return';
 export type DeliveryStatus =
   | 'CREATED'
   | 'ASSIGNED'
-  | 'PICKED_UP'
-  | 'ON_ROUTE'
-  | 'DELIVERED'
+  | 'ON_THE_WAY'
+  | 'PICKED'
+  | 'HANDOVER'
+  | 'COMPLETED'
   | 'FAILED'
   | 'CANCELLED';
 
@@ -2051,8 +2077,9 @@ export interface DeliveryAssignPayload {
 
 export interface DeliveryStatusPayload {
   status: DeliveryStatus;
-  note?: string | null
-  handover_photo?: File | null;
+  note?: string | null;
+  /** Optional; hanya diperlukan saat HANDOVER */
+  photo?: File | null;
 }
 
 export interface DeliveryQuery {
@@ -2151,6 +2178,23 @@ export interface SingleResponse<T> {
   meta: Record<string, unknown> | null;
   message: string | null;
   errors: Record<string, string[] | string> | null;
+}
+
+```
+</details>
+
+### src/types/loyalty.ts
+
+- SHA: `f4db26e1ab8e`  
+- Ukuran: 143 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/types/loyalty.ts
+export interface LoyaltySummary {
+  stamps: number;   // 0..9
+  cycle: number;    // 10
+  next: number;     // 1..10
 }
 
 ```
@@ -2985,7 +3029,7 @@ export default function DataTable<T extends object>({
 
 ### src/components/delivery/AssignCourierSelect.tsx
 
-- SHA: `7edcd5681f24`  
+- SHA: `2ab750179e2f`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2996,60 +3040,79 @@ import { listUsers } from '../../api/users';
 import type { User } from '../../types/users';
 
 type Props = {
-    value: string | number | null;
-    onChange: (userId: string | number | null) => void;
-    disabled?: boolean;
+  value: string | number | null;
+  onChange: (userId: string | number | null) => void;
+  disabled?: boolean;
 };
 
 export default function AssignCourierSelect({ value, onChange, disabled = false }: Props) {
-    const [loading, setLoading] = useState(false);
-    const [rows, setRows] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<User[]>([]);
 
-    const options = useMemo(() => rows
-        .filter(u => (u.roles ?? []).includes('Kurir'))
-        .map(u => ({ id: u.id, label: `${u.name}` })), [rows]);
+  const options = useMemo(
+    () =>
+      rows
+        .filter((u) => (u.roles ?? []).includes('Kurir'))
+        .map((u) => ({ id: u.id, label: `${u.name}` })),
+    [rows]
+  );
 
-    useEffect(() => {
-        let mounted = true;
-        (async () => {
-            setLoading(true);
-            try {
-                const res = await listUsers({ role: 'Kurir', per_page: 100 });
-                const list = Array.isArray((res as unknown as { data: User[] }).data) ? (res as { data: User[] }).data : [];
-                if (mounted) setRows(list);
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        })();
-        return () => { mounted = false; };
-    }, []);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await listUsers({ role: 'Kurir', per_page: 100 });
+        const list = Array.isArray((res as unknown as { data: User[] }).data)
+          ? (res as { data: User[] }).data
+          : [];
+        if (mounted) setRows(list);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-    return (
-        <div className="flex items-center gap-2">
-            <select
-                className="border rounded px-2 py-1 text-sm"
-                value={value === null ? '' : String(value)}
-                onChange={(e) => onChange(e.target.value ? e.target.value : null)}
-                disabled={disabled || loading}
-            >
-                <option value="">{loading ? 'Memuat kurir…' : '— Pilih Kurir —'}</option>
-                {options.map(o => (
-                    <option key={String(o.id)} value={String(o.id)}>{o.label}</option>
-                ))}
-            </select>
-            {value && (
-                <button
-                    type="button"
-                    className="text-xs border rounded px-2 py-1"
-                    onClick={() => onChange(null)}
-                    disabled={disabled}
-                    title="Kosongkan kurir"
-                >
-                    ×
-                </button>
-            )}
-        </div>
-    );
+  const hasValue = value !== null && String(value).length > 0;
+
+  return (
+    <div className="flex items-center gap-2" aria-busy={loading ? 'true' : 'false'}>
+      <label className="sr-only" htmlFor="assign-courier">
+        Pilih kurir
+      </label>
+      <select
+        id="assign-courier"
+        className="input min-w-[220px] py-2 pr-8"
+        value={value === null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value ? e.target.value : null)}
+        disabled={disabled || loading}
+        aria-label="Pilih kurir untuk pengantaran"
+      >
+        <option value="">{loading ? 'Memuat kurir…' : '— Pilih Kurir —'}</option>
+        {options.map((o) => (
+          <option key={String(o.id)} value={String(o.id)}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      {hasValue && (
+        <button
+          type="button"
+          className="btn-outline text-xs h-9 px-2"
+          onClick={() => onChange(null)}
+          disabled={disabled}
+          title="Kosongkan kurir"
+          aria-label="Kosongkan kurir"
+        >
+          Kosongkan
+        </button>
+      )}
+    </div>
+  );
 }
 
 ```
@@ -3057,7 +3120,7 @@ export default function AssignCourierSelect({ value, onChange, disabled = false 
 
 ### src/components/delivery/DeliveryStatusStepper.tsx
 
-- SHA: `433ca0e83965`  
+- SHA: `bfdc8abff0a2`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -3065,7 +3128,7 @@ export default function AssignCourierSelect({ value, onChange, disabled = false 
 // src/components/delivery/DeliveryStatusStepper.tsx
 import type { DeliveryStatus } from '../../types/deliveries';
 
-const FLOW: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED'];
+const FLOW: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'ON_THE_WAY', 'PICKED', 'HANDOVER', 'COMPLETED'];
 
 export default function DeliveryStatusStepper({ status }: { status: DeliveryStatus }) {
     // Logika asli dipertahankan
@@ -4566,7 +4629,7 @@ export default function ReceiptPreview({
 
 ### src/components/receivables/SettleReceivableDialog.tsx
 
-- SHA: `a05312f41003`  
+- SHA: `b2b34e1e2b79`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4582,192 +4645,242 @@ import type { Order } from "../../types/orders";
 import { buildWhatsAppLink } from "../../utils/wa";
 
 type Props = {
-    open: boolean;
-    receivable: Receivable | null;
-    onClose: () => void;
-    onSettled?: (r: Receivable) => void;
+  open: boolean;
+  receivable: Receivable | null;
+  onClose: () => void;
+  onSettled?: (r: Receivable) => void;
 };
 
 const METHODS: PaymentMethod[] = ["CASH", "QRIS", "TRANSFER"];
 
 function extractOrderId(
-    order: Order | { order: Order;[k: string]: unknown } | undefined
+  order: Order | { order: Order; [k: string]: unknown } | undefined
 ): string | null {
-    if (!order) return null;
-    if ("id" in order && typeof (order as Order).id === "string") {
-        return (order as Order).id;
-    }
-    if ("order" in (order as { order: Order })) {
-        return (order as { order: Order }).order?.id ?? null;
-    }
-    return null;
+  if (!order) return null;
+  if ("id" in order && typeof (order as Order).id === "string") {
+    return (order as Order).id;
+  }
+  if ("order" in (order as { order: Order })) {
+    return (order as { order: Order }).order?.id ?? null;
+  }
+  return null;
 }
 
 function buildReceiptMessage(receivable: Receivable, receiptUrl: string): string {
-    const inv = receivable.order?.invoice_no ?? "-";
-    const total = toIDR(receivable.order?.grand_total ?? 0);
-    return [
-        "Terima kasih atas pembayarannya.",
-        `Kwitansi: ${receiptUrl}`,
-        `No: ${inv}`,
-        `Total: ${total}`,
-        "— Salve Laundry"
-    ].join("\n");
+  const inv = receivable.order?.invoice_no ?? "-";
+  const total = toIDR(receivable.order?.grand_total ?? 0);
+  return [
+    "Terima kasih atas pembayarannya.",
+    `Kwitansi: ${receiptUrl}`,
+    `No: ${inv}`,
+    `Total: ${total}`,
+    "— Salve Laundry",
+  ].join("\n");
 }
 
 export default function SettleReceivableDialog({ open, receivable, onClose, onSettled }: Props) {
-    const [amount, setAmount] = useState<number>(0);
-    const [method, setMethod] = useState<PaymentMethod>("CASH");
-    const [paidAt, setPaidAt] = useState<string>("");
-    const [note, setNote] = useState<string>("");
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string>("");
+  const [amount, setAmount] = useState<number>(0);
+  const [method, setMethod] = useState<PaymentMethod>("CASH");
+  const [paidAt, setPaidAt] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string>("");
 
-    useEffect(() => {
-        if (open && receivable) {
-            setAmount(receivable.remaining_amount);
-            setMethod("CASH");
-            setPaidAt(new Date().toISOString().slice(0, 16)); // "YYYY-MM-DDTHH:mm"
-            setNote("");
-            setErr("");
+  useEffect(() => {
+    if (open && receivable) {
+      setAmount(receivable.remaining_amount);
+      setMethod("CASH");
+      setPaidAt(new Date().toISOString().slice(0, 16)); // "YYYY-MM-DDTHH:mm"
+      setNote("");
+      setErr("");
+    }
+  }, [open, receivable]);
+
+  const disabled = useMemo(() => {
+    if (!receivable) return true;
+    return amount <= 0 || amount > receivable.remaining_amount || loading;
+  }, [amount, loading, receivable]);
+
+  const customerPhone =
+    receivable?.order?.customer?.phone ||
+    receivable?.order?.customer?.whatsapp ||
+    "";
+  const canWhatsApp = Boolean(customerPhone);
+
+  if (!open || !receivable) return null;
+
+  const onSubmit = async (withWA = false) => {
+    if (!receivable) return;
+    setLoading(true);
+    setErr("");
+    try {
+      const res = await settleReceivable(receivable.id, {
+        amount,
+        method,
+        paid_at: paidAt ? new Date(paidAt).toISOString() : undefined,
+        note: note || undefined,
+      });
+      const payload = res.data.data as ReceivableSettleResult;
+      const next = payload.receivable;
+
+      if (next.status === "SETTLED") {
+        const orderId = payload.order_id ?? extractOrderId(payload.order as any);
+        if (orderId && !withWA) {
+          await openOrderReceipt(orderId, true);
         }
-    }, [open, receivable]);
+        const receiptUrl =
+          payload.share_url /* prioritas: link publik */ ??
+          payload.receipt_url ??
+          (orderId ? `${import.meta.env.VITE_API_BASE_URL}/orders/${orderId}/receipt` : "");
 
-    const disabled = useMemo(() => {
-        if (!receivable) return true;
-        return amount <= 0 || amount > receivable.remaining_amount || loading;
-    }, [amount, loading, receivable]);
-
-    const customerPhone =
-        receivable?.order?.customer?.phone ||
-        receivable?.order?.customer?.whatsapp ||
-        "";
-    const canWhatsApp = Boolean(customerPhone);
-
-    if (!open || !receivable) return null;
-
-    const onSubmit = async (withWA = false) => {
-        if (!receivable) return;
-        setLoading(true);
-        setErr("");
-        try {
-            const res = await settleReceivable(receivable.id, {
-                amount,
-                method,
-                paid_at: paidAt ? new Date(paidAt).toISOString() : undefined,
-                note: note || undefined,
-            });
-            const payload = res.data.data as ReceivableSettleResult;
-            const next = payload.receivable;
-
-            if (next.status === "SETTLED") {
-                const orderId = payload.order_id ?? extractOrderId(payload.order as any);
-                if (orderId && !withWA) {
-                    await openOrderReceipt(orderId, true);
-                }
-                const receiptUrl =
-                    payload.share_url /* prioritas: link publik */
-                    ?? payload.receipt_url
-                    ?? (orderId ? `${import.meta.env.VITE_API_BASE_URL}/orders/${orderId}/receipt` : "");
-
-                if (withWA && receiptUrl && customerPhone) {
-                    const msg = buildReceiptMessage(receivable, receiptUrl);
-                    const wa = buildWhatsAppLink(customerPhone, msg);
-                    window.open(wa, "_blank");
-                }
-            }
-
-            onSettled?.(next);
-            onClose();
-        } catch {
-            setErr("Gagal memproses pelunasan. Periksa nominal/metode, atau coba lagi.");
-        } finally {
-            setLoading(false);
+        if (withWA && receiptUrl && customerPhone) {
+          const msg = buildReceiptMessage(receivable, receiptUrl);
+          const wa = buildWhatsAppLink(customerPhone, msg);
+          window.open(wa, "_blank");
         }
-    };
+      }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                <h3 className="mb-4 text-lg font-semibold">Pelunasan Piutang</h3>
-                <div className="space-y-3">
-                    <div className="text-sm">
-                        <div>Invoice: <strong>{receivable.order?.invoice_no ?? "-"}</strong></div>
-                        <div>Total: <strong>{toIDR(receivable.order?.grand_total ?? 0)}</strong></div>
-                        <div>Terbayar: <strong>{toIDR(receivable.order?.paid_amount ?? 0)}</strong></div>
-                        <div className="mt-1">
-                            Sisa: <span className="rounded-md bg-amber-100 px-2 py-0.5 font-semibold">
-                                {toIDR(receivable.remaining_amount)}
-                            </span>
-                        </div>
-                    </div>
-                    <label className="block text-sm">
-                        Nominal Pelunasan
-                        <input
-                            type="number"
-                            min={0}
-                            max={receivable.remaining_amount}
-                            step="100"
-                            value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
-                            className="mt-1 w-full rounded-lg border px-3 py-2"
-                        />
-                    </label>
-                    <label className="block text-sm">
-                        Metode
-                        <select
-                            className="mt-1 w-full rounded-lg border px-3 py-2"
-                            value={method}
-                            onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                        >
-                            {METHODS.map((m) => (
-                                <option key={m} value={m}>{m}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <label className="block text-sm">
-                        Tanggal Bayar
-                        <input
-                            type="datetime-local"
-                            value={paidAt}
-                            onChange={(e) => setPaidAt(e.target.value)}
-                            className="mt-1 w-full rounded-lg border px-3 py-2"
-                        />
-                    </label>
-                    <label className="block text-sm">
-                        Catatan (opsional)
-                        <input
-                            type="text"
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            className="mt-1 w-full rounded-lg border px-3 py-2"
-                        />
-                    </label>
-                    {err ? <p className="text-sm text-red-600">{err}</p> : null}
-                </div>
-                <div className="mt-6 flex justify-end gap-2">
-                    <button onClick={onClose} className="rounded-xl border px-4 py-2">Batal</button>
-                    <button
-                        onClick={() => onSubmit(false)}
-                        disabled={disabled}
-                        className="rounded-xl bg-black px-4 py-2 text-white disabled:opacity-50"
-                    >
-                        {loading ? "Memproses..." : "Lunasi"}
-                    </button>
-                    {canWhatsApp && (
-                        <button
-                            onClick={() => onSubmit(true)}
-                            disabled={disabled}
-                            title="Lunasi dan kirim link kwitansi via WhatsApp"
-                            className="rounded-xl bg-green-600 px-4 py-2 text-white disabled:opacity-50"
-                        >
-                            {loading ? "Memproses..." : "Lunasi & Kirim WA"}
-                        </button>
-                    )}
-                </div>
-            </div >
-        </div >
-    );
+      onSettled?.(next);
+      onClose();
+    } catch {
+      setErr("Gagal memproses pelunasan. Periksa nominal/metode, atau coba lagi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settle-title"
+    >
+      <div className="w-full max-w-md rounded-lg border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-elev-2">
+        {/* Header */}
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 id="settle-title" className="text-lg font-semibold tracking-tight">
+              Pelunasan Piutang
+            </h3>
+            <p className="text-xs text-gray-600">Lengkapi detail pembayaran di bawah ini</p>
+          </div>
+        </div>
+
+        {/* Info ringkas */}
+        <div className="mb-4 grid grid-cols-2 gap-2 rounded-md border border-[color:var(--color-border)] bg-white p-3 text-sm">
+          <div>
+            <div className="text-gray-600">Invoice</div>
+            <div className="font-medium">{receivable.order?.invoice_no ?? "-"}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-gray-600">Total</div>
+            <div className="font-semibold">{toIDR(receivable.order?.grand_total ?? 0)}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Terbayar</div>
+            <div className="tabular-nums">{toIDR(receivable.order?.paid_amount ?? 0)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-gray-600">Sisa</div>
+            <span className="chip chip--subtle font-semibold">
+              {toIDR(receivable.remaining_amount)}
+            </span>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div className="space-y-3">
+          <label className="block text-sm" htmlFor="amount">
+            Nominal Pelunasan
+            <input
+              id="amount"
+              type="number"
+              min={0}
+              max={receivable.remaining_amount}
+              step="100"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="input mt-1"
+              autoFocus
+              inputMode="numeric"
+            />
+          </label>
+
+          <label className="block text-sm" htmlFor="method">
+            Metode
+            <select
+              id="method"
+              className="input mt-1"
+              value={method}
+              onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+            >
+              {METHODS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-sm" htmlFor="paid_at">
+            Tanggal Bayar
+            <input
+              id="paid_at"
+              type="datetime-local"
+              value={paidAt}
+              onChange={(e) => setPaidAt(e.target.value)}
+              className="input mt-1"
+            />
+          </label>
+
+          <label className="block text-sm" htmlFor="note">
+            Catatan (opsional)
+            <input
+              id="note"
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="input mt-1"
+            />
+          </label>
+
+          {err ? (
+            <p role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {err}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Actions */}
+        <div className="mt-6 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-outline" type="button">
+            Batal
+          </button>
+
+          <button
+            onClick={() => onSubmit(false)}
+            disabled={disabled}
+            className="btn-primary disabled:opacity-50"
+            type="button"
+          >
+            {loading ? "Memproses..." : "Lunasi"}
+          </button>
+
+          {canWhatsApp && (
+            <button
+              onClick={() => onSubmit(true)}
+              disabled={disabled}
+              title="Lunasi dan kirim link kwitansi via WhatsApp"
+              type="button"
+              className="btn text-[color:var(--color-brand-on)] disabled:opacity-50"
+              style={{ background: "var(--color-status-success)" }}
+            >
+              {loading ? "Memproses..." : "Lunasi & Kirim WA"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 ```
@@ -6515,8 +6628,8 @@ function SimpleTable(props: {
 
 ### src/pages/deliveries/DeliveryDetail.tsx
 
-- SHA: `b1114ece0d74`  
-- Ukuran: 8 KB
+- SHA: `8c04c5408bb6`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -6532,226 +6645,234 @@ import { useHasRole } from '../../store/useAuth';
 /* eslint-disable no-console */
 const TAG = '[DeliveryDetail]';
 const dbg = {
-  log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
-  warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
-  err:  (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
-  group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
-  groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
+    log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
+    warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
+    err: (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
+    group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
+    groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
 };
 /* eslint-enable no-console */
 
 export default function DeliveryDetail() {
-  const { id } = useParams();
-  const [row, setRow] = useState<Delivery | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+    const { id } = useParams();
+    const [row, setRow] = useState<Delivery | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
-  const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
-  const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
+    const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+    const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
 
-  const load = useCallback(async () => {
-    dbg.group('load() start');
-    dbg.log('params', { id });
-    if (!id) {
-      dbg.warn('no id in params; abort load');
-      dbg.groupEnd();
-      return;
+    const load = useCallback(async () => {
+        dbg.group('load() start');
+        dbg.log('params', { id });
+        if (!id) {
+            dbg.warn('no id in params; abort load');
+            dbg.groupEnd();
+            return;
+        }
+        const t0 = performance.now();
+        setLoading(true); setErr(null);
+        try {
+            const res = await listDeliveries({ q: id, per_page: 1 });
+            const list = res.data ?? [];
+            const found = list.find(d => String(d.id) === String(id)) ?? null;
+            setRow(found);
+            if (!found) {
+                setErr('Delivery tidak ditemukan');
+                dbg.warn('not found');
+            } else {
+                dbg.log('found row', { id: found.id, status: found.status, assigned_to: found.assigned_to });
+            }
+        } catch (e) {
+            dbg.err('load() error:', e);
+            setErr('Gagal memuat delivery');
+        } finally {
+            setLoading(false);
+            const dt = (performance.now() - t0).toFixed(1);
+            dbg.log(`load() done in ${dt}ms`);
+            dbg.groupEnd();
+        }
+    }, [id]);
+
+    useEffect(() => {
+        dbg.log('mount');
+        void load();
+        return () => { dbg.log('unmount'); };
+    }, [load]);
+
+    async function onAssign(user_id: string | number | null) {
+        dbg.group('onAssign');
+        dbg.log('attempt', { page_id: id, row_id: row?.id, user_id, canAssign });
+        try {
+            if (!row) { dbg.warn('blocked: no row'); return; }
+            if (!canAssign) { dbg.warn('blocked: no permission'); return; }
+            if (!user_id) { dbg.warn('skipped: user_id empty'); return; }
+            await assignCourier(row.id, { user_id });
+            dbg.log('assign success → reload');
+            await load();
+        } catch (e) {
+            dbg.err('assign error:', e);
+        } finally {
+            dbg.groupEnd();
+        }
     }
-    const t0 = performance.now();
-    setLoading(true); setErr(null);
-    try {
-      const res = await listDeliveries({ q: id, per_page: 1 });
-      const list = res.data ?? [];
-      const found = list.find(d => String(d.id) === String(id)) ?? null;
-      setRow(found);
-      if (!found) {
-        setErr('Delivery tidak ditemukan');
-        dbg.warn('not found');
-      } else {
-        dbg.log('found row', { id: found.id, status: found.status, assigned_to: found.assigned_to });
-      }
-    } catch (e) {
-      dbg.err('load() error:', e);
-      setErr('Gagal memuat delivery');
-    } finally {
-      setLoading(false);
-      const dt = (performance.now() - t0).toFixed(1);
-      dbg.log(`load() done in ${dt}ms`);
-      dbg.groupEnd();
+
+    async function onUpdateStatus(status: DeliveryStatus) {
+        dbg.group('onUpdateStatus');
+        const file = fileRef.current?.files?.[0] ?? null;
+        dbg.log('attempt', {
+            page_id: id,
+            row_id: row?.id,
+            from: row?.status,
+            to: status,
+            hasFile: !!file,
+            canUpdate,
+        });
+        try {
+            if (!row) { dbg.warn('blocked: no row'); return; }
+            if (!canUpdate) { dbg.warn('blocked: no permission'); return; }
+            let photo: File | null = null;
+            if (status === 'HANDOVER' && file) {
+                if (file.size > 4 * 1024 * 1024) { // 4MB
+                    dbg.warn('blocked: file too large (>4MB)');
+                    return;
+                }
+                photo = file;
+            }
+            await updateDeliveryStatus(row.id, { status, note: null, photo });
+            if (fileRef.current) {
+                fileRef.current.value = '';
+                dbg.log('file input cleared');
+            }
+            dbg.log('status updated → reload');
+            await load();
+        } catch (e) {
+            dbg.err('update status error:', e);
+        } finally {
+            dbg.groupEnd();
+        }
     }
-  }, [id]);
 
-  useEffect(() => {
-    dbg.log('mount');
-    void load();
-    return () => { dbg.log('unmount'); };
-  }, [load]);
+    if (loading) return <div className="text-sm text-gray-500">Memuat…</div>;
+    if (err) return <div className="text-sm text-red-600">{err}</div>;
+    if (!row) return null;
 
-  async function onAssign(user_id: string | number | null) {
-    dbg.group('onAssign');
-    dbg.log('attempt', { page_id: id, row_id: row?.id, user_id, canAssign });
-    try {
-      if (!row) { dbg.warn('blocked: no row'); return; }
-      if (!canAssign) { dbg.warn('blocked: no permission'); return; }
-      if (!user_id) { dbg.warn('skipped: user_id empty'); return; }
-      await assignCourier(row.id, { user_id });
-      dbg.log('assign success → reload');
-      await load();
-    } catch (e) {
-      dbg.err('assign error:', e);
-    } finally {
-      dbg.groupEnd();
-    }
-  }
-
-  async function onUpdateStatus(status: DeliveryStatus) {
-    dbg.group('onUpdateStatus');
-    const file = fileRef.current?.files?.[0] ?? null;
-    dbg.log('attempt', {
-      page_id: id,
-      row_id: row?.id,
-      from: row?.status,
-      to: status,
-      hasFile: !!file,
-      canUpdate,
-    });
-    try {
-      if (!row) { dbg.warn('blocked: no row'); return; }
-      if (!canUpdate) { dbg.warn('blocked: no permission'); return; }
-      await updateDeliveryStatus(row.id, { status, handover_photo: file });
-      if (fileRef.current) {
-        fileRef.current.value = '';
-        dbg.log('file input cleared');
-      }
-      dbg.log('status updated → reload');
-      await load();
-    } catch (e) {
-      dbg.err('update status error:', e);
-    } finally {
-      dbg.groupEnd();
-    }
-  }
-
-  if (loading) return <div className="text-sm text-gray-500">Memuat…</div>;
-  if (err) return <div className="text-sm text-red-600">{err}</div>;
-  if (!row) return null;
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="flex items-start justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Delivery Detail</h1>
-          <div className="text-xs text-gray-600">ID: {row.id}</div>
-        </div>
-        <span className={statusChipClass(row.status)} aria-label={`Status: ${row.status}`}>
-          {row.status}
-        </span>
-      </header>
-
-      {/* Card: Info utama */}
-      <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
-        <div className="p-4 grid gap-4 md:grid-cols-2">
-          <div className="grid gap-2">
-            <InfoLine label="Order">
-              <span className="font-medium">{row.order_id}</span>
-            </InfoLine>
-            <InfoLine label="Tipe">
-              <span>{row.type}</span>
-            </InfoLine>
-            <InfoLine label="Fee">
-              <span className="tabular-nums">
-                {Number(row.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
-              </span>
-            </InfoLine>
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-xs text-gray-600">Kurir</label>
-            <AssignCourierSelect
-              value={row.assigned_to ?? null}
-              onChange={onAssign}
-              disabled={!canAssign}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Card: Progress & aksi */}
-      <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
-        <div className="p-4 space-y-3">
-          <DeliveryStatusStepper status={row.status} />
-
-          <div className="grid gap-3 md:grid-cols-[240px_1fr] items-center">
-            <div className="grid gap-1">
-              <label htmlFor="status" className="text-xs text-gray-600">Ubah status</label>
-              <select
-                id="status"
-                className="input py-2"
-                defaultValue={row.status}
-                onChange={(e) => {
-                  const next = e.target.value as DeliveryStatus;
-                  dbg.log('status select changed', { from: row.status, to: next });
-                  void onUpdateStatus(next);
-                }}
-                disabled={!canUpdate}
-              >
-                {(['CREATED','ASSIGNED','PICKED_UP','ON_ROUTE','DELIVERED','FAILED','CANCELLED'] as DeliveryStatus[])
-                  .map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-
-            <div className="grid gap-1">
-              <label htmlFor="proof" className="text-xs text-gray-600">
-                Bukti serah-terima (opsional; dipakai saat DELIVERED)
-              </label>
-              <input
-                id="proof"
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="input py-1.5"
-                onChange={() => {
-                  const f = fileRef.current?.files?.[0] ?? null;
-                  dbg.log('file selected', f ? { name: f.name, size: f.size, type: f.type } : '(none)');
-                }}
-              />
-              {row.handover_photo && (
-                <div className="pt-1">
-                  <a
-                    href={(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '') + '/' + String(row.handover_photo).replace(/^\/+/, '')}
-                    target="_blank" rel="noopener noreferrer"
-                    className="btn-outline inline-flex"
-                    onClick={() => dbg.log('open proof clicked', { url: row.handover_photo })}
-                  >
-                    Lihat bukti serah-terima
-                  </a>
+    return (
+        <div className="space-y-4">
+            {/* Header */}
+            <header className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-lg font-semibold tracking-tight">Delivery Detail</h1>
+                    <div className="text-xs text-gray-600">ID: {row.id}</div>
                 </div>
-              )}
-            </div>
-          </div>
+                <span className={statusChipClass(row.status)} aria-label={`Status: ${row.status}`}>
+                    {row.status}
+                </span>
+            </header>
+
+            {/* Card: Info utama */}
+            <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
+                <div className="p-4 grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                        <InfoLine label="Order">
+                            <span className="font-medium">{row.order_id}</span>
+                        </InfoLine>
+                        <InfoLine label="Tipe">
+                            <span>{row.type}</span>
+                        </InfoLine>
+                        <InfoLine label="Fee">
+                            <span className="tabular-nums">
+                                {Number(row.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                            </span>
+                        </InfoLine>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <label className="text-xs text-gray-600">Kurir</label>
+                        <AssignCourierSelect
+                            value={row.assigned_to ?? null}
+                            onChange={onAssign}
+                            disabled={!canAssign}
+                        />
+                    </div>
+                </div>
+            </section>
+
+            {/* Card: Progress & aksi */}
+            <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1">
+                <div className="p-4 space-y-3">
+                    <DeliveryStatusStepper status={row.status} />
+
+                    <div className="grid gap-3 md:grid-cols-[240px_1fr] items-center">
+                        <div className="grid gap-1">
+                            <label htmlFor="status" className="text-xs text-gray-600">Ubah status</label>
+                            <select
+                                id="status"
+                                className="input py-2"
+                                value={row.status}
+                                onChange={(e) => {
+                                    const next = e.target.value as DeliveryStatus;
+                                    dbg.log('status select changed', { from: row.status, to: next });
+                                    void onUpdateStatus(next);
+                                }}
+                                disabled={!canUpdate}
+                            >
+                                {(['CREATED', 'ASSIGNED', 'ON_THE_WAY', 'PICKED', 'HANDOVER', 'COMPLETED', 'FAILED', 'CANCELLED'] as DeliveryStatus[])
+                                    .map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="grid gap-1">
+                            <label htmlFor="proof" className="text-xs text-gray-600">
+                                Bukti serah-terima (opsional; digunakan saat HANDOVER, maks. 4MB)
+                            </label>
+                            <input
+                                id="proof"
+                                ref={fileRef}
+                                type="file"
+                                accept="image/*"
+                                className="input py-1.5"
+                                onChange={() => {
+                                    const f = fileRef.current?.files?.[0] ?? null;
+                                    dbg.log('file selected', f ? { name: f.name, size: f.size, type: f.type } : '(none)');
+                                }}
+                            />
+                            {row.handover_photo && (
+                                <div className="pt-1">
+                                    <a
+                                        href={(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '') + '/' + String(row.handover_photo).replace(/^\/+/, '')}
+                                        target="_blank" rel="noopener noreferrer"
+                                        className="btn-outline inline-flex"
+                                        onClick={() => dbg.log('open proof clicked', { url: row.handover_photo })}
+                                    >
+                                        Lihat bukti serah-terima
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
-      </section>
-    </div>
-  );
+    );
 }
 
 /* ---------- Sub UI ---------- */
 function InfoLine({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-gray-600">{label}</span>
-      <div className="text-sm">{children}</div>
-    </div>
-  );
+    return (
+        <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-gray-600">{label}</span>
+            <div className="text-sm">{children}</div>
+        </div>
+    );
 }
 
 function statusChipClass(s: DeliveryStatus) {
-  // Progress aktif = solid brand; selesai = subtle; batal/error = danger
-  if (s === 'DELIVERED') return 'chip chip--subtle';
-  if (s === 'FAILED' || s === 'CANCELLED') return 'chip chip--danger';
-  return 'chip chip--solid';
+    // Progress aktif = solid brand; selesai = subtle; batal/error = danger
+    if (s === 'COMPLETED') return 'chip chip--subtle';
+    if (s === 'FAILED' || s === 'CANCELLED') return 'chip chip--danger';
+    return 'chip chip--solid';
 }
 
 ```
@@ -6759,7 +6880,7 @@ function statusChipClass(s: DeliveryStatus) {
 
 ### src/pages/deliveries/DeliveryIndex.tsx
 
-- SHA: `3aecc5f6f262`  
+- SHA: `3e5ebb43f20a`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6774,14 +6895,26 @@ import { useHasRole } from '../../store/useAuth';
 import { Link } from 'react-router-dom';
 import { getOrder } from '../../api/orders';
 
-const STATUSES: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED', 'FAILED', 'CANCELLED'];
+const STATUSES: DeliveryStatus[] = [
+  'CREATED',
+  'ASSIGNED',
+  'ON_THE_WAY',
+  'PICKED',
+  'HANDOVER',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+];
+
+const FLOW: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'ON_THE_WAY', 'PICKED', 'HANDOVER', 'COMPLETED'];
+const TERMINALS = new Set<DeliveryStatus>(['COMPLETED', 'FAILED', 'CANCELLED']);
 
 /* eslint-disable no-console */
 const TAG = '[DeliveryIndex]';
 const dbg = {
   log: (...args: unknown[]) => { if (import.meta.env.DEV) console.log(TAG, ...args); },
   warn: (...args: unknown[]) => { if (import.meta.env.DEV) console.warn(TAG, ...args); },
-  err:  (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
+  err: (...args: unknown[]) => { if (import.meta.env.DEV) console.error(TAG, ...args); },
   group: (label: string) => { if (import.meta.env.DEV) console.groupCollapsed(`${TAG} ${label}`); },
   groupEnd: () => { if (import.meta.env.DEV) console.groupEnd(); },
 };
@@ -6791,11 +6924,11 @@ export default function DeliveryIndex() {
   const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
   const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
 
-  const [status, setStatus]   = useState<DeliveryStatus | ''>('');
+  const [status, setStatus] = useState<DeliveryStatus | ''>('');
   const [courier, setCourier] = useState<string | number | ''>('');
-  const [rows, setRows]       = useState<Delivery[]>([]);
+  const [rows, setRows] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(false);
-  const [err, setErr]         = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [orderMap, setOrderMap] = useState<Record<string, { invoice_no?: string | null; number?: string | null }>>({});
 
   const load = useCallback(async () => {
@@ -6856,7 +6989,7 @@ export default function DeliveryIndex() {
     dbg.log('attempt', { delivery_id: d.id, user_id, canAssign });
     try {
       if (!canAssign) { dbg.warn('blocked: no permission to assign'); return; }
-      if (!user_id)   { dbg.warn('skipped: user_id is null/empty');   return; }
+      if (!user_id) { dbg.warn('skipped: user_id is null/empty'); return; }
       await assignCourier(d.id, { user_id });
       dbg.log('assign success → reload');
       await load();
@@ -6872,9 +7005,9 @@ export default function DeliveryIndex() {
     dbg.log('attempt', { delivery_id: d.id, from: d.status, canUpdate });
     try {
       if (!canUpdate) { dbg.warn('blocked: no permission to update status'); return; }
-      const flow: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED'];
-      const i = Math.max(0, flow.indexOf(d.status));
-      const next = flow[Math.min(i + 1, flow.length - 1)];
+      if (TERMINALS.has(d.status)) { dbg.warn('no-op: terminal status'); return; }
+      const i = Math.max(0, FLOW.indexOf(d.status));
+      const next = FLOW[Math.min(i + 1, FLOW.length - 1)];
       dbg.log('computed next', { next, index: i });
 
       if (next !== d.status) {
@@ -7013,7 +7146,7 @@ export default function DeliveryIndex() {
                             type="button"
                             className="btn-outline text-xs px-2 py-1"
                             onClick={() => void advance(r)}
-                            disabled={!canUpdate || r.status === 'DELIVERED' || r.status === 'FAILED' || r.status === 'CANCELLED'}
+                            disabled={!canUpdate || TERMINALS.has(r.status)}
                             title="Majukan status"
                           >
                             Next
@@ -7063,7 +7196,7 @@ function chipClass(s: DeliveryStatus) {
   if (s === 'FAILED' || s === 'CANCELLED') {
     return 'inline-flex items-center rounded-full px-2.5 py-1 text-xs text-white bg-[color:var(--color-status-danger)]';
   }
-  if (s === 'DELIVERED') {
+  if (s === 'COMPLETED') {
     return 'inline-flex items-center rounded-full px-2.5 py-1 text-xs text-[color:var(--color-brand-primary)] bg-[#E6EDFF]';
   }
   // progress statuses
@@ -7075,7 +7208,7 @@ function chipClass(s: DeliveryStatus) {
 
 ### src/pages/expenses/ExpenseForm.tsx
 
-- SHA: `53cf31566e56`  
+- SHA: `a1c3f7d6344a`  
 - Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7091,147 +7224,212 @@ import { toIDR } from '../../utils/money';
 import { useHasRole } from '../../store/useAuth';
 
 export default function ExpenseForm() {
-    const params = useParams();
-    const id = params.id ? String(params.id) : null;
-    const editing = !!id;
-    const nav = useNavigate();
-    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
-    const isSuperadmin = useHasRole(['Superadmin']);
+  const params = useParams();
+  const id = params.id ? String(params.id) : null;
+  const editing = !!id;
+  const nav = useNavigate();
+  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const isSuperadmin = useHasRole(['Superadmin']);
 
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string>('');
 
-    const [branchList, setBranchList] = useState<Branch[]>([]);
-    const [branchId, setBranchId] = useState<string>('');
+  const [branchList, setBranchList] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState<string>('');
 
-    const [category, setCategory] = useState<string>('');
-    const [amount, setAmount] = useState<string>('0');
-    const [note, setNote] = useState<string>('');
-    const [existingProof, setExistingProof] = useState<string | null>(null);
-    const fileRef = useRef<HTMLInputElement>(null);
+  const [category, setCategory] = useState<string>('');
+  const [amount, setAmount] = useState<string>('0');
+  const [note, setNote] = useState<string>('');
+  const [existingProof, setExistingProof] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-    const title = editing ? 'Ubah Pengeluaran' : 'Tambah Pengeluaran';
+  const title = editing ? 'Ubah Pengeluaran' : 'Tambah Pengeluaran';
 
-    useEffect(() => {
-        let stop = false;
-        (async () => {
-            setLoading(true); setErr('');
-            try {
-                if (isSuperadmin) {
-                    const b = await listBranches({ per_page: 100 });
-                    if (!stop) setBranchList(b.data ?? []);
-                }
-                if (editing && id) {
-                    const res = await getExpense(id);
-                    const row = res.data as Expense | null;
-                    if (row) {
-                        if (isSuperadmin) setBranchId(String(row.branch_id));
-                        setCategory(row.category);
-                        setAmount(String(row.amount ?? 0));
-                        setNote(row.note ?? '');
-                        setExistingProof(row.proof_path ?? null);
-                    }
-                }
-            } catch (e) {
-                if (import.meta.env.DEV) console.error('[ExpenseForm] load error', e);
-                setErr('Gagal memuat data');
-            } finally {
-                if (!stop) setLoading(false);
-            }
-        })();
-        return () => { stop = true; };
-    }, [editing, id, isSuperadmin]);
-
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        if (!canManage) return;
-        try {
-            setLoading(true); setErr('');
-            const file = fileRef.current?.files?.[0] ?? null;
-            const num = Number(amount || 0);
-            if (Number.isNaN(num)) { setErr('Nominal tidak valid'); setLoading(false); return; }
-
-            if (editing && id) {
-                await updateExpense(id, { category, amount: num, note: note || null, proof: file ?? undefined });
-            } else {
-                const payload: { branch_id?: string; category: string; amount: number; note?: string | null; proof?: File | null } = {
-                    category, amount: num, note: note || null,
-                };
-                if (isSuperadmin) payload.branch_id = branchId || undefined;
-                if (file) payload.proof = file;
-                await createExpense(payload);
-            }
-            nav('/expenses');
-        } catch (e) {
-            if (import.meta.env.DEV) console.error('[ExpenseForm] submit error', e);
-            setErr('Gagal menyimpan');
-        } finally {
-            setLoading(false);
+  useEffect(() => {
+    let stop = false;
+    (async () => {
+      setLoading(true); setErr('');
+      try {
+        if (isSuperadmin) {
+          const b = await listBranches({ per_page: 100 });
+          if (!stop) setBranchList(b.data ?? []);
         }
+        if (editing && id) {
+          const res = await getExpense(id);
+          const row = res.data as Expense | null;
+          if (row) {
+            if (isSuperadmin) setBranchId(String(row.branch_id));
+            setCategory(row.category);
+            setAmount(String(row.amount ?? 0));
+            setNote(row.note ?? '');
+            setExistingProof(row.proof_path ?? null);
+          }
+        }
+      } catch (e) {
+        if (import.meta.env.DEV) console.error('[ExpenseForm] load error', e);
+        setErr('Gagal memuat data');
+      } finally {
+        if (!stop) setLoading(false);
+      }
+    })();
+    return () => { stop = true; };
+  }, [editing, id, isSuperadmin]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canManage) return;
+    try {
+      setLoading(true); setErr('');
+      const file = fileRef.current?.files?.[0] ?? null;
+      const num = Number(amount || 0);
+      if (Number.isNaN(num)) { setErr('Nominal tidak valid'); setLoading(false); return; }
+
+      if (editing && id) {
+        await updateExpense(id, { category, amount: num, note: note || null, proof: file ?? undefined });
+      } else {
+        const payload: { branch_id?: string; category: string; amount: number; note?: string | null; proof?: File | null } = {
+          category, amount: num, note: note || null,
+        };
+        if (isSuperadmin) payload.branch_id = branchId || undefined;
+        if (file) payload.proof = file;
+        await createExpense(payload);
+      }
+      nav('/expenses');
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('[ExpenseForm] submit error', e);
+      setErr('Gagal menyimpan');
+    } finally {
+      setLoading(false);
     }
+  }
 
-    function fileUrl(path: string | null): string | null {
-        if (!path) return null;
-        const base = String(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '');
-        const clean = String(path).replace(/^\/+/, '');
-        return `${base}/${clean}`;
-    }
+  function fileUrl(path: string | null): string | null {
+    if (!path) return null;
+    const base = String(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '');
+    const clean = String(path).replace(/^\/+/, '');
+    return `${base}/${clean}`;
+  }
 
-    return (
-        <div className="p-4">
-            <h1 className="text-lg font-semibold mb-3">{title}</h1>
-
-            {err && <div className="mb-2 text-sm text-red-600">{err}</div>}
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-
-            {!loading && (
-                <form onSubmit={onSubmit} className="grid gap-3 max-w-xl">
-                    {isSuperadmin && (
-                        <label className="grid gap-1 text-sm">
-                            <span>Cabang</span>
-                            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} required className="border rounded-md px-2 py-1">
-                                <option value="">-- pilih cabang --</option>
-                                {branchList.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
-                            </select>
-                        </label>
-                    )}
-
-                    <label className="grid gap-1 text-sm">
-                        <span>Kategori</span>
-                        <input value={category} onChange={(e) => setCategory(e.target.value)} required className="border rounded-md px-2 py-1" placeholder="Contoh: Listrik / Sewa / Operasional lain" />
-                    </label>
-
-                    <label className="grid gap-1 text-sm">
-                        <span>Nominal</span>
-                        <input value={amount} onChange={(e) => setAmount(e.target.value)} required className="border rounded-md px-2 py-1" inputMode="numeric" />
-                        <span className="text-xs text-gray-500">{toIDR(Number(amount || 0))}</span>
-                    </label>
-
-                    <label className="grid gap-1 text-sm">
-                        <span>Catatan</span>
-                        <textarea value={note} onChange={(e) => setNote(e.target.value)} className="border rounded-md px-2 py-1" rows={3} placeholder="Opsional" />
-                    </label>
-
-                    <label className="grid gap-1 text-sm">
-                        <span>Bukti (foto/struk/PDF)</span>
-                        <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="border rounded-md px-2 py-1" />
-                        {existingProof && (
-                            <a href={fileUrl(existingProof) ?? '#'} target="_blank" rel="noopener noreferrer" className="text-xs underline">
-                                Lihat bukti saat ini
-                            </a>
-                        )}
-                    </label>
-
-                    <div className="mt-2 flex items-center gap-3">
-                        <button type="submit" disabled={loading} className="rounded-lg bg-black px-3 py-2 text-white text-sm disabled:opacity-50">
-                            {editing ? 'Simpan Perubahan' : 'Simpan'}
-                        </button>
-                        <button type="button" onClick={() => nav('/expenses')} className="text-sm underline">Batal</button>
-                    </div>
-                </form>
-            )}
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+          <p className="text-xs text-gray-600">Catat pengeluaran operasional dengan bukti pendukung</p>
         </div>
-    );
+      </div>
+
+      {/* Alert error */}
+      {err && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {err}
+        </div>
+      )}
+
+      {/* Loading info */}
+      {loading && <div className="text-sm text-gray-500">Memuat…</div>}
+
+      {/* Form Card */}
+      {!loading && (
+        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 max-w-2xl">
+          <form onSubmit={onSubmit}>
+            <div className="p-4 grid gap-3">
+              {isSuperadmin && (
+                <label className="grid gap-1 text-sm">
+                  <span>Cabang</span>
+                  <select
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    required
+                    className="input py-2"
+                  >
+                    <option value="">-- pilih cabang --</option>
+                    {branchList.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+                  </select>
+                </label>
+              )}
+
+              <label className="grid gap-1 text-sm">
+                <span>Kategori</span>
+                <input
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  required
+                  className="input py-2"
+                  placeholder="Contoh: Listrik / Sewa / Operasional lain"
+                />
+              </label>
+
+              <label className="grid gap-1 text-sm">
+                <span>Nominal</span>
+                <input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required
+                  className="input py-2"
+                  inputMode="numeric"
+                />
+                <span className="text-xs text-gray-500">{toIDR(Number(amount || 0))}</span>
+              </label>
+
+              <label className="grid gap-1 text-sm">
+                <span>Catatan</span>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="input py-2"
+                  rows={3}
+                  placeholder="Opsional"
+                />
+              </label>
+
+              <label className="grid gap-1 text-sm">
+                <span>Bukti (foto/struk/PDF)</span>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  className="input py-2"
+                />
+                {existingProof && (
+                  <a
+                    href={fileUrl(existingProof) ?? '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs underline"
+                  >
+                    Lihat bukti saat ini
+                  </a>
+                )}
+              </label>
+            </div>
+
+            <div className="p-4 border-t border-[color:var(--color-border)] flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={loading || !canManage}
+                className="btn-primary disabled:opacity-50"
+              >
+                {editing ? 'Simpan Perubahan' : 'Simpan'}
+              </button>
+              <button
+                type="button"
+                onClick={() => nav('/expenses')}
+                className="btn-outline"
+              >
+                Batal
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
 }
 
 ```
@@ -7239,8 +7437,8 @@ export default function ExpenseForm() {
 
 ### src/pages/expenses/ExpensesIndex.tsx
 
-- SHA: `fdbd00d25868`  
-- Ukuran: 9 KB
+- SHA: `51d043f5920a`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7257,166 +7455,298 @@ import { useHasRole } from '../../store/useAuth';
 type Meta = { current_page: number; per_page: number; total: number; last_page: number };
 
 export default function ExpensesIndex() {
-    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
-    const isSuperadmin = useHasRole(['Superadmin']);
-    const nav = useNavigate();
+  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const isSuperadmin = useHasRole(['Superadmin']);
+  const nav = useNavigate();
 
-    const [rows, setRows] = useState<Expense[]>([]);
-    const [meta, setMeta] = useState<Meta | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string>('');
-    const [branchList, setBranchList] = useState<Branch[]>([]);
+  const [rows, setRows] = useState<Expense[]>([]);
+  const [meta, setMeta] = useState<Meta | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string>('');
+  const [branchList, setBranchList] = useState<Branch[]>([]);
 
-    // Filters
-    const [branchId, setBranchId] = useState<string>('');
-    const [dateFrom, setDateFrom] = useState<string>('');
-    const [dateTo, setDateTo] = useState<string>('');
-    const [page, setPage] = useState<number>(1);
-    const [perPage, setPerPage] = useState<number>(15);
+  // Filters
+  const [branchId, setBranchId] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const [perPage, setPerPage] = useState<number>(15);
 
-    const params: ExpenseQuery = useMemo(() => {
-        const out: ExpenseQuery = { page, per_page: perPage };
-        if (isSuperadmin && branchId) out.branch_id = branchId;
-        if (dateFrom) out.date_from = dateFrom;
-        if (dateTo) out.date_to = dateTo;
-        return out;
-    }, [page, perPage, isSuperadmin, branchId, dateFrom, dateTo]);
+  const params: ExpenseQuery = useMemo(() => {
+    const out: ExpenseQuery = { page, per_page: perPage };
+    if (isSuperadmin && branchId) out.branch_id = branchId;
+    if (dateFrom) out.date_from = dateFrom;
+    if (dateTo) out.date_to = dateTo;
+    return out;
+  }, [page, perPage, isSuperadmin, branchId, dateFrom, dateTo]);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        setErr('');
-        try {
-            if (isSuperadmin && branchList.length === 0) {
-                const bres = await listBranches({ per_page: 100 });
-                setBranchList(bres.data ?? []);
-            }
-            const res = await listExpenses(params);
-            setRows(res.data ?? []);
-            setMeta((res.meta as unknown as Meta) ?? null);
-        } catch (e) {
-            setErr('Gagal memuat data');
-            if (import.meta.env.DEV) console.error('[ExpensesIndex] load error', e);
-        } finally {
-            setLoading(false);
-        }
-    }, [params, isSuperadmin, branchList.length]);
-
-    useEffect(() => { load(); }, [load]);
-
-    async function onDelete(row: Expense) {
-        if (!canManage) return;
-        const ok = window.confirm(`Hapus pengeluaran "${row.category}" sebesar ${toIDR(Number(row.amount))}?`);
-        if (!ok) return;
-        try {
-            await deleteExpense(row.id);
-            await load();
-        } catch (e) {
-            if (import.meta.env.DEV) console.error('[ExpensesIndex] delete error', e);
-            alert('Gagal menghapus');
-        }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr('');
+    try {
+      if (isSuperadmin && branchList.length === 0) {
+        const bres = await listBranches({ per_page: 100 });
+        setBranchList(bres.data ?? []);
+      }
+      const res = await listExpenses(params);
+      setRows(res.data ?? []);
+      setMeta((res.meta as unknown as Meta) ?? null);
+    } catch (e) {
+      setErr('Gagal memuat data');
+      if (import.meta.env.DEV) console.error('[ExpensesIndex] load error', e);
+    } finally {
+      setLoading(false);
     }
+  }, [params, isSuperadmin, branchList.length]);
 
-    function fileUrl(path: string | null): string | null {
-        if (!path) return null;
-        const base = String(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '');
-        const clean = String(path).replace(/^\/+/, '');
-        return `${base}/${clean}`;
+  useEffect(() => { load(); }, [load]);
+
+  async function onDelete(row: Expense) {
+    if (!canManage) return;
+    const ok = window.confirm(`Hapus pengeluaran "${row.category}" sebesar ${toIDR(Number(row.amount))}?`);
+    if (!ok) return;
+    try {
+      await deleteExpense(row.id);
+      await load();
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('[ExpensesIndex] delete error', e);
+      alert('Gagal menghapus');
     }
+  }
 
-    return (
-        <div className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-                <h1 className="text-lg font-semibold">Biaya Operasional</h1>
-                {canManage && (
-                    <button
-                        className="rounded-lg bg-black px-3 py-2 text-white text-sm"
-                        onClick={() => nav('/expenses/new')}
-                    >
-                        Tambah
-                    </button>
-                )}
-            </div>
+  function fileUrl(path: string | null): string | null {
+    if (!path) return null;
+    const base = String(import.meta.env.VITE_FILES_BASE_URL || '').replace(/\/+$/, '');
+    const clean = String(path).replace(/^\/+/, '');
+    return `${base}/${clean}`;
+  }
 
-            <div className="mb-3 grid grid-cols-1 md:grid-cols-5 gap-2">
-                {isSuperadmin && (
-                    <select
-                        value={branchId}
-                        onChange={(e) => setBranchId(e.target.value)}
-                        className="border rounded-md px-2 py-1 text-sm"
-                    >
-                        <option value="">Semua Cabang</option>
-                        {branchList.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
-                    </select>
-                )}
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border rounded-md px-2 py-1 text-sm" />
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border rounded-md px-2 py-1 text-sm" />
-                <select value={perPage} onChange={(e) => { setPerPage(parseInt(e.target.value, 10)); setPage(1); }} className="border rounded-md px-2 py-1 text-sm">
-                    {[10, 15, 25, 50, 100].map(n => <option key={n} value={n}>{n}/hal</option>)}
-                </select>
-                <button onClick={() => { setPage(1); load(); }} className="border rounded-md px-3 py-1 text-sm">Terapkan</button>
-            </div>
-
-            {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-            {err && <div className="text-sm text-red-600">{err}</div>}
-            {!loading && rows.length === 0 && <div className="text-sm text-gray-500">Belum ada data.</div>}
-
-            {!loading && rows.length > 0 && (
-                <div className="overflow-auto">
-                    <table className="min-w-full text-sm">
-                        <thead>
-                            <tr className="text-left border-b">
-                                <th className="p-2">Tanggal</th>
-                                {isSuperadmin && <th className="p-2">Cabang</th>}
-                                <th className="p-2">Kategori</th>
-                                <th className="p-2">Nominal</th>
-                                <th className="p-2">Catatan</th>
-                                <th className="p-2">Bukti</th>
-                                {canManage && <th className="p-2"></th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map(r => (
-                                <tr key={r.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-2">{r.created_at ? new Date(r.created_at).toLocaleString('id-ID') : '-'}</td>
-                                    {isSuperadmin && <td className="p-2">{r.branch?.name ?? r.branch_id}</td>}
-                                    <td className="p-2">{r.category}</td>
-                                    <td className="p-2">{toIDR(Number(r.amount))}</td>
-                                    <td className="p-2">{r.note ?? '-'}</td>
-                                    <td className="p-2">
-                                        {r.proof_path ? (
-                                            <a
-                                                className="underline"
-                                                target="_blank" rel="noopener noreferrer"
-                                                href={fileUrl(r.proof_path) ?? '#'}
-                                            >
-                                                Lihat
-                                            </a>
-                                        ) : (
-                                            <span className="text-gray-400">-</span>
-                                        )}
-                                    </td>
-                                    {canManage && (
-                                        <td className="p-2 text-right space-x-2">
-                                            <Link to={`/expenses/${encodeURIComponent(r.id)}/edit`} className="underline">Edit</Link>
-                                            <button onClick={() => onDelete(r)} className="underline text-red-600">Hapus</button>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {meta && meta.last_page > 1 && (
-                <div className="mt-3 flex items-center gap-2">
-                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border rounded-md px-3 py-1 text-sm disabled:opacity-50">Prev</button>
-                    <div className="text-sm">Hal {page} / {meta.last_page} • {meta.total} data</div>
-                    <button disabled={page >= meta.last_page} onClick={() => setPage(p => p + 1)} className="border rounded-md px-3 py-1 text-sm disabled:opacity-50">Next</button>
-                </div>
-            )}
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Biaya Operasional</h1>
+          <p className="text-xs text-gray-600">Catatan pengeluaran per cabang & periode</p>
         </div>
-    );
+        {canManage && (
+          <button
+            className="btn-primary"
+            onClick={() => nav('/expenses/new')}
+            aria-label="Tambah pengeluaran"
+          >
+            Tambah
+          </button>
+        )}
+      </div>
+
+      {/* Toolbar (FilterBar) */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Filter data pengeluaran"
+      >
+        <div className="p-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+          {isSuperadmin && (
+            <label className="grid gap-1 text-sm">
+              <span className="text-[color:var(--color-text-default)]">Cabang</span>
+              <select
+                value={branchId}
+                onChange={(e) => { setBranchId(e.target.value); setPage(1); }}
+                className="input py-2"
+                aria-label="Pilih cabang"
+              >
+                <option value="">Semua Cabang</option>
+                {branchList.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+              </select>
+            </label>
+          )}
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Dari Tanggal</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="input py-2"
+            />
+          </label>
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Sampai Tanggal</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="input py-2"
+            />
+          </label>
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-[color:var(--color-text-default)]">Per halaman</span>
+            <select
+              value={perPage}
+              onChange={(e) => { setPerPage(parseInt(e.target.value, 10)); setPage(1); }}
+              className="input py-2"
+              aria-label="Jumlah baris per halaman"
+            >
+              {[10, 15, 25, 50, 100].map(n => <option key={n} value={n}>{n}/hal</option>)}
+            </select>
+          </label>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => { setPage(1); load(); }}
+              className="btn-outline"
+            >
+              Terapkan
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Alerts */}
+      {err && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {err}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !err && rows.length === 0 && (
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+          Belum ada data.
+        </div>
+      )}
+
+      {/* Table (sama gaya dengan Customers) */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Tanggal</Th>
+                  {isSuperadmin && <Th>Cabang</Th>}
+                  <Th>Kategori</Th>
+                  <Th className="text-right">Nominal</Th>
+                  <Th>Catatan</Th>
+                  <Th>Bukti</Th>
+                  {canManage && <Th className="text-right pr-4">Aksi</Th>}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton showBranch={isSuperadmin} showAction={canManage} />
+                    <RowSkeleton showBranch={isSuperadmin} showAction={canManage} />
+                    <RowSkeleton showBranch={isSuperadmin} showAction={canManage} />
+                    <RowSkeleton showBranch={isSuperadmin} showAction={canManage} />
+                    <RowSkeleton showBranch={isSuperadmin} showAction={canManage} />
+                  </>
+                ) : (
+                  rows.map(r => (
+                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <Td>{r.created_at ? new Date(r.created_at).toLocaleString('id-ID') : '-'}</Td>
+                      {isSuperadmin && <Td>{r.branch?.name ?? r.branch_id}</Td>}
+                      <Td><span className="font-medium">{r.category}</span></Td>
+                      <Td className="text-right tabular-nums">{toIDR(Number(r.amount))}</Td>
+                      <Td><span className="line-clamp-2 max-w-[48ch]">{r.note ?? '-'}</span></Td>
+                      <Td>
+                        {r.proof_path ? (
+                          <a
+                            className="text-[color:var(--brand)] underline"
+                            target="_blank" rel="noopener noreferrer"
+                            href={fileUrl(r.proof_path) ?? '#'}
+                          >
+                            Lihat
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </Td>
+                      {canManage && (
+                        <Td className="text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <Link
+                              to={`/expenses/${encodeURIComponent(r.id)}/edit`}
+                              className="btn-outline"
+                              aria-label={`Edit pengeluaran ${r.category}`}
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() => onDelete(r)}
+                              className="btn-outline text-red-600"
+                              aria-label={`Hapus pengeluaran ${r.category}`}
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </Td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Pagination */}
+      {meta && meta.last_page > 1 && (
+        <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage(p => p - 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <div className="text-sm">
+            Hal {page} / {meta.last_page} • {meta.total} data
+          </div>
+          <button
+            disabled={page >= meta.last_page}
+            onClick={() => setPage(p => p + 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Next
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Subcomponents (konsisten dengan Customers) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton({ showBranch, showAction }: { showBranch: boolean; showAction: boolean }) {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      {showBranch && <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>}
+      <td className="px-3 py-3"><div className="h-4 w-32 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse ml-auto" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-64 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-8 w-16 rounded bg-black/10 animate-pulse" /></td>
+      {showAction && <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>}
+    </tr>
+  );
 }
 
 ```
@@ -7424,7 +7754,7 @@ export default function ExpensesIndex() {
 
 ### src/pages/Login.tsx
 
-- SHA: `2cb6522ccef7`  
+- SHA: `13cc3508c2e6`  
 - Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7508,9 +7838,8 @@ export default function LoginPage() {
       <section
         aria-labelledby="auth-title"
         className="
-          w-full max-w-[420px] rounded-2xl border
-          border-[color:var(--color-border)]
-          bg-[color:var(--color-bg)]
+          w-full max-w-[420px] rounded-2xl
+          bg-[color:var(--color-surface)]
           p-6 sm:p-8 shadow-[var(--shadow-2)]
         "
       >
@@ -8934,8 +9263,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `6bb115ef1d13`  
-- Ukuran: 22 KB
+- SHA: `1c032902d458`  
+- Ukuran: 25 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -8953,6 +9282,8 @@ import { applyVoucherToOrder } from '../../api/vouchers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/useAuth';
 import { toIDR } from '../../utils/money';
+import { getLoyaltySummary } from '../../api/loyalty';
+import type { LoyaltySummary } from '../../types/loyalty';
 
 type HttpError = { response?: { status?: number; data?: unknown } };
 
@@ -9004,8 +9335,21 @@ export default function POSPage() {
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
+  // Loyalty (preview stamp)
+  const [loyRefreshKey, setLoyRefreshKey] = useState(0);
+  const [loy, setLoy] = useState<LoyaltySummary | null>(null);
+  useEffect(() => {
+    if (!customerId) { setLoy(null); return; }
+    getLoyaltySummary(customerId, branchId)
+      .then((r: any) => {
+        // fungsi API bisa mengembalikan envelope { data } atau object langsung
+        const data: LoyaltySummary = 'data' in r ? r.data : r;
+        setLoy(data);
+      })
+      .catch(() => setLoy(null));
+  }, [customerId, branchId, loyRefreshKey]);
+
   // Tanggal masuk & selesai
-  // Simpan dalam ISO string (UTC) agar konsisten dengan backend (cast datetime)
   const [receivedAt, setReceivedAt] = useState<string>(() => new Date().toISOString());
   const [readyAt, setReadyAt] = useState<string | null>(null);
 
@@ -9034,6 +9378,19 @@ export default function POSPage() {
     return total;
   }, [mode, dpAmount, total]);
   const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
+  // Preview loyalti (berdasarkan stamp saat ini & subtotal saat ini)
+  const loyaltyPreview = useMemo(() => {
+    if (!loy || subtotal <= 0) return { reward: 'NONE' as 'NONE' | 'DISC25' | 'FREE100', discount: 0, next: 1, stamps: 0 };
+    const next = loy.next;
+    let disc = 0;
+    if (next === 5) disc = subtotal * 0.25;
+    if (next === 10) disc = subtotal;
+    return { reward: next === 5 ? 'DISC25' : next === 10 ? 'FREE100' : 'NONE', discount: disc, next, stamps: loy.stamps };
+  }, [loy, subtotal]);
+  const predictedGrand = useMemo(
+    () => Math.max(0, subtotal - (discount || 0) - (loyaltyPreview.discount || 0)),
+    [subtotal, discount, loyaltyPreview.discount]
+  );
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
   const dateErr = useMemo(() => {
     if (!readyAt) return null;
@@ -9139,6 +9496,7 @@ export default function POSPage() {
         console.warn('[POSPage] upload photos failed', e);
       }
 
+      setLoyRefreshKey((v) => v + 1);
       alert('Transaksi tersimpan');
       nav(`/orders/${order.id}/receipt`, { replace: true });
     } catch (e: unknown) {
@@ -9277,6 +9635,30 @@ export default function POSPage() {
           <div className="text-sm font-semibold">{branchId || '-'}</div>
         </div>
 
+        {/* Stamp Loyalty (preview) */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">Stamp Loyalty</div>
+            <div className="text-[11px] text-gray-600">
+              {loy ? `Stamp ${loy.stamps}/10 · Next ${loy.next}` : '-'}
+            </div>
+          </div>
+          <div className="grid grid-cols-10 gap-1" aria-label="Loyalty stamps">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-2.5 rounded ${loy && i < loy.stamps ? 'bg-black/70' : 'bg-black/10'}`}
+                title={`Stamp ${i + 1}`}
+              />
+            ))}
+          </div>
+          <div className="text-[11px] text-gray-700">
+            {loyaltyPreview.reward === 'DISC25' && 'Transaksi berikutnya mendapat diskon 25%.'}
+            {loyaltyPreview.reward === 'FREE100' && 'Transaksi berikutnya GRATIS (100%).'}
+            {loyaltyPreview.reward === 'NONE' && 'Belum ada benefit pada transaksi berikutnya.'}
+          </div>
+        </div>
+
         {/* Desktop cart */}
         <div className="hidden md:block">
           <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
@@ -9299,6 +9681,13 @@ export default function POSPage() {
             <span>Grand Total</span>
             <span className="font-semibold">{toIDR(grand)}</span>
           </div>
+
+          {!!(loyaltyPreview.discount > 0) && (
+            <div className="flex justify-between text-[12px] text-gray-700">
+              <span>Perkiraan setelah loyalti</span>
+              <span className="font-medium">{toIDR(predictedGrand)}</span>
+            </div>
+          )}
 
           {/* Mode Pembayaran */}
           <div className="space-y-2">
@@ -9530,15 +9919,15 @@ function MobileCartBar({
 
 ### src/pages/receivables/ReceivablesIndex.tsx
 
-- SHA: `b4c99f795109`  
-- Ukuran: 8 KB
+- SHA: `9d7d05f047f7`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/receivables/ReceivablesIndex.tsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Receivable, ReceivableQuery, ReceivableStatus } from "../../types/receivables";
 import { listReceivables } from "../../api/receivables";
-import DataTable from "../../components/DataTable"; // perbaikan path
 import { toIDR } from "../../utils/money";
 import SettleReceivableDialog from "../../components/receivables/SettleReceivableDialog";
 
@@ -9547,183 +9936,272 @@ type Meta = { current_page: number; per_page: number; total: number; last_page: 
 const STATUS: Array<ReceivableStatus | ""> = ["", "OPEN", "PARTIAL", "OVERDUE", "SETTLED"];
 
 export default function ReceivablesIndex() {
-    const [rows, setRows] = useState<Receivable[]>([]);
-    const [meta, setMeta] = useState<Meta | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string>("");
+  const [rows, setRows] = useState<Receivable[]>([]);
+  const [meta, setMeta] = useState<Meta | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
-    const [q, setQ] = useState<string>("");
-    const [status, setStatus] = useState<ReceivableStatus | "">("");
-    const [dueBefore, setDueBefore] = useState<string>("");
-    const [page, setPage] = useState<number>(1);
-    const [perPage, setPerPage] = useState<number>(15);
+  const [q, setQ] = useState<string>("");
+  const [status, setStatus] = useState<ReceivableStatus | "">("");
+  const [dueBefore, setDueBefore] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
+  const [perPage, setPerPage] = useState<number>(15);
 
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [selected, setSelected] = useState<Receivable | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selected, setSelected] = useState<Receivable | null>(null);
 
-    const params: ReceivableQuery = useMemo(
-        () => ({ q, status, due_before: dueBefore || undefined, page, per_page: perPage }),
-        [q, status, dueBefore, page, perPage]
-    );
+  const params: ReceivableQuery = useMemo(
+    () => ({ q, status, due_before: dueBefore || undefined, page, per_page: perPage }),
+    [q, status, dueBefore, page, perPage]
+  );
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        setError("");
-        try {
-            const res = await listReceivables(params);
-            // API dinormalisasi: res.data = Receivable[] ; res.meta = Pagination meta
-            setRows(res.data ?? []);
-            setMeta((res.meta as Meta) ?? null);
-        } catch {
-            setError("Gagal memuat data piutang.");
-        } finally {
-            setLoading(false);
-        }
-    }, [params]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await listReceivables(params);
+      setRows(res.data ?? []);
+      setMeta((res.meta as Meta) ?? null);
+    } catch {
+      setError("Gagal memuat data piutang.");
+    } finally {
+      setLoading(false);
+    }
+  }, [params]);
 
-    useEffect(() => {
-        load();
-    }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-    const columns = [
-        { key: "invoice_no", header: "Invoice", render: (r: Receivable) => r.order?.invoice_no ?? "-" },
-        { key: "customer", header: "Customer", render: (r: Receivable) => r.order?.customer?.name ?? "-" },
-        {
-            key: "due_date",
-            header: "Jatuh Tempo",
-            render: (r: Receivable) => {
-                const txt = r.due_date ? new Date(r.due_date).toLocaleDateString("id-ID") : "-";
-                const danger = r.status === "OVERDUE";
-                return <span className={danger ? "text-red-600 font-semibold" : ""}>{txt}</span>;
-            },
-        },
-        { key: "grand_total", header: "Total", render: (r: Receivable) => toIDR(r.order?.grand_total ?? 0) },
-        { key: "paid_amount", header: "Terbayar", render: (r: Receivable) => toIDR(r.order?.paid_amount ?? 0) },
-        {
-            key: "remaining",
-            header: "Sisa",
-            render: (r: Receivable) => (
-                <span className="rounded-md bg-amber-100 px-2 py-0.5 font-semibold">{toIDR(r.remaining_amount)}</span>
-            ),
-        },
-        { key: "status", header: "Status", render: (r: Receivable) => r.status },
-        {
-            key: "actions",
-            header: "",
-            render: (r: Receivable) =>
-                r.remaining_amount > 0 ? (
-                    <button
-                        className="rounded-xl bg-black px-3 py-1 text-sm text-white"
-                        onClick={() => {
-                            setSelected(r);
-                            setDialogOpen(true);
-                        }}
-                    >
-                        Pelunasan
-                    </button>
-                ) : null,
-        },
-    ];
-
-    return (
-        <div className="space-y-4">
-            <div className="flex flex-wrap items-end gap-2">
-                <div className="flex-1 min-w-[220px]">
-                    <label className="block text-sm">Cari (Invoice/Customer)</label>
-                    <input
-                        value={q}
-                        onChange={(e) => {
-                            setPage(1);
-                            setQ(e.target.value);
-                        }}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                        placeholder="cth: SLV-202510-000012 atau nama pelanggan"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm">Status</label>
-                    <select
-                        value={status}
-                        onChange={(e) => {
-                            setPage(1);
-                            setStatus(e.target.value as ReceivableStatus | "");
-                        }}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                    >
-                        {STATUS.map((s) => (
-                            <option key={s || "ALL"} value={s}>
-                                {s || "ALL"}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-sm">Jatuh Tempo ≤</label>
-                    <input
-                        type="date"
-                        value={dueBefore}
-                        onChange={(e) => {
-                            setPage(1);
-                            setDueBefore(e.target.value);
-                        }}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm">Per halaman</label>
-                    <select
-                        value={perPage}
-                        onChange={(e) => {
-                            setPage(1);
-                            setPerPage(Number(e.target.value));
-                        }}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                    >
-                        {[10, 15, 25, 50].map((n) => (
-                            <option key={n} value={n}>
-                                {n}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {error ? <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
-            <DataTable rows={rows} columns={columns} loading={loading} />
-
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                    {meta ? `Hal ${meta.current_page}/${meta.last_page} — ${meta.total} data` : null}
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        disabled={!meta || page <= 1}
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        className="rounded-xl border px-3 py-1 disabled:opacity-50"
-                    >
-                        Prev
-                    </button>
-                    <button
-                        disabled={!meta || (meta && page >= meta.last_page)}
-                        onClick={() => setPage((p) => (meta ? Math.min(meta.last_page, p + 1) : p))}
-                        className="rounded-xl border px-3 py-1 disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
-            </div>
-
-            <SettleReceivableDialog
-                open={dialogOpen}
-                receivable={selected}
-                onClose={() => setDialogOpen(false)}
-                onSettled={() => load()}
-            />
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Receivables</h1>
+          <p className="text-xs text-gray-600">Daftar piutang & status pelunasan</p>
         </div>
-    );
+      </div>
+
+      {/* Toolbar (FilterBar) */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Toolbar filter piutang"
+      >
+        <div className="p-3 grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto] gap-3">
+          {/* Search */}
+          <div className="relative">
+            <label className="sr-only" htmlFor="cari">Cari</label>
+            <input
+              id="cari"
+              value={q}
+              onChange={(e) => { setPage(1); setQ(e.target.value); }}
+              className="input w-full pl-9 py-2"
+              placeholder="Cari invoice/customer…"
+              aria-label="Cari invoice atau nama pelanggan"
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="text-sm text-gray-600" htmlFor="status">Status</label>
+            <select
+              id="status"
+              value={status}
+              onChange={(e) => { setPage(1); setStatus(e.target.value as ReceivableStatus | ""); }}
+              className="input w-full py-2"
+            >
+              {STATUS.map((s) => (
+                <option key={s || "ALL"} value={s}>
+                  {s || "ALL"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Due before */}
+          <div>
+            <label className="text-sm text-gray-600" htmlFor="dueBefore">Jatuh Tempo ≤</label>
+            <input
+              id="dueBefore"
+              type="date"
+              value={dueBefore}
+              onChange={(e) => { setPage(1); setDueBefore(e.target.value); }}
+              className="input w-full py-2"
+            />
+          </div>
+
+          {/* Per page */}
+          <div>
+            <label className="text-sm text-gray-600" htmlFor="perPage">Per halaman</label>
+            <select
+              id="perPage"
+              value={perPage}
+              onChange={(e) => { setPage(1); setPerPage(Number(e.target.value)); }}
+              className="input w-full py-2"
+            >
+              {[10, 15, 25, 50].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {/* Error */}
+      {error ? (
+        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {error}
+        </div>
+      ) : null}
+
+      {/* Table (konsisten dengan Customers) */}
+      <section aria-busy={loading ? "true" : "false"}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-[900px] w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Invoice</Th>
+                  <Th>Customer</Th>
+                  <Th>Jatuh Tempo</Th>
+                  <Th className="text-right">Total</Th>
+                  <Th className="text-right">Terbayar</Th>
+                  <Th className="text-right">Sisa</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">Belum ada data</td>
+                  </tr>
+                ) : (
+                  rows.map((r) => {
+                    const dueText = r.due_date
+                      ? new Date(r.due_date).toLocaleDateString("id-ID")
+                      : "-";
+                    const isOverdue = r.status === "OVERDUE";
+                    return (
+                      <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                        <Td>{r.order?.invoice_no ?? "-"}</Td>
+                        <Td><span className="line-clamp-1">{r.order?.customer?.name ?? "-"}</span></Td>
+                        <Td>
+                          <span className={isOverdue ? "text-red-600 font-semibold" : ""}>
+                            {dueText}
+                          </span>
+                        </Td>
+                        <Td className="text-right tabular-nums">{toIDR(r.order?.grand_total ?? 0)}</Td>
+                        <Td className="text-right tabular-nums">{toIDR(r.order?.paid_amount ?? 0)}</Td>
+                        <Td className="text-right">
+                          <span className="chip chip--subtle">{toIDR(r.remaining_amount)}</span>
+                        </Td>
+                        <Td>{renderStatusChip(r.status)}</Td>
+                        <Td className="text-right">
+                          {r.remaining_amount > 0 ? (
+                            <button
+                              className="btn-primary"
+                              onClick={() => { setSelected(r); setDialogOpen(true); }}
+                              aria-label={`Pelunasan untuk ${r.order?.invoice_no ?? 'invoice'}`}
+                            >
+                              Pelunasan
+                            </button>
+                          ) : null}
+                        </Td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer / Pagination */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-500">
+          {meta ? `Hal ${meta.current_page}/${meta.last_page} — ${meta.total} data` : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            disabled={!meta || page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="btn-outline disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <button
+            disabled={!meta || (meta && page >= meta.last_page)}
+            onClick={() => setPage((p) => (meta ? Math.min(meta.last_page, p + 1) : p))}
+            className="btn-outline disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {/* Dialog Pelunasan */}
+      <SettleReceivableDialog
+        open={dialogOpen}
+        receivable={selected}
+        onClose={() => setDialogOpen(false)}
+        onSettled={() => load()}
+      />
+    </div>
+  );
+}
+
+/* ---------- Subcomponents: konsisten dengan Customers ---------- */
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-6 w-24 rounded-full bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-24 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
+  );
+}
+
+/* ---------- Status chip ---------- */
+function renderStatusChip(s?: ReceivableStatus) {
+  const base = "chip";
+  switch (s) {
+    case "OPEN":
+      return <span className={`${base} chip--subtle`}>OPEN</span>;
+    case "PARTIAL":
+      return <span className={`${base} chip--subtle`}>PARTIAL</span>;
+    case "OVERDUE":
+      return <span className={`${base} chip--danger`}>OVERDUE</span>;
+    case "SETTLED":
+      return <span className={`${base} chip--solid`}>SETTLED</span>;
+    default:
+      return <span className="text-gray-600">-</span>;
+  }
 }
 
 ```
@@ -11659,11 +12137,12 @@ function RowSkeleton() {
 
 ### src/pages/vouchers/VoucherForm.tsx
 
-- SHA: `104b591d9807`  
-- Ukuran: 7 KB
+- SHA: `937798c10c4c`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/vouchers/VoucherForm.tsx
 import { useEffect, useState } from 'react';
 import { createVoucher, getVoucher, updateVoucher } from '../../api/vouchers';
 import type { Voucher, VoucherUpsertPayload, VoucherType } from '../../types/vouchers';
@@ -11674,155 +12153,249 @@ import type { AxiosError } from 'axios';
 const TYPES: VoucherType[] = ['PERCENT', 'NOMINAL'];
 
 export default function VoucherForm() {
-    const { id } = useParams<{ id: string }>();
-    const nav = useNavigate();
-    const editing = Boolean(id);
-    const { user: me } = useAuth;
+  const { id } = useParams<{ id: string }>();
+  const nav = useNavigate();
+  const editing = Boolean(id);
+  const { user: me } = useAuth;
 
-    const [form, setForm] = useState<VoucherUpsertPayload>({
-        branch_id: me?.branch_id != null ? String(me.branch_id) : null,
-        code: '',
-        type: 'PERCENT',
-        value: 0,
-        start_at: null,
-        end_at: null,
-        min_total: 0,
-        usage_limit: null,
-        active: true,
-    });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [form, setForm] = useState<VoucherUpsertPayload>({
+    branch_id: me?.branch_id != null ? String(me.branch_id) : null,
+    code: '',
+    type: 'PERCENT',
+    value: 0,
+    start_at: null,
+    end_at: null,
+    min_total: 0,
+    usage_limit: null,
+    active: true,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-    useEffect(() => {
-        (async () => {
-            if (!editing) return;
-            setLoading(true);
-            try {
-                const res = await getVoucher(id!);
-                const v = res.data as Voucher;
-                setForm({
-                    branch_id: v.branch_id,
-                    code: v.code,
-                    type: v.type,
-                    value: v.value,
-                    start_at: v.start_at,
-                    end_at: v.end_at,
-                    min_total: v.min_total ?? 0,
-                    usage_limit: v.usage_limit,
-                    active: v.active,
-                });
-            } catch {
-                setError('Gagal memuat data voucher');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [editing, id]);
+  useEffect(() => {
+    (async () => {
+      if (!editing) return;
+      setLoading(true);
+      try {
+        const res = await getVoucher(id!);
+        const v = res.data as Voucher;
+        setForm({
+          branch_id: v.branch_id,
+          code: v.code,
+          type: v.type,
+          value: v.value,
+          start_at: v.start_at,
+          end_at: v.end_at,
+          min_total: v.min_total ?? 0,
+          usage_limit: v.usage_limit,
+          active: v.active,
+        });
+      } catch {
+        setError('Gagal memuat data voucher');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [editing, id]);
 
-    function validateUI(): string | null {
-        if (!form.code || !/^[A-Z0-9-]+$/.test(form.code)) return 'Kode wajib huruf/angka/strip dan huruf besar';
-        if (form.type === 'PERCENT' && (form.value < 0 || form.value > 100)) return 'Nilai persentase harus 0–100';
-        if ((form.start_at && form.end_at) && new Date(form.start_at) > new Date(form.end_at)) return 'Periode tidak valid (start > end)';
-        if ((form.min_total ?? 0) < 0) return 'Min total tidak boleh negatif';
-        return null;
+  function validateUI(): string | null {
+    if (!form.code || !/^[A-Z0-9-]+$/.test(form.code)) return 'Kode wajib huruf/angka/strip dan huruf besar';
+    if (form.type === 'PERCENT' && (form.value < 0 || form.value > 100)) return 'Nilai persentase harus 0–100';
+    if ((form.start_at && form.end_at) && new Date(form.start_at) > new Date(form.end_at)) return 'Periode tidak valid (start > end)';
+    if ((form.min_total ?? 0) < 0) return 'Min total tidak boleh negatif';
+    return null;
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true); setError(null); setFieldErrors({});
+    const uiErr = validateUI();
+    if (uiErr) { setLoading(false); setError(uiErr); return; }
+
+    try {
+      if (editing) {
+        await updateVoucher(id!, form);
+      } else {
+        await createVoucher(form);
+      }
+      nav('/vouchers');
+    } catch (ex: unknown) {
+      const err = ex as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
+      const resp = err.response;
+      if (resp?.status === 422) {
+        setFieldErrors(resp.data?.errors ?? {});
+        setError(resp.data?.message ?? 'Validasi gagal');
+      } else if (resp?.status === 403) {
+        setError('Tidak berwenang');
+      } else {
+        setError('Gagal menyimpan voucher');
+      }
+    } finally {
+      setLoading(false);
     }
+  }
 
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true); setError(null); setFieldErrors({});
-        const uiErr = validateUI();
-        if (uiErr) { setLoading(false); setError(uiErr); return; }
+  return (
+    <form className="space-y-4 max-w-2xl" onSubmit={onSubmit} aria-busy={loading ? 'true' : 'false'}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">
+            {editing ? 'Edit Voucher' : 'Buat Voucher'}
+          </h1>
+          <p className="text-xs text-gray-600">
+            Atur kode, tipe, nilai, periode, dan status voucher.
+          </p>
+        </div>
+      </div>
 
-        try {
-            if (editing) {
-                await updateVoucher(id!, form);
-            } else {
-                await createVoucher(form);
-            }
-            nav('/vouchers');
-        } catch (ex: unknown) {
-            const err = ex as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
-            const resp = err.response;
-            if (resp?.status === 422) {
-                setFieldErrors(resp.data?.errors ?? {});
-                setError(resp.data?.message ?? 'Validasi gagal');
-            } else if (resp?.status === 403) {
-                setError('Tidak berwenang');
-            } else {
-                setError('Gagal menyimpan voucher');
-            }
-        } finally {
-            setLoading(false);
-        }
-    }
+      {/* Alert error */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
 
-    return (
-        <form className="space-y-4 max-w-xl" onSubmit={onSubmit}>
-            <h1 className="text-lg font-semibold">{editing ? 'Edit Voucher' : 'Buat Voucher'}</h1>
-
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
-            <div className="grid grid-cols-2 gap-3">
-                <label className="col-span-2">
-                    <div className="text-xs text-gray-600 mb-1">Kode</div>
-                    <input className="border rounded px-3 py-2 w-full" value={form.code}
-                        onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} required />
-                    {fieldErrors.code && <div className="text-xs text-red-600">{fieldErrors.code.join(', ')}</div>}
-                </label>
-
-                <label>
-                    <div className="text-xs text-gray-600 mb-1">Tipe</div>
-                    <select className="border rounded px-3 py-2 w-full" value={form.type}
-                        onChange={(e) => setForm({ ...form, type: e.target.value as VoucherType })}>
-                        {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                </label>
-
-                <label>
-                    <div className="text-xs text-gray-600 mb-1">Nilai</div>
-                    <input type="number" className="border rounded px-3 py-2 w-full" value={form.value}
-                        onChange={(e) => setForm({ ...form, value: Number(e.target.value) })} required />
-                    <div className="text-[10px] text-gray-500">{form.type === 'PERCENT' ? '0–100 (%)' : 'Nominal rupiah'}</div>
-                    {fieldErrors.value && <div className="text-xs text-red-600">{fieldErrors.value.join(', ')}</div>}
-                </label>
-
-                <label>
-                    <div className="text-xs text-gray-600 mb-1">Min Total</div>
-                    <input type="number" className="border rounded px-3 py-2 w-full" value={form.min_total ?? 0}
-                        onChange={(e) => setForm({ ...form, min_total: Number(e.target.value) })} />
-                </label>
-
-                <label>
-                    <div className="text-xs text-gray-600 mb-1">Usage Limit</div>
-                    <input type="number" className="border rounded px-3 py-2 w-full" value={form.usage_limit ?? 0}
-                        onChange={(e) => setForm({ ...form, usage_limit: e.target.value ? Number(e.target.value) : null })} />
-                </label>
-
-                <label>
-                    <div className="text-xs text-gray-600 mb-1">Start At</div>
-                    <input type="datetime-local" className="border rounded px-3 py-2 w-full" value={form.start_at ?? ''}
-                        onChange={(e) => setForm({ ...form, start_at: e.target.value || null })} />
-                </label>
-
-                <label>
-                    <div className="text-xs text-gray-600 mb-1">End At</div>
-                    <input type="datetime-local" className="border rounded px-3 py-2 w-full" value={form.end_at ?? ''}
-                        onChange={(e) => setForm({ ...form, end_at: e.target.value || null })} />
-                </label>
-
-                <label className="col-span-2">
-                    <input type="checkbox" checked={!!form.active}
-                        onChange={(e) => setForm({ ...form, active: e.target.checked })} /> <span className="text-sm">Aktif</span>
-                </label>
+      {/* Card form */}
+      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Kode */}
+          <label className="md:col-span-2">
+            <div className="text-xs text-gray-600 mb-1">Kode</div>
+            <input
+              className="input w-full"
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+              required
+              placeholder="Contoh: NEWUSER-10"
+              aria-invalid={!!fieldErrors.code}
+              aria-describedby={fieldErrors.code ? 'err-code' : undefined}
+            />
+            <div className="text-[10px] text-gray-500 mt-1">
+              Hanya huruf besar, angka, dan strip. Contoh: <span className="font-mono">SALVE-25</span>
             </div>
+            {fieldErrors.code && (
+              <div id="err-code" className="text-xs text-red-600 mt-1">
+                {fieldErrors.code.join(', ')}
+              </div>
+            )}
+          </label>
 
-            <div className="flex items-center gap-2">
-                <button disabled={loading} className="rounded border px-3 py-2">{loading ? 'Menyimpan…' : 'Simpan'}</button>
-                <button type="button" className="rounded border px-3 py-2" onClick={() => history.back()}>Batal</button>
+          {/* Tipe */}
+          <label>
+            <div className="text-xs text-gray-600 mb-1">Tipe</div>
+            <select
+              className="input w-full"
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value as VoucherType })}
+            >
+              {TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+
+          {/* Nilai */}
+          <label>
+            <div className="text-xs text-gray-600 mb-1">Nilai</div>
+            <input
+              type="number"
+              className="input w-full"
+              value={form.value}
+              onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+              required
+              aria-invalid={!!fieldErrors.value}
+              aria-describedby={fieldErrors.value ? 'err-value' : undefined}
+            />
+            <div className="text-[10px] text-gray-500 mt-1">
+              {form.type === 'PERCENT' ? '0–100 (%)' : 'Nominal rupiah'}
             </div>
-        </form>
-    );
+            {fieldErrors.value && (
+              <div id="err-value" className="text-xs text-red-600 mt-1">
+                {fieldErrors.value.join(', ')}
+              </div>
+            )}
+          </label>
+
+          {/* Min Total */}
+          <label>
+            <div className="text-xs text-gray-600 mb-1">Min Total</div>
+            <input
+              type="number"
+              className="input w-full"
+              value={form.min_total ?? 0}
+              onChange={(e) => setForm({ ...form, min_total: Number(e.target.value) })}
+            />
+          </label>
+
+          {/* Usage Limit */}
+          <label>
+            <div className="text-xs text-gray-600 mb-1">Usage Limit</div>
+            <input
+              type="number"
+              className="input w-full"
+              value={form.usage_limit ?? 0}
+              onChange={(e) =>
+                setForm({ ...form, usage_limit: e.target.value ? Number(e.target.value) : null })
+              }
+            />
+            <div className="text-[10px] text-gray-500 mt-1">Kosongkan untuk tidak dibatasi.</div>
+          </label>
+
+          {/* Start At */}
+          <label>
+            <div className="text-xs text-gray-600 mb-1">Start At</div>
+            <input
+              type="datetime-local"
+              className="input w-full"
+              value={form.start_at ?? ''}
+              onChange={(e) => setForm({ ...form, start_at: e.target.value || null })}
+            />
+          </label>
+
+          {/* End At */}
+          <label>
+            <div className="text-xs text-gray-600 mb-1">End At</div>
+            <input
+              type="datetime-local"
+              className="input w-full"
+              value={form.end_at ?? ''}
+              onChange={(e) => setForm({ ...form, end_at: e.target.value || null })}
+            />
+          </label>
+
+          {/* Aktif */}
+          <label className="md:col-span-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!!form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+            />
+            <span className="text-sm">Aktif</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button disabled={loading} className="btn-primary disabled:opacity-50">
+          {loading ? 'Menyimpan…' : 'Simpan'}
+        </button>
+        <button
+          type="button"
+          className="btn-outline"
+          onClick={() => history.back()}
+        >
+          Batal
+        </button>
+      </div>
+    </form>
+  );
 }
 
 ```
@@ -11830,11 +12403,12 @@ export default function VoucherForm() {
 
 ### src/pages/vouchers/VouchersIndex.tsx
 
-- SHA: `76887826eeb5`  
-- Ukuran: 7 KB
+- SHA: `108bf6b6088f`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/vouchers/VouchersIndex.tsx
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listVouchers, deleteVoucher } from '../../api/vouchers';
 import type { Voucher, PaginationMeta } from '../../types/vouchers';
@@ -11842,136 +12416,250 @@ import { useNavigate } from 'react-router-dom';
 import { useHasRole } from '../../store/useAuth';
 
 export default function VouchersIndex() {
-    const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
-    const nav = useNavigate();
-    const [rows, setRows] = useState<Voucher[]>([]);
-    const [meta, setMeta] = useState<PaginationMeta | null>(null);
-    const [q, setQ] = useState('');
-    const [active, setActive] = useState<'all' | 'active' | 'inactive'>('all');
-    const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const perPage = 10;
+  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const nav = useNavigate();
+  const [rows, setRows] = useState<Voucher[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [q, setQ] = useState('');
+  const [active, setActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const perPage = 10;
 
-    const queryActive = useMemo(() => active === 'all' ? undefined : active === 'active', [active]);
+  const queryActive = useMemo(
+    () => (active === 'all' ? undefined : active === 'active'),
+    [active]
+  );
 
-    const fetchPage = useCallback(async (p = 1) => {
-        setLoading(true); setError(null);
-        try {
-            const res = await listVouchers({ q, page: p, per_page: perPage, active: queryActive });
-            setRows(res.data ?? []);
-            setMeta(res.meta ?? null);
-        } catch (ex: unknown) {
-            const err = ex as { response?: { status?: number } };
-            if (err?.response?.status === 403) setError('Tidak berwenang mengakses vouchers');
-            else setError('Gagal memuat data voucher');
-        } finally {
-            setLoading(false);
-        }
-    }, [q, queryActive]);
+  const fetchPage = useCallback(
+    async (p = 1) => {
+      setLoading(true); setError(null);
+      try {
+        const res = await listVouchers({ q, page: p, per_page: perPage, active: queryActive });
+        setRows(res.data ?? []);
+        setMeta(res.meta ?? null);
+      } catch (ex: unknown) {
+        const err = ex as { response?: { status?: number } };
+        if (err?.response?.status === 403) setError('Tidak berwenang mengakses vouchers');
+        else setError('Gagal memuat data voucher');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [q, queryActive]
+  );
 
-    useEffect(() => { void fetchPage(page); }, [fetchPage, page]);
+  useEffect(() => { void fetchPage(page); }, [fetchPage, page]);
 
-    useEffect(() => {
-        const t = setTimeout(() => { void fetchPage(1); setPage(1); }, 300);
-        return () => clearTimeout(t);
-    }, [fetchPage, q, active]);
+  useEffect(() => {
+    const t = setTimeout(() => { void fetchPage(1); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [fetchPage, q, active]);
 
-    return (
-        <div className="space-y-4">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold">Vouchers</h1>
-                    <p className="text-xs text-gray-500">Kelola kode promo dan periode aktif.</p>
-                </div>
-                {canManage && (
-                    <div className="space-x-2">
-                        <button className="rounded border px-3 py-2 text-sm" onClick={() => nav('/vouchers/new')}>New Voucher</button>
-                    </div>
-                )}
-            </header>
-
-            <div className="flex items-center gap-2">
-                <input
-                    className="border rounded px-3 py-2 text-sm"
-                    placeholder="Cari kode…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                />
-                <select
-                    className="border rounded px-3 py-2 text-sm"
-                    value={active}
-                    onChange={(e) => setActive(e.target.value as 'all' | 'active' | 'inactive')}
-                >
-                    <option value="all">Semua</option>
-                    <option value="active">Aktif</option>
-                    <option value="inactive">Nonaktif</option>
-                </select>
-            </div>
-
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
-            <div className="overflow-auto border rounded">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="bg-gray-50 text-left">
-                            <th className="p-2">Kode</th>
-                            <th className="p-2">Tipe</th>
-                            <th className="p-2">Nilai</th>
-                            <th className="p-2">Min Total</th>
-                            <th className="p-2">Periode</th>
-                            <th className="p-2">Limit</th>
-                            <th className="p-2">Status</th>
-                            <th className="p-2">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td className="p-4" colSpan={8}>Memuat…</td></tr>
-                        ) : rows.length === 0 ? (
-                            <tr><td className="p-4 text-muted-foreground" colSpan={8}>Belum ada voucher</td></tr>
-                        ) : rows.map(v => (
-                            <tr key={v.id} className="border-t">
-                                <td className="p-2 font-mono">{v.code}</td>
-                                <td className="p-2">{v.type}</td>
-                                <td className="p-2">{v.type === 'PERCENT' ? `${v.value}%` : new Intl.NumberFormat('id-ID').format(v.value)}</td>
-                                <td className="p-2">{new Intl.NumberFormat('id-ID').format(v.min_total ?? 0)}</td>
-                                <td className="p-2">
-                                    {(v.start_at && v.end_at) ? `${v.start_at?.slice(0, 16)} — ${v.end_at?.slice(0, 16)}` : '—'}
-                                </td>
-                                <td className="p-2">{v.usage_limit ?? '—'}</td>
-                                <td className="p-2">{v.active ? 'Aktif' : 'Nonaktif'}</td>
-                                <td className="p-2">
-                                    <div className="flex gap-2">
-                                        <button className="underline text-xs" onClick={() => nav(`/vouchers/${v.id}/edit`)}>Edit</button>
-                                        {canManage && (
-                                            <button
-                                                className="underline text-xs text-red-600"
-                                                onClick={async () => {
-                                                    if (!confirm(`Hapus voucher ${v.code}?`)) return;
-                                                    try { await deleteVoucher(v.id); await fetchPage(page); } catch { alert('Gagal menghapus'); }
-                                                }}
-                                            >
-                                                Delete
-                                            </button>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {meta && meta.last_page > 1 && (
-                <div className="flex items-center gap-2">
-                    <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded border px-2 py-1 text-xs">Prev</button>
-                    <div className="text-xs text-gray-600">Hal {meta.current_page} / {meta.last_page}</div>
-                    <button disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)} className="rounded border px-2 py-1 text-xs">Next</button>
-                </div>
-            )}
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Vouchers</h1>
+          <p className="text-xs text-gray-500">Kelola kode promo dan periode aktif.</p>
         </div>
-    );
+        {canManage && (
+          <button
+            className="btn-primary"
+            onClick={() => nav('/vouchers/new')}
+            aria-label="Tambah voucher baru"
+          >
+            New Voucher
+          </button>
+        )}
+      </header>
+
+      {/* Toolbar */}
+      <section
+        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        aria-label="Toolbar pencarian voucher"
+      >
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+          <div className="relative">
+            <input
+              className="input w-full pl-9 py-2"
+              placeholder="Cari kode…"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); }}
+              aria-label="Cari voucher"
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <label htmlFor="filter-active" className="text-sm text-gray-600">Status</label>
+            <select
+              id="filter-active"
+              className="input py-2"
+              value={active}
+              onChange={(e) => setActive(e.target.value as 'all' | 'active' | 'inactive')}
+              aria-label="Filter status voucher"
+            >
+              <option value="all">Semua</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Nonaktif</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {/* Error */}
+      {error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Table */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)] text-left">
+                  <Th>Kode</Th>
+                  <Th>Tipe</Th>
+                  <Th className="text-right">Nilai</Th>
+                  <Th className="text-right">Min Total</Th>
+                  <Th>Periode</Th>
+                  <Th className="text-right">Limit</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
+                      Belum ada voucher
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((v) => (
+                    <tr key={v.id} className="hover:bg-black/5 transition-colors">
+                      <Td><span className="font-mono">{v.code}</span></Td>
+                      <Td>{v.type}</Td>
+                      <Td className="text-right">
+                        {v.type === 'PERCENT'
+                          ? `${v.value}%`
+                          : new Intl.NumberFormat('id-ID').format(v.value)}
+                      </Td>
+                      <Td className="text-right">
+                        {new Intl.NumberFormat('id-ID').format(v.min_total ?? 0)}
+                      </Td>
+                      <Td>
+                        {(v.start_at && v.end_at)
+                          ? `${v.start_at?.slice(0, 16)} — ${v.end_at?.slice(0, 16)}`
+                          : '—'}
+                      </Td>
+                      <Td className="text-right">{v.usage_limit ?? '—'}</Td>
+                      <Td>{v.active ? 'Aktif' : 'Nonaktif'}</Td>
+                      <Td className="text-right">
+                        <div className="inline-flex gap-2">
+                          <button
+                            className="btn-outline"
+                            onClick={() => nav(`/vouchers/${v.id}/edit`)}
+                            aria-label={`Edit voucher ${v.code}`}
+                          >
+                            Edit
+                          </button>
+                          {canManage && (
+                            <button
+                              className="btn-outline text-red-600"
+                              onClick={async () => {
+                                if (!confirm(`Hapus voucher ${v.code}?`)) return;
+                                try {
+                                  await deleteVoucher(v.id);
+                                  await fetchPage(page);
+                                } catch {
+                                  alert('Gagal menghapus');
+                                }
+                              }}
+                              aria-label={`Hapus voucher ${v.code}`}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Pagination */}
+      {meta && meta.last_page > 1 && (
+        <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman voucher">
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span className="text-sm">Hal {meta.current_page} / {meta.last_page}</span>
+          <button
+            disabled={page >= meta.last_page}
+            onClick={() => setPage((p) => p + 1)}
+            className="btn-outline disabled:opacity-50"
+          >
+            Next
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Subcomponents (konsisten dgn Customers) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-14 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right">
+        <div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" />
+      </td>
+    </tr>
+  );
 }
 
 ```

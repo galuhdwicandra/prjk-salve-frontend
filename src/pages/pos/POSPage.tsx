@@ -12,6 +12,8 @@ import { applyVoucherToOrder } from '../../api/vouchers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/useAuth';
 import { toIDR } from '../../utils/money';
+import { getLoyaltySummary } from '../../api/loyalty';
+import type { LoyaltySummary } from '../../types/loyalty';
 
 type HttpError = { response?: { status?: number; data?: unknown } };
 
@@ -63,8 +65,21 @@ export default function POSPage() {
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
+  // Loyalty (preview stamp)
+  const [loyRefreshKey, setLoyRefreshKey] = useState(0);
+  const [loy, setLoy] = useState<LoyaltySummary | null>(null);
+  useEffect(() => {
+    if (!customerId) { setLoy(null); return; }
+    getLoyaltySummary(customerId, branchId)
+      .then((r: any) => {
+        // fungsi API bisa mengembalikan envelope { data } atau object langsung
+        const data: LoyaltySummary = 'data' in r ? r.data : r;
+        setLoy(data);
+      })
+      .catch(() => setLoy(null));
+  }, [customerId, branchId, loyRefreshKey]);
+
   // Tanggal masuk & selesai
-  // Simpan dalam ISO string (UTC) agar konsisten dengan backend (cast datetime)
   const [receivedAt, setReceivedAt] = useState<string>(() => new Date().toISOString());
   const [readyAt, setReadyAt] = useState<string | null>(null);
 
@@ -93,6 +108,19 @@ export default function POSPage() {
     return total;
   }, [mode, dpAmount, total]);
   const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
+  // Preview loyalti (berdasarkan stamp saat ini & subtotal saat ini)
+  const loyaltyPreview = useMemo(() => {
+    if (!loy || subtotal <= 0) return { reward: 'NONE' as 'NONE' | 'DISC25' | 'FREE100', discount: 0, next: 1, stamps: 0 };
+    const next = loy.next;
+    let disc = 0;
+    if (next === 5) disc = subtotal * 0.25;
+    if (next === 10) disc = subtotal;
+    return { reward: next === 5 ? 'DISC25' : next === 10 ? 'FREE100' : 'NONE', discount: disc, next, stamps: loy.stamps };
+  }, [loy, subtotal]);
+  const predictedGrand = useMemo(
+    () => Math.max(0, subtotal - (discount || 0) - (loyaltyPreview.discount || 0)),
+    [subtotal, discount, loyaltyPreview.discount]
+  );
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
   const dateErr = useMemo(() => {
     if (!readyAt) return null;
@@ -198,6 +226,7 @@ export default function POSPage() {
         console.warn('[POSPage] upload photos failed', e);
       }
 
+      setLoyRefreshKey((v) => v + 1);
       alert('Transaksi tersimpan');
       nav(`/orders/${order.id}/receipt`, { replace: true });
     } catch (e: unknown) {
@@ -336,6 +365,30 @@ export default function POSPage() {
           <div className="text-sm font-semibold">{branchId || '-'}</div>
         </div>
 
+        {/* Stamp Loyalty (preview) */}
+        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">Stamp Loyalty</div>
+            <div className="text-[11px] text-gray-600">
+              {loy ? `Stamp ${loy.stamps}/10 · Next ${loy.next}` : '-'}
+            </div>
+          </div>
+          <div className="grid grid-cols-10 gap-1" aria-label="Loyalty stamps">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-2.5 rounded ${loy && i < loy.stamps ? 'bg-black/70' : 'bg-black/10'}`}
+                title={`Stamp ${i + 1}`}
+              />
+            ))}
+          </div>
+          <div className="text-[11px] text-gray-700">
+            {loyaltyPreview.reward === 'DISC25' && 'Transaksi berikutnya mendapat diskon 25%.'}
+            {loyaltyPreview.reward === 'FREE100' && 'Transaksi berikutnya GRATIS (100%).'}
+            {loyaltyPreview.reward === 'NONE' && 'Belum ada benefit pada transaksi berikutnya.'}
+          </div>
+        </div>
+
         {/* Desktop cart */}
         <div className="hidden md:block">
           <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
@@ -358,6 +411,13 @@ export default function POSPage() {
             <span>Grand Total</span>
             <span className="font-semibold">{toIDR(grand)}</span>
           </div>
+
+          {!!(loyaltyPreview.discount > 0) && (
+            <div className="flex justify-between text-[12px] text-gray-700">
+              <span>Perkiraan setelah loyalti</span>
+              <span className="font-medium">{toIDR(predictedGrand)}</span>
+            </div>
+          )}
 
           {/* Mode Pembayaran */}
           <div className="space-y-2">
