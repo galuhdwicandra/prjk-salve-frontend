@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-08 02:35:42_  
+_Dihasilkan otomatis: 2025-12-08 03:05:10_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -13282,7 +13282,7 @@ function RowSkeleton() {
 
 ### src/pages/wash-notes/WashNoteForm.tsx
 
-- SHA: `62f744d8ea6e`  
+- SHA: `8ca81e782fa6`  
 - Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -13293,420 +13293,501 @@ import { createWashNote, updateWashNote, getWashNote, searchOrderCandidates, lis
 import { useNavigate, useParams } from 'react-router-dom';
 
 type ItemDraft = {
-    order_id: string;
-    number: string;
-    customer?: string;
-    qty: number;
-    process_status?: 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
-    started_at?: string | null;
-    finished_at?: string | null;
-    note?: string | null;
+  order_id: string;
+  number: string;
+  customer?: string;
+  qty: number;
+  process_status?: 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
+  started_at?: string | null;
+  finished_at?: string | null;
+  note?: string | null;
 };
 
 function InfoTipsForm({ noteDate }: { noteDate: string }) {
-    const [open, setOpen] = useState(true);
-    return (
-        <aside className="rounded border p-3 bg-gray-50">
-            <div className="flex items-center justify-between">
-                <strong className="text-sm">Tips / Keterangan</strong>
-                <button
-                    type="button"
-                    onClick={() => setOpen(o => !o)}
-                    className="text-xs underline"
-                    aria-expanded={open}
-                    aria-controls="wash-tips-form"
-                >
-                    {open ? 'Sembunyikan' : 'Tampilkan'}
-                </button>
-            </div>
-            {open && (
-                <div id="wash-tips-form" className="mt-2 text-sm leading-relaxed">
-                    <ul className="list-disc ml-5 space-y-1">
-                        <li>Catatan dibuat per <strong>Petugas Cuci</strong> per <strong>tanggal</strong>. Tanggal aktif: <b>{noteDate}</b>.</li>
-                        <li>Gunakan <em>rentang tanggal</em> di bagian pencarian untuk menyaring order yang akan ditambahkan.</li>
-                        <li>Ketik lengkap <strong>huruf atau nomor order</strong> pada kolom “Cari Order”, lalu <strong>Tambah</strong> untuk memasukkan ke daftar.</li>
-                        <li>Isi <code>qty</code>, pilih status proses, dan (opsional) jam mulai–selesai. Jam selesai harus ≥ jam mulai bila keduanya diisi.</li>
-                        <li>Duplikasi order pada catatan yang sama akan otomatis dicegah.</li>
-                        <li>Tekan <strong>Simpan</strong> setelah minimal satu order terisi.</li>
-                        <li>Bila <em>Auto-isi qty</em> aktif, kolom qty terisi otomatis dari total item pada order; Anda tetap dapat mengubahnya.</li>
-                    </ul>
-                </div>
-            )}
-        </aside>
-    );
+  const [open, setOpen] = useState(true);
+  return (
+    <aside className="card rounded-lg border border-[color:var(--color-border)] bg-[var(--color-surface)] shadow-elev-1">
+      <div className="flex items-center justify-between p-3">
+        <strong className="text-sm">Tips / Keterangan</strong>
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="text-xs underline"
+          aria-expanded={open}
+          aria-controls="wash-tips-form"
+        >
+          {open ? 'Sembunyikan' : 'Tampilkan'}
+        </button>
+      </div>
+      {open && (
+        <div id="wash-tips-form" className="px-3 pb-3 text-sm leading-relaxed">
+          <ul className="list-disc ml-5 space-y-1">
+            <li>Catatan dibuat per <strong>Petugas Cuci</strong> per <strong>tanggal</strong>. Tanggal aktif: <b>{noteDate}</b>.</li>
+            <li>Gunakan <em>rentang tanggal</em> di bagian pencarian untuk menyaring order yang akan ditambahkan.</li>
+            <li>Ketik lengkap <strong>huruf atau nomor order</strong> pada kolom “Cari Order”, lalu <strong>Tambah</strong> untuk memasukkan ke daftar.</li>
+            <li>Isi <code>qty</code>, pilih status proses, dan (opsional) jam mulai–selesai. Jam selesai harus ≥ jam mulai bila keduanya diisi.</li>
+            <li>Duplikasi order pada catatan yang sama akan otomatis dicegah.</li>
+            <li>Tekan <strong>Simpan</strong> setelah minimal satu order terisi.</li>
+            <li>Bila <em>Auto-isi qty</em> aktif, kolom qty terisi otomatis dari total item pada order; Anda tetap dapat mengubahnya.</li>
+          </ul>
+        </div>
+      )}
+    </aside>
+  );
 }
 
 export default function WashNoteForm() {
-    const nav = useNavigate();
-    const { id } = useParams<{ id: string }>();
+  const nav = useNavigate();
+  const { id } = useParams<{ id: string }>();
 
-    const [noteDate, setNoteDate] = useState(() => new Date().toISOString().slice(0, 10));
-    const [items, setItems] = useState<ItemDraft[]>([]);
-    const [q, setQ] = useState('');
-    const [candidates, setCandidates] = useState<any[]>([]);
-    const today = new Date().toISOString().slice(0, 10);
-    const [from, setFrom] = useState<string>(today);
-    const [to, setTo] = useState<string>(today);
-    const [loading, setLoading] = useState(false);
-    const [autoQty, setAutoQty] = useState<boolean>(true);
+  const [noteDate, setNoteDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [items, setItems] = useState<ItemDraft[]>([]);
+  const [q, setQ] = useState('');
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const today = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState<string>(today);
+  const [to, setTo] = useState<string>(today);
+  const [loading, setLoading] = useState(false);
+  const [autoQty, setAutoQty] = useState<boolean>(true);
 
-    const toLocalYMD = (s?: string): string => {
-        if (!s) return '';
-        // jika s sudah 'YYYY-MM-DD'
-        if (s.length >= 10 && s[4] === '-' && s[7] === '-') return s.slice(0, 10);
-        const ms = Date.parse(s);           // -> number (milliseconds)
-        if (Number.isNaN(ms)) return s.slice(0, 10);
-        const d = new Date(ms);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dd}`;
-    };
-    const hhmm = (t?: string | null) => (t ? String(t).slice(0, 5) : null);
+  const toLocalYMD = (s?: string): string => {
+    if (!s) return '';
+    if (s.length >= 10 && s[4] === '-' && s[7] === '-') return s.slice(0, 10);
+    const ms = Date.parse(s);
+    if (Number.isNaN(ms)) return s.slice(0, 10);
+    const d = new Date(ms);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  };
+  const hhmm = (t?: string | null) => (t ? String(t).slice(0, 5) : null);
 
-    const loadDetail = async () => {
-        if (!id) return;
-        setLoading(true);
-        try {
-            const res = await getWashNote(id);
-            const n = res.data;
-            setNoteDate(toLocalYMD(n.note_date));
-            const mapped = (n.items ?? []).map((it: any) => ({
-                order_id: it.order_id,
-                number: it.order?.number ?? it.order_id,
-                customer: it.order?.customer?.name ?? '',
-                qty: Number(it.qty ?? 0),
-                process_status: it.process_status ?? undefined,
-                started_at: it.started_at ?? null,
-                finished_at: it.finished_at ?? null,
-                note: it.note ?? null,
-            }));
-            setItems(mapped);
-        } catch (e) {
-        } finally {
-            setLoading(false);
-        }
-    };
+  const loadDetail = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const res = await getWashNote(id);
+      const n = res.data;
+      setNoteDate(toLocalYMD(n.note_date));
+      const mapped = (n.items ?? []).map((it: any) => ({
+        order_id: it.order_id,
+        number: it.order?.number ?? it.order_id,
+        customer: it.order?.customer?.name ?? '',
+        qty: Number(it.qty ?? 0),
+        process_status: it.process_status ?? undefined,
+        started_at: it.started_at ?? null,
+        finished_at: it.finished_at ?? null,
+        note: it.note ?? null,
+      }));
+      setItems(mapped);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => { loadDetail(); }, [id]);
+  useEffect(() => { loadDetail(); }, [id]);
 
-    const norm = (v?: string) => (v ?? '').trim().toLowerCase();
-    const selectedIds = useMemo<Set<string>>(
-        () => new Set(items.map(i => norm(i.order_id))),
-        [items]
-    );
-    const selectedNumbers = useMemo<Set<string>>(
-        () => new Set(items.map(i => norm(i.number))),
-        [items]
-    );
+  const norm = (v?: string) => (v ?? '').trim().toLowerCase();
+  const selectedIds = useMemo<Set<string>>(
+    () => new Set(items.map(i => norm(i.order_id))),
+    [items]
+  );
+  const selectedNumbers = useMemo<Set<string>>(
+    () => new Set(items.map(i => norm(i.number))),
+    [items]
+  );
 
-    const search = async () => {
-        setLoading(true);
-        try {
-            const od = toLocalYMD(noteDate);
-            const res = await searchOrderCandidates({
-                query: q,
-                date_from: from,
-                date_to: to,
-                on_date: od,
-            });
-            const rows = (res.data ?? []) as any[];
-            // Saring di sumber data: buang yang sudah dipilih (id maupun number)
-            const filtered = rows.filter(o => {
-                const oid = norm(String(o.id));
-                const onum = norm(String(o.number));
-                return !selectedIds.has(oid) && !selectedNumbers.has(onum);
-            });
-            setCandidates(filtered);
-        } catch (e) {
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (q.length >= 2) search(); else setCandidates([]);
-    }, [q, from, to, noteDate, items]);
-
-    const addItem = (o: any) => {
+  const search = async () => {
+    setLoading(true);
+    try {
+      const od = toLocalYMD(noteDate);
+      const res = await searchOrderCandidates({
+        query: q,
+        date_from: from,
+        date_to: to,
+        on_date: od,
+      });
+      const rows = (res.data ?? []) as any[];
+      const filtered = rows.filter(o => {
         const oid = norm(String(o.id));
         const onum = norm(String(o.number));
-        // Cegah duplikasi baik via id maupun number
-        if (items.some(x => norm(x.order_id) === oid || norm(x.number) === onum)) return;
-        const dqty = Number(o?.default_qty ?? 0);
-        setItems(prev => [...prev, {
-            order_id: o.id,
-            number: o.number,
-            customer: o.customer?.name ?? '',
-            qty: autoQty ? dqty : 0,
-            process_status: 'WASH',
-        }]);
-        setCandidates(prev => prev.filter(c => norm(String(c.id)) !== oid && norm(String(c.number)) !== onum));
+        return !selectedIds.has(oid) && !selectedNumbers.has(onum);
+      });
+      setCandidates(filtered);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (q.length >= 2) search(); else setCandidates([]);
+  }, [q, from, to, noteDate, items]);
+
+  const addItem = (o: any) => {
+    const oid = norm(String(o.id));
+    const onum = norm(String(o.number));
+    if (items.some(x => norm(x.order_id) === oid || norm(x.number) === onum)) return;
+    const dqty = Number(o?.default_qty ?? 0);
+    setItems(prev => [...prev, {
+      order_id: o.id,
+      number: o.number,
+      customer: o.customer?.name ?? '',
+      qty: autoQty ? dqty : 0,
+      process_status: 'WASH',
+    }]);
+    setCandidates(prev => prev.filter(c => norm(String(c.id)) !== oid && norm(String(c.number)) !== onum));
+  };
+
+  const removeItem = (order_id: string) => {
+    setItems(prev => prev.filter(x => x.order_id !== order_id));
+    if (q.length >= 2) { void search(); }
+  };
+
+  const clearSelected = () => setItems([]);
+
+  const invalidQty = useMemo(
+    () => items.some(it => isNaN(it.qty as any) || (it.qty as number) < 0),
+    [items]
+  );
+  const invalidTime = useMemo(() => {
+    const cmp = (a?: string | null, b?: string | null) => (a && b) ? (a <= b) : true;
+    const anyInvalid = items.some(it => {
+      const s = it.started_at ?? '';
+      const f = it.finished_at ?? '';
+      if (!s || !f) return false;
+      return !(cmp(s, f));
+    });
+    return anyInvalid;
+  }, [items]);
+
+  const disableSave = items.length === 0 || invalidQty || invalidTime || loading;
+
+  const selectedSummary = useMemo(() => {
+    const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+    return { count: items.length, totalQty };
+  }, [items]);
+
+  const submit = async () => {
+    const payload = {
+      note_date: noteDate,
+      items: items.map(it => ({
+        order_id: it.order_id,
+        qty: it.qty,
+        process_status: it.process_status,
+        started_at: it.started_at || null,
+        finished_at: it.finished_at || null,
+        note: it.note || null,
+      })),
     };
 
-    const removeItem = (order_id: string) => {
-        setItems(prev => prev.filter(x => x.order_id !== order_id));
-        // Refresh kandidat agar order yang dihapus bisa muncul kembali di hasil cari
-        if (q.length >= 2) { void search(); }
-    };
+    setLoading(true);
+    try {
+      if (id) {
+        await updateWashNote(id, payload);
+      } else {
+        await createWashNote(payload);
+      }
+      nav('/wash-notes');
+    } catch (err: any) {
+      const resp = err?.response;
+      const status = resp?.status;
+      const data = resp?.data;
 
-    const clearSelected = () => setItems([]);
-
-    // Validasi ringan sisi klien
-    const invalidQty = useMemo(
-        () => items.some(it => isNaN(it.qty as any) || (it.qty as number) < 0),
-        [items]
-    );
-    const invalidTime = useMemo(() => {
-        const cmp = (a?: string | null, b?: string | null) => (a && b) ? (a <= b) : true;
-        const anyInvalid = items.some(it => {
-            const s = it.started_at ?? '';
-            const f = it.finished_at ?? '';
-            // valid bila salah satu kosong, atau f >= s
-            if (!s || !f) return false;
-            return !(cmp(s, f));
-        });
-        return anyInvalid;
-    }, [items]);
-
-    const disableSave = items.length === 0 || invalidQty || invalidTime || loading;
-
-    const selectedSummary = useMemo(() => {
-        const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
-        return { count: items.length, totalQty };
-    }, [items]);
-
-    const submit = async () => {
-        const payload = {
-            note_date: noteDate,
-            items: items.map(it => ({
-                order_id: it.order_id,
-                qty: it.qty,
-                process_status: it.process_status,
-                started_at: it.started_at || null,
-                finished_at: it.finished_at || null,
-                note: it.note || null,
-            })),
-        };
-
-        setLoading(true);
-        try {
-            if (id) {
-                await updateWashNote(id, payload);
-            } else {
-                await createWashNote(payload);
-            }
-            nav('/wash-notes');
-        } catch (err: any) {
-            const resp = err?.response;
-            const status = resp?.status;
-            const data = resp?.data;
-
-            // Tangani 422: catatan harian sudah ada untuk user & tanggal yang sama
-            if (status === 422) {
-                // 1) Redirect by meta.existing_id
-                const existingId = data?.meta?.existing_id;
-                if (existingId) {
-                    return nav(`/wash-notes/${existingId}/edit`);
-                }
-                // 2) Fallback: cari catatan di tanggal yang sama
-                try {
-                    const res = await listWashNotes({ date_from: noteDate, date_to: noteDate, page: 1, per_page: 1 });
-                    const existing = res?.data?.[0];
-                    if (existing?.id) {
-                        return nav(`/wash-notes/${existing.id}/edit`);
-                    }
-                } catch (e) {
-                }
-            }
-            throw err;
-        } finally {
-            setLoading(false);
+      if (status === 422) {
+        const existingId = data?.meta?.existing_id;
+        if (existingId) {
+          return nav(`/wash-notes/${existingId}/edit`);
         }
-    };
+        try {
+          const res = await listWashNotes({ date_from: noteDate, date_to: noteDate, page: 1, per_page: 1 });
+          const existing = res?.data?.[0];
+          if (existing?.id) {
+            return nav(`/wash-notes/${existing.id}/edit`);
+          }
+        } catch {}
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const resetSearchDates = () => { setFrom(today); setTo(today); };
+  const resetSearchDates = () => { setFrom(today); setTo(today); };
 
-    return (
-        <div className="p-4 space-y-4">
-            <div className="flex items-end gap-3">
-                {/* Tanggal ditentukan otomatis (default hari ini) dan dapat disesuaikan di backend bila diperlukan */}
-                <div className="text-sm text-gray-600">
-                    Tanggal catatan: <b>{noteDate}</b>
-                </div>
-                <button
-                    onClick={submit}
-                    disabled={disableSave}
-                    className={`ml-auto px-3 py-2 rounded text-white ${disableSave ? 'bg-gray-400 cursor-not-allowed' : 'bg-black'}`}
-                    title={disableSave ? 'Lengkapi data agar dapat disimpan' : 'Simpan catatan'}
-                >
-                    {id ? 'Simpan Perubahan' : 'Simpan'}
-                </button>
-            </div>
-
-            <InfoTipsForm noteDate={noteDate} />
-
-            {(invalidQty || invalidTime) && (
-                <div className="rounded border border-red-200 bg-red-50 text-red-700 p-3 text-sm" role="alert" aria-live="polite">
-                    {invalidQty && <div>Qty tidak boleh negatif.</div>}
-                    {invalidTime && <div>Jam selesai harus lebih besar atau sama dengan jam mulai.</div>}
-                </div>
-            )}
-
-            <div className="border rounded p-3 space-y-3">
-                <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                        <label className="block text-sm">Cari Order (nomor / pelanggan)</label>
-                        <input
-                            value={q}
-                            onChange={e => setQ(e.target.value)}
-                            placeholder="ketik minimal 2 huruf…"
-                            className="border rounded px-2 py-1 w-full"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm">Dari Tanggal</label>
-                        <input
-                            type="date"
-                            className="border rounded px-2 py-1"
-                            value={from}
-                            onChange={e => setFrom(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm">Sampai Tanggal</label>
-                        <input
-                            type="date"
-                            className="border rounded px-2 py-1"
-                            value={to}
-                            onChange={e => setTo(e.target.value)}
-                        />
-                    </div>
-                    <button
-                        type="button"
-                        onClick={resetSearchDates}
-                        className="px-3 py-2 border rounded"
-                        title="Kembalikan rentang ke hari ini"
-                    >
-                        Reset
-                    </button>
-                    <div className="flex items-center gap-2 text-sm ml-2">
-                        <input
-                            id="auto-qty"
-                            type="checkbox"
-                            className="h-4 w-4"
-                            checked={autoQty}
-                            onChange={e => setAutoQty(e.target.checked)}
-                        />
-                        <label htmlFor="auto-qty">Auto-isi qty dari order</label>
-                    </div>
-                </div>
-
-                {candidates.length > 0 && (
-                    <div className="border rounded divide-y">
-                        {candidates
-                            // Saringan tambahan saat render (defensif)
-                            .filter(o => !selectedIds.has(norm(String(o.id))) && !selectedNumbers.has(norm(String(o.number))))
-                            .map(o => (
-                                <div key={o.id} className="p-2 flex items-center gap-3">
-                                    <div className="w-56">{o.number}</div>
-                                    <div className="flex-1">{o.customer?.name ?? '-'}</div>
-                                    <div className="text-sm text-gray-600">
-                                        Default qty: <b>{Number(o?.default_qty ?? 0)}</b>
-                                    </div>
-                                    <button
-                                        onClick={() => addItem(o)}
-                                        disabled={selectedIds.has(norm(String(o.id))) || selectedNumbers.has(norm(String(o.number)))}
-                                        className="text-blue-600 underline disabled:text-gray-400 disabled:no-underline"
-                                    >
-                                        Tambah
-                                    </button>
-                                </div>
-                            ))}
-                    </div>
-                )}
-
-                <div className="flex items-center justify-between text-sm">
-                    <div>
-                        Terpilih: <b>{selectedSummary.count}</b> order • total qty <b>{selectedSummary.totalQty}</b>
-                    </div>
-                    {items.length > 0 && (
-                        <button type="button" onClick={clearSelected} className="underline text-gray-700">
-                            Hapus semua pilihan
-                        </button>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    {items.map((it, idx) => (
-                        <div key={it.order_id} className="p-2 border rounded grid grid-cols-12 gap-2 items-center">
-                            <div className="col-span-3 text-sm">
-                                <div className="font-medium">{it.number}</div>
-                                <div className="text-gray-500">{it.customer || '-'}</div>
-                            </div>
-                            <input
-                                className="col-span-2 border rounded px-2 py-1"
-                                type="number" min={0} step="0.1"
-                                value={it.qty}
-                                onChange={e => {
-                                    const v = parseFloat(e.target.value || '0');
-                                    setItems(prev => prev.map((x, i) => i === idx ? { ...x, qty: isNaN(v) ? 0 : v } : x));
-                                }}
-                            />
-                            <select
-                                className="col-span-2 border rounded px-2 py-1"
-                                value={it.process_status ?? ''}
-                                onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, process_status: (e.target.value || undefined) as any } : x))}
-                            >
-                                <option value="">(kosong)</option>
-                                <option value="QUEUE">QUEUE</option>
-                                <option value="WASH">WASH</option>
-                                <option value="DRY">DRY</option>
-                                <option value="FINISHING">FINISHING</option>
-                                <option value="COMPLETED">COMPLETED</option>
-                                <option value="PICKED_UP">PICKED_UP</option>
-                            </select>
-                            <input
-                                className="col-span-2 border rounded px-2 py-1"
-                                type="time"
-                                value={it.started_at ?? ''}
-                                onChange={e => {
-                                    const v = hhmm(e.target.value);
-                                    setItems(prev => prev.map((x, i) => i === idx ? { ...x, started_at: v || null } : x));
-                                }}
-                            />
-                            <input
-                                className="col-span-2 border rounded px-2 py-1"
-                                type="time"
-                                value={it.finished_at ?? ''}
-                                onChange={e => {
-                                    const v = hhmm(e.target.value);
-                                    setItems(prev => prev.map((x, i) => i === idx ? { ...x, finished_at: v || null } : x));
-                                }}
-                            />
-                            <div className="col-span-12 flex gap-2">
-                                <input
-                                    className="flex-1 border rounded px-2 py-1"
-                                    placeholder="Catatan singkat"
-                                    value={it.note ?? ''}
-                                    onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, note: e.target.value || null } : x))}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => removeItem(it.order_id)}
-                                    className="px-3 py-1 border rounded text-red-600 border-red-300"
-                                    title="Hapus dari daftar"
-                                >
-                                    Hapus
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                    {items.length === 0 && <div className="text-sm text-gray-500">Belum ada order terpilih.</div>}
-                </div>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* Header + Save */}
+      <div className="flex items-end gap-3">
+        <div className="text-sm text-gray-600">
+          Tanggal catatan: <b>{noteDate}</b>
         </div>
-    );
+        <button
+          onClick={submit}
+          disabled={disableSave}
+          className={`ml-auto ${disableSave ? 'btn-outline opacity-60 cursor-not-allowed' : 'btn-primary'}`}
+          title={disableSave ? 'Lengkapi data agar dapat disimpan' : 'Simpan catatan'}
+        >
+          {id ? 'Simpan Perubahan' : 'Simpan'}
+        </button>
+      </div>
+
+      <InfoTipsForm noteDate={noteDate} />
+
+      {(invalidQty || invalidTime) && (
+        <div className="rounded-md border border-red-200 bg-red-50 text-red-700 p-3 text-sm" role="alert" aria-live="polite">
+          {invalidQty && <div>Qty tidak boleh negatif.</div>}
+          {invalidTime && <div>Jam selesai harus lebih besar atau sama dengan jam mulai.</div>}
+        </div>
+      )}
+
+      {/* Toolbar Pencarian */}
+      <section className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1" aria-label="Pencarian order kandidat">
+        <div className="p-3 grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto_auto] gap-2">
+          <div className="relative">
+            <label className="sr-only" htmlFor="q">Cari Order</label>
+            <input
+              id="q"
+              value={q}
+              onChange={e => { setQ(e.target.value); }}
+              placeholder="Cari Order (nomor / pelanggan)… (min 2 huruf)"
+              className="input w-full pl-9 py-2"
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+
+          <div>
+            <label className="block text-xs mb-1" htmlFor="from">Dari</label>
+            <input
+              id="from"
+              type="date"
+              className="input py-2"
+              value={from}
+              onChange={e => setFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1" htmlFor="to">Sampai</label>
+            <input
+              id="to"
+              type="date"
+              className="input py-2"
+              value={to}
+              onChange={e => setTo(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={resetSearchDates}
+            className="btn-outline h-10 self-end"
+            title="Kembalikan rentang ke hari ini"
+          >
+            Reset
+          </button>
+
+          <div className="flex items-center gap-2 self-end">
+            <input
+              id="auto-qty"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={autoQty}
+              onChange={e => setAutoQty(e.target.checked)}
+            />
+            <label htmlFor="auto-qty" className="text-sm">Auto-isi qty dari order</label>
+          </div>
+        </div>
+      </section>
+
+      {/* Kandidat (TABLE – gaya sama dengan CustomersIndex) */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-[720px] w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Kode Order</Th>
+                  <Th>Pelanggan</Th>
+                  <Th className="text-right">Default Qty</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton cols={[160, 240, 80, 100]} />
+                    <RowSkeleton cols={[160, 240, 80, 100]} />
+                    <RowSkeleton cols={[160, 240, 80, 100]} />
+                  </>
+                ) : candidates.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">Tidak ada kandidat. Ketik minimal 2 huruf untuk mencari.</td>
+                  </tr>
+                ) : (
+                  candidates
+                    .filter(o => !selectedIds.has(norm(String(o.id))) && !selectedNumbers.has(norm(String(o.number))))
+                    .map(o => (
+                      <tr key={o.id} className="hover:bg-black/5 transition-colors">
+                        <Td className="font-medium">{o.number}</Td>
+                        <Td>{o.customer?.name ?? '-'}</Td>
+                        <Td className="text-right tabular-nums">{Number(o?.default_qty ?? 0)}</Td>
+                        <Td className="text-right">
+                          <button
+                            onClick={() => addItem(o)}
+                            disabled={selectedIds.has(norm(String(o.id))) || selectedNumbers.has(norm(String(o.number)))}
+                            className="btn-outline disabled:opacity-50"
+                          >
+                            Tambah
+                          </button>
+                        </Td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Ringkas pilihan */}
+      <div className="flex items-center justify-between text-sm">
+        <div>
+          Terpilih: <b>{selectedSummary.count}</b> order • total qty <b>{selectedSummary.totalQty}</b>
+        </div>
+        {items.length > 0 && (
+          <button type="button" onClick={clearSelected} className="underline text-gray-700">
+            Hapus semua pilihan
+          </button>
+        )}
+      </div>
+
+      {/* Items terpilih (TABLE – gaya sama dengan CustomersIndex) */}
+      <section>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-[980px] w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Order</Th>
+                  <Th>Pelanggan</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th>Status</Th>
+                  <Th>Mulai</Th>
+                  <Th>Selesai</Th>
+                  <Th>Catatan</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">Belum ada order terpilih.</td>
+                  </tr>
+                ) : (
+                  items.map((it, idx) => (
+                    <tr key={it.order_id} className="hover:bg-black/5 transition-colors">
+                      <Td className="font-medium">{it.number}</Td>
+                      <Td><span className="line-clamp-1 max-w-[40ch]">{it.customer || '-'}</span></Td>
+                      <Td className="text-right">
+                        <input
+                          className="input w-24 text-right"
+                          type="number"
+                          min={0}
+                          step={1}               // integer agar tidak muncul .00
+                          value={it.qty}
+                          onChange={e => {
+                            const v = parseFloat(e.target.value || '0');
+                            setItems(prev => prev.map((x, i) => i === idx ? { ...x, qty: isNaN(v) ? 0 : v } : x));
+                          }}
+                        />
+                      </Td>
+                      <Td>
+                        <select
+                          className="input"
+                          value={it.process_status ?? ''}
+                          onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, process_status: (e.target.value || undefined) as any } : x))}
+                        >
+                          <option value="">(kosong)</option>
+                          <option value="QUEUE">QUEUE</option>
+                          <option value="WASH">WASH</option>
+                          <option value="DRY">DRY</option>
+                          <option value="FINISHING">FINISHING</option>
+                          <option value="COMPLETED">COMPLETED</option>
+                          <option value="PICKED_UP">PICKED_UP</option>
+                        </select>
+                      </Td>
+                      <Td>
+                        <input
+                          className="input w-28"
+                          type="time"
+                          value={it.started_at ?? ''}
+                          onChange={e => {
+                            const v = hhmm(e.target.value);
+                            setItems(prev => prev.map((x, i) => i === idx ? { ...x, started_at: v || null } : x));
+                          }}
+                        />
+                      </Td>
+                      <Td>
+                        <input
+                          className="input w-28"
+                          type="time"
+                          value={it.finished_at ?? ''}
+                          onChange={e => {
+                            const v = hhmm(e.target.value);
+                            setItems(prev => prev.map((x, i) => i === idx ? { ...x, finished_at: v || null } : x));
+                          }}
+                        />
+                      </Td>
+                      <Td>
+                        <input
+                          className="input w-[24rem] max-w-[48ch]"
+                          placeholder="Catatan singkat"
+                          value={it.note ?? ''}
+                          onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, note: e.target.value || null } : x))}
+                        />
+                      </Td>
+                      <Td className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(it.order_id)}
+                          className="btn-outline text-red-600 border-red-300"
+                          title="Hapus dari daftar"
+                        >
+                          Hapus
+                        </button>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ---------- Subcomponents (tabel konsisten) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton({ cols = [160, 240, 100, 100] }: { cols?: number[] }) {
+  return (
+    <tr>
+      {cols.map((w, i) => (
+        <td key={i} className="px-3 py-3">
+          <div className="h-4 rounded bg-black/10 animate-pulse" style={{ width: `${w}px` }} />
+        </td>
+      ))}
+    </tr>
+  );
 }
 
 ```
@@ -13714,8 +13795,8 @@ export default function WashNoteForm() {
 
 ### src/pages/wash-notes/WashNotesIndex.tsx
 
-- SHA: `c4958c48cced`  
-- Ukuran: 6 KB
+- SHA: `7ef423f41e77`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13728,8 +13809,8 @@ import { useHasRole } from '../../store/useAuth';
 function InfoTips() {
   const [open, setOpen] = useState(true);
   return (
-    <aside className="rounded border p-3 bg-gray-50">
-      <div className="flex items-center justify-between">
+    <aside className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+      <div className="flex items-center justify-between p-3">
         <strong className="text-sm">Tips / Keterangan</strong>
         <button
           type="button"
@@ -13742,13 +13823,13 @@ function InfoTips() {
         </button>
       </div>
       {open && (
-        <div id="wash-tips" className="mt-2 text-sm leading-relaxed">
+        <div id="wash-tips" className="px-3 pb-3 text-sm leading-relaxed">
           <ul className="list-disc ml-5 space-y-1">
             <li>Pilih <em>rentang tanggal</em> untuk menampilkan catatan cuci pada periode tersebut.</li>
             <li>Tekan <strong>Tambah</strong> untuk membuat catatan cuci harian (default tanggal hari ini).</li>
             <li><strong>Rekap</strong> menunjukkan jumlah order dan total <code>qty</code> yang dicuci pada tiap catatan.</li>
-            <li>Hanya <strong>Superadmin</strong> dan <strong>Admin Cabang</strong> yang bisa menghapus catatan. Petugas Cuci tidak bisa menghapus.</li>
-            <li>Gunakan tombol <strong>Detail</strong> untuk melihat item/order yang dicatat pada hari tersebut, dan <strong>Ubah</strong> untuk memperbarui.</li>
+            <li>Hanya <strong>Superadmin</strong> dan <strong>Admin Cabang</strong> yang bisa menghapus catatan.</li>
+            <li>Gunakan tombol <strong>Detail</strong> untuk melihat item/order, dan <strong>Ubah</strong> untuk memperbarui.</li>
           </ul>
         </div>
       )}
@@ -13763,23 +13844,24 @@ export default function WashNotesIndex() {
   const [rows, setRows] = useState<any[]>([]);
   const [meta, setMeta] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
-  const canDelete = useHasRole(['Superadmin', 'Admin Cabang']); // kontrol tombol Hapus
+  const [err, setErr] = useState<string | null>(null);
+  const canDelete = useHasRole(['Superadmin', 'Admin Cabang']);
 
   const load = async () => {
     setLoading(true);
+    setErr(null);
     try {
       const res = await listWashNotes({ date_from: from, date_to: to });
       setRows(res.data ?? []);
       setMeta(res.meta ?? null);
+    } catch {
+      setErr('Gagal memuat catatan cuci.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [from, to]);
 
   const recap = useMemo(
     () => meta?.recap ?? { orders_count: 0, total_qty: 0 },
@@ -13792,106 +13874,149 @@ export default function WashNotesIndex() {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-end gap-2">
+    <div className="space-y-4">
+      {/* Header + CTA */}
+      <div className="flex items-center justify-between">
         <div>
-          <label className="block text-sm">Dari Tanggal</label>
-          <input
-            type="date"
-            className="border rounded px-2 py-1"
-            value={from}
-            onChange={e => setFrom(e.target.value)}
-          />
+          <h1 className="text-lg font-semibold tracking-tight">Catatan Cuci Harian</h1>
+          <p className="text-xs text-gray-600">Rekap order & qty yang dicuci per tanggal</p>
         </div>
-        <div>
-          <label className="block text-sm">Sampai Tanggal</label>
-          <input
-            type="date"
-            className="border rounded px-2 py-1"
-            value={to}
-            onChange={e => setTo(e.target.value)}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={resetDates}
-          className="inline-block px-3 py-2 border rounded"
-          disabled={loading}
-          title="Kembalikan ke hari ini"
-        >
-          Reset
-        </button>
-
-        <NavLink
-          to="/wash-notes/new"
-          className="ml-auto inline-block bg-black text-white px-3 py-2 rounded"
-        >
-          Tambah
-        </NavLink>
+        <NavLink to="/wash-notes/new" className="btn-primary">Tambah</NavLink>
       </div>
 
+      {/* FilterBar */}
+      <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1" aria-label="Filter catatan cuci">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-[repeat(3,auto)_1fr] gap-3 items-end">
+          <label className="grid gap-1 text-sm">
+            <span>Dari Tanggal</span>
+            <input
+              type="date"
+              className="input px-2 py-2 bg-white"
+              value={from}
+              onChange={e => setFrom(e.target.value)}
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>Sampai Tanggal</span>
+            <input
+              type="date"
+              className="input px-2 py-2 bg-white"
+              value={to}
+              onChange={e => setTo(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={resetDates}
+            className="btn-outline"
+            disabled={loading}
+            title="Kembalikan ke hari ini"
+          >
+            Reset
+          </button>
+          <div className="sm:ml-auto text-sm text-gray-700">
+            <strong>Rekap:</strong> {recap.orders_count} order • {recap.total_qty} qty
+          </div>
+        </div>
+      </section>
+
+      {/* Info Tips */}
       <InfoTips />
 
-      <div className="text-sm" aria-live="polite">
-        <strong>Rekap:</strong> {recap.orders_count} order, total qty {recap.total_qty}
-      </div>
-
-      {loading ? (
-        <div>Memuat…</div>
-      ) : (
-        <div className="border rounded divide-y">
-          {rows.map(r => (
-            <div key={r.id} className="p-3 flex items-center gap-3">
-              <div className="w-40">
-                <div className="text-xs text-gray-500">Tanggal</div>
-                <div className="font-medium">{r.note_date}</div>
-              </div>
-              <div className="w-40">
-                <div className="text-xs text-gray-500">Petugas</div>
-                <div className="font-medium">{r.user?.name ?? r.user_id}</div>
-              </div>
-              <div className="w-40">
-                <div className="text-xs text-gray-500">Rekap</div>
-                <div>
-                  {r.orders_count} order • {r.total_qty}
-                </div>
-              </div>
-              <div className="ml-auto flex gap-2">
-                <NavLink className="underline" to={`/wash-notes/${r.id}`}>
-                  Detail
-                </NavLink>
-                <NavLink className="underline" to={`/wash-notes/${r.id}/edit`}>
-                  Ubah
-                </NavLink>
-                {canDelete && (
-                  <button
-                    onClick={async () => {
-                      if (confirm('Hapus catatan ini?')) {
-                        await deleteWashNote(r.id);
-                        load();
-                      }
-                    }}
-                    className="text-red-600"
-                  >
-                    Hapus
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <div className="p-4 text-sm text-gray-500">
-              Tidak ada data pada rentang tanggal ini.{' '}
-              <NavLink className="underline" to="/wash-notes/new">
-                Buat catatan cuci baru
-              </NavLink>
-              .
-            </div>
-          )}
+      {/* Error */}
+      {err && (
+        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+          {err}
         </div>
       )}
+
+      {/* Tabel konsisten seperti CustomersIndex */}
+      <section aria-busy={loading ? 'true' : 'false'}>
+        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+          <div className="overflow-auto">
+            <table className="min-w-[720px] w-full text-sm">
+              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                <tr className="divide-x divide-[color:var(--color-border)]">
+                  <Th>Tanggal</Th>
+                  <Th>Petugas</Th>
+                  <Th className="text-right">Order</Th>
+                  <Th className="text-right">Total Qty</Th>
+                  <Th className="text-right pr-4">Aksi</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--color-border)]">
+                {loading ? (
+                  <>
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                    <RowSkeleton />
+                  </>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-4 text-center text-gray-500">
+                      Tidak ada data pada rentang tanggal ini.{' '}
+                      <NavLink className="underline" to="/wash-notes/new">Buat catatan cuci baru</NavLink>.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <Td>{r.note_date}</Td>
+                      <Td><span className="line-clamp-1">{r.user?.name ?? r.user_id}</span></Td>
+                      <Td className="text-right tabular-nums">{r.orders_count}</Td>
+                      <Td className="text-right tabular-nums">{r.total_qty}</Td>
+                      <Td className="text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <NavLink className="btn-outline" to={`/wash-notes/${r.id}`}>Detail</NavLink>
+                          <NavLink className="btn-outline" to={`/wash-notes/${r.id}/edit`}>Ubah</NavLink>
+                          {canDelete && (
+                            <button
+                              onClick={async () => {
+                                if (confirm('Hapus catatan ini?')) {
+                                  await deleteWashNote(r.id);
+                                  load();
+                                }
+                              }}
+                              className="btn-outline text-red-600 border-red-300"
+                            >
+                              Hapus
+                            </button>
+                          )}
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
+  );
+}
+
+/* ---------- Subcomponents ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton() {
+  return (
+    <tr>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="ml-auto h-4 w-10 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="ml-auto h-4 w-12 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+    </tr>
   );
 }
 
