@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-08 02:07:31_  
+_Dihasilkan otomatis: 2025-12-08 02:35:42_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -884,7 +884,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 
 ### src/api/reports.ts
 
-- SHA: `82b7ef90fc44`  
+- SHA: `1afa41b5c804`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -893,7 +893,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 import { api } from './client';
 import type { ApiEnvelope } from './client';
 
-export type ReportKind = 'sales' | 'payments' | 'orders' | 'receivables' | 'expenses';
+export type ReportKind = 'sales' | 'orders' | 'receivables' | 'expenses' | 'services';
 
 export interface ReportQuery {
     from: string; // 'YYYY-MM-DD'
@@ -10543,18 +10543,19 @@ function renderStatusChip(s?: ReceivableStatus) {
 
 ### src/pages/reports/ReportsIndex.tsx
 
-- SHA: `2f42027127d5`  
-- Ukuran: 7 KB
+- SHA: `2683dbc5b2ff`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+// src/pages/reports/ReportsIndex.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { getReportPreview, exportReport, type ReportKind } from '../../api/reports';
 import { listBranches } from '../../api/branches';
 
 type Branch = { id: string; name: string };
 
-const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses'];
+const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services'];
 
 export default function ReportsIndex() {
     const [kind, setKind] = useState<ReportKind>('sales');
@@ -10563,143 +10564,258 @@ export default function ReportsIndex() {
     const [branchId, setBranchId] = useState<string | null>(null);
     const [method, setMethod] = useState<string>('');
     const [status, setStatus] = useState<string>('');
+    const [page, setPage] = useState<number>(1);
 
     const [columns, setColumns] = useState<string[]>([]);
     const [rows, setRows] = useState<any[]>([]);
     const [pageInfo, setPageInfo] = useState({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // ambil daftar cabang (khusus superadmin akan tampil; implementasi auth di komponen lain)
-        listBranches({ per_page: 100 }).then((res) => {
-            const list = Array.isArray(res.data) ? res.data : [];
-            setBranches(list.map((b: any) => ({ id: b.id, name: b.name })));
-        }).catch(() => { });
+        listBranches({ per_page: 100 })
+            .then((res) => {
+                const list = Array.isArray(res.data) ? res.data : [];
+                setBranches(list.map((b: any) => ({ id: b.id, name: b.name })));
+            })
+            .catch(() => { });
     }, []);
 
-    const params = useMemo(() => ({
-        from, to,
-        branch_id: branchId || undefined,
-        method: kind === 'sales' && method ? method : undefined,
-        status: (kind === 'orders' || kind === 'receivables') && status ? status : undefined,
-        per_page: 20,
-    }), [from, to, branchId, method, status, kind]);
+    const params = useMemo(
+        () => ({
+            from,
+            to,
+            branch_id: branchId || undefined,
+            method: kind === 'sales' && method ? method : undefined,
+            status: (kind === 'orders' || kind === 'receivables') && status ? status : undefined,
+            per_page: 20,
+            page,
+        }),
+        [from, to, branchId, method, status, kind, page]
+    );
 
     async function load() {
         setLoading(true);
+        setError(null);
         try {
             const resp = await getReportPreview(kind, params);
-            setColumns(resp.meta.columns);
-            setRows(resp.data);
+            setColumns(resp.meta.columns ?? []);
+            setRows(resp.data ?? []);
             setPageInfo({
                 current_page: resp.meta.current_page,
                 last_page: resp.meta.last_page,
                 per_page: resp.meta.per_page,
                 total: resp.meta.total,
             });
+        } catch {
+            setError('Gagal memuat pratinjau laporan.');
         } finally {
             setLoading(false);
         }
     }
 
-    useEffect(() => { load(); /* auto-load on mount & kind change */ }, [kind]);
+    useEffect(() => {
+        load(); // auto-load saat mount / filter berubah
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [kind, params]);
 
     async function onExport(format: 'csv' | 'xlsx' = 'csv') {
         const blob = await exportReport(kind, { ...params, format, delimiter: 'semicolon' });
         const fname = `${kind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.${format}`;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = fname; a.click();
+        a.href = url;
+        a.download = fname;
+        a.click();
         URL.revokeObjectURL(url);
     }
 
     return (
-        <div className="p-4 space-y-4">
-            <h1 className="text-xl font-semibold">Reports</h1>
+        <div className="space-y-4">
+            <header className="flex items-center justify-between">
+                <h1 className="text-lg font-semibold tracking-tight">Reports</h1>
+            </header>
 
-            {/* Tabs */}
-            <div className="flex gap-2">
-                {KINDS.map(k => (
-                    <button
-                        key={k}
-                        onClick={() => setKind(k)}
-                        className={`px-3 py-1 rounded ${k === kind ? 'bg-black text-white' : 'bg-gray-200'}`}
-                    >
-                        {k.toUpperCase()}
-                    </button>
-                ))}
+            {/* Tabs (segmented) */}
+            <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-2 w-max">
+                <div className="flex gap-1">
+                    {KINDS.map((k) => {
+                        const active = k === kind;
+                        return (
+                            <button
+                                key={k}
+                                onClick={() => {
+                                    setKind(k);
+                                    setPage(1);
+                                    // Reset filter khusus agar tidak “nempel” saat pindah tab
+                                    setMethod('');
+                                    setStatus('');
+                                }}
+                                className={active ? 'btn-primary' : 'btn-outline'}
+                                aria-current={active ? 'page' : undefined}
+                            >
+                                {k.toUpperCase()}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Filter bar */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
-                <div>
-                    <label className="block text-sm">Dari Tanggal</label>
-                    <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border p-2 rounded w-full" />
-                </div>
-                <div>
-                    <label className="block text-sm">Sampai Tanggal</label>
-                    <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border p-2 rounded w-full" />
-                </div>
-                <div>
-                    <label className="block text-sm">Cabang</label>
-                    <select value={branchId ?? ''} onChange={e => setBranchId(e.target.value || null)} className="border p-2 rounded w-full">
-                        <option value="">(Semua)</option>
-                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                </div>
-                {kind === 'sales' && (
-                    <div>
-                        <label className="block text-sm">Metode</label>
-                        <select value={method} onChange={e => setMethod(e.target.value)} className="border p-2 rounded w-full">
+            <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+                <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 items-end">
+                    <label className="grid gap-1 text-sm">
+                        <span>Dari Tanggal</span>
+                        <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="input py-2" />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                        <span>Sampai Tanggal</span>
+                        <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="input py-2" />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                        <span>Cabang</span>
+                        <select
+                            value={branchId ?? ''}
+                            onChange={(e) => { setBranchId(e.target.value || null); setPage(1); }}
+                            className="input py-2"
+                        >
                             <option value="">(Semua)</option>
-                            <option value="CASH">CASH</option>
-                            <option value="QRIS">QRIS</option>
-                            <option value="TRANSFER">TRANSFER</option>
-                            <option value="PENDING">PENDING</option>
+                            {branches.map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
                         </select>
+                    </label>
+
+                    {kind === 'sales' && (
+                        <label className="grid gap-1 text-sm">
+                            <span>Metode</span>
+                            <select value={method} onChange={(e) => { setMethod(e.target.value); setPage(1); }} className="input py-2">
+                                <option value="">(Semua)</option>
+                                <option value="CASH">CASH</option>
+                                <option value="QRIS">QRIS</option>
+                                <option value="TRANSFER">TRANSFER</option>
+                                <option value="PENDING">PENDING</option>
+                            </select>
+                        </label>
+                    )}
+
+                    {(kind === 'orders' || kind === 'receivables') && (
+                        <label className="grid gap-1 text-sm">
+                            <span>Status</span>
+                            <input
+                                value={status}
+                                onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+                                className="input py-2"
+                                placeholder="cth: OPEN / PARTIAL / ..."
+                            />
+                        </label>
+                    )}
+
+                    <div className="flex gap-2">
+                        <button onClick={() => { setPage(1); load(); }} className="btn-primary">Terapkan</button>
+                        <button onClick={() => onExport('csv')} className="btn-outline">Export CSV</button>
+                        <button onClick={() => onExport('xlsx')} className="btn-outline">Export XLSX</button>
                     </div>
-                )}
-                {(kind === 'orders' || kind === 'receivables') && (
-                    <div>
-                        <label className="block text-sm">Status</label>
-                        <input value={status} onChange={e => setStatus(e.target.value)} className="border p-2 rounded w-full" placeholder="cth: OPEN / PARTIAL / ..." />
-                    </div>
-                )}
-                <div className="flex gap-2">
-                    <button onClick={load} className="px-3 py-2 bg-blue-600 text-white rounded">Terapkan</button>
-                    <button onClick={() => onExport('csv')} className="px-3 py-2 bg-green-600 text-white rounded">Export CSV</button>
-                    {/* XLSX opsional nanti */}
                 </div>
-            </div>
+            </section>
 
-            {/* Preview table */}
-            <div className="overflow-auto border rounded">
-                <table className="min-w-full text-sm">
-                    <thead className="bg-gray-100">
-                        <tr>{columns.map(c => <th key={c} className="text-left p-2">{c}</th>)}</tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td className="p-3" colSpan={columns.length}>Loading…</td></tr>
-                        ) : rows.length === 0 ? (
-                            <tr><td className="p-3" colSpan={columns.length}>Tidak ada data</td></tr>
-                        ) : rows.map((r, i) => (
-                            <tr key={i} className="border-t">
-                                {columns.map(col => {
-                                    const key = col.toLowerCase().replaceAll(' ', '_');
-                                    return <td key={col} className="p-2">{String(r[key] ?? '')}</td>;
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            {/* Error */}
+            {error && (
+                <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+                    {error}
+                </div>
+            )}
 
-            <div className="text-xs text-gray-600">
-                Hal {pageInfo.current_page} dari {pageInfo.last_page} • Total {pageInfo.total}
-            </div>
+            {/* Preview table — gaya konsisten dengan CustomersIndex */}
+            <section aria-busy={loading ? 'true' : 'false'}>
+                <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+                    <div className="overflow-auto">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-[#E6EDFF] sticky top-0 z-10">
+                                <tr className="divide-x divide-[color:var(--color-border)]">
+                                    {columns.map((c) => (
+                                        <Th key={c}>{c}</Th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[color:var(--color-border)]">
+                                {loading ? (
+                                    <>
+                                        <RowSkeleton cols={Math.max(columns.length, 3)} />
+                                        <RowSkeleton cols={Math.max(columns.length, 3)} />
+                                        <RowSkeleton cols={Math.max(columns.length, 3)} />
+                                        <RowSkeleton cols={Math.max(columns.length, 3)} />
+                                        <RowSkeleton cols={Math.max(columns.length, 3)} />
+                                    </>
+                                ) : rows.length === 0 ? (
+                                    <tr>
+                                        <td className="px-3 py-4 text-center text-gray-500" colSpan={Math.max(columns.length, 1)}>
+                                            Tidak ada data
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    rows.map((r, i) => (
+                                        <tr key={i} className="hover:bg-black/5 transition-colors">
+                                            {columns.map((col) => {
+                                                const key = col.toLowerCase().replaceAll(' ', '_');
+                                                return <Td key={col}>{String(r[key] ?? '')}</Td>;
+                                            })}
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            {/* Pagination */}
+            {!loading && pageInfo.last_page > 1 && (
+                <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
+                    <button
+                        disabled={page <= 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        className="btn-outline disabled:opacity-50"
+                    >
+                        Prev
+                    </button>
+                    <span className="text-sm">
+                        Page {pageInfo.current_page} / {pageInfo.last_page} • Total {pageInfo.total}
+                    </span>
+                    <button
+                        disabled={page >= pageInfo.last_page}
+                        onClick={() => setPage((p) => Math.min(pageInfo.last_page, p + 1))}
+                        className="btn-outline disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </nav>
+            )}
         </div>
+    );
+}
+
+/* ---------- Subcomponents (tabel konsisten) ---------- */
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+            {children}
+        </th>
+    );
+}
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+}
+function RowSkeleton({ cols }: { cols: number }) {
+    return (
+        <tr>
+            {Array.from({ length: cols }).map((_, idx) => (
+                <td key={idx} className="px-3 py-3">
+                    <div className="h-4 w-full max-w-[220px] rounded bg-black/10 animate-pulse" />
+                </td>
+            ))}
+        </tr>
     );
 }
 

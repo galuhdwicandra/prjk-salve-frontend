@@ -2,7 +2,7 @@
 import { api } from './client';
 import type { ApiEnvelope } from './client';
 
-export type ReportKind = 'sales' | 'payments' | 'orders' | 'receivables' | 'expenses';
+export type ReportKind = 'sales' | 'orders' | 'receivables' | 'expenses' | 'services';
 
 export interface ReportQuery {
     from: string; // 'YYYY-MM-DD'
