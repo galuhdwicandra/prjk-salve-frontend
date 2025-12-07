@@ -21,6 +21,7 @@ import { getAllowedNext } from '../../utils/order-status';
 import { isAxiosError } from 'axios';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
+import { useHasRole } from '../../store/useAuth';
 
 type ApiErrorResponse = {
   message?: string;
@@ -54,6 +55,7 @@ export default function OrderDetail(): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
+  const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
 
   type DraftItem = {
     id?: string;              // jika ada
@@ -228,7 +230,7 @@ export default function OrderDetail(): React.ReactElement {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {!isEditing && (
+              {!isEditing && canEdit && (
                 <button
                   type="button"
                   className="btn-outline px-3 py-1.5 text-xs"
@@ -238,7 +240,7 @@ export default function OrderDetail(): React.ReactElement {
                   Edit
                 </button>
               )}
-              {isEditing && (
+              {isEditing && canEdit && (
                 <>
                   <button
                     type="button"
@@ -369,6 +371,7 @@ export default function OrderDetail(): React.ReactElement {
                     placeholder="Catatan order (opsional)"
                     value={draft.notes ?? ''}
                     onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
+                    disabled={!canEdit}
                   />
                   {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
                 </div>
@@ -379,6 +382,7 @@ export default function OrderDetail(): React.ReactElement {
                     className="input w-full px-2 py-2 text-sm"
                     value={toLocalInputValue(draft.received_at ?? null)}
                     onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+                    disabled={!canEdit}
                   />
                   {fieldErr['received_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['received_at']}</div>}
                 </div>
@@ -389,6 +393,7 @@ export default function OrderDetail(): React.ReactElement {
                     className="input w-full px-2 py-2 text-sm"
                     value={toLocalInputValue(draft.ready_at ?? null)}
                     onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+                    disabled={!canEdit}
                   />
                   {fieldErr['ready_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['ready_at']}</div>}
                 </div>
@@ -397,18 +402,18 @@ export default function OrderDetail(): React.ReactElement {
           )}
 
           {/* Items table */}
-          {!isEditing && (
+          {isEditing && canEdit && (
             <>
               {/* Ringkasan tanggal masuk/selesai (read-only) */}
               <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 text-sm">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <span className="text-gray-600">Tgl Masuk</span>{' '}
-                    <b>{row.received_at ? row.received_at.replace('T',' ').slice(0,16) : '—'}</b>
+                    <b>{row.received_at ? row.received_at.replace('T', ' ').slice(0, 16) : '—'}</b>
                   </div>
                   <div>
                     <span className="text-gray-600">Tgl Selesai</span>{' '}
-                    <b>{row.ready_at ? row.ready_at.replace('T',' ').slice(0,16) : '—'}</b>
+                    <b>{row.ready_at ? row.ready_at.replace('T', ' ').slice(0, 16) : '—'}</b>
                   </div>
                 </div>
               </div>
@@ -446,7 +451,7 @@ export default function OrderDetail(): React.ReactElement {
             </>
           )}
 
-          {isEditing && (
+          {isEditing && canEdit && (
             <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
               {/* Tambah layanan */}
               <div className="p-3">
@@ -488,6 +493,8 @@ export default function OrderDetail(): React.ReactElement {
                               placeholder="Catatan item (opsional)"
                               value={it.note ?? ''}
                               onChange={(e) => changeNote(it.service_id, e.target.value)}
+                              disabled={!canEdit}
+
                             />
                             {fieldErr[`items.${it.service_id}.note`] && (
                               <div className="text-[11px] text-red-600 mt-1">{fieldErr[`items.${it.service_id}.note`]}</div>
@@ -500,6 +507,7 @@ export default function OrderDetail(): React.ReactElement {
                               className="input w-24 px-2 py-1 text-xs"
                               value={it.qty}
                               onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
+                              disabled={!canEdit}
                             />
                           </Td>
                           <Td>{harga ? harga.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '—'}</Td>
@@ -510,6 +518,7 @@ export default function OrderDetail(): React.ReactElement {
                               className="btn-outline px-2 py-1 text-xs"
                               onClick={() => removeItem(it.service_id)}
                               title="Hapus baris"
+                              disabled={!canEdit}
                             >
                               Hapus
                             </button>
@@ -546,12 +555,14 @@ export default function OrderDetail(): React.ReactElement {
             key={`${row.id}:${row.photos?.length ?? 0}`}
             photos={row.photos ?? []}
           />
-          <div className="mt-3">
-            <OrderPhotosUpload
-              orderId={row.id}
-              onUploaded={async () => { await refresh(); }}
-            />
-          </div>
+          {canEdit && (
+            <div className="mt-3">
+              <OrderPhotosUpload
+                orderId={row.id}
+                onUploaded={async () => { await refresh(); }}
+              />
+            </div>
+          )}
 
           {/* Receipt Preview */}
           {receiptOpen && (

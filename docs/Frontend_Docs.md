@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-07 22:46:23_  
+_Dihasilkan otomatis: 2025-12-08 02:07:31_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -8275,8 +8275,8 @@ export default function LoginPage() {
 
 ### src/pages/orders/OrderDetail.tsx
 
-- SHA: `5a2775664512`  
-- Ukuran: 26 KB
+- SHA: `a1732bd717cc`  
+- Ukuran: 27 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -8303,6 +8303,7 @@ import { getAllowedNext } from '../../utils/order-status';
 import { isAxiosError } from 'axios';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
+import { useHasRole } from '../../store/useAuth';
 
 type ApiErrorResponse = {
   message?: string;
@@ -8336,6 +8337,7 @@ export default function OrderDetail(): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
+  const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
 
   type DraftItem = {
     id?: string;              // jika ada
@@ -8510,7 +8512,7 @@ export default function OrderDetail(): React.ReactElement {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {!isEditing && (
+              {!isEditing && canEdit && (
                 <button
                   type="button"
                   className="btn-outline px-3 py-1.5 text-xs"
@@ -8520,7 +8522,7 @@ export default function OrderDetail(): React.ReactElement {
                   Edit
                 </button>
               )}
-              {isEditing && (
+              {isEditing && canEdit && (
                 <>
                   <button
                     type="button"
@@ -8651,6 +8653,7 @@ export default function OrderDetail(): React.ReactElement {
                     placeholder="Catatan order (opsional)"
                     value={draft.notes ?? ''}
                     onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
+                    disabled={!canEdit}
                   />
                   {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
                 </div>
@@ -8661,6 +8664,7 @@ export default function OrderDetail(): React.ReactElement {
                     className="input w-full px-2 py-2 text-sm"
                     value={toLocalInputValue(draft.received_at ?? null)}
                     onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+                    disabled={!canEdit}
                   />
                   {fieldErr['received_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['received_at']}</div>}
                 </div>
@@ -8671,6 +8675,7 @@ export default function OrderDetail(): React.ReactElement {
                     className="input w-full px-2 py-2 text-sm"
                     value={toLocalInputValue(draft.ready_at ?? null)}
                     onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+                    disabled={!canEdit}
                   />
                   {fieldErr['ready_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['ready_at']}</div>}
                 </div>
@@ -8679,18 +8684,18 @@ export default function OrderDetail(): React.ReactElement {
           )}
 
           {/* Items table */}
-          {!isEditing && (
+          {isEditing && canEdit && (
             <>
               {/* Ringkasan tanggal masuk/selesai (read-only) */}
               <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 text-sm">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <span className="text-gray-600">Tgl Masuk</span>{' '}
-                    <b>{row.received_at ? row.received_at.replace('T',' ').slice(0,16) : '—'}</b>
+                    <b>{row.received_at ? row.received_at.replace('T', ' ').slice(0, 16) : '—'}</b>
                   </div>
                   <div>
                     <span className="text-gray-600">Tgl Selesai</span>{' '}
-                    <b>{row.ready_at ? row.ready_at.replace('T',' ').slice(0,16) : '—'}</b>
+                    <b>{row.ready_at ? row.ready_at.replace('T', ' ').slice(0, 16) : '—'}</b>
                   </div>
                 </div>
               </div>
@@ -8728,7 +8733,7 @@ export default function OrderDetail(): React.ReactElement {
             </>
           )}
 
-          {isEditing && (
+          {isEditing && canEdit && (
             <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
               {/* Tambah layanan */}
               <div className="p-3">
@@ -8770,6 +8775,8 @@ export default function OrderDetail(): React.ReactElement {
                               placeholder="Catatan item (opsional)"
                               value={it.note ?? ''}
                               onChange={(e) => changeNote(it.service_id, e.target.value)}
+                              disabled={!canEdit}
+
                             />
                             {fieldErr[`items.${it.service_id}.note`] && (
                               <div className="text-[11px] text-red-600 mt-1">{fieldErr[`items.${it.service_id}.note`]}</div>
@@ -8782,6 +8789,7 @@ export default function OrderDetail(): React.ReactElement {
                               className="input w-24 px-2 py-1 text-xs"
                               value={it.qty}
                               onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
+                              disabled={!canEdit}
                             />
                           </Td>
                           <Td>{harga ? harga.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '—'}</Td>
@@ -8792,6 +8800,7 @@ export default function OrderDetail(): React.ReactElement {
                               className="btn-outline px-2 py-1 text-xs"
                               onClick={() => removeItem(it.service_id)}
                               title="Hapus baris"
+                              disabled={!canEdit}
                             >
                               Hapus
                             </button>
@@ -8828,12 +8837,14 @@ export default function OrderDetail(): React.ReactElement {
             key={`${row.id}:${row.photos?.length ?? 0}`}
             photos={row.photos ?? []}
           />
-          <div className="mt-3">
-            <OrderPhotosUpload
-              orderId={row.id}
-              onUploaded={async () => { await refresh(); }}
-            />
-          </div>
+          {canEdit && (
+            <div className="mt-3">
+              <OrderPhotosUpload
+                orderId={row.id}
+                onUploaded={async () => { await refresh(); }}
+              />
+            </div>
+          )}
 
           {/* Receipt Preview */}
           {receiptOpen && (
@@ -13155,8 +13166,8 @@ function RowSkeleton() {
 
 ### src/pages/wash-notes/WashNoteForm.tsx
 
-- SHA: `539fe88cfdbe`  
-- Ukuran: 18 KB
+- SHA: `62f744d8ea6e`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13235,6 +13246,8 @@ export default function WashNoteForm() {
         const dd = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${dd}`;
     };
+    const hhmm = (t?: string | null) => (t ? String(t).slice(0, 5) : null);
+
     const loadDetail = async () => {
         if (!id) return;
         setLoading(true);
@@ -13242,7 +13255,7 @@ export default function WashNoteForm() {
             const res = await getWashNote(id);
             const n = res.data;
             setNoteDate(toLocalYMD(n.note_date));
-            setItems((n.items ?? []).map((it: any) => ({
+            const mapped = (n.items ?? []).map((it: any) => ({
                 order_id: it.order_id,
                 number: it.order?.number ?? it.order_id,
                 customer: it.order?.customer?.name ?? '',
@@ -13251,7 +13264,9 @@ export default function WashNoteForm() {
                 started_at: it.started_at ?? null,
                 finished_at: it.finished_at ?? null,
                 note: it.note ?? null,
-            })));
+            }));
+            setItems(mapped);
+        } catch (e) {
         } finally {
             setLoading(false);
         }
@@ -13287,6 +13302,7 @@ export default function WashNoteForm() {
                 return !selectedIds.has(oid) && !selectedNumbers.has(onum);
             });
             setCandidates(filtered);
+        } catch (e) {
         } finally {
             setLoading(false);
         }
@@ -13327,13 +13343,14 @@ export default function WashNoteForm() {
     );
     const invalidTime = useMemo(() => {
         const cmp = (a?: string | null, b?: string | null) => (a && b) ? (a <= b) : true;
-        return items.some(it => {
+        const anyInvalid = items.some(it => {
             const s = it.started_at ?? '';
             const f = it.finished_at ?? '';
             // valid bila salah satu kosong, atau f >= s
             if (!s || !f) return false;
             return !(cmp(s, f));
         });
+        return anyInvalid;
     }, [items]);
 
     const disableSave = items.length === 0 || invalidQty || invalidTime || loading;
@@ -13355,6 +13372,7 @@ export default function WashNoteForm() {
                 note: it.note || null,
             })),
         };
+
         setLoading(true);
         try {
             if (id) {
@@ -13364,23 +13382,26 @@ export default function WashNoteForm() {
             }
             nav('/wash-notes');
         } catch (err: any) {
-            const status = err?.response?.status;
-            const data = err?.response?.data;
+            const resp = err?.response;
+            const status = resp?.status;
+            const data = resp?.data;
+
             // Tangani 422: catatan harian sudah ada untuk user & tanggal yang sama
             if (status === 422) {
-                // 1) Jika backend mengirim existing_id, langsung arahkan ke edit
+                // 1) Redirect by meta.existing_id
                 const existingId = data?.meta?.existing_id;
                 if (existingId) {
                     return nav(`/wash-notes/${existingId}/edit`);
                 }
-                // 2) Fallback: cari catatan di tanggal yang sama, lalu arahkan ke edit
+                // 2) Fallback: cari catatan di tanggal yang sama
                 try {
                     const res = await listWashNotes({ date_from: noteDate, date_to: noteDate, page: 1, per_page: 1 });
                     const existing = res?.data?.[0];
                     if (existing?.id) {
                         return nav(`/wash-notes/${existing.id}/edit`);
                     }
-                } catch { }
+                } catch (e) {
+                }
             }
             throw err;
         } finally {
@@ -13533,13 +13554,19 @@ export default function WashNoteForm() {
                                 className="col-span-2 border rounded px-2 py-1"
                                 type="time"
                                 value={it.started_at ?? ''}
-                                onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, started_at: e.target.value || null } : x))}
+                                onChange={e => {
+                                    const v = hhmm(e.target.value);
+                                    setItems(prev => prev.map((x, i) => i === idx ? { ...x, started_at: v || null } : x));
+                                }}
                             />
                             <input
                                 className="col-span-2 border rounded px-2 py-1"
                                 type="time"
                                 value={it.finished_at ?? ''}
-                                onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, finished_at: e.target.value || null } : x))}
+                                onChange={e => {
+                                    const v = hhmm(e.target.value);
+                                    setItems(prev => prev.map((x, i) => i === idx ? { ...x, finished_at: v || null } : x));
+                                }}
                             />
                             <div className="col-span-12 flex gap-2">
                                 <input
