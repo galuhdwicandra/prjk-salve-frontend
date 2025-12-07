@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-05 22:31:04_  
+_Dihasilkan otomatis: 2025-12-07 22:46:23_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -24,6 +24,7 @@ _Dihasilkan otomatis: 2025-12-05 22:31:04_
   - [src/api/services.ts](#file-srcapiservicests)
   - [src/api/users.ts](#file-srcapiusersts)
   - [src/api/vouchers.ts](#file-srcapivouchersts)
+  - [src/api/washNotes.ts](#file-srcapiwashnotests)
 
 - [Store (src/store)](#store-srcstore)
   - [src/store/useAuth.ts](#file-srcstoreuseauthts)
@@ -49,6 +50,7 @@ _Dihasilkan otomatis: 2025-12-05 22:31:04_
   - [src/types/services.ts](#file-srctypesservicests)
   - [src/types/users.ts](#file-srctypesusersts)
   - [src/types/vouchers.ts](#file-srctypesvouchersts)
+  - [src/types/wash-notes.ts](#file-srctypeswash-notests)
 
 - [Components (src/components)](#components-srccomponents)
   - [src/components/ConfirmDialog.tsx](#file-srccomponentsconfirmdialogtsx)
@@ -96,6 +98,8 @@ _Dihasilkan otomatis: 2025-12-05 22:31:04_
   - [src/pages/users/UsersList.tsx](#file-srcpagesusersuserslisttsx)
   - [src/pages/vouchers/VoucherForm.tsx](#file-srcpagesvouchersvoucherformtsx)
   - [src/pages/vouchers/VouchersIndex.tsx](#file-srcpagesvouchersvouchersindextsx)
+  - [src/pages/wash-notes/WashNoteForm.tsx](#file-srcpageswash-noteswashnoteformtsx)
+  - [src/pages/wash-notes/WashNotesIndex.tsx](#file-srcpageswash-noteswashnotesindextsx)
 
 - [Pages (src/utils)](#pages-srcutils)
   - [src/utils/files.ts](#file-srcutilsfilests)
@@ -1148,6 +1152,90 @@ export async function applyVoucherToOrder(orderId: ID, payload: ApplyVoucherPayl
 ```
 </details>
 
+### src/api/washNotes.ts
+
+- SHA: `a5c135a183b1`  
+- Ukuran: 2 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+// src/api/washNotes.ts
+import { api } from './client';
+import type { ApiEnvelope } from './client';
+
+export type ProcessStatus = 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
+
+export interface WashNoteItem {
+    id?: string;
+    order_id: string;
+    qty?: number;
+    process_status?: ProcessStatus | null;
+    started_at?: string | null;
+    finished_at?: string | null;
+    note?: string | null;
+}
+
+export interface WashNote {
+    id: string;
+    user_id: number;
+    branch_id: string | null;
+    note_date: string;
+    orders_count: number;
+    total_qty: number;
+    items?: WashNoteItem[];
+}
+
+export interface OrderLite {
+    id: string;
+    number: string;
+    invoice_no?: string | null;
+    status?: string;
+    customer?: { id: string; name: string } | null;
+    default_qty?: number;
+}
+
+export interface WashNoteUpsert {
+    note_date: string;
+    items: WashNoteItem[];
+}
+
+export async function listWashNotes(params?: {
+    date_from?: string; date_to?: string; page?: number; per_page?: number;
+}) {
+    const { data } = await api.get<ApiEnvelope<WashNote[]>>('/wash-notes', { params });
+    return data;
+}
+
+export async function getWashNote(id: string) {
+    const { data } = await api.get<ApiEnvelope<WashNote>>(`/wash-notes/${encodeURIComponent(id)}`);
+    return data;
+}
+
+export async function createWashNote(payload: WashNoteUpsert) {
+    const { data } = await api.post<ApiEnvelope<WashNote>>('/wash-notes', payload);
+    return data;
+}
+
+export async function updateWashNote(id: string, payload: WashNoteUpsert) {
+    const { data } = await api.patch<ApiEnvelope<WashNote>>(`/wash-notes/${encodeURIComponent(id)}`, payload);
+    return data;
+}
+
+export async function deleteWashNote(id: string) {
+    const { data } = await api.delete<ApiEnvelope<null>>(`/wash-notes/${encodeURIComponent(id)}`);
+    return data;
+}
+
+export async function searchOrderCandidates(params: {
+    query?: string; date_from?: string; date_to?: string; on_date?: string;
+}) {
+    const { data } = await api.get<ApiEnvelope<OrderLite[]>>('/wash-notes/candidates', { params });
+    return data;
+}
+
+```
+</details>
+
 
 
 ## Store (src/store)
@@ -1282,29 +1370,38 @@ export function useHasRole(required: RoleName | RoleName[]): boolean {
 
 ### src/layouts/GuestLayout.tsx
 
-- SHA: `5ff6840caa9a`  
-- Ukuran: 394 B
+- SHA: `57fcc9161a87`  
+- Ukuran: 595 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
-// src/layouts/GuestLayout.tsx
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 
 export default function GuestLayout() {
-    return (
-        <main className="min-h-dvh grid place-items-center p-6">
-            <div className="w-full max-w-[420px] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow-2)] bg-[color:var(--color-surface)]">
-                <Outlet />
-            </div>
-        </main>
-    );
+  const { pathname } = useLocation();
+  const isFullBleed = pathname === '/login';
+
+  // LOGIN: biarkan halaman (Login.tsx) yang mengatur layout sendiri
+  if (isFullBleed) {
+    return <Outlet />;
+  }
+
+  // Halaman tamu lain: tetap model kartu 420px
+  return (
+    <main className="min-h-dvh grid place-items-center p-6">
+      <div className="w-full max-w-[420px] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow-2)] bg-[color:var(--color-surface)]">
+        <Outlet />
+      </div>
+    </main>
+  );
 }
+
 ```
 </details>
 
 ### src/layouts/ProtectedLayout.tsx
 
-- SHA: `5bcd28db4d1e`  
+- SHA: `de19e69637cb`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1342,6 +1439,7 @@ export default function ProtectedLayout() {
     { label: 'Services', to: '/services', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Users', to: '/users', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Branches', to: '/branches', roles: ['Superadmin'] },
+    { label: 'Wash Notes', to: '/wash-notes', roles: ['Superadmin', 'Admin Cabang', 'Petugas Cuci'] },
     { label: 'Delivery', to: '/deliveries', roles: ['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir'], show: FF.delivery },
     { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
@@ -1560,8 +1658,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src/router/index.tsx
 
-- SHA: `e85e7b79bc34`  
-- Ukuran: 9 KB
+- SHA: `d077b9476fd9`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1597,6 +1695,8 @@ const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
+const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
+const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 
 export const router = createBrowserRouter([
   {
@@ -1884,6 +1984,46 @@ export const router = createBrowserRouter([
               <Guarded roles={['Superadmin', 'Admin Cabang']}>
                 <LazyBoundary>
                   <VoucherForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNotesIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes/new',
+            element: (
+              <Guarded roles={['Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNoteForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes/:id',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNoteForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes/:id/edit',
+            element: (
+              <Guarded roles={['Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNoteForm />
                 </LazyBoundary>
               </Guarded>
             ),
@@ -2710,6 +2850,47 @@ export type ApplyVoucherResponse = {
     applied_amount: number;
     order: unknown;
 };
+
+```
+</details>
+
+### src/types/wash-notes.ts
+
+- SHA: `d9c1406d2fc9`  
+- Ukuran: 755 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+export type ProcessStatus = 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
+
+export interface WashNoteItem {
+    id: string;
+    order_id: string;
+    qty: number;
+    process_status?: ProcessStatus | null;
+    started_at?: string | null;  // "HH:mm"
+    finished_at?: string | null; // "HH:mm"
+    note?: string | null;
+}
+
+export interface WashNote {
+    id: string;
+    user_id: number;
+    branch_id: string | null;
+    note_date: string; // "YYYY-MM-DD"
+    orders_count: number;
+    total_qty: number;
+    items?: WashNoteItem[];
+}
+
+export interface OrderLite {
+    id: string;
+    number: string;
+    invoice_no?: string | null;
+    status: string;
+    customer?: { id: string; name: string } | null;
+    default_qty?: number;
+}
 
 ```
 </details>
@@ -7825,8 +8006,8 @@ function RowSkeleton({ showBranch, showAction }: { showBranch: boolean; showActi
 
 ### src/pages/Login.tsx
 
-- SHA: `13cc3508c2e6`  
-- Ukuran: 7 KB
+- SHA: `486046bd90ed`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7845,7 +8026,6 @@ function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
 /** Ikon mata tertutup (hide) */
 function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -7853,6 +8033,22 @@ function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
       <path d="M1 12s4-7 11-7a12 12 0 0 1 5.6 1.4" />
       <path d="M23 12s-4 7-11 7A12 12 0 0 1 6.4 18.6" />
       <line x1="3" y1="3" x2="21" y2="21" />
+    </svg>
+  );
+}
+
+/** Ilustrasi sederhana perangkat + grafik (SVG ringan, purely visual) */
+function PhoneChart() {
+  return (
+    <svg viewBox="0 0 280 160" className="w-[260px] h-auto drop-shadow-sm">
+      <rect x="40" y="20" rx="20" ry="20" width="200" height="120" fill="white" opacity="0.92" />
+      <rect x="60" y="50" width="8" height="55" fill="currentColor" opacity="0.75" />
+      <rect x="85" y="40" width="8" height="65" fill="currentColor" opacity="0.75" />
+      <rect x="110" y="60" width="8" height="45" fill="currentColor" opacity="0.75" />
+      <rect x="135" y="35" width="8" height="70" fill="currentColor" opacity="0.75" />
+      <rect x="160" y="55" width="8" height="50" fill="currentColor" opacity="0.75" />
+      <circle cx="210" cy="90" r="20" fill="currentColor" opacity="0.15" />
+      <path d="M60 110 L100 80 L140 95 L180 70 L210 75" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.9" />
     </svg>
   );
 }
@@ -7892,136 +8088,184 @@ export default function LoginPage() {
 
   return (
     <main
-      className="
-        text-[color:var(--color-text)] overflow-hidden
-      "
+      className="relative min-h-dvh w-full bg-[var(--color-bg)] text-[var(--color-text)]"
+      style={{
+        ['--color-primary' as any]: '#00007a',
+        ['--color-on-primary' as any]: '#ffffff',
+        ['--focus-ring' as any]: '0 0 0 3px color-mix(in srgb, #00007a 32%, transparent)'
+      }}
     >
-      {/* Layer gradient halus */}
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none absolute inset-0 -z-10
-          [background:radial-gradient(1000px_600px_at_50%_-120px,rgba(51,102,255,0.10),transparent_55%)]
-        "
-      />
-
-      {/* Card autentikasi */}
-      <section
-        aria-labelledby="auth-title"
-        className="
-          w-full max-w-[420px] rounded-2xl
-          bg-[color:var(--color-surface)]
-          p-6 sm:p-8 shadow-[var(--shadow-2)]
-        "
-      >
-        <header className="mb-6 sm:mb-8 text-center">
-          <div className="text-xs font-semibold tracking-[0.18em] text-[color:var(--color-primary)]">
-            SALVE
-          </div>
-          <h1 id="auth-title" className="mt-1 text-2xl font-semibold">Masuk</h1>
-        </header>
-
-        {error && (
+      {/* Centered container */}
+      <div className="mx-auto flex min-h-dvh max-w-5xl items-center justify-center p-4 sm:p-8">
+        {/* Auth Card: 2 columns on md+ */}
+        <section
+          className="
+            w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr]
+            overflow-hidden rounded-2xl bg-[var(--color-surface)]
+            shadow-[var(--shadow-2)]
+          "
+        >
+          {/* Left Visual Panel */}
           <div
-            role="alert"
             className="
-              mb-4 rounded-md border px-3 py-2 text-sm
-              border-[color:var(--color-danger)]
-              text-[color:var(--color-danger)]
-              bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]
+              relative hidden md:flex items-center justify-center
+              text-[var(--color-on-primary)]
+              bg-[var(--color-primary)]
             "
           >
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} aria-busy={loading} className="space-y-4">
-          {/* Email atau Username */}
-          <div className="space-y-1.5">
-            <label htmlFor="login" className="text-sm font-medium">Email atau Username</label>
-            <input
-              id="login"
-              required
-              type="text"
-              placeholder="email atau username"
-              value={loginId}
-              onChange={(e) => setLoginId(e.target.value)}
-              autoComplete="username"
-              disabled={loading}
-              aria-invalid={!!error}
+            {/* Curved accent layer */}
+            <div
+              aria-hidden
               className="
-                block w-full rounded-md
-                border border-[color:var(--color-border)]
-                bg-white/95 text-[color:var(--color-text)]
-                placeholder:text-slate-500
-                px-3 py-2
-                focus:outline-none focus-visible:shadow-[var(--focus-ring)]
-                disabled:opacity-60
+                absolute inset-0
+                [background:radial-gradient(140%_120%_at_0%_100%,rgba(255,255,255,.24),transparent_60%)]
               "
             />
-          </div>
-
-          {/* Password + toggle show/hide */}
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium">Kata sandi</label>
-            <div className="relative">
-              <input
-                id="password"
-                required
-                type={showPwd ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                disabled={loading}
-                aria-invalid={!!error}
-                className="
-                  block w-full rounded-md
-                  border border-[color:var(--color-border)]
-                  bg-white/95 text-[color:var(--color-text)]
-                  placeholder:text-slate-500
-                  px-3 py-2 pr-12
-                  focus:outline-none focus-visible:shadow-[var(--focus-ring)]
-                  disabled:opacity-60
-                "
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                disabled={loading}
-                aria-label={showPwd ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
-                aria-pressed={showPwd}
-                className="
-                  absolute right-1.5 top-1/2 -translate-y-1/2
-                  rounded-md px-2 py-1
-                  text-slate-600 hover:bg-[color:var(--blue-100)]
-                  focus:outline-none focus-visible:shadow-[var(--focus-ring)]
-                  disabled:opacity-60
-                "
-              >
-                {showPwd ? <EyeOffIcon /> : <EyeIcon />}
-              </button>
+            {/* White curved panel to emulate mockup wave */}
+            <div
+              aria-hidden
+              className="
+                absolute -right-20 top-0 h-full w-[65%]
+                bg-[var(--color-surface)]
+                opacity-[.96]
+                rounded-l-[56px]
+              "
+              style={{ clipPath: 'ellipse(90% 70% at 0% 50%)' }}
+            />
+            {/* Vertical 'Welcome' */}
+            <div
+              className="
+                absolute left-6 top-1/2 -translate-y-1/2
+                -rotate-90 text-[40px] leading-none tracking-[0.12em]
+                font-bold text-white/70 select-none
+              "
+            >
+              Welcome
+            </div>
+            {/* Device + chart illustration */}
+            <div className="relative z-10 text-[var(--color-on-primary)]">
+              <PhoneChart />
+            </div>
+            {/* Tagline */}
+            <div className="absolute bottom-6 left-6 z-10 text-white/80 text-xs tracking-wide">
+              SYSTEM POS LAUNDRY SALVE
             </div>
           </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="
-              inline-flex w-full items-center justify-center rounded-lg
-              bg-[color:var(--color-primary)] px-4 py-2.5
-              font-medium text-[color:var(--color-on-primary)]
-              transition hover:shadow-[var(--shadow-2)] active:scale-[.98]
-              focus:outline-none focus-visible:shadow-[var(--focus-ring)]
-              disabled:opacity-60
-            "
-          >
-            {loading ? 'Memproses…' : 'Masuk'}
-          </button>
+          {/* Right Form Panel */}
+          <div className="px-6 py-8 sm:px-10 sm:py-12">
+            <header className="mb-8">
+              <h1 className="text-3xl font-semibold tracking-wide text-[color:var(--color-text)]">
+                LOGIN
+              </h1>
+            </header>
 
-        </form>
-      </section>
+            {error && (
+              <div
+                role="alert"
+                className="
+                  mb-4 rounded-md border px-3 py-2 text-sm
+                  border-[color:var(--color-danger)]
+                  text-[color:var(--color-danger)]
+                  bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]
+                "
+              >
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={onSubmit} aria-busy={loading} className="space-y-5">
+              {/* Username / Email */}
+              <div>
+                <label htmlFor="login" className="block text-sm font-medium mb-1">
+                  Username
+                </label>
+                <div className="relative">
+                  {/* left icon */}
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {/* user icon */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="1.8">
+                      <path d="M20 21a8 8 0 1 0-16 0" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login"
+                    required
+                    type="text"
+                    placeholder="Email atau username"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    autoComplete="username"
+                    disabled={loading}
+                    aria-invalid={!!error}
+                    className="input pl-10 py-2"
+                  />
+                </div>
+              </div>
+
+              {/* Password + toggle */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {/* lock icon */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="1.8">
+                      <rect x="4" y="11" width="16" height="9" rx="2" />
+                      <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+                    </svg>
+                  </span>
+                  <input
+                    id="password"
+                    required
+                    type={showPwd ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    disabled={loading}
+                    aria-invalid={!!error}
+                    className="input pl-10 pr-12 py-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd((v) => !v)}
+                    disabled={loading}
+                    aria-label={showPwd ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    aria-pressed={showPwd}
+                    className="
+                      absolute right-1.5 top-1/2 -translate-y-1/2
+                      rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100
+                      focus:outline-none focus-visible:focus-ring disabled:opacity-60
+                    "
+                  >
+                    {showPwd ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full py-2.5 focus-ring"
+              >
+                {loading ? 'Memproses…' : 'Login'}
+              </button>
+
+              {/* Links (visual only, optional)
+              <div className="mt-2 flex items-center justify-end gap-6 text-sm">
+                <a href="#" className="hover:underline">Forgot</a>
+                <a href="#" className="hover:underline">Help</a>
+              </div> */}
+            </form>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
@@ -12903,6 +13147,608 @@ function RowSkeleton() {
         <div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" />
       </td>
     </tr>
+  );
+}
+
+```
+</details>
+
+### src/pages/wash-notes/WashNoteForm.tsx
+
+- SHA: `539fe88cfdbe`  
+- Ukuran: 18 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+// src/pages/wash-notes/WashNoteForm.tsx
+import { useEffect, useMemo, useState } from 'react';
+import { createWashNote, updateWashNote, getWashNote, searchOrderCandidates, listWashNotes } from '../../api/washNotes';
+import { useNavigate, useParams } from 'react-router-dom';
+
+type ItemDraft = {
+    order_id: string;
+    number: string;
+    customer?: string;
+    qty: number;
+    process_status?: 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
+    started_at?: string | null;
+    finished_at?: string | null;
+    note?: string | null;
+};
+
+function InfoTipsForm({ noteDate }: { noteDate: string }) {
+    const [open, setOpen] = useState(true);
+    return (
+        <aside className="rounded border p-3 bg-gray-50">
+            <div className="flex items-center justify-between">
+                <strong className="text-sm">Tips / Keterangan</strong>
+                <button
+                    type="button"
+                    onClick={() => setOpen(o => !o)}
+                    className="text-xs underline"
+                    aria-expanded={open}
+                    aria-controls="wash-tips-form"
+                >
+                    {open ? 'Sembunyikan' : 'Tampilkan'}
+                </button>
+            </div>
+            {open && (
+                <div id="wash-tips-form" className="mt-2 text-sm leading-relaxed">
+                    <ul className="list-disc ml-5 space-y-1">
+                        <li>Catatan dibuat per <strong>Petugas Cuci</strong> per <strong>tanggal</strong>. Tanggal aktif: <b>{noteDate}</b>.</li>
+                        <li>Gunakan <em>rentang tanggal</em> di bagian pencarian untuk menyaring order yang akan ditambahkan.</li>
+                        <li>Ketik lengkap <strong>huruf atau nomor order</strong> pada kolom “Cari Order”, lalu <strong>Tambah</strong> untuk memasukkan ke daftar.</li>
+                        <li>Isi <code>qty</code>, pilih status proses, dan (opsional) jam mulai–selesai. Jam selesai harus ≥ jam mulai bila keduanya diisi.</li>
+                        <li>Duplikasi order pada catatan yang sama akan otomatis dicegah.</li>
+                        <li>Tekan <strong>Simpan</strong> setelah minimal satu order terisi.</li>
+                        <li>Bila <em>Auto-isi qty</em> aktif, kolom qty terisi otomatis dari total item pada order; Anda tetap dapat mengubahnya.</li>
+                    </ul>
+                </div>
+            )}
+        </aside>
+    );
+}
+
+export default function WashNoteForm() {
+    const nav = useNavigate();
+    const { id } = useParams<{ id: string }>();
+
+    const [noteDate, setNoteDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [items, setItems] = useState<ItemDraft[]>([]);
+    const [q, setQ] = useState('');
+    const [candidates, setCandidates] = useState<any[]>([]);
+    const today = new Date().toISOString().slice(0, 10);
+    const [from, setFrom] = useState<string>(today);
+    const [to, setTo] = useState<string>(today);
+    const [loading, setLoading] = useState(false);
+    const [autoQty, setAutoQty] = useState<boolean>(true);
+
+    const toLocalYMD = (s?: string): string => {
+        if (!s) return '';
+        // jika s sudah 'YYYY-MM-DD'
+        if (s.length >= 10 && s[4] === '-' && s[7] === '-') return s.slice(0, 10);
+        const ms = Date.parse(s);           // -> number (milliseconds)
+        if (Number.isNaN(ms)) return s.slice(0, 10);
+        const d = new Date(ms);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+    };
+    const loadDetail = async () => {
+        if (!id) return;
+        setLoading(true);
+        try {
+            const res = await getWashNote(id);
+            const n = res.data;
+            setNoteDate(toLocalYMD(n.note_date));
+            setItems((n.items ?? []).map((it: any) => ({
+                order_id: it.order_id,
+                number: it.order?.number ?? it.order_id,
+                customer: it.order?.customer?.name ?? '',
+                qty: Number(it.qty ?? 0),
+                process_status: it.process_status ?? undefined,
+                started_at: it.started_at ?? null,
+                finished_at: it.finished_at ?? null,
+                note: it.note ?? null,
+            })));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { loadDetail(); }, [id]);
+
+    const norm = (v?: string) => (v ?? '').trim().toLowerCase();
+    const selectedIds = useMemo<Set<string>>(
+        () => new Set(items.map(i => norm(i.order_id))),
+        [items]
+    );
+    const selectedNumbers = useMemo<Set<string>>(
+        () => new Set(items.map(i => norm(i.number))),
+        [items]
+    );
+
+    const search = async () => {
+        setLoading(true);
+        try {
+            const od = toLocalYMD(noteDate);
+            const res = await searchOrderCandidates({
+                query: q,
+                date_from: from,
+                date_to: to,
+                on_date: od,
+            });
+            const rows = (res.data ?? []) as any[];
+            // Saring di sumber data: buang yang sudah dipilih (id maupun number)
+            const filtered = rows.filter(o => {
+                const oid = norm(String(o.id));
+                const onum = norm(String(o.number));
+                return !selectedIds.has(oid) && !selectedNumbers.has(onum);
+            });
+            setCandidates(filtered);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (q.length >= 2) search(); else setCandidates([]);
+    }, [q, from, to, noteDate, items]);
+
+    const addItem = (o: any) => {
+        const oid = norm(String(o.id));
+        const onum = norm(String(o.number));
+        // Cegah duplikasi baik via id maupun number
+        if (items.some(x => norm(x.order_id) === oid || norm(x.number) === onum)) return;
+        const dqty = Number(o?.default_qty ?? 0);
+        setItems(prev => [...prev, {
+            order_id: o.id,
+            number: o.number,
+            customer: o.customer?.name ?? '',
+            qty: autoQty ? dqty : 0,
+            process_status: 'WASH',
+        }]);
+        setCandidates(prev => prev.filter(c => norm(String(c.id)) !== oid && norm(String(c.number)) !== onum));
+    };
+
+    const removeItem = (order_id: string) => {
+        setItems(prev => prev.filter(x => x.order_id !== order_id));
+        // Refresh kandidat agar order yang dihapus bisa muncul kembali di hasil cari
+        if (q.length >= 2) { void search(); }
+    };
+
+    const clearSelected = () => setItems([]);
+
+    // Validasi ringan sisi klien
+    const invalidQty = useMemo(
+        () => items.some(it => isNaN(it.qty as any) || (it.qty as number) < 0),
+        [items]
+    );
+    const invalidTime = useMemo(() => {
+        const cmp = (a?: string | null, b?: string | null) => (a && b) ? (a <= b) : true;
+        return items.some(it => {
+            const s = it.started_at ?? '';
+            const f = it.finished_at ?? '';
+            // valid bila salah satu kosong, atau f >= s
+            if (!s || !f) return false;
+            return !(cmp(s, f));
+        });
+    }, [items]);
+
+    const disableSave = items.length === 0 || invalidQty || invalidTime || loading;
+
+    const selectedSummary = useMemo(() => {
+        const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+        return { count: items.length, totalQty };
+    }, [items]);
+
+    const submit = async () => {
+        const payload = {
+            note_date: noteDate,
+            items: items.map(it => ({
+                order_id: it.order_id,
+                qty: it.qty,
+                process_status: it.process_status,
+                started_at: it.started_at || null,
+                finished_at: it.finished_at || null,
+                note: it.note || null,
+            })),
+        };
+        setLoading(true);
+        try {
+            if (id) {
+                await updateWashNote(id, payload);
+            } else {
+                await createWashNote(payload);
+            }
+            nav('/wash-notes');
+        } catch (err: any) {
+            const status = err?.response?.status;
+            const data = err?.response?.data;
+            // Tangani 422: catatan harian sudah ada untuk user & tanggal yang sama
+            if (status === 422) {
+                // 1) Jika backend mengirim existing_id, langsung arahkan ke edit
+                const existingId = data?.meta?.existing_id;
+                if (existingId) {
+                    return nav(`/wash-notes/${existingId}/edit`);
+                }
+                // 2) Fallback: cari catatan di tanggal yang sama, lalu arahkan ke edit
+                try {
+                    const res = await listWashNotes({ date_from: noteDate, date_to: noteDate, page: 1, per_page: 1 });
+                    const existing = res?.data?.[0];
+                    if (existing?.id) {
+                        return nav(`/wash-notes/${existing.id}/edit`);
+                    }
+                } catch { }
+            }
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetSearchDates = () => { setFrom(today); setTo(today); };
+
+    return (
+        <div className="p-4 space-y-4">
+            <div className="flex items-end gap-3">
+                {/* Tanggal ditentukan otomatis (default hari ini) dan dapat disesuaikan di backend bila diperlukan */}
+                <div className="text-sm text-gray-600">
+                    Tanggal catatan: <b>{noteDate}</b>
+                </div>
+                <button
+                    onClick={submit}
+                    disabled={disableSave}
+                    className={`ml-auto px-3 py-2 rounded text-white ${disableSave ? 'bg-gray-400 cursor-not-allowed' : 'bg-black'}`}
+                    title={disableSave ? 'Lengkapi data agar dapat disimpan' : 'Simpan catatan'}
+                >
+                    {id ? 'Simpan Perubahan' : 'Simpan'}
+                </button>
+            </div>
+
+            <InfoTipsForm noteDate={noteDate} />
+
+            {(invalidQty || invalidTime) && (
+                <div className="rounded border border-red-200 bg-red-50 text-red-700 p-3 text-sm" role="alert" aria-live="polite">
+                    {invalidQty && <div>Qty tidak boleh negatif.</div>}
+                    {invalidTime && <div>Jam selesai harus lebih besar atau sama dengan jam mulai.</div>}
+                </div>
+            )}
+
+            <div className="border rounded p-3 space-y-3">
+                <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                        <label className="block text-sm">Cari Order (nomor / pelanggan)</label>
+                        <input
+                            value={q}
+                            onChange={e => setQ(e.target.value)}
+                            placeholder="ketik minimal 2 huruf…"
+                            className="border rounded px-2 py-1 w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm">Dari Tanggal</label>
+                        <input
+                            type="date"
+                            className="border rounded px-2 py-1"
+                            value={from}
+                            onChange={e => setFrom(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm">Sampai Tanggal</label>
+                        <input
+                            type="date"
+                            className="border rounded px-2 py-1"
+                            value={to}
+                            onChange={e => setTo(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        onClick={resetSearchDates}
+                        className="px-3 py-2 border rounded"
+                        title="Kembalikan rentang ke hari ini"
+                    >
+                        Reset
+                    </button>
+                    <div className="flex items-center gap-2 text-sm ml-2">
+                        <input
+                            id="auto-qty"
+                            type="checkbox"
+                            className="h-4 w-4"
+                            checked={autoQty}
+                            onChange={e => setAutoQty(e.target.checked)}
+                        />
+                        <label htmlFor="auto-qty">Auto-isi qty dari order</label>
+                    </div>
+                </div>
+
+                {candidates.length > 0 && (
+                    <div className="border rounded divide-y">
+                        {candidates
+                            // Saringan tambahan saat render (defensif)
+                            .filter(o => !selectedIds.has(norm(String(o.id))) && !selectedNumbers.has(norm(String(o.number))))
+                            .map(o => (
+                                <div key={o.id} className="p-2 flex items-center gap-3">
+                                    <div className="w-56">{o.number}</div>
+                                    <div className="flex-1">{o.customer?.name ?? '-'}</div>
+                                    <div className="text-sm text-gray-600">
+                                        Default qty: <b>{Number(o?.default_qty ?? 0)}</b>
+                                    </div>
+                                    <button
+                                        onClick={() => addItem(o)}
+                                        disabled={selectedIds.has(norm(String(o.id))) || selectedNumbers.has(norm(String(o.number)))}
+                                        className="text-blue-600 underline disabled:text-gray-400 disabled:no-underline"
+                                    >
+                                        Tambah
+                                    </button>
+                                </div>
+                            ))}
+                    </div>
+                )}
+
+                <div className="flex items-center justify-between text-sm">
+                    <div>
+                        Terpilih: <b>{selectedSummary.count}</b> order • total qty <b>{selectedSummary.totalQty}</b>
+                    </div>
+                    {items.length > 0 && (
+                        <button type="button" onClick={clearSelected} className="underline text-gray-700">
+                            Hapus semua pilihan
+                        </button>
+                    )}
+                </div>
+
+                <div className="space-y-2">
+                    {items.map((it, idx) => (
+                        <div key={it.order_id} className="p-2 border rounded grid grid-cols-12 gap-2 items-center">
+                            <div className="col-span-3 text-sm">
+                                <div className="font-medium">{it.number}</div>
+                                <div className="text-gray-500">{it.customer || '-'}</div>
+                            </div>
+                            <input
+                                className="col-span-2 border rounded px-2 py-1"
+                                type="number" min={0} step="0.1"
+                                value={it.qty}
+                                onChange={e => {
+                                    const v = parseFloat(e.target.value || '0');
+                                    setItems(prev => prev.map((x, i) => i === idx ? { ...x, qty: isNaN(v) ? 0 : v } : x));
+                                }}
+                            />
+                            <select
+                                className="col-span-2 border rounded px-2 py-1"
+                                value={it.process_status ?? ''}
+                                onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, process_status: (e.target.value || undefined) as any } : x))}
+                            >
+                                <option value="">(kosong)</option>
+                                <option value="QUEUE">QUEUE</option>
+                                <option value="WASH">WASH</option>
+                                <option value="DRY">DRY</option>
+                                <option value="FINISHING">FINISHING</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="PICKED_UP">PICKED_UP</option>
+                            </select>
+                            <input
+                                className="col-span-2 border rounded px-2 py-1"
+                                type="time"
+                                value={it.started_at ?? ''}
+                                onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, started_at: e.target.value || null } : x))}
+                            />
+                            <input
+                                className="col-span-2 border rounded px-2 py-1"
+                                type="time"
+                                value={it.finished_at ?? ''}
+                                onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, finished_at: e.target.value || null } : x))}
+                            />
+                            <div className="col-span-12 flex gap-2">
+                                <input
+                                    className="flex-1 border rounded px-2 py-1"
+                                    placeholder="Catatan singkat"
+                                    value={it.note ?? ''}
+                                    onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, note: e.target.value || null } : x))}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeItem(it.order_id)}
+                                    className="px-3 py-1 border rounded text-red-600 border-red-300"
+                                    title="Hapus dari daftar"
+                                >
+                                    Hapus
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {items.length === 0 && <div className="text-sm text-gray-500">Belum ada order terpilih.</div>}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+```
+</details>
+
+### src/pages/wash-notes/WashNotesIndex.tsx
+
+- SHA: `c4958c48cced`  
+- Ukuran: 6 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+// src/pages/wash-notes/WashNotesIndex.tsx
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { listWashNotes, deleteWashNote } from '../../api/washNotes';
+import { useHasRole } from '../../store/useAuth';
+
+function InfoTips() {
+  const [open, setOpen] = useState(true);
+  return (
+    <aside className="rounded border p-3 bg-gray-50">
+      <div className="flex items-center justify-between">
+        <strong className="text-sm">Tips / Keterangan</strong>
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="text-xs underline"
+          aria-expanded={open}
+          aria-controls="wash-tips"
+        >
+          {open ? 'Sembunyikan' : 'Tampilkan'}
+        </button>
+      </div>
+      {open && (
+        <div id="wash-tips" className="mt-2 text-sm leading-relaxed">
+          <ul className="list-disc ml-5 space-y-1">
+            <li>Pilih <em>rentang tanggal</em> untuk menampilkan catatan cuci pada periode tersebut.</li>
+            <li>Tekan <strong>Tambah</strong> untuk membuat catatan cuci harian (default tanggal hari ini).</li>
+            <li><strong>Rekap</strong> menunjukkan jumlah order dan total <code>qty</code> yang dicuci pada tiap catatan.</li>
+            <li>Hanya <strong>Superadmin</strong> dan <strong>Admin Cabang</strong> yang bisa menghapus catatan. Petugas Cuci tidak bisa menghapus.</li>
+            <li>Gunakan tombol <strong>Detail</strong> untuk melihat item/order yang dicatat pada hari tersebut, dan <strong>Ubah</strong> untuk memperbarui.</li>
+          </ul>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+export default function WashNotesIndex() {
+  const today = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState<string>(today);
+  const [to, setTo] = useState<string>(today);
+  const [rows, setRows] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+  const canDelete = useHasRole(['Superadmin', 'Admin Cabang']); // kontrol tombol Hapus
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await listWashNotes({ date_from: from, date_to: to });
+      setRows(res.data ?? []);
+      setMeta(res.meta ?? null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to]);
+
+  const recap = useMemo(
+    () => meta?.recap ?? { orders_count: 0, total_qty: 0 },
+    [meta]
+  );
+
+  const resetDates = () => {
+    setFrom(today);
+    setTo(today);
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-end gap-2">
+        <div>
+          <label className="block text-sm">Dari Tanggal</label>
+          <input
+            type="date"
+            className="border rounded px-2 py-1"
+            value={from}
+            onChange={e => setFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Sampai Tanggal</label>
+          <input
+            type="date"
+            className="border rounded px-2 py-1"
+            value={to}
+            onChange={e => setTo(e.target.value)}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={resetDates}
+          className="inline-block px-3 py-2 border rounded"
+          disabled={loading}
+          title="Kembalikan ke hari ini"
+        >
+          Reset
+        </button>
+
+        <NavLink
+          to="/wash-notes/new"
+          className="ml-auto inline-block bg-black text-white px-3 py-2 rounded"
+        >
+          Tambah
+        </NavLink>
+      </div>
+
+      <InfoTips />
+
+      <div className="text-sm" aria-live="polite">
+        <strong>Rekap:</strong> {recap.orders_count} order, total qty {recap.total_qty}
+      </div>
+
+      {loading ? (
+        <div>Memuat…</div>
+      ) : (
+        <div className="border rounded divide-y">
+          {rows.map(r => (
+            <div key={r.id} className="p-3 flex items-center gap-3">
+              <div className="w-40">
+                <div className="text-xs text-gray-500">Tanggal</div>
+                <div className="font-medium">{r.note_date}</div>
+              </div>
+              <div className="w-40">
+                <div className="text-xs text-gray-500">Petugas</div>
+                <div className="font-medium">{r.user?.name ?? r.user_id}</div>
+              </div>
+              <div className="w-40">
+                <div className="text-xs text-gray-500">Rekap</div>
+                <div>
+                  {r.orders_count} order • {r.total_qty}
+                </div>
+              </div>
+              <div className="ml-auto flex gap-2">
+                <NavLink className="underline" to={`/wash-notes/${r.id}`}>
+                  Detail
+                </NavLink>
+                <NavLink className="underline" to={`/wash-notes/${r.id}/edit`}>
+                  Ubah
+                </NavLink>
+                {canDelete && (
+                  <button
+                    onClick={async () => {
+                      if (confirm('Hapus catatan ini?')) {
+                        await deleteWashNote(r.id);
+                        load();
+                      }
+                    }}
+                    className="text-red-600"
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {rows.length === 0 && (
+            <div className="p-4 text-sm text-gray-500">
+              Tidak ada data pada rentang tanggal ini.{' '}
+              <NavLink className="underline" to="/wash-notes/new">
+                Buat catatan cuci baru
+              </NavLink>
+              .
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

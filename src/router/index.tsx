@@ -30,6 +30,8 @@ const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
+const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
+const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 
 export const router = createBrowserRouter([
   {
@@ -317,6 +319,46 @@ export const router = createBrowserRouter([
               <Guarded roles={['Superadmin', 'Admin Cabang']}>
                 <LazyBoundary>
                   <VoucherForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNotesIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes/new',
+            element: (
+              <Guarded roles={['Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNoteForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes/:id',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNoteForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/wash-notes/:id/edit',
+            element: (
+              <Guarded roles={['Petugas Cuci']}>
+                <LazyBoundary>
+                  <WashNoteForm />
                 </LazyBoundary>
               </Guarded>
             ),

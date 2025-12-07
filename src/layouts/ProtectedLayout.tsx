@@ -31,6 +31,7 @@ export default function ProtectedLayout() {
     { label: 'Services', to: '/services', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Users', to: '/users', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Branches', to: '/branches', roles: ['Superadmin'] },
+    { label: 'Wash Notes', to: '/wash-notes', roles: ['Superadmin', 'Admin Cabang', 'Petugas Cuci'] },
     { label: 'Delivery', to: '/deliveries', roles: ['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir'], show: FF.delivery },
     { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
     { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
