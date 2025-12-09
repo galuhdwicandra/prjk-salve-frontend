@@ -38,6 +38,14 @@ export interface WashNoteUpsert {
     items: WashNoteItem[];
 }
 
+export interface SearchOrderCandidatesParams {
+    query?: string;
+    date_from?: string;
+    date_to?: string;
+    on_date?: string;
+    exclude_note_id?: string; // <— baru
+}
+
 export async function listWashNotes(params?: {
     date_from?: string; date_to?: string; page?: number; per_page?: number;
 }) {
@@ -65,9 +73,10 @@ export async function deleteWashNote(id: string) {
     return data;
 }
 
-export async function searchOrderCandidates(params: {
-    query?: string; date_from?: string; date_to?: string; on_date?: string;
-}) {
-    const { data } = await api.get<ApiEnvelope<OrderLite[]>>('/wash-notes/candidates', { params });
+export async function searchOrderCandidates(params: SearchOrderCandidatesParams) {
+    const { data } = await api.get<ApiEnvelope<OrderLite[]>>(
+        '/wash-notes/candidates',
+        { params }
+    );
     return data;
 }

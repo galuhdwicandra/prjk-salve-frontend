@@ -108,6 +108,7 @@ export default function WashNoteForm() {
                 date_from: from,
                 date_to: to,
                 on_date: od,
+                exclude_note_id: id || undefined,
             });
             const rows = (res.data ?? []) as any[];
             const filtered = rows.filter(o => {
