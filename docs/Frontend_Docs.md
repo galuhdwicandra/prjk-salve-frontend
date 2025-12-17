@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2025-12-09 14:47:04_  
+_Dihasilkan otomatis: 2025-12-09 18:07:26_  
 **Root:** `/home/galuhdwicandra/projects/clone_salve/prjk-salve-frontend`
 
 
@@ -1155,7 +1155,7 @@ export async function applyVoucherToOrder(orderId: ID, payload: ApplyVoucherPayl
 
 ### src/api/washNotes.ts
 
-- SHA: `a5c135a183b1`  
+- SHA: `3fe62f8fac9d`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1200,6 +1200,14 @@ export interface WashNoteUpsert {
     items: WashNoteItem[];
 }
 
+export interface SearchOrderCandidatesParams {
+    query?: string;
+    date_from?: string;
+    date_to?: string;
+    on_date?: string;
+    exclude_note_id?: string; // <— baru
+}
+
 export async function listWashNotes(params?: {
     date_from?: string; date_to?: string; page?: number; per_page?: number;
 }) {
@@ -1227,10 +1235,11 @@ export async function deleteWashNote(id: string) {
     return data;
 }
 
-export async function searchOrderCandidates(params: {
-    query?: string; date_from?: string; date_to?: string; on_date?: string;
-}) {
-    const { data } = await api.get<ApiEnvelope<OrderLite[]>>('/wash-notes/candidates', { params });
+export async function searchOrderCandidates(params: SearchOrderCandidatesParams) {
+    const { data } = await api.get<ApiEnvelope<OrderLite[]>>(
+        '/wash-notes/candidates',
+        { params }
+    );
     return data;
 }
 
@@ -8007,7 +8016,7 @@ function RowSkeleton({ showBranch, showAction }: { showBranch: boolean; showActi
 
 ### src/pages/Login.tsx
 
-- SHA: `486046bd90ed`  
+- SHA: `48ec7137d507`  
 - Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -8141,7 +8150,7 @@ export default function LoginPage() {
                 font-bold text-white/70 select-none
               "
             >
-              Welcome
+              SALVE
             </div>
             {/* Device + chart illustration */}
             <div className="relative z-10 text-[var(--color-on-primary)]">
@@ -13283,7 +13292,7 @@ function RowSkeleton() {
 
 ### src/pages/wash-notes/WashNoteForm.tsx
 
-- SHA: `126fcb5832d5`  
+- SHA: `7c0a2815aa78`  
 - Ukuran: 24 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -13398,6 +13407,7 @@ export default function WashNoteForm() {
                 date_from: from,
                 date_to: to,
                 on_date: od,
+                exclude_note_id: id || undefined,
             });
             const rows = (res.data ?? []) as any[];
             const filtered = rows.filter(o => {

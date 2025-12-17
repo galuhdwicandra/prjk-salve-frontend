@@ -127,7 +127,7 @@ export default function LoginPage() {
                 font-bold text-white/70 select-none
               "
             >
-              Welcome
+              SALVE
             </div>
             {/* Device + chart illustration */}
             <div className="relative z-10 text-[var(--color-on-primary)]">
