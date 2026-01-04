@@ -175,9 +175,8 @@ export default function POSPage() {
 
     setLoading(true); setError(null);
     try {
-      // 1) create order
+      // 1) create order — JANGAN kirim branch_id; backend auto pakai cabang user
       const payload: OrderCreatePayload = {
-        branch_id: branchId || undefined,
         customer_id: customerId,
         items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
         discount: discount || 0,
