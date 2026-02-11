@@ -25,12 +25,12 @@
 }
 
 @layer base {
-  html, body, #root, #root > * {
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
+  html, body, #root {
     background-clip: padding-box;
   }
+
+  /* Jangan matikan outline global. Biarkan fokus tampil untuk aksesibilitas. */
+  /* Jika mau custom, pakai :focus-visible dan ring Tailwind di komponen. */
 }
 
 @layer components {

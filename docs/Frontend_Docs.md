@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-02-11 17:10:25_  
+_Dihasilkan otomatis: 2026-02-11 18:43:27_  
 **Root:** `/home/galuhdwicandra/workspace/clone_salve/prjk-salve-frontend`
 
 
@@ -1411,16 +1411,16 @@ export default function GuestLayout() {
 
 ### src/layouts/ProtectedLayout.tsx
 
-- SHA: `de19e69637cb`  
-- Ukuran: 8 KB
+- SHA: `d04093b069e9`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/layouts/ProtectedLayout.tsx
-import { useState } from 'react';
-import { Navigate, Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
-import { useAuth, useHasRole } from '../store/useAuth';
-import type { RoleName } from '../api/client';
+import React, { useEffect, useMemo, useState } from "react";
+import { Navigate, Outlet, useLocation, useNavigate, NavLink } from "react-router-dom";
+import { useAuth, useHasRole } from "../store/useAuth";
+import type { RoleName } from "../api/client";
 
 export default function ProtectedLayout() {
   const me = useAuth.user;
@@ -1430,143 +1430,210 @@ export default function ProtectedLayout() {
   // Drawer untuk mobile
   const [open, setOpen] = useState(false);
 
+  // Close drawer on route change (UX)
+  useEffect(() => {
+    setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  // Esc to close + lock scroll on mobile drawer
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   if (!me) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   const FF = {
-    vouchers: import.meta.env.VITE_FEATURE_VOUCHER === 'true',
-    delivery: import.meta.env.VITE_FEATURE_DELIVERY === 'true',
-    receivables: import.meta.env.VITE_FEATURE_RECEIVABLES === 'true',
+    vouchers: import.meta.env.VITE_FEATURE_VOUCHER === "true",
+    delivery: import.meta.env.VITE_FEATURE_DELIVERY === "true",
+    receivables: import.meta.env.VITE_FEATURE_RECEIVABLES === "true",
   };
 
   type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
   const MENU: MenuItem[] = [
-    { label: 'Dashboard', to: '/', roles: ['Superadmin', 'Admin Cabang,', 'Kasir', 'Petugas Cuci', 'Kurir'] as RoleName[] },
-    { label: 'POS', to: '/pos', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
-    { label: 'Orders', to: '/orders', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
-    { label: 'Customers', to: '/customers', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
-    { label: 'Services', to: '/services', roles: ['Superadmin', 'Admin Cabang'] },
-    { label: 'Users', to: '/users', roles: ['Superadmin', 'Admin Cabang'] },
-    { label: 'Branches', to: '/branches', roles: ['Superadmin'] },
-    { label: 'Wash Notes', to: '/wash-notes', roles: ['Superadmin', 'Admin Cabang', 'Petugas Cuci'] },
-    { label: 'Delivery', to: '/deliveries', roles: ['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir'], show: FF.delivery },
-    { label: 'Expenses', to: '/expenses', roles: ['Superadmin', 'Admin Cabang'] },
-    { label: 'Receivables', to: '/receivables', roles: ['Superadmin', 'Admin Cabang', 'Kasir'], show: FF.receivables },
-    { label: 'Vouchers', to: '/vouchers', roles: ['Superadmin', 'Admin Cabang'], show: FF.vouchers },
-    { label: 'Reports', to: '/reports', roles: ['Superadmin', 'Admin Cabang', 'Kasir'] },
+    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang,", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
+    { label: "POS", to: "/pos", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Orders", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Customers", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Services", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Users", to: "/users", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Branches", to: "/branches", roles: ["Superadmin"] },
+    { label: "Wash Notes", to: "/wash-notes", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
+    { label: "Delivery", to: "/deliveries", roles: ["Superadmin", "Admin Cabang", "Kasir", "Kurir"], show: FF.delivery },
+    { label: "Expenses", to: "/expenses", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Receivables", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
+    { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], show: FF.vouchers },
+    { label: "Reports", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
   ];
 
-  const VISIBLE = MENU.filter(
-    (m) => (m.show ?? true) && (me.roles ?? []).some((r) => m.roles.includes(r as RoleName)),
+  const VISIBLE = useMemo(
+    () =>
+      MENU.filter((m) => (m.show ?? true) && (me.roles ?? []).some((r) => m.roles.includes(r as RoleName))),
+    [me.roles, FF.delivery, FF.receivables, FF.vouchers],
   );
 
+  const roleText = (me.roles ?? []).join(", ");
+  const showSubtitle = roleText && roleText.toLowerCase() !== (me.name ?? "").toLowerCase();
+
   return (
-    <div className="min-h-dvh bg-[var(--color-surface)] text-[var(--color-text-default)]">
+    <div
+      className="min-h-dvh text-[var(--color-text-default)]"
+      style={{
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 92%, #ffffff) 0%, var(--color-surface) 100%)",
+      }}
+    >
       {/* Topbar */}
-      <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur">
-        <div className="container-app flex h-14 items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-surface)]/85 backdrop-blur shadow-[0_10px_30px_-25px_rgba(0,0,0,.35)]">
+        <div className="container-app flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 min-w-0">
             {/* Toggle drawer (mobile) */}
             <button
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] hover:bg-[#E6EDFF] transition-colors"
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-white/80 hover:bg-white transition-colors"
               aria-label="Open menu"
               onClick={() => setOpen(true)}
             >
-              {/* ikon burger sederhana */}
               <span className="block h-0.5 w-4 bg-current" />
               <span className="block h-0.5 w-4 bg-current mt-1" />
               <span className="block h-0.5 w-4 bg-current mt-1" />
             </button>
-            <div className="font-semibold">SALVE</div>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-9 w-9 rounded-xl overflow-hidden bg-white shadow-sm border border-[var(--color-border)] flex items-center justify-center">
+                <img
+                  src="/logo-salve.png"
+                  alt="Logo Salve"
+                  className="h-7 w-7 object-contain"
+                />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold leading-5 truncate">SALVE</div>
+                <div className="text-[11px] leading-4 text-black/55 dark:text-white/60 truncate">
+                  {"POS Laundry"}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Aksi cepat sederhana (placeholder) */}
+          {/* Right actions */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={async () => {
-                await useAuth.logout();
-                nav('/login', { replace: true });
-              }}
-              className="hidden md:inline-flex h-9 items-center rounded-lg border border-[var(--color-border)] px-3 text-sm hover:bg-[#E6EDFF] transition-colors"
-            >
-              Logout
-            </button>
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-white px-2 py-1 shadow-[0_8px_20px_-16px_rgba(0,0,0,.35)]">
+              <div className="h-8 w-8 rounded-full bg-black/10 flex items-center justify-center text-xs font-bold">
+                {(me.name ?? "U").slice(0, 1).toUpperCase()}
+              </div>
+
+              <div className="hidden sm:block leading-tight pr-1">
+                <div className="text-sm font-semibold truncate max-w-[180px]">{me.name}</div>
+                {showSubtitle ? (
+                  <div className="text-[11px] text-black/55 dark:text-white/60 truncate max-w-[180px]">
+                    {roleText}
+                  </div>
+                ) : null}
+              </div>
+
+              <button
+                onClick={async () => {
+                  await useAuth.logout();
+                  nav("/login", { replace: true });
+                }}
+                className="inline-flex h-8 items-center rounded-lg border border-[var(--color-border)] bg-white px-3 text-xs font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="container-app grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-6 py-6">
+      <div className="container-app grid grid-cols-1 md:grid-cols-[17rem_1fr] gap-4 md:gap-6 py-4 md:py-6">
         {/* Sidebar (desktop) */}
-        <aside className="hidden md:block rounded-lg border border-[var(--color-border)] bg-white/90 p-4 shadow-elev-1">
-          <UserCard name={me.name} roles={me.roles} />
-          <nav className="mt-4 space-y-1">
-            {VISIBLE.map((m) => (
-              <NavLink
-                key={m.to}
-                to={m.to}
-                className={({ isActive }) =>
-                  [
-                    'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)] shadow-elev-1'
-                      : 'hover:bg-[#E6EDFF]',
-                  ].join(' ')
-                }
+        <aside className="hidden md:block">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white/90 p-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
+            <UserCard name={me.name} roles={me.roles ?? []} />
+            <nav className="mt-4 space-y-1">
+              {VISIBLE.map((m) => (
+                <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
+                  <span className="truncate">{m.label}</span>
+                  <span className="ml-auto text-[10px] opacity-60">{isActiveDot(m.to, location.pathname)}</span>
+                </NavLink>
+              ))}
+            </nav>
+
+            <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+              <button
+                onClick={async () => {
+                  await useAuth.logout();
+                  nav("/login", { replace: true });
+                }}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-white/80 px-3 py-2 text-sm hover:bg-white transition-colors"
               >
-                {m.label}
-              </NavLink>
-            ))}
-          </nav>
-          <button
-            onClick={async () => {
-              await useAuth.logout();
-              nav('/login', { replace: true });
-            }}
-            className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[#E6EDFF] transition-colors"
-          >
-            Logout
-          </button>
+                Logout
+              </button>
+            </div>
+          </div>
         </aside>
 
         {/* Drawer Sidebar (mobile) */}
         <MobileDrawer open={open} onClose={() => setOpen(false)}>
           <div className="p-4">
-            <UserCard name={me.name} roles={me.roles} />
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">Menu</div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-white hover:bg-slate-50"
+                aria-label="Close menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <UserCard name={me.name} roles={me.roles ?? []} />
+            </div>
+
             <nav className="mt-4 space-y-1">
               {VISIBLE.map((m) => (
-                <NavLink
-                  key={m.to}
-                  to={m.to}
-                  onClick={() => setOpen(false)}
-                  className={({ isActive }) =>
-                    [
-                      'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on)] shadow-elev-1'
-                        : 'hover:bg-[#E6EDFF]',
-                    ].join(' ')
-                  }
-                >
-                  {m.label}
+                <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
+                  <span className="truncate">{m.label}</span>
                 </NavLink>
               ))}
             </nav>
-            <button
-              onClick={async () => {
-                await useAuth.logout();
-                nav('/login', { replace: true });
-              }}
-              className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[#E6EDFF] transition-colors"
-            >
-              Logout
-            </button>
+
+            <div className="mt-4">
+              <button
+                onClick={async () => {
+                  await useAuth.logout();
+                  nav("/login", { replace: true });
+                }}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm hover:bg-slate-50 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </MobileDrawer>
 
         {/* Konten */}
         <main className="min-w-0">
-          <div className="rounded-lg border border-[var(--color-border)] bg-white/90 p-4 shadow-elev-1">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white/90 p-4 md:p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
             <Outlet />
           </div>
         </main>
@@ -1575,12 +1642,34 @@ export default function ProtectedLayout() {
   );
 }
 
+function navItemClass(isActive: boolean) {
+  return [
+    "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15",
+    isActive
+      ? "bg-[var(--color-brand-primary)] text-[var(--color-brand-on)] shadow-[0_10px_22px_-18px_rgba(0,0,0,.45)]"
+      : "text-[var(--color-text-default)] hover:bg-black/5",
+  ].join(" ");
+}
+
+// kecil saja, supaya tidak mengubah logika: ini hanya untuk penanda UI
+function isActiveDot(_to: string, _pathname: string) {
+  return "";
+}
+
 function UserCard(props: { name: string; roles: string[] }) {
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-      <div className="font-semibold">{props.name}</div>
-      <div className="mt-0.5 text-xs text-black/60 dark:text-white/70">
-        {props.roles?.join(', ')}
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-2xl bg-black/10 flex items-center justify-center font-bold">
+          {(props.name ?? "U").slice(0, 1).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <div className="font-semibold leading-5 truncate">{props.name}</div>
+          <div className="mt-0.5 text-xs text-black/60 dark:text-white/70 truncate">
+            {props.roles?.join(", ")}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1592,18 +1681,18 @@ function MobileDrawer(props: { open: boolean; onClose: () => void; children: Rea
       {/* Overlay */}
       <div
         className={[
-          'fixed inset-0 z-40 bg-black/30 transition-opacity md:hidden',
-          props.open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        ].join(' ')}
+          "fixed inset-0 z-40 bg-black/35 transition-opacity md:hidden",
+          props.open ? "opacity-100" : "pointer-events-none opacity-0",
+        ].join(" ")}
         onClick={props.onClose}
         aria-hidden={!props.open}
       />
       {/* Panel */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 w-72 border-r border-[var(--color-border)] bg-white p-0 shadow-elev-2 transition-transform md:hidden',
-          props.open ? 'translate-x-0' : '-translate-x-full',
-        ].join(' ')}
+          "fixed inset-y-0 left-0 z-50 w-[82vw] max-w-[320px] border-r border-[var(--color-border)] bg-white shadow-[0_20px_60px_-30px_rgba(0,0,0,.6)] transition-transform md:hidden",
+          props.open ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
         role="dialog"
         aria-modal="true"
         aria-label="Navigation"
@@ -8028,21 +8117,29 @@ function RowSkeleton({ showBranch, showAction }: { showBranch: boolean; showActi
 
 ### src/pages/Login.tsx
 
-- SHA: `48ec7137d507`  
+- SHA: `3b9a0d80dfab`  
 - Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/Login.tsx
-import { useState, type FormEvent } from 'react';
-import type { AxiosError } from 'axios';
-import { useAuth, homePathByRole } from '../store/useAuth';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, type FormEvent } from "react";
+import type { AxiosError } from "axios";
+import { useAuth, homePathByRole } from "../store/useAuth";
+import { useNavigate, useLocation } from "react-router-dom";
 
 /** Ikon mata (show) */
 function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      {...props}
+    >
       <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
       <circle cx="12" cy="12" r="3.2" />
     </svg>
@@ -8051,7 +8148,15 @@ function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
 /** Ikon mata tertutup (hide) */
 function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      {...props}
+    >
       <path d="M1 12s4-7 11-7a12 12 0 0 1 5.6 1.4" />
       <path d="M23 12s-4 7-11 7A12 12 0 0 1 6.4 18.6" />
       <line x1="3" y1="3" x2="21" y2="21" />
@@ -8059,18 +8164,37 @@ function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-/** Ilustrasi sederhana perangkat + grafik (SVG ringan, purely visual) */
-function PhoneChart() {
+function BrandStar() {
   return (
-    <svg viewBox="0 0 280 160" className="w-[260px] h-auto drop-shadow-sm">
-      <rect x="40" y="20" rx="20" ry="20" width="200" height="120" fill="white" opacity="0.92" />
-      <rect x="60" y="50" width="8" height="55" fill="currentColor" opacity="0.75" />
-      <rect x="85" y="40" width="8" height="65" fill="currentColor" opacity="0.75" />
-      <rect x="110" y="60" width="8" height="45" fill="currentColor" opacity="0.75" />
-      <rect x="135" y="35" width="8" height="70" fill="currentColor" opacity="0.75" />
-      <rect x="160" y="55" width="8" height="50" fill="currentColor" opacity="0.75" />
-      <circle cx="210" cy="90" r="20" fill="currentColor" opacity="0.15" />
-      <path d="M60 110 L100 80 L140 95 L180 70 L210 75" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.9" />
+    <svg viewBox="0 0 64 64" className="h-10 w-10 text-white/95">
+      <path
+        fill="currentColor"
+        d="M32 4c2.2 0 4 1.8 4 4v16h16c2.2 0 4 1.8 4 4s-1.8 4-4 4H36v16c0 2.2-1.8 4-4 4s-4-1.8-4-4V36H12c-2.2 0-4-1.8-4-4s1.8-4 4-4h16V8c0-2.2 1.8-4 4-4z"
+      />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5">
+      <path
+        fill="#EA4335"
+        d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.6-5.5 3.6-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.6-4.1 9.6-9.8 0-.7-.1-1.2-.2-1.7H12z"
+      />
+      <path
+        fill="#34A853"
+        d="M3.6 7.3l3.2 2.3C7.7 7.7 9.7 6.3 12 6.3c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 8.2 2 4.9 4.1 3.6 7.3z"
+        opacity=".001"
+      />
+      <path
+        fill="#FBBC05"
+        d="M12 22c3.1 0 5.7-1 7.6-2.8l-3.5-2.9c-.9.6-2 1-4.1 1-3.3 0-6-2.7-6-6 0-.6.1-1.2.3-1.7L3 7.2C2.4 8.7 2 10.3 2 12c0 5.5 4.5 10 10 10z"
+      />
+      <path
+        fill="#4285F4"
+        d="M21.6 12.2c0-.7-.1-1.2-.2-1.7H12v3.9h5.5c-.3 1.4-1.6 3.6-5.5 3.6v4c5.8 0 9.6-4.1 9.6-9.8z"
+      />
     </svg>
   );
 }
@@ -8079,8 +8203,8 @@ export default function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();
 
-  const [loginId, setLoginId] = useState('');
-  const [password, setPassword] = useState('');
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -8098,10 +8222,7 @@ export default function LoginPage() {
       nav(from ?? fallback, { replace: true });
     } catch (err: unknown) {
       const ax = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
-      const msg =
-        ax.response?.data?.errors?.auth?.[0] ??
-        ax.response?.data?.message ??
-        'Login gagal';
+      const msg = ax.response?.data?.errors?.auth?.[0] ?? ax.response?.data?.message ?? "Login gagal";
       setError(msg);
     } finally {
       setLoading(false);
@@ -8109,182 +8230,154 @@ export default function LoginPage() {
   }
 
   return (
-    <main
-      className="relative min-h-dvh w-full bg-[var(--color-bg)] text-[var(--color-text)]"
-      style={{
-        ['--color-primary' as any]: '#00007a',
-        ['--color-on-primary' as any]: '#ffffff',
-        ['--focus-ring' as any]: '0 0 0 3px color-mix(in srgb, #00007a 32%, transparent)'
-      }}
-    >
-      {/* Centered container */}
-      <div className="mx-auto flex min-h-dvh max-w-5xl items-center justify-center p-4 sm:p-8">
-        {/* Auth Card: 2 columns on md+ */}
-        <section
-          className="
-            w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr]
-            overflow-hidden rounded-2xl bg-[var(--color-surface)]
-            shadow-[var(--shadow-2)]
-          "
-        >
-          {/* Left Visual Panel */}
-          <div
-            className="
-              relative hidden md:flex items-center justify-center
-              text-[var(--color-on-primary)]
-              bg-[var(--color-primary)]
-            "
-          >
-            {/* Curved accent layer */}
-            <div
+    <main className="min-h-dvh w-full bg-slate-100 text-slate-900">
+      <div className="mx-auto flex min-h-dvh max-w-6xl items-center justify-center px-4 py-8">
+        <section className="grid w-full overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(0,0,0,.35)] md:grid-cols-2">
+          {/* LEFT PANEL (visual) */}
+          <div className="relative hidden min-h-[560px] md:block">
+            {/* gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-blue-700 to-indigo-950" />
+
+            {/* subtle line pattern */}
+            <svg
               aria-hidden
-              className="
-                absolute inset-0
-                [background:radial-gradient(140%_120%_at_0%_100%,rgba(255,255,255,.24),transparent_60%)]
-              "
-            />
-            {/* White curved panel to emulate mockup wave */}
-            <div
-              aria-hidden
-              className="
-                absolute -right-20 top-0 h-full w-[65%]
-                bg-[var(--color-surface)]
-                opacity-[.96]
-                rounded-l-[56px]
-              "
-              style={{ clipPath: 'ellipse(90% 70% at 0% 50%)' }}
-            />
-            {/* Vertical 'Welcome' */}
-            <div
-              className="
-                absolute left-6 top-1/2 -translate-y-1/2
-                -rotate-90 text-[40px] leading-none tracking-[0.12em]
-                font-bold text-white/70 select-none
-              "
+              className="absolute inset-0 h-full w-full opacity-20"
+              viewBox="0 0 800 800"
+              preserveAspectRatio="none"
             >
-              SALVE
-            </div>
-            {/* Device + chart illustration */}
-            <div className="relative z-10 text-[var(--color-on-primary)]">
-              <PhoneChart />
-            </div>
-            {/* Tagline */}
-            <div className="absolute bottom-6 left-6 z-10 text-white/80 text-xs tracking-wide">
-              SYSTEM POS LAUNDRY SALVE
+              <defs>
+                <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                  <stop stopColor="#ffffff" stopOpacity="0.35" offset="0" />
+                  <stop stopColor="#ffffff" stopOpacity="0" offset="1" />
+                </linearGradient>
+              </defs>
+              <path d="M80,760 C200,560 300,520 520,420 C650,360 720,260 760,80" stroke="url(#g)" strokeWidth="2" fill="none" />
+              <path d="M40,720 C200,520 320,480 520,380 C660,310 720,220 740,60" stroke="url(#g)" strokeWidth="2" fill="none" />
+              <path d="M120,800 C220,590 340,540 520,450 C640,390 720,290 800,120" stroke="url(#g)" strokeWidth="2" fill="none" />
+            </svg>
+
+            <div className="relative z-10 flex h-full flex-col justify-between p-10">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/logo-salve.png"
+                  alt="Logo Salve"
+                  className="h-10 w-auto object-contain"
+                />
+              </div>
+
+              <div className="max-w-sm">
+                <h2 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-white">
+                  Hello
+                  <br />
+                  Salve! <span className="align-middle">👋</span>
+                </h2>
+                <p className="mt-5 text-sm leading-6 text-white/80">
+                  Kelola transaksi, kas, stok, dan operasional cabang dengan workflow yang rapi, cepat, dan terukur.
+                </p>
+              </div>
+
+              <div className="text-xs tracking-wide text-white/60">© {new Date().getFullYear()} Galuh. All rights reserved.</div>
             </div>
           </div>
 
-          {/* Right Form Panel */}
-          <div className="px-6 py-8 sm:px-10 sm:py-12">
-            <header className="mb-8">
-              <h1 className="text-3xl font-semibold tracking-wide text-[color:var(--color-text)]">
-                LOGIN
-              </h1>
-            </header>
-
-            {error && (
-              <div
-                role="alert"
-                className="
-                  mb-4 rounded-md border px-3 py-2 text-sm
-                  border-[color:var(--color-danger)]
-                  text-[color:var(--color-danger)]
-                  bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]
-                "
-              >
-                {error}
+          {/* RIGHT PANEL (form) */}
+          <div className="flex min-h-[560px] flex-col justify-center px-6 py-10 sm:px-10">
+            <div className="mx-auto w-full max-w-sm">
+              {/* top small brand (mobile) */}
+              <div className="mb-8 flex items-center justify-between">
+                <div className="font-semibold text-slate-900">Salve</div>
+                <div className="text-xs text-slate-500 md:hidden">Login</div>
               </div>
-            )}
 
-            <form onSubmit={onSubmit} aria-busy={loading} className="space-y-5">
-              {/* Username / Email */}
-              <div>
-                <label htmlFor="login" className="block text-sm font-medium mb-1">
-                  Username
-                </label>
-                <div className="relative">
-                  {/* left icon */}
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    {/* user icon */}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="1.8">
-                      <path d="M20 21a8 8 0 1 0-16 0" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  </span>
+              <h1 className="text-2xl font-semibold text-slate-900">Welcome!</h1>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={onSubmit} aria-busy={loading} className="mt-7 space-y-5">
+                {/* Email / Username */}
+                <div>
+                  <label htmlFor="login" className="sr-only">
+                    Email / Username
+                  </label>
                   <input
                     id="login"
                     required
                     type="text"
-                    placeholder="Email atau username"
+                    placeholder="Email / Username"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
                     autoComplete="username"
                     disabled={loading}
                     aria-invalid={!!error}
-                    className="input pl-10 py-2"
+                    className="
+                      w-full border-0 border-b border-slate-300 bg-transparent px-0 py-3 text-sm
+                      text-slate-900 placeholder:text-slate-400
+                      focus:border-slate-900 focus:outline-none
+                      disabled:opacity-70
+                    "
                   />
                 </div>
-              </div>
 
-              {/* Password + toggle */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
-                  Password
-                </label>
+                {/* Password + toggle */}
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    {/* lock icon */}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="1.8">
-                      <rect x="4" y="11" width="16" height="9" rx="2" />
-                      <path d="M8 11V8a4 4 0 1 1 8 0v3" />
-                    </svg>
-                  </span>
+                  <label htmlFor="password" className="sr-only">
+                    Password
+                  </label>
                   <input
                     id="password"
                     required
-                    type={showPwd ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    type={showPwd ? "text" : "password"}
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     disabled={loading}
                     aria-invalid={!!error}
-                    className="input pl-10 pr-12 py-2"
+                    className="
+                      w-full border-0 border-b border-slate-300 bg-transparent px-0 py-3 text-sm
+                      text-slate-900 placeholder:text-slate-400
+                      focus:border-slate-900 focus:outline-none
+                      disabled:opacity-70
+                    "
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
                     disabled={loading}
-                    aria-label={showPwd ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    aria-label={showPwd ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                     aria-pressed={showPwd}
                     className="
-                      absolute right-1.5 top-1/2 -translate-y-1/2
-                      rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100
-                      focus:outline-none focus-visible:focus-ring disabled:opacity-60
+                      absolute right-0 top-1/2 -translate-y-1/2
+                      rounded-md p-2 text-slate-600 hover:bg-slate-100
+                      focus:outline-none focus:ring-2 focus:ring-slate-300
+                      disabled:opacity-60
                     "
                   >
                     {showPwd ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
                 </div>
-              </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full py-2.5 focus-ring"
-              >
-                {loading ? 'Memproses…' : 'Login'}
-              </button>
-
-              {/* Links (visual only, optional)
-              <div className="mt-2 flex items-center justify-end gap-6 text-sm">
-                <a href="#" className="hover:underline">Forgot</a>
-                <a href="#" className="hover:underline">Help</a>
-              </div> */}
-            </form>
+                {/* Login button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="
+                    mt-2 w-full rounded-md bg-slate-900 py-3 text-sm font-semibold text-white
+                    hover:bg-slate-800 active:bg-slate-950
+                    disabled:cursor-not-allowed disabled:opacity-70
+                  "
+                >
+                  {loading ? "Memproses…" : "Login Now"}
+                </button>
+              </form>
+            </div>
           </div>
         </section>
       </div>
@@ -9611,8 +9704,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `b5149ef34c4f`  
-- Ukuran: 25 KB
+- SHA: `5a6e03a14ffb`  
+- Ukuran: 32 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -9625,6 +9718,7 @@ import type { OrderCreatePayload } from '../../types/orders';
 import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
 import type { RoleName } from '../../api/client';
 import CustomerPicker from '../../components/customers/CustomerPicker';
+import { createCustomer } from '../../api/customers';
 import { uploadOrderPhotos } from '../../api/orderPhotos';
 import { applyVoucherToOrder } from '../../api/vouchers';
 import { useNavigate } from 'react-router-dom';
@@ -9683,6 +9777,14 @@ export default function POSPage() {
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
+  // quick add customer (POS)
+  const [openCustomerCreate, setOpenCustomerCreate] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerWa, setNewCustomerWa] = useState('');
+  const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerError, setCustomerError] = useState<string | null>(null);
+
   // Loyalty (preview stamp)
   const [loyRefreshKey, setLoyRefreshKey] = useState(0);
   const [loy, setLoy] = useState<LoyaltySummary | null>(null);
@@ -9719,6 +9821,8 @@ export default function POSPage() {
     // Kembalikan sebagai "YYYY-MM-DD HH:mm:ss" (lokal-naif)
     return v.trim().replace('T', ' ') + ':00';
   }
+
+  const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
 
   // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
@@ -9915,12 +10019,26 @@ export default function POSPage() {
             <label className="text-xs">
               Pelanggan <span className="text-red-600">*</span>
             </label>
-            <CustomerPicker
-              value={customerId}
-              onChange={setCustomerId}
-              placeholder="Ketik nama/WA/alamat pelanggan…"
-              requiredText="Pelanggan wajib dipilih dari data terdaftar."
-            />
+            <div className="flex items-start gap-2">
+              <div className="grow">
+                <CustomerPicker
+                  value={customerId}
+                  onChange={setCustomerId}
+                  placeholder="Ketik nama/WA/alamat pelanggan…"
+                  requiredText="Pelanggan wajib dipilih dari data terdaftar."
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-primary whitespace-nowrap"
+                onClick={() => {
+                  setCustomerError(null);
+                  setOpenCustomerCreate(true);
+                }}
+              >
+                + Customer
+              </button>
+            </div>
           </div>
 
           {/* Tanggal Masuk & Selesai */}
@@ -9980,6 +10098,138 @@ export default function POSPage() {
             />
           </div>
         </div>
+        {openCustomerCreate && (
+          <div
+            className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => { if (!savingCustomer) setOpenCustomerCreate(false); }}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div>
+                  <div className="text-base font-semibold">Tambah Customer</div>
+                  <div className="text-xs text-gray-500">Tanpa keluar dari POS</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-outline px-2 py-1"
+                  disabled={savingCustomer}
+                  onClick={() => setOpenCustomerCreate(false)}
+                >
+                  Tutup
+                </button>
+              </div>
+
+              {customerError && (
+                <div className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2 mb-3">
+                  {customerError}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="grid gap-1">
+                  <label className="text-xs">Nama <span className="text-red-600">*</span></label>
+                  <input
+                    className="input px-3 py-2 w-full"
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    placeholder="Nama pelanggan"
+                    disabled={savingCustomer}
+                  />
+                </div>
+
+                <div className="grid gap-1">
+                  <label className="text-xs">WhatsApp <span className="text-red-600">*</span></label>
+                  <input
+                    className="input px-3 py-2 w-full"
+                    value={newCustomerWa}
+                    onChange={(e) => setNewCustomerWa(e.target.value)}
+                    placeholder="08123456789"
+                    inputMode="numeric"
+                    disabled={savingCustomer}
+                  />
+                </div>
+
+                <div className="grid gap-1">
+                  <label className="text-xs">Alamat (opsional)</label>
+                  <textarea
+                    className="input px-3 py-2 w-full min-h-[84px]"
+                    value={newCustomerAddress}
+                    onChange={(e) => setNewCustomerAddress(e.target.value)}
+                    placeholder="Alamat pelanggan"
+                    disabled={savingCustomer}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  className="btn-outline"
+                  disabled={savingCustomer}
+                  onClick={() => setOpenCustomerCreate(false)}
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={savingCustomer}
+                  onClick={async () => {
+                    if (!newCustomerName.trim() || !newCustomerWa.trim()) {
+                      setCustomerError('Nama dan WhatsApp wajib diisi.');
+                      return;
+                    }
+                    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
+                      setCustomerError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
+                      return;
+                    }
+
+                    try {
+                      setSavingCustomer(true);
+                      setCustomerError(null);
+
+                      const res = await createCustomer({
+                        name: newCustomerName.trim(),
+                        whatsapp: normalizeWa(newCustomerWa),
+                        address: newCustomerAddress.trim() ? newCustomerAddress.trim() : null,
+                        notes: null,
+                      });
+
+                      // auto pilih customer baru
+                      const created = (res as any)?.data?.data ?? (res as any)?.data ?? null;
+                      if (!created || !created.id) {
+                        setCustomerError('Gagal: server tidak mengembalikan data customer (id kosong).');
+                        return;
+                      }
+                      setCustomerId(String(created.id));
+
+                      // reset form
+                      setNewCustomerName('');
+                      setNewCustomerWa('');
+                      setNewCustomerAddress('');
+
+                      setOpenCustomerCreate(false);
+                    } catch (err: any) {
+                      setCustomerError(
+                        err?.response?.data?.message || 'Gagal menambahkan customer.'
+                      );
+                    } finally {
+                      setSavingCustomer(false);
+                    }
+                  }}
+                >
+                  {savingCustomer ? 'Menyimpan…' : 'Simpan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* RIGHT: cart & pembayaran */}

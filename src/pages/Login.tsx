@@ -1,13 +1,21 @@
 // src/pages/Login.tsx
-import { useState, type FormEvent } from 'react';
-import type { AxiosError } from 'axios';
-import { useAuth, homePathByRole } from '../store/useAuth';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, type FormEvent } from "react";
+import type { AxiosError } from "axios";
+import { useAuth, homePathByRole } from "../store/useAuth";
+import { useNavigate, useLocation } from "react-router-dom";
 
 /** Ikon mata (show) */
 function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      {...props}
+    >
       <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
       <circle cx="12" cy="12" r="3.2" />
     </svg>
@@ -16,7 +24,15 @@ function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
 /** Ikon mata tertutup (hide) */
 function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      {...props}
+    >
       <path d="M1 12s4-7 11-7a12 12 0 0 1 5.6 1.4" />
       <path d="M23 12s-4 7-11 7A12 12 0 0 1 6.4 18.6" />
       <line x1="3" y1="3" x2="21" y2="21" />
@@ -24,18 +40,37 @@ function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-/** Ilustrasi sederhana perangkat + grafik (SVG ringan, purely visual) */
-function PhoneChart() {
+function BrandStar() {
   return (
-    <svg viewBox="0 0 280 160" className="w-[260px] h-auto drop-shadow-sm">
-      <rect x="40" y="20" rx="20" ry="20" width="200" height="120" fill="white" opacity="0.92" />
-      <rect x="60" y="50" width="8" height="55" fill="currentColor" opacity="0.75" />
-      <rect x="85" y="40" width="8" height="65" fill="currentColor" opacity="0.75" />
-      <rect x="110" y="60" width="8" height="45" fill="currentColor" opacity="0.75" />
-      <rect x="135" y="35" width="8" height="70" fill="currentColor" opacity="0.75" />
-      <rect x="160" y="55" width="8" height="50" fill="currentColor" opacity="0.75" />
-      <circle cx="210" cy="90" r="20" fill="currentColor" opacity="0.15" />
-      <path d="M60 110 L100 80 L140 95 L180 70 L210 75" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.9" />
+    <svg viewBox="0 0 64 64" className="h-10 w-10 text-white/95">
+      <path
+        fill="currentColor"
+        d="M32 4c2.2 0 4 1.8 4 4v16h16c2.2 0 4 1.8 4 4s-1.8 4-4 4H36v16c0 2.2-1.8 4-4 4s-4-1.8-4-4V36H12c-2.2 0-4-1.8-4-4s1.8-4 4-4h16V8c0-2.2 1.8-4 4-4z"
+      />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5">
+      <path
+        fill="#EA4335"
+        d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.6-5.5 3.6-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.6-4.1 9.6-9.8 0-.7-.1-1.2-.2-1.7H12z"
+      />
+      <path
+        fill="#34A853"
+        d="M3.6 7.3l3.2 2.3C7.7 7.7 9.7 6.3 12 6.3c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 8.2 2 4.9 4.1 3.6 7.3z"
+        opacity=".001"
+      />
+      <path
+        fill="#FBBC05"
+        d="M12 22c3.1 0 5.7-1 7.6-2.8l-3.5-2.9c-.9.6-2 1-4.1 1-3.3 0-6-2.7-6-6 0-.6.1-1.2.3-1.7L3 7.2C2.4 8.7 2 10.3 2 12c0 5.5 4.5 10 10 10z"
+      />
+      <path
+        fill="#4285F4"
+        d="M21.6 12.2c0-.7-.1-1.2-.2-1.7H12v3.9h5.5c-.3 1.4-1.6 3.6-5.5 3.6v4c5.8 0 9.6-4.1 9.6-9.8z"
+      />
     </svg>
   );
 }
@@ -44,8 +79,8 @@ export default function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();
 
-  const [loginId, setLoginId] = useState('');
-  const [password, setPassword] = useState('');
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -63,10 +98,7 @@ export default function LoginPage() {
       nav(from ?? fallback, { replace: true });
     } catch (err: unknown) {
       const ax = err as AxiosError<{ errors?: Record<string, string[]>; message?: string }>;
-      const msg =
-        ax.response?.data?.errors?.auth?.[0] ??
-        ax.response?.data?.message ??
-        'Login gagal';
+      const msg = ax.response?.data?.errors?.auth?.[0] ?? ax.response?.data?.message ?? "Login gagal";
       setError(msg);
     } finally {
       setLoading(false);
@@ -74,182 +106,154 @@ export default function LoginPage() {
   }
 
   return (
-    <main
-      className="relative min-h-dvh w-full bg-[var(--color-bg)] text-[var(--color-text)]"
-      style={{
-        ['--color-primary' as any]: '#00007a',
-        ['--color-on-primary' as any]: '#ffffff',
-        ['--focus-ring' as any]: '0 0 0 3px color-mix(in srgb, #00007a 32%, transparent)'
-      }}
-    >
-      {/* Centered container */}
-      <div className="mx-auto flex min-h-dvh max-w-5xl items-center justify-center p-4 sm:p-8">
-        {/* Auth Card: 2 columns on md+ */}
-        <section
-          className="
-            w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr]
-            overflow-hidden rounded-2xl bg-[var(--color-surface)]
-            shadow-[var(--shadow-2)]
-          "
-        >
-          {/* Left Visual Panel */}
-          <div
-            className="
-              relative hidden md:flex items-center justify-center
-              text-[var(--color-on-primary)]
-              bg-[var(--color-primary)]
-            "
-          >
-            {/* Curved accent layer */}
-            <div
+    <main className="min-h-dvh w-full bg-slate-100 text-slate-900">
+      <div className="mx-auto flex min-h-dvh max-w-6xl items-center justify-center px-4 py-8">
+        <section className="grid w-full overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-30px_rgba(0,0,0,.35)] md:grid-cols-2">
+          {/* LEFT PANEL (visual) */}
+          <div className="relative hidden min-h-[560px] md:block">
+            {/* gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-blue-700 to-indigo-950" />
+
+            {/* subtle line pattern */}
+            <svg
               aria-hidden
-              className="
-                absolute inset-0
-                [background:radial-gradient(140%_120%_at_0%_100%,rgba(255,255,255,.24),transparent_60%)]
-              "
-            />
-            {/* White curved panel to emulate mockup wave */}
-            <div
-              aria-hidden
-              className="
-                absolute -right-20 top-0 h-full w-[65%]
-                bg-[var(--color-surface)]
-                opacity-[.96]
-                rounded-l-[56px]
-              "
-              style={{ clipPath: 'ellipse(90% 70% at 0% 50%)' }}
-            />
-            {/* Vertical 'Welcome' */}
-            <div
-              className="
-                absolute left-6 top-1/2 -translate-y-1/2
-                -rotate-90 text-[40px] leading-none tracking-[0.12em]
-                font-bold text-white/70 select-none
-              "
+              className="absolute inset-0 h-full w-full opacity-20"
+              viewBox="0 0 800 800"
+              preserveAspectRatio="none"
             >
-              SALVE
-            </div>
-            {/* Device + chart illustration */}
-            <div className="relative z-10 text-[var(--color-on-primary)]">
-              <PhoneChart />
-            </div>
-            {/* Tagline */}
-            <div className="absolute bottom-6 left-6 z-10 text-white/80 text-xs tracking-wide">
-              SYSTEM POS LAUNDRY SALVE
+              <defs>
+                <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                  <stop stopColor="#ffffff" stopOpacity="0.35" offset="0" />
+                  <stop stopColor="#ffffff" stopOpacity="0" offset="1" />
+                </linearGradient>
+              </defs>
+              <path d="M80,760 C200,560 300,520 520,420 C650,360 720,260 760,80" stroke="url(#g)" strokeWidth="2" fill="none" />
+              <path d="M40,720 C200,520 320,480 520,380 C660,310 720,220 740,60" stroke="url(#g)" strokeWidth="2" fill="none" />
+              <path d="M120,800 C220,590 340,540 520,450 C640,390 720,290 800,120" stroke="url(#g)" strokeWidth="2" fill="none" />
+            </svg>
+
+            <div className="relative z-10 flex h-full flex-col justify-between p-10">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/logo-salve.png"
+                  alt="Logo Salve"
+                  className="h-10 w-auto object-contain"
+                />
+              </div>
+
+              <div className="max-w-sm">
+                <h2 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-white">
+                  Hello
+                  <br />
+                  Salve! <span className="align-middle">👋</span>
+                </h2>
+                <p className="mt-5 text-sm leading-6 text-white/80">
+                  Kelola transaksi, kas, stok, dan operasional cabang dengan workflow yang rapi, cepat, dan terukur.
+                </p>
+              </div>
+
+              <div className="text-xs tracking-wide text-white/60">© {new Date().getFullYear()} Galuh. All rights reserved.</div>
             </div>
           </div>
 
-          {/* Right Form Panel */}
-          <div className="px-6 py-8 sm:px-10 sm:py-12">
-            <header className="mb-8">
-              <h1 className="text-3xl font-semibold tracking-wide text-[color:var(--color-text)]">
-                LOGIN
-              </h1>
-            </header>
-
-            {error && (
-              <div
-                role="alert"
-                className="
-                  mb-4 rounded-md border px-3 py-2 text-sm
-                  border-[color:var(--color-danger)]
-                  text-[color:var(--color-danger)]
-                  bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]
-                "
-              >
-                {error}
+          {/* RIGHT PANEL (form) */}
+          <div className="flex min-h-[560px] flex-col justify-center px-6 py-10 sm:px-10">
+            <div className="mx-auto w-full max-w-sm">
+              {/* top small brand (mobile) */}
+              <div className="mb-8 flex items-center justify-between">
+                <div className="font-semibold text-slate-900">Salve</div>
+                <div className="text-xs text-slate-500 md:hidden">Login</div>
               </div>
-            )}
 
-            <form onSubmit={onSubmit} aria-busy={loading} className="space-y-5">
-              {/* Username / Email */}
-              <div>
-                <label htmlFor="login" className="block text-sm font-medium mb-1">
-                  Username
-                </label>
-                <div className="relative">
-                  {/* left icon */}
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    {/* user icon */}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="1.8">
-                      <path d="M20 21a8 8 0 1 0-16 0" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  </span>
+              <h1 className="text-2xl font-semibold text-slate-900">Welcome!</h1>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={onSubmit} aria-busy={loading} className="mt-7 space-y-5">
+                {/* Email / Username */}
+                <div>
+                  <label htmlFor="login" className="sr-only">
+                    Email / Username
+                  </label>
                   <input
                     id="login"
                     required
                     type="text"
-                    placeholder="Email atau username"
+                    placeholder="Email / Username"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
                     autoComplete="username"
                     disabled={loading}
                     aria-invalid={!!error}
-                    className="input pl-10 py-2"
+                    className="
+                      w-full border-0 border-b border-slate-300 bg-transparent px-0 py-3 text-sm
+                      text-slate-900 placeholder:text-slate-400
+                      focus:border-slate-900 focus:outline-none
+                      disabled:opacity-70
+                    "
                   />
                 </div>
-              </div>
 
-              {/* Password + toggle */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
-                  Password
-                </label>
+                {/* Password + toggle */}
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    {/* lock icon */}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="1.8">
-                      <rect x="4" y="11" width="16" height="9" rx="2" />
-                      <path d="M8 11V8a4 4 0 1 1 8 0v3" />
-                    </svg>
-                  </span>
+                  <label htmlFor="password" className="sr-only">
+                    Password
+                  </label>
                   <input
                     id="password"
                     required
-                    type={showPwd ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    type={showPwd ? "text" : "password"}
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     disabled={loading}
                     aria-invalid={!!error}
-                    className="input pl-10 pr-12 py-2"
+                    className="
+                      w-full border-0 border-b border-slate-300 bg-transparent px-0 py-3 text-sm
+                      text-slate-900 placeholder:text-slate-400
+                      focus:border-slate-900 focus:outline-none
+                      disabled:opacity-70
+                    "
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
                     disabled={loading}
-                    aria-label={showPwd ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    aria-label={showPwd ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                     aria-pressed={showPwd}
                     className="
-                      absolute right-1.5 top-1/2 -translate-y-1/2
-                      rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100
-                      focus:outline-none focus-visible:focus-ring disabled:opacity-60
+                      absolute right-0 top-1/2 -translate-y-1/2
+                      rounded-md p-2 text-slate-600 hover:bg-slate-100
+                      focus:outline-none focus:ring-2 focus:ring-slate-300
+                      disabled:opacity-60
                     "
                   >
                     {showPwd ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
                 </div>
-              </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full py-2.5 focus-ring"
-              >
-                {loading ? 'Memproses…' : 'Login'}
-              </button>
-
-              {/* Links (visual only, optional)
-              <div className="mt-2 flex items-center justify-end gap-6 text-sm">
-                <a href="#" className="hover:underline">Forgot</a>
-                <a href="#" className="hover:underline">Help</a>
-              </div> */}
-            </form>
+                {/* Login button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="
+                    mt-2 w-full rounded-md bg-slate-900 py-3 text-sm font-semibold text-white
+                    hover:bg-slate-800 active:bg-slate-950
+                    disabled:cursor-not-allowed disabled:opacity-70
+                  "
+                >
+                  {loading ? "Memproses…" : "Login Now"}
+                </button>
+              </form>
+            </div>
           </div>
         </section>
       </div>
