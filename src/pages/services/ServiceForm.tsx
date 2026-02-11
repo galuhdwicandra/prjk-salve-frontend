@@ -71,7 +71,7 @@ export default function ServiceForm() {
   }, [editing, id]);
 
   const errorList = useMemo(() => {
-    const all = Object.entries(fieldErrors).flatMap(([k, v]) => v.map(msg => `${k}: ${msg}`));
+    const all = Object.entries(fieldErrors).flatMap(([k, v]) => v.map((msg) => `${k}: ${msg}`));
     return all;
   }, [fieldErrors]);
 
@@ -103,207 +103,307 @@ export default function ServiceForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <header>
-        <h1 className="text-lg font-semibold tracking-tight">
-          {editing ? 'Edit Service' : 'New Service'}
-        </h1>
-        <p className="text-xs text-gray-600">
-          Definisikan layanan, unit, dan harga default. Tekan <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> untuk simpan.
-        </p>
+      <header className="space-y-1">
+        <div className="text-xs text-slate-500">
+          <span className="font-medium text-slate-700">Master Data</span>
+          <span className="mx-2 text-slate-300">/</span>
+          <span className="text-slate-600">Services</span>
+          <span className="mx-2 text-slate-300">/</span>
+          <span className="text-slate-600">{editing ? 'Edit' : 'New'}</span>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+              {editing ? 'Edit Service' : 'New Service'}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Definisikan layanan, unit, dan harga default. Tekan <kbd className="kbd">Ctrl</kbd>/<kbd className="kbd">⌘</kbd>+<kbd className="kbd">S</kbd> untuk simpan.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => nav(-1)}
+              className="
+                inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+              "
+              aria-label="Kembali"
+            >
+              <IconArrowLeft />
+              Back
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Error global */}
       {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-        >
-          {error}
-          {errorList.length > 0 && (
-            <ul className="mt-1 list-disc ms-5">
-              {errorList.map((e, i) => <li key={i}>{e}</li>)}
-            </ul>
-          )}
+        <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="flex items-start gap-2">
+            <div className="mt-0.5 text-red-600">
+              <IconAlert />
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold">{error}</div>
+              {errorList.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 ps-5">
+                  {errorList.map((e, i) => (
+                    <li key={i} className="text-red-700/90">
+                      {e}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Form utama */}
       <form
-        className="card max-w-xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-4"
+        className="
+          max-w-2xl rounded-xl border border-slate-200 bg-white p-5
+          shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]
+          space-y-5
+        "
         onSubmit={onSubmit}
         aria-busy={loading ? 'true' : 'false'}
       >
-        {/* Kategori */}
-        <div className="grid gap-1">
-          <label htmlFor="category_id" className="text-sm font-medium">
-            Kategori <span className="text-red-600">*</span>
-          </label>
-          <select
-            id="category_id"
-            className="input"
-            value={form.category_id}
-            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-            disabled={loading}
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.category_id)}
-            aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}
-          >
-            <option value="">Pilih kategori</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {fieldErrors.category_id && (
-            <p id="err-category_id" className="text-xs text-red-600">
-              {fieldErrors.category_id.join(', ')}
-            </p>
-          )}
-        </div>
-
-        {/* Nama */}
-        <div className="grid gap-1">
-          <label htmlFor="name" className="text-sm font-medium">
-            Nama <span className="text-red-600">*</span>
-          </label>
-          <input
-            id="name"
-            className="input"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            disabled={loading}
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.name)}
-            aria-describedby={fieldErrors.name ? 'err-name' : undefined}
-            placeholder="Contoh: Cuci Sepatu Premium"
-            autoFocus
-          />
-          {fieldErrors.name && (
-            <p id="err-name" className="text-xs text-red-600">
-              {fieldErrors.name.join(', ')}
-            </p>
-          )}
-        </div>
-
-        {/* Unit + presets */}
-        <div className="grid gap-1">
-          <label htmlFor="unit" className="text-sm font-medium">
-            Unit <span className="text-red-600">*</span>
-          </label>
-
-          {/* Segmented presets */}
-          <div className="flex flex-wrap gap-2">
-            {UNIT_PRESETS.map(u => {
-              const active = form.unit.toUpperCase() === u;
-              return (
-                <button
-                  type="button"
-                  key={u}
-                  onClick={() => setForm({ ...form, unit: u })}
-                  className={
-                    active
-                      ? 'chip chip--solid'
-                      : 'chip chip--subtle hover:opacity-90'
-                  }
-                  aria-pressed={active}
-                >
-                  {u}
-                </button>
-              );
-            })}
+        {/* Section title */}
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Informasi Layanan</div>
+            <div className="mt-0.5 text-xs text-slate-500">Field bertanda * wajib diisi.</div>
           </div>
-
-          {/* Free text */}
-          <input
-            id="unit"
-            className="input"
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })}
-            disabled={loading}
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.unit)}
-            aria-describedby={fieldErrors.unit ? 'err-unit' : 'hint-unit'}
-            placeholder="ITEM / PASANG / KG"
-          />
-          {!fieldErrors.unit && (
-            <p id="hint-unit" className="text-xs text-gray-500">
-              Pilih salah satu atau ketik unit kustom (akan otomatis UPPERCASE).
-            </p>
-          )}
-          {fieldErrors.unit && (
-            <p id="err-unit" className="text-xs text-red-600">
-              {fieldErrors.unit.join(', ')}
-            </p>
-          )}
+          <div className="text-xs text-slate-500">{loading ? 'Memproses…' : null}</div>
         </div>
 
-        {/* Harga Default (Rp prefix) */}
-        <div className="grid gap-1">
-          <label htmlFor="price_default" className="text-sm font-medium">
-            Harga Default <span className="text-red-600">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 select-none">Rp</span>
+        {/* Grid */}
+        <div className="grid grid-cols-1 gap-4">
+          {/* Kategori */}
+          <Field
+            label="Kategori"
+            required
+            htmlFor="category_id"
+            hint="Pilih kategori agar layanan mudah dikelompokkan."
+            error={fieldErrors.category_id?.join(', ')}
+          >
+            <div className="relative">
+              <select
+                id="category_id"
+                className={inputClass(Boolean(fieldErrors.category_id))}
+                value={form.category_id}
+                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                disabled={loading}
+                aria-required="true"
+                aria-invalid={Boolean(fieldErrors.category_id)}
+                aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}
+              >
+                <option value="">Pilih kategori</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <IconChevronDown />
+              </span>
+            </div>
+            {fieldErrors.category_id && (
+              <p id="err-category_id" className="mt-1 text-xs text-red-600">
+                {fieldErrors.category_id.join(', ')}
+              </p>
+            )}
+          </Field>
+
+          {/* Nama */}
+          <Field
+            label="Nama"
+            required
+            htmlFor="name"
+            hint="Gunakan nama jelas, mis. “Cuci Sepatu Premium”."
+            error={fieldErrors.name?.join(', ')}
+          >
             <input
-              id="price_default"
-              type="number"
-              min={0}
-              step="100"
-              className="input pl-10"
-              value={form.price_default}
-              onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+              id="name"
+              className={inputClass(Boolean(fieldErrors.name))}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               disabled={loading}
               aria-required="true"
-              aria-invalid={Boolean(fieldErrors.price_default)}
-              aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
-              placeholder="Contoh: 25000"
-              inputMode="numeric"
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+              placeholder="Contoh: Cuci Sepatu Premium"
+              autoFocus
             />
-          </div>
-          {!fieldErrors.price_default && (
-            <p id="hint-price_default" className="text-xs text-gray-500">
-              Gunakan kelipatan 100 agar kasir cepat input.
-            </p>
-          )}
-          {fieldErrors.price_default && (
-            <p id="err-price_default" className="text-xs text-red-600">
-              {fieldErrors.price_default.join(', ')}
-            </p>
-          )}
-        </div>
+            {fieldErrors.name && (
+              <p id="err-name" className="mt-1 text-xs text-red-600">
+                {fieldErrors.name.join(', ')}
+              </p>
+            )}
+          </Field>
 
-        {/* Active */}
-        <div className="flex items-center gap-2">
-          <input
-            id="is_active"
-            type="checkbox"
-            checked={!!form.is_active}
-            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-            disabled={loading}
-          />
-          <label htmlFor="is_active" className="text-sm">Active</label>
+          {/* Unit */}
+          <Field
+            label="Unit"
+            required
+            htmlFor="unit"
+            hint={!fieldErrors.unit ? 'Klik preset atau ketik unit kustom (otomatis UPPERCASE).' : undefined}
+            error={fieldErrors.unit?.join(', ')}
+          >
+            <div className="flex flex-wrap gap-2">
+              {UNIT_PRESETS.map((u) => {
+                const active = form.unit.toUpperCase() === u;
+                return (
+                  <button
+                    type="button"
+                    key={u}
+                    onClick={() => setForm({ ...form, unit: u })}
+                    className={
+                      active
+                        ? 'rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white'
+                        : 'rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100'
+                    }
+                    aria-pressed={active}
+                    disabled={loading}
+                  >
+                    {u}
+                  </button>
+                );
+              })}
+            </div>
+
+            <input
+              id="unit"
+              className={inputClass(Boolean(fieldErrors.unit))}
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })}
+              disabled={loading}
+              aria-required="true"
+              aria-invalid={Boolean(fieldErrors.unit)}
+              aria-describedby={fieldErrors.unit ? 'err-unit' : 'hint-unit'}
+              placeholder="ITEM / PASANG / KG"
+            />
+
+            {!fieldErrors.unit && (
+              <p id="hint-unit" className="mt-1 text-xs text-slate-500">
+                Pilih salah satu atau ketik unit kustom (akan otomatis UPPERCASE).
+              </p>
+            )}
+            {fieldErrors.unit && (
+              <p id="err-unit" className="mt-1 text-xs text-red-600">
+                {fieldErrors.unit.join(', ')}
+              </p>
+            )}
+          </Field>
+
+          {/* Harga Default */}
+          <Field
+            label="Harga Default"
+            required
+            htmlFor="price_default"
+            hint={!fieldErrors.price_default ? 'Gunakan kelipatan 100 agar kasir cepat input.' : undefined}
+            error={fieldErrors.price_default?.join(', ')}
+          >
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 select-none">
+                Rp
+              </span>
+              <input
+                id="price_default"
+                type="number"
+                min={0}
+                step="100"
+                className={inputClass(Boolean(fieldErrors.price_default), 'pl-10')}
+                value={form.price_default}
+                onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+                disabled={loading}
+                aria-required="true"
+                aria-invalid={Boolean(fieldErrors.price_default)}
+                aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
+                placeholder="Contoh: 25000"
+                inputMode="numeric"
+              />
+            </div>
+
+            {!fieldErrors.price_default && (
+              <p id="hint-price_default" className="mt-1 text-xs text-slate-500">
+                Gunakan kelipatan 100 agar kasir cepat input.
+              </p>
+            )}
+            {fieldErrors.price_default && (
+              <p id="err-price_default" className="mt-1 text-xs text-red-600">
+                {fieldErrors.price_default.join(', ')}
+              </p>
+            )}
+          </Field>
+
+          {/* Active switch (checkbox tetap) */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Status</div>
+              <div className="mt-0.5 text-xs text-slate-500">Jika nonaktif, layanan tidak tampil/terpakai.</div>
+            </div>
+
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                id="is_active"
+                type="checkbox"
+                className="peer sr-only"
+                checked={!!form.is_active}
+                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                disabled={loading}
+              />
+              <span
+                className="
+                  h-6 w-11 rounded-full border border-slate-200 bg-white
+                  peer-checked:bg-slate-900 peer-checked:border-slate-900
+                  transition-colors
+                "
+              />
+              <span
+                className="
+                  absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-slate-200
+                  peer-checked:translate-x-5 peer-checked:bg-white
+                  transition-transform
+                "
+              />
+            </label>
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 pt-2">
           <button
             id="btn-submit"
             disabled={loading}
-            className="btn-primary disabled:opacity-60"
+            className="
+              inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
+              hover:bg-slate-800 active:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-60
+            "
             aria-label="Simpan layanan"
           >
+            <IconSave />
             {loading ? 'Menyimpan…' : 'Simpan'}
           </button>
+
           <button
             type="button"
-            className="btn-outline"
+            className="
+              inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm
+              font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+            "
             onClick={() => nav(-1)}
             aria-label="Batalkan dan kembali"
+            disabled={loading}
           >
+            <IconX />
             Batal
           </button>
         </div>
@@ -311,14 +411,121 @@ export default function ServiceForm() {
 
       {/* Harga per cabang (override) — hanya saat edit */}
       {editing && service && (
-        <section className="card max-w-3xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-2">
-          <h2 className="text-sm font-semibold">Harga per Cabang</h2>
-          <p className="text-xs text-gray-500">
-            Harga efektif = override <code>service_prices</code> per cabang, jika tidak ada akan memakai <code>price_default</code>.
-          </p>
-          <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
+        <section className="max-w-4xl rounded-xl border border-slate-200 bg-white p-5 shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)] space-y-2">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Harga per Cabang</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Harga efektif = override <code className="rounded bg-slate-100 px-1">service_prices</code> per cabang, jika tidak ada akan memakai{' '}
+                <code className="rounded bg-slate-100 px-1">price_default</code>.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
+          </div>
         </section>
       )}
+
+      {/* tiny styles for kbd (optional, local) */}
+      <style>{`
+        .kbd{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          padding:0 .35rem;
+          height:1.35rem;
+          border:1px solid rgb(226 232 240);
+          border-bottom-width:2px;
+          border-radius:.4rem;
+          background:white;
+          font-size:.75rem;
+          font-weight:600;
+          color:rgb(51 65 85);
+          line-height:1;
+        }
+      `}</style>
     </div>
+  );
+}
+
+/* ---------- Helpers UI (no logic change) ---------- */
+function Field({
+  label,
+  required,
+  htmlFor,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  htmlFor: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={htmlFor} className="text-sm font-semibold text-slate-900">
+        {label} {required ? <span className="text-red-600">*</span> : null}
+      </label>
+      {children}
+      {!error && hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+function inputClass(invalid: boolean, extra: string = '') {
+  return `
+    w-full rounded-lg border bg-white py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400
+    focus:outline-none focus:ring-2
+    ${invalid ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:border-slate-300 focus:ring-slate-200'}
+    ${extra}
+  `;
+}
+
+/* ---------- Icons (inline SVG) ---------- */
+function IconChevronDown() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+function IconArrowLeft() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 18l-6-6 6-6" />
+      <path d="M21 12H9" />
+    </svg>
+  );
+}
+function IconSave() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2Z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v4h8" />
+    </svg>
+  );
+}
+function IconX() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M18 6 6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+function IconAlert() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+      <path d="M10.3 4.3h3.4L22 18.6a2 2 0 0 1-1.7 3H3.7a2 2 0 0 1-1.7-3L10.3 4.3Z" />
+    </svg>
   );
 }

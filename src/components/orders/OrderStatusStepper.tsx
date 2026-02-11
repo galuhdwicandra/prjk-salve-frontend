@@ -15,7 +15,7 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
 
   return (
     <div
-      className="flex items-center gap-2 text-xs select-none"
+      className="flex flex-wrap items-center gap-2 text-xs select-none"
       role="list"
       aria-label="Order progress"
     >
@@ -23,39 +23,55 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
         const isCurrent = idx === activeIdx;
         const isDone = idx < activeIdx;
 
-        const dotCls =
-          'grid place-items-center h-6 w-6 rounded-full border text-[10px] font-semibold transition-transform duration-150 motion-reduce:transition-none';
+        // Container pill
+        const pillBase =
+          'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors motion-reduce:transition-none';
+        const pillState = isCurrent
+          ? 'bg-slate-900 text-white border-slate-900'
+          : isDone
+          ? 'bg-slate-50 text-slate-900 border-slate-200'
+          : 'bg-white text-slate-500 border-slate-200';
+
+        // Dot / icon
+        const dotBase =
+          'grid place-items-center h-5 w-5 rounded-full border text-[10px] font-semibold';
         const dotState = isCurrent
-          ? 'bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)] border-transparent scale-[1.04]'
+          ? 'bg-white text-slate-900 border-white'
           : isDone
-          ? 'bg-[#E6EDFF] text-[var(--color-brand-primary)] border-[color:var(--color-brand-primary)]'
-          : 'bg-[color:var(--color-surface)] text-gray-500 border-[color:var(--color-border)]';
+          ? 'bg-slate-900 text-white border-slate-900'
+          : 'bg-white text-slate-500 border-slate-200';
 
-        const labelCls = 'text-[11px] font-medium tracking-wide';
-        const labelState = isCurrent
-          ? 'text-[color:var(--color-text-default)]'
-          : isDone
-          ? 'text-[var(--color-brand-primary)]'
-          : 'text-gray-500';
+        // Label
+        const labelBase = 'text-[11px] font-semibold tracking-wide';
+        const labelState = isCurrent ? 'text-white' : isDone ? 'text-slate-900' : 'text-slate-500';
 
-        const barCls = 'h-[2px] rounded w-6 md:w-10';
-        const barState = idx < activeIdx
-          ? 'bg-[var(--color-brand-primary)]/80'
-          : 'bg-[color:var(--color-border)]';
+        // Connector (line) between pills
+        const barBase = 'h-[2px] w-6 rounded-full sm:w-10';
+        const barState = idx < activeIdx ? 'bg-slate-900' : 'bg-slate-200';
 
         return (
           <React.Fragment key={s}>
             <div
-              className="flex items-center gap-2"
+              className={`${pillBase} ${pillState}`}
               role="listitem"
               aria-current={isCurrent ? 'step' : undefined}
               aria-label={s}
             >
-              <span className={`${dotCls} ${dotState}`} aria-hidden="true">{idx + 1}</span>
-              <span className={`${labelCls} ${labelState}`}>{s}</span>
+              <span className={`${dotBase} ${dotState}`} aria-hidden="true">
+                {isDone ? (
+                  // check icon for done
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                ) : (
+                  idx + 1
+                )}
+              </span>
+              <span className={`${labelBase} ${labelState}`}>{s}</span>
             </div>
+
             {idx < UI_FLOW.length - 1 && (
-              <div className={`${barCls} ${barState}`} aria-hidden="true" />
+              <div className={`${barBase} ${barState}`} aria-hidden="true" />
             )}
           </React.Fragment>
         );

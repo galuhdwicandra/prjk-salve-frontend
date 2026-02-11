@@ -1,12 +1,11 @@
 // src/components/orders/OrderPhotosGallery.tsx
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { OrderPhoto } from "../../types/orders";
 
 const fileUrl = (p?: string | null) => {
   if (!p) return "";
   if (/^https?:\/\//i.test(p)) return p;
   const filesBase = (import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
-  // Fallback pintar: jika FILES_BASE_URL kosong, coba turunan dari API_BASE_URL (buang suffix /api/v1)
   const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
   const originFallback = apiBase.replace(/\/api\/v1$/i, "");
   const base = filesBase || originFallback || "";
@@ -14,34 +13,100 @@ const fileUrl = (p?: string | null) => {
 };
 
 export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] }) {
+  const [preview, setPreview] = useState<{ url: string; label: string; ts?: string } | null>(null);
+
   const groups = useMemo(() => {
     const norm = (k: unknown) => String(k || "").toUpperCase();
     return {
-      before: photos.filter(p => norm(p.kind) === "BEFORE"),
-      after: photos.filter(p => norm(p.kind) === "AFTER"),
+      before: photos.filter((p) => norm(p.kind) === "BEFORE"),
+      after: photos.filter((p) => norm(p.kind) === "AFTER"),
     };
   }, [photos]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreview(null);
+    };
+    if (preview) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview]);
+
   if (!photos?.length) {
     return (
-      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
-        <div className="text-sm font-semibold mb-1">Order Photos</div>
-        <div className="text-xs text-gray-500">Belum ada foto.</div>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+        <div className="text-sm font-semibold text-slate-900">Order Photos</div>
+        <div className="mt-2 text-xs text-slate-500">Belum ada foto.</div>
       </div>
     );
   }
 
   return (
-    <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-4">
-      <div className="text-sm font-semibold tracking-tight">Order Photos</div>
-      <Section label="Before" items={groups.before} />
-      <Section label="After" items={groups.after} />
-    </div>
+    <>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">Order Photos</div>
+          <span className="text-xs text-slate-500">{photos.length} foto</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Section
+            label="Before"
+            items={groups.before}
+            onPreview={(data) => setPreview(data)}
+          />
+          <Section
+            label="After"
+            items={groups.after}
+            onPreview={(data) => setPreview(data)}
+          />
+        </div>
+      </div>
+
+      {/* Lightbox Modal */}
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setPreview(null)}
+              className="absolute -top-10 right-0 text-white text-sm font-semibold"
+            >
+              ✕ Close
+            </button>
+
+            <div className="rounded-xl bg-white overflow-hidden shadow-2xl">
+              <img
+                src={preview.url}
+                alt={preview.label}
+                className="w-full max-h-[80vh] object-contain bg-black"
+              />
+              <div className="px-4 py-3 border-t border-slate-200">
+                <div className="text-sm font-semibold text-slate-900">
+                  {preview.label}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {preview.ts ?? "-"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
+/* ------------------------
+   Section
+------------------------- */
+
 function resolveCreatedAt(p: OrderPhoto): string | undefined {
-  // Jangan asumsikan nama field timestamp. Ambil yang ada saja.
   const anyP = p as unknown as Record<string, unknown>;
   const raw =
     (anyP["created_at"] as string | undefined) ??
@@ -54,45 +119,66 @@ function resolveCreatedAt(p: OrderPhoto): string | undefined {
   return isNaN(d.getTime()) ? undefined : d.toLocaleString();
 }
 
-function Section({ label, items }: { label: string; items: OrderPhoto[] }) {
+function Section({
+  label,
+  items,
+  onPreview,
+}: {
+  label: string;
+  items: OrderPhoto[];
+  onPreview: (data: { url: string; label: string; ts?: string }) => void;
+}) {
   return (
-    <div>
-      <div className="text-xs font-medium text-gray-600 mb-2">{label}</div>
+    <section className="rounded-xl border border-slate-200 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <div className="text-sm font-semibold text-slate-900">{label}</div>
+        <span className="text-xs text-slate-500">{items.length} foto</span>
+      </div>
+
       {!items.length ? (
-        <div className="text-xs text-gray-500">-</div>
+        <div className="px-4 py-6 text-center text-xs text-slate-500">-</div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {items.map(p => {
-            const url = fileUrl(p.path);
-            return (
-              <a
-                key={p.id}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={resolveCreatedAt(p)}
-                className="group relative block overflow-hidden rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] transition-shadow hover:shadow-elev-2 focus:outline-none focus-visible:shadow-[var(--focus-ring)]"
-              >
-                <img
-                  src={url}
-                  alt={`${label} photo`}
-                  loading="lazy"
-                  className="w-full h-32 md:h-36 lg:h-40 object-cover transition-transform duration-150 ease-out group-hover:scale-[1.02]"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src =
-                      "data:image/svg+xml;utf8," +
-                      encodeURIComponent(
-                        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'><rect width='100%' height='100%' fill='#eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='#999'>image not found</text></svg>"
-                      );
-                  }}
-                />
-                {/* subtle overlay on hover */}
-                <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-              </a>
-            );
-          })}
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {items.map((p) => {
+              const url = fileUrl(p.path);
+              const ts = resolveCreatedAt(p);
+
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() =>
+                    onPreview({
+                      url,
+                      label: `${label} #${p.id}`,
+                      ts,
+                    })
+                  }
+                  className="group block overflow-hidden rounded-lg border border-slate-200 bg-white hover:shadow-lg transition"
+                >
+                  <div className="relative">
+                    <img
+                      src={url}
+                      alt={`${label} photo`}
+                      loading="lazy"
+                      className="h-28 w-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          "data:image/svg+xml;utf8," +
+                          encodeURIComponent(
+                            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'><rect width='100%' height='100%' fill='#f1f5f9'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='#64748b'>image not found</text></svg>"
+                          );
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

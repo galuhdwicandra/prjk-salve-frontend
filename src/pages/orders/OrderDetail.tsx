@@ -1,13 +1,13 @@
 // src/pages/orders/OrderDetail.tsx
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   getOrder,
   updateOrderStatus,
   getOrderReceiptHtml,
   openOrderReceipt,
+  updateOrder,
+  createOrderShareLink,
 } from '../../api/orders';
-import { updateOrder } from '../../api/orders';
-import { createOrderShareLink } from '../../api/orders';
 import type { OrderUpdatePayload } from '../../types/orders';
 import CustomerPicker from '../../components/customers/CustomerPicker';
 import ProductSearch from '../../components/pos/ProductSearch';
@@ -16,7 +16,7 @@ import type { Order, OrderBackendStatus } from '../../types/orders';
 import OrderStatusStepper from '../../components/orders/OrderStatusStepper';
 import OrderPhotosGallery from '../../components/orders/OrderPhotosGallery';
 import OrderPhotosUpload from '../../components/orders/OrderPhotosUpload';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
 import { isAxiosError } from 'axios';
 import { buildWhatsAppLink } from '../../utils/wa';
@@ -32,47 +32,67 @@ type ApiErrorResponse = {
 function toLocalInputValue(v?: string | null): string {
   if (!v) return '';
   const s = String(v).trim();
-  // Terima "YYYY-MM-DD HH:mm[:ss]" atau "YYYY-MM-DDTHH:mm[:ss][Z]"
-  if (s.includes('T')) {
-    // Buang 'Z' bila ada, pangkas ke menit untuk <input type="datetime-local">
-    return s.replace('Z', '').slice(0, 16);
-  }
-  // Spasi → 'T', pangkas ke menit
+  if (s.includes('T')) return s.replace('Z', '').slice(0, 16);
   return s.replace(' ', 'T').slice(0, 16);
 }
 function fromLocalInputValue(v: string): string | null {
   if (!v) return null;
-  // Kirim sebagai string lokal "naif": "YYYY-MM-DD HH:mm:ss"
-  const s = v.trim(); // format input selalu "YYYY-MM-DDTHH:mm"
+  const s = v.trim();
   return s.replace('T', ' ') + ':00';
 }
+
+type DraftItem = {
+  id?: string;
+  service_id: string;
+  service_name?: string;
+  price?: number;
+  qty: number;
+  note?: string | null;
+};
+type Draft = {
+  customer_id: string | null;
+  notes: string | null;
+  discount?: number;
+  items: DraftItem[];
+  received_at?: string | null;
+  ready_at?: string | null;
+};
+
+function money(v: unknown): string {
+  const n = Number(v ?? 0);
+  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+}
+
+function statusBadgeClass(status: OrderBackendStatus): string {
+  const base = 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset';
+  const cls =
+    status === 'CANCELED'
+      ? 'bg-red-50 text-red-700 ring-red-200'
+      : status === 'READY'
+        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+        : status === 'PICKED_UP'
+          ? 'bg-slate-900 text-white ring-slate-900'
+          : status === 'DELIVERING'
+            ? 'bg-blue-50 text-blue-700 ring-blue-200'
+            : status === 'WASHING' || status === 'DRYING' || status === 'IRONING'
+              ? 'bg-amber-50 text-amber-700 ring-amber-200'
+              : 'bg-slate-50 text-slate-700 ring-slate-200';
+  return `${base} ${cls}`;
+}
+
 export default function OrderDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const [row, setRow] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
 
-  type DraftItem = {
-    id?: string;              // jika ada
-    service_id: string;
-    service_name?: string;    // untuk UI
-    price?: number;           // untuk hitung preview subtotal
-    qty: number;
-    note?: string | null;
-  };
-  type Draft = {
-    customer_id: string | null;
-    notes: string | null;
-    discount?: number;
-    items: DraftItem[];
-    received_at?: string | null;
-    ready_at?: string | null;
-  };
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
 
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -125,15 +145,20 @@ export default function OrderDetail(): React.ReactElement {
         qty: Number(it.qty),
         note: it.note ?? null,
       })),
-      // discount: row.discount ?? 0, // aktifkan jika rule backend sdh mendukung
     });
   }, [row]);
 
   const changeQty = useCallback((serviceId: string, qty: number) => {
-    setDraft(d => ({ ...d, items: d.items.map(it => it.service_id === serviceId ? { ...it, qty: Math.max(1, qty) } : it) }));
+    setDraft(d => ({
+      ...d,
+      items: d.items.map(it => it.service_id === serviceId ? { ...it, qty: Math.max(1, qty) } : it),
+    }));
   }, []);
   const changeNote = useCallback((serviceId: string, note: string) => {
-    setDraft(d => ({ ...d, items: d.items.map(it => it.service_id === serviceId ? { ...it, note } : it) }));
+    setDraft(d => ({
+      ...d,
+      items: d.items.map(it => it.service_id === serviceId ? { ...it, note } : it),
+    }));
   }, []);
   const removeItem = useCallback((serviceId: string) => {
     setDraft(d => ({ ...d, items: d.items.filter(it => it.service_id !== serviceId) }));
@@ -206,58 +231,93 @@ export default function OrderDetail(): React.ReactElement {
     }
   }, [row]);
 
+  const previewSubtotal = row
+    ? draft.items.reduce((s, it) => {
+      const harga = Number(
+        it.price ??
+        (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
+        0
+      );
+      return s + Number(it.qty || 0) * harga;
+    }, 0)
+    : 0;
+
   return (
     <div className="space-y-4">
-      {loading && <div className="text-sm text-gray-600">Memuat…</div>}
+      {loading && (
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          Memuat…
+        </div>
+      )}
+
       {err && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {err}
         </div>
       )}
+
       {!loading && !row && !err && (
-        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-6 text-sm text-gray-500">
-          Tidak ditemukan
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+          <div className="text-sm font-medium text-slate-900">Tidak ditemukan</div>
+          <div className="mt-1 text-sm text-slate-500">Order tidak tersedia atau sudah dihapus.</div>
+          <div className="mt-4">
+            <Link to="/orders" className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+              Kembali
+            </Link>
+          </div>
         </div>
       )}
 
       {row && (
         <>
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold tracking-tight">Order {row.invoice_no ?? row.number}</div>
-              <div className="text-xs text-gray-600">{row.customer?.name ?? '-'}</div>
+          {/* Top header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold text-slate-900">
+                  Order {row.invoice_no ?? row.number}
+                </h1>
+                <span className={statusBadgeClass(row.status)}>{row.status}</span>
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                Customer: <span className="font-medium text-slate-900">{row.customer?.name ?? '-'}</span>
+              </div>
+              <div className="mt-2">
+                <OrderStatusStepper backendStatus={row.status} />
+              </div>
             </div>
 
+            {/* Actions */}
             <div className="flex flex-wrap items-center gap-2">
               {!isEditing && canEdit && (
                 <button
                   type="button"
-                  className="btn-outline px-3 py-1.5 text-xs"
+                  className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                   onClick={() => setIsEditing(true)}
                   title="Edit order"
                 >
                   Edit
                 </button>
               )}
+
               {isEditing && canEdit && (
                 <>
                   <button
                     type="button"
-                    className="btn-outline px-3 py-1.5 text-xs"
-                    onClick={() => { setIsEditing(false); setFieldErr({}); /* reset draft -> useEffect(row) sudah cover */ }}
+                    className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                    onClick={() => { setIsEditing(false); setFieldErr({}); }}
                     title="Batalkan perubahan"
                   >
                     Batal
                   </button>
+
                   <button
                     type="button"
-                    className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)] disabled:opacity-50"
+                    className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
                     onClick={async () => {
                       if (!id) return;
                       setSaving(true); setFieldErr({});
                       try {
-                        // Siapkan payload — kirim seluruh items (lihat catatan hapus-tulis ulang)【13:Backend_Docs.md†L41-L47】
                         const payload: OrderUpdatePayload = {
                           customer_id: draft.customer_id ?? null,
                           notes: (draft.notes ?? '') || null,
@@ -268,7 +328,6 @@ export default function OrderDetail(): React.ReactElement {
                           })),
                           received_at: draft.received_at ?? null,
                           ready_at: draft.ready_at ?? null,
-                          // discount: draft.discount ?? 0, // aktifkan bila rule backend sdh mendukung
                         };
                         await updateOrder(id, payload);
                         await refresh();
@@ -278,7 +337,6 @@ export default function OrderDetail(): React.ReactElement {
                         if (isAxiosError<ApiErrorResponse>(e)) {
                           const api = e.response?.data;
                           msg = api?.message ?? msg;
-                          // petakan error field sederhana ke state fieldErr
                           const map: Record<string, string> = {};
                           const errMap = api?.errors;
                           if (errMap) {
@@ -300,328 +358,430 @@ export default function OrderDetail(): React.ReactElement {
                   </button>
                 </>
               )}
-              {/* Buka struk tab baru */}
+
               <button
                 type="button"
-                className="btn-outline px-3 py-1.5 text-xs"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={() => openOrderReceipt(row.id)}
                 title="Buka struk di tab baru"
               >
                 Receipt
               </button>
 
-              {/* Toggle preview di halaman */}
               <button
                 type="button"
-                className="btn-outline px-3 py-1.5 text-xs"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={async () => {
-                  const next = !receiptOpen;
-                  setReceiptOpen(next);
-                  if (next && !receiptHtml) {
-                    await loadReceipt();
-                  }
+                  setReceiptOpen(true);
+                  if (!receiptHtml) await loadReceipt();
                 }}
-                title="Tampilkan/sembunyikan preview struk"
+                title="Preview struk"
               >
-                {receiptOpen ? 'Tutup Preview' : 'Preview Receipt'}
+                Preview
               </button>
 
-              {/* Kirim WhatsApp */}
               <button
                 type="button"
-                className="btn-outline px-3 py-1.5 text-xs"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={onSendWA}
                 title="Kirim kwitansi via WhatsApp"
               >
                 Kirim WA
               </button>
 
-              {/* Shortcut pelunasan bila masih ada sisa */}
               {(row.due_amount ?? 0) > 0 && (
                 <button
                   type="button"
-                  className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)]"
+                  className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
                   onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
                   title="Menuju halaman Piutang untuk pelunasan"
                 >
                   Pelunasan
                 </button>
               )}
-
-              {/* Stepper status (komponen existing) */}
-              <OrderStatusStepper backendStatus={row.status} />
             </div>
           </div>
 
-          {isEditing && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs font-medium mb-1">Pelanggan</div>
-                  <CustomerPicker
-                    value={draft.customer_id ?? ''}
-                    onChange={(id) => setDraft(d => ({ ...d, customer_id: id || null }))}
-                  />
-                  {fieldErr['customer_id'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['customer_id']}</div>}
-                </div>
-                <div>
-                  <div className="text-xs font-medium mb-1">Catatan</div>
-                  <textarea
-                    className="input w-full px-2 py-2 text-sm"
-                    placeholder="Catatan order (opsional)"
-                    value={draft.notes ?? ''}
-                    onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
-                    disabled={!canEdit}
-                  />
-                  {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
-                </div>
-                <div>
-                  <div className="text-xs font-medium mb-1">Tanggal Masuk</div>
-                  <input
-                    type="datetime-local"
-                    className="input w-full px-2 py-2 text-sm"
-                    value={toLocalInputValue(draft.received_at ?? null)}
-                    onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
-                    disabled={!canEdit}
-                  />
-                  {fieldErr['received_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['received_at']}</div>}
-                </div>
-                <div>
-                  <div className="text-xs font-medium mb-1">Tanggal Selesai</div>
-                  <input
-                    type="datetime-local"
-                    className="input w-full px-2 py-2 text-sm"
-                    value={toLocalInputValue(draft.ready_at ?? null)}
-                    onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
-                    disabled={!canEdit}
-                  />
-                  {fieldErr['ready_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['ready_at']}</div>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Items table */}
-          {isEditing && canEdit && (
-            <>
-              {/* Ringkasan tanggal masuk/selesai (read-only) */}
-              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 text-sm">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div>
-                    <span className="text-gray-600">Tgl Masuk</span>{' '}
-                    <b>{row.received_at ? row.received_at.replace('T', ' ').slice(0, 16) : '—'}</b>
+          {/* Main layout */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            {/* Left column */}
+            <div className="space-y-4 lg:col-span-8">
+              {/* Editing fields */}
+              {isEditing && (
+                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-sm font-semibold text-slate-900">Edit Order</div>
+                    <div className="text-xs text-slate-500">Perubahan akan disimpan setelah klik “Simpan”.</div>
                   </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Pelanggan</div>
+                      <div className="mt-1">
+                        <CustomerPicker
+                          value={draft.customer_id ?? ''}
+                          onChange={(cid) => setDraft(d => ({ ...d, customer_id: cid || null }))}
+                        />
+                      </div>
+                      {fieldErr['customer_id'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Catatan</div>
+                      <textarea
+                        className="
+                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                        "
+                        placeholder="Catatan order (opsional)"
+                        value={draft.notes ?? ''}
+                        onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
+                        disabled={!canEdit}
+                      />
+                      {fieldErr['notes'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Tanggal Masuk</div>
+                      <input
+                        type="datetime-local"
+                        className="
+                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          focus:border-slate-900 focus:outline-none
+                        "
+                        value={toLocalInputValue(draft.received_at ?? null)}
+                        onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+                        disabled={!canEdit}
+                      />
+                      {fieldErr['received_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Tanggal Selesai</div>
+                      <input
+                        type="datetime-local"
+                        className="
+                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          focus:border-slate-900 focus:outline-none
+                        "
+                        value={toLocalInputValue(draft.ready_at ?? null)}
+                        onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+                        disabled={!canEdit}
+                      />
+                      {fieldErr['ready_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Items (read-only view when not editing) */}
+              {!isEditing && (
+                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">Items</div>
+                      <div className="text-xs text-slate-500">Rincian layanan pada order ini.</div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
+                        <tr className="border-b border-slate-200">
+                          <Th>Layanan</Th>
+                          <Th>Qty</Th>
+                          <Th>Harga</Th>
+                          <Th className="text-right">Total</Th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(row.items ?? []).map((it) => (
+                          <tr key={it.id} className="hover:bg-slate-50/60 transition-colors">
+                            <Td className="font-medium text-slate-900">{it.service?.name ?? it.service_id}</Td>
+                            <Td className="text-slate-700">{it.qty}</Td>
+                            <Td className="text-slate-700">{money(it.price)}</Td>
+                            <Td className="text-right font-medium text-slate-900">{money(it.total)}</Td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="border-t border-slate-200 px-4 py-3">
+                    <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                      <Kpi label="Subtotal" value={money(row.subtotal)} />
+                      <Kpi label="Diskon" value={money(row.discount)} />
+                      <Kpi label="Grand Total" value={money(row.grand_total)} strong />
+                      <Kpi label="Sisa" value={money(row.due_amount)} strong />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Items editor */}
+              {isEditing && canEdit && (
+                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                  <div className="px-4 py-3">
+                    <div className="text-sm font-semibold text-slate-900">Edit Items</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Tambahkan layanan, ubah qty/catatan, atau hapus item. Total final tetap dihitung backend.
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-4">
+                    <ProductSearch onPick={addItemFromSearch} />
+                    {fieldErr['items'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['items']}</div>}
+                  </div>
+
+                  <div className="overflow-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
+                        <tr className="border-b border-slate-200">
+                          <Th>Layanan</Th>
+                          <Th className="w-[140px]">Qty</Th>
+                          <Th>Harga</Th>
+                          <Th className="text-right">Total</Th>
+                          <Th className="text-right">Aksi</Th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100">
+                        {draft.items.length === 0 && (
+                          <tr>
+                            <td className="px-4 py-5 text-sm text-slate-500" colSpan={5}>
+                              Belum ada item. Tambahkan layanan di atas.
+                            </td>
+                          </tr>
+                        )}
+
+                        {draft.items.map((it) => {
+                          const harga = Number(
+                            it.price ??
+                            (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
+                            0
+                          );
+                          const total = harga * Number(it.qty || 0);
+
+                          return (
+                            <tr key={it.service_id} className="hover:bg-slate-50/60 transition-colors">
+                              <Td className="align-top">
+                                <div className="font-medium text-slate-900">{it.service_name ?? it.service_id}</div>
+                                <input
+                                  className="
+                                    mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900
+                                    placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                                  "
+                                  placeholder="Catatan item (opsional)"
+                                  value={it.note ?? ''}
+                                  onChange={(e) => changeNote(it.service_id, e.target.value)}
+                                  disabled={!canEdit}
+                                />
+                              </Td>
+
+                              <Td className="align-top">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  className="
+                                    w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                                    focus:border-slate-900 focus:outline-none
+                                  "
+                                  value={it.qty}
+                                  onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
+                                  disabled={!canEdit}
+                                />
+                              </Td>
+
+                              <Td className="align-top text-slate-700">{harga ? money(harga) : '—'}</Td>
+
+                              <Td className="align-top text-right font-medium text-slate-900">{money(total)}</Td>
+
+                              <Td className="align-top text-right">
+                                <button
+                                  type="button"
+                                  className="
+                                    inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
+                                    hover:bg-slate-50 disabled:opacity-60
+                                  "
+                                  onClick={() => removeItem(it.service_id)}
+                                  title="Hapus item"
+                                  disabled={!canEdit}
+                                >
+                                  Hapus
+                                </button>
+                              </Td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="border-t border-slate-200 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
+                      <div className="text-slate-600">
+                        Subtotal (preview): <span className="font-semibold text-slate-900">{money(previewSubtotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Photos */}
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-gray-600">Tgl Selesai</span>{' '}
-                    <b>{row.ready_at ? row.ready_at.replace('T', ' ').slice(0, 16) : '—'}</b>
+                    <div className="text-sm font-semibold text-slate-900">Foto Order</div>
+                    <div className="text-xs text-slate-500">Dokumentasi sebelum/sesudah proses.</div>
                   </div>
                 </div>
-              </div>
-              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-                <div className="overflow-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                      <tr className="divide-x divide-[color:var(--color-border)]">
-                        <Th>Layanan</Th>
-                        <Th>Qty</Th>
-                        <Th>Harga</Th>
-                        <Th>Total</Th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[color:var(--color-border)]">
-                      {(row.items ?? []).map((it) => (
-                        <tr key={it.id} className="hover:bg-black/5 transition-colors">
-                          <Td>{it.service?.name ?? it.service_id}</Td>
-                          <Td>{it.qty}</Td>
-                          <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                          <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Totals read-only */}
-                <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-                  <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                  <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                  <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                  <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                </div>
-              </div>
-            </>
-          )}
 
-          {isEditing && canEdit && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-              {/* Tambah layanan */}
-              <div className="p-3">
-                <ProductSearch onPick={addItemFromSearch} />
-                {fieldErr['items'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['items']}</div>}
-              </div>
-              <div className="overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                    <tr className="divide-x divide-[color:var(--color-border)]">
-                      <Th>Layanan</Th>
-                      <Th>Qty</Th>
-                      <Th>Harga</Th>
-                      <Th>Total</Th>
-                      <Th>Aksi</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--color-border)]">
-                    {draft.items.length === 0 && (
-                      <tr>
-                        <Td colSpan={5} >
-                          <span className="text-xs text-gray-600">Belum ada item. Tambahkan layanan di atas.</span>
-                        </Td>
-                      </tr>
-                    )}
-                    {draft.items.map((it) => {
-                      const harga = Number(
-                        it.price ??
-                        (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
-                        0
-                      );
-                      const total = harga * Number(it.qty || 0);
-                      return (
-                        <tr key={it.service_id} className="hover:bg-black/5 transition-colors">
-                          <Td>
-                            <div className="font-medium">{it.service_name ?? it.service_id}</div>
-                            <input
-                              className="input mt-1 px-2 py-1 text-xs w-full"
-                              placeholder="Catatan item (opsional)"
-                              value={it.note ?? ''}
-                              onChange={(e) => changeNote(it.service_id, e.target.value)}
-                              disabled={!canEdit}
-
-                            />
-                            {fieldErr[`items.${it.service_id}.note`] && (
-                              <div className="text-[11px] text-red-600 mt-1">{fieldErr[`items.${it.service_id}.note`]}</div>
-                            )}
-                          </Td>
-                          <Td>
-                            <input
-                              type="number"
-                              min={1}
-                              className="input w-24 px-2 py-1 text-xs"
-                              value={it.qty}
-                              onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
-                              disabled={!canEdit}
-                            />
-                          </Td>
-                          <Td>{harga ? harga.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '—'}</Td>
-                          <Td>{(total || 0).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                          <Td>
-                            <button
-                              type="button"
-                              className="btn-outline px-2 py-1 text-xs"
-                              onClick={() => removeItem(it.service_id)}
-                              title="Hapus baris"
-                              disabled={!canEdit}
-                            >
-                              Hapus
-                            </button>
-                          </Td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {/* Preview total lokal (informasi; total final dihitung backend) */}
-              <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-                <div>
-                  <span className="text-gray-600">Subtotal (preview)</span>{' '}
-                  <b>{
-                    draft.items
-                      .reduce((s, it) => {
-                        const harga = Number(
-                          it.price ??
-                          (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
-                          0
-                        );
-                        return s + Number(it.qty || 0) * harga;
-                      }, 0)
-                      .toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })
-                  }</b>
+                <div className="mt-3">
+                  <OrderPhotosGallery
+                    key={`${row.id}:${row.photos?.length ?? 0}`}
+                    photos={row.photos ?? []}
+                  />
                 </div>
-              </div>
+
+                {canEdit && (
+                  <div className="mt-4">
+                    <OrderPhotosUpload
+                      orderId={row.id}
+                      onUploaded={async () => { await refresh(); }}
+                    />
+                  </div>
+                )}
+              </section>
             </div>
-          )}
 
-          {/* Photos */}
-          <OrderPhotosGallery
-            key={`${row.id}:${row.photos?.length ?? 0}`}
-            photos={row.photos ?? []}
-          />
-          {canEdit && (
-            <div className="mt-3">
-              <OrderPhotosUpload
-                orderId={row.id}
-                onUploaded={async () => { await refresh(); }}
-              />
+            {/* Right column */}
+            <div className="space-y-4 lg:col-span-4">
+              {/* Summary */}
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                <div className="text-sm font-semibold text-slate-900">Ringkasan</div>
+
+                <div className="mt-3 grid gap-2 text-sm">
+                  <RowLine label="Nomor" value={row.invoice_no ?? row.number ?? '-'} />
+                  <RowLine label="Customer" value={row.customer?.name ?? '-'} />
+                  <RowLine label="Total" value={money(row.grand_total)} strong />
+                  <RowLine label="Dibayar" value={money((row as any)?.paid_amount ?? 0)} />
+                  <RowLine label="Sisa" value={money(row.due_amount)} strong />
+                </div>
+
+                <div className="mt-4 grid gap-2 text-sm">
+                  <RowLine label="Tanggal Masuk" value={row.received_at ? String(row.received_at).replace('T', ' ').slice(0, 16) : '—'} />
+                  <RowLine label="Tanggal Selesai" value={row.ready_at ? String(row.ready_at).replace('T', ' ').slice(0, 16) : '—'} />
+                </div>
+
+                {(row.due_amount ?? 0) > 0 && (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
+                    >
+                      Proses Pelunasan
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              {/* Status transitions */}
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                <div className="text-sm font-semibold text-slate-900">Ubah Status</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {getAllowedNext(row.status).map((s) => (
+                    <button
+                      key={s}
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                      onClick={() => void onTransit(s)}
+                      title={`Set status ke ${s}`}
+                    >
+                      Set {s}
+                    </button>
+                  ))}
+
+                  {getAllowedNext(row.status).length === 0 && (
+                    <span className="text-xs text-slate-500">
+                      Status terminal — tidak ada transisi.
+                    </span>
+                  )}
+                </div>
+              </section>
             </div>
-          )}
+          </div>
 
-          {/* Receipt Preview */}
+          {/* Receipt Preview Modal */}
           {receiptOpen && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--color-border)]">
-                <div className="text-sm font-semibold">Receipt Preview</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="btn-outline px-3 py-1.5 text-xs disabled:opacity-50"
-                    onClick={loadReceipt}
-                    disabled={receiptLoading}
-                    title="Muat ulang HTML struk"
-                  >
-                    {receiptLoading ? 'Memuat…' : 'Reload'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-outline px-3 py-1.5 text-xs"
-                    onClick={() => openOrderReceipt(row.id, true)}
-                    title="Buka & print"
-                  >
-                    Open & Print
-                  </button>
-                </div>
-              </div>
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+              onClick={() => setReceiptOpen(false)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                  <div className="text-sm font-semibold text-slate-900">Receipt Preview</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+                      onClick={loadReceipt}
+                      disabled={receiptLoading}
+                      title="Muat ulang HTML struk"
+                    >
+                      {receiptLoading ? 'Memuat…' : 'Reload'}
+                    </button>
 
-              {receiptErr && <div className="p-3 text-xs text-red-600">{receiptErr}</div>}
-              {!receiptErr && receiptLoading && (
-                <div className="p-3 text-xs text-gray-600">Memuat struk…</div>
-              )}
-              {!receiptErr && !receiptLoading && !receiptHtml && (
-                <div className="p-3 text-xs text-gray-600">Belum ada HTML struk.</div>
-              )}
-              {!receiptErr && !!receiptHtml && (
-                <ReceiptPreview html={receiptHtml} height="70vh" />
-              )}
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => openOrderReceipt(row.id, true)}
+                      title="Buka & print"
+                    >
+                      Open & Print
+                    </button>
+
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                      onClick={() => setReceiptOpen(false)}
+                      title="Tutup"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
+
+                {receiptErr && (
+                  <div className="px-4 py-3 text-sm text-red-700">
+                    {receiptErr}
+                  </div>
+                )}
+
+                {!receiptErr && receiptLoading && (
+                  <div className="px-4 py-3 text-sm text-slate-600">
+                    Memuat struk…
+                  </div>
+                )}
+
+                {!receiptErr && !receiptLoading && !receiptHtml && (
+                  <div className="px-4 py-3 text-sm text-slate-600">
+                    Belum ada HTML struk.
+                  </div>
+                )}
+
+                {!receiptErr && !!receiptHtml && (
+                  <div className="p-4">
+                    <ReceiptPreview html={receiptHtml} height="70vh" />
+                  </div>
+                )}
+              </div>
             </div>
           )}
-
-          {/* Status transitions */}
-          <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 flex flex-wrap gap-2">
-            {getAllowedNext(row.status).map((s) => (
-              <button
-                key={s}
-                className="btn-outline px-2 py-1 text-xs"
-                onClick={() => void onTransit(s)}
-                title={`Set status ke ${s}`}
-              >
-                Set {s}
-              </button>
-            ))}
-
-            {getAllowedNext(row.status).length === 0 && (
-              <span className="text-xs text-gray-600">
-                Status terminal — tidak ada transisi.
-              </span>
-            )}
-          </div>
         </>
       )}
     </div>
@@ -629,14 +789,17 @@ export default function OrderDetail(): React.ReactElement {
 }
 
 /* ------------------------
-   Sub-komponen presentasional (UI-only)
+   Presentational helpers (UI-only)
 ------------------------- */
 
-type ThProps = React.ThHTMLAttributes<HTMLTableHeaderCellElement>;
-function Th({ children, className, ...rest }: ThProps) {
+function Th({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'th'>) {
   return (
     <th
-      className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wide ${className ?? ''}`}
+      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${className}`}
       {...rest}
     >
       {children}
@@ -644,14 +807,32 @@ function Th({ children, className, ...rest }: ThProps) {
   );
 }
 
-type TdProps = React.TdHTMLAttributes<HTMLTableCellElement>;
-function Td({ children, className, ...rest }: TdProps) {
+function Td({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'td'>) {
   return (
-    <td
-      className={`px-3 py-2 align-middle ${className ?? ''}`}
-      {...rest}
-    >
+    <td className={`px-4 py-3 align-middle ${className}`} {...rest}>
       {children}
     </td>
+  );
+}
+
+function Kpi({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`mt-0.5 text-sm ${strong ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{value}</div>
+    </div>
+  );
+}
+
+function RowLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="text-slate-500">{label}</div>
+      <div className={`text-right ${strong ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{value}</div>
+    </div>
   );
 }

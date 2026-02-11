@@ -48,19 +48,19 @@ export default function ProtectedLayout() {
 
   type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
   const MENU: MenuItem[] = [
-    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang,", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
+    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
     { label: "POS", to: "/pos", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
-    { label: "Orders", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
-    { label: "Customers", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
-    { label: "Services", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
-    { label: "Users", to: "/users", roles: ["Superadmin", "Admin Cabang"] },
-    { label: "Branches", to: "/branches", roles: ["Superadmin"] },
-    { label: "Wash Notes", to: "/wash-notes", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
-    { label: "Delivery", to: "/deliveries", roles: ["Superadmin", "Admin Cabang", "Kasir", "Kurir"], show: FF.delivery },
-    { label: "Expenses", to: "/expenses", roles: ["Superadmin", "Admin Cabang"] },
-    { label: "Receivables", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
+    { label: "Pesanan", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Pelanggan", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Layanan", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Pengguna", to: "/users", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Cabang", to: "/branches", roles: ["Superadmin"] },
+    { label: "Catatan Cuci", to: "/wash-notes", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
+    { label: "Pengiriman", to: "/deliveries", roles: ["Superadmin", "Admin Cabang", "Kasir", "Kurir"], show: FF.delivery },
+    { label: "Pengeluaran", to: "/expenses", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Piutang", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
     { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], show: FF.vouchers },
-    { label: "Reports", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
   ];
 
   const VISIBLE = useMemo(

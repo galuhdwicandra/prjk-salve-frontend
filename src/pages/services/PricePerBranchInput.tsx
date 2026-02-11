@@ -1,9 +1,9 @@
 // src/pages/services/PricePerBranchInput.tsx
-import { useEffect, useRef, useState } from 'react';
-import type { Branch } from '../../types/branches';
-import type { ServicePrice, ServicePriceSetPayload } from '../../types/services';
-import { listBranches } from '../../api/branches';
-import { listServicePricesByService, setServicePrice } from '../../api/servicePrices';
+import { useEffect, useRef, useState } from "react";
+import type { Branch } from "../../types/branches";
+import type { ServicePrice, ServicePriceSetPayload } from "../../types/services";
+import { listBranches } from "../../api/branches";
+import { listServicePricesByService, setServicePrice } from "../../api/servicePrices";
 
 interface Props {
   serviceId: string;
@@ -12,14 +12,14 @@ interface Props {
 type Row = Branch & { override?: ServicePrice | null; effective: number };
 
 function toStr(x: unknown) {
-  return x == null ? '' : String(x);
+  return x == null ? "" : String(x);
 }
 function toNum(x: unknown, fallback = 0) {
   const n = Number(x);
   return Number.isFinite(n) ? n : fallback;
 }
 function toIDR(n: number) {
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+  return n.toLocaleString("id-ID", { style: "currency", currency: "IDR" });
 }
 
 export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) {
@@ -35,23 +35,14 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
       setLoading(true);
       setError(null);
       setNotice(null);
-
-      console.groupCollapsed('[PricePerBranchInput] LOAD');
-      console.log('serviceId:', serviceId);
-      console.log('defaultPrice:', defaultPrice);
-
       try {
         const branchesRes = await listBranches({ per_page: 100 });
-        const branchesRaw: unknown = (branchesRes)?.data ?? branchesRes;
+        const branchesRaw: unknown = branchesRes?.data ?? branchesRes;
         const branches: Branch[] = Array.isArray(branchesRaw) ? branchesRaw : [];
-        console.log('branches (raw):', branchesRes);
-        console.log('branches (parsed):', branches);
 
         const overridesRes = await listServicePricesByService(serviceId);
-        const overridesData: unknown = (overridesRes)?.data ?? overridesRes;
+        const overridesData: unknown = overridesRes?.data ?? overridesRes;
         const overrides: ServicePrice[] = Array.isArray(overridesData) ? overridesData : [];
-        console.log('overrides (raw):', overridesRes);
-        console.log('overrides (parsed):', overrides);
 
         const map = new Map<string, ServicePrice>(
           overrides.map((p) => [toStr(p.branch_id), p])
@@ -64,13 +55,10 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
           return { ...b, override: ov, effective: eff };
         });
 
-        console.log('merged rows:', merged);
         setRows(merged);
-      } catch (e) {
-        console.error('LOAD error:', e);
-        setError('Gagal memuat harga per cabang.');
+      } catch {
+        setError("Gagal memuat harga per cabang.");
       } finally {
-        console.groupEnd();
         setLoading(false);
       }
     })();
@@ -82,14 +70,11 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
 
     if (!Number.isFinite(price) || price <= 0) {
       setNotice(null);
-      setError('Harga tidak valid.');
+      setError("Harga tidak valid.");
       return;
     }
 
     const payload: ServicePriceSetPayload = { service_id: serviceId, branch_id, price };
-
-    console.groupCollapsed('[PricePerBranchInput] SAVE ONE');
-    console.log('payload:', payload);
 
     try {
       setSaving(branch_id);
@@ -97,13 +82,9 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
       setNotice(null);
 
       const res = await setServicePrice(payload);
-      console.log('response (raw):', res);
-      const updated: ServicePrice = (res && (res).data ? (res).data : res) as ServicePrice;
-      console.log('response (parsed row):', updated);
+      const updated: ServicePrice = (res && (res as any).data ? (res as any).data : res) as ServicePrice;
 
-      if (!updated || !updated.id) {
-        console.warn('No updated row returned, skip UI update.');
-      } else {
+      if (updated?.id) {
         setRows((prev) =>
           prev.map((r) =>
             toStr(r.id) === branch_id
@@ -120,101 +101,116 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
         if (ref) ref.value = toStr(updated.price);
       }
 
-      setNotice('Harga cabang diperbarui.');
-    } catch (e) {
-      console.error('SAVE error:', e);
-      setError('Gagal menyimpan harga cabang.');
+      setNotice("Harga cabang diperbarui.");
+    } catch {
+      setError("Gagal menyimpan harga cabang.");
     } finally {
       setSaving(null);
-      console.groupEnd();
     }
   }
 
-  /* ---------------- UI ---------------- */
-
   if (loading) {
     return (
-      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          <span className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3 text-sm text-slate-500">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
           Memuat harga cabang…
         </div>
       </div>
     );
   }
+
   if (error && !rows.length) {
     return (
-      <div
-        role="alert"
-        aria-live="polite"
-        className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-      >
+      <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
         {error}
       </div>
     );
   }
+
   if (!rows.length) {
-    return <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-4 text-sm text-gray-500">Belum ada cabang.</div>;
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+        Belum ada cabang.
+      </div>
+    );
   }
 
   return (
-    <section className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-[0_12px_32px_-20px_rgba(0,0,0,.35)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--color-border)]">
+      <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold">Harga Per Cabang</h2>
-          <p className="text-xs text-gray-600">
-            Default harga layanan: <span className="font-medium">{toIDR(Number(defaultPrice))}</span>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Harga Per Cabang
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Atur harga override untuk setiap cabang.
           </p>
+        </div>
+
+        <div className="rounded-lg bg-slate-50 px-4 py-3 text-sm">
+          <div className="text-xs text-slate-500">Default Price</div>
+          <div className="font-semibold text-slate-900">
+            {toIDR(Number(defaultPrice))}
+          </div>
         </div>
       </div>
 
-      {/* Alerts */}
       {notice && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="mx-4 mt-3 rounded-md border border-[color:var(--color-border)] bg-[#E6EDFF] text-[color:var(--color-text-default)] text-sm px-3 py-2"
-        >
+        <div className="mx-6 mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {notice}
         </div>
       )}
       {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="mx-4 mt-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-        >
+        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      {/* Table — konsisten dengan Customers */}
-      <div className="overflow-auto mt-3">
-        <table className="min-w-[720px] w-full text-sm">
-          <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-            <tr className="divide-x divide-[color:var(--color-border)]">
+      {/* Table */}
+      <div className="overflow-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-white sticky top-0 border-b border-slate-200">
+            <tr>
               <Th>Cabang</Th>
               <Th className="text-right">Harga Efektif</Th>
               <Th className="text-right">Override</Th>
-              <Th className="text-right pr-4">Aksi</Th>
+              <Th className="text-right pr-6">Aksi</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[color:var(--color-border)]">
-            {rows.map((r) => {
+
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((r, idx) => {
               const key = toStr(r.id);
               const isSaving = saving === key;
+
               return (
-                <tr key={key} className="hover:bg-black/5 transition-colors">
+                <tr
+                  key={key}
+                  className={[
+                    idx % 2 === 0 ? "bg-white" : "bg-slate-50/40",
+                    "hover:bg-slate-100/60 transition-colors",
+                  ].join(" ")}
+                >
                   <Td>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{r.code}</span>
-                      <span className="text-gray-500">— {r.name}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700">
+                        {r.code}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">
+                          {r.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Branch ID: {r.id}
+                        </div>
+                      </div>
                     </div>
                   </Td>
 
-                  <Td className="text-right">
-                    <span className="font-medium">{toIDR(r.effective)}</span>
+                  <Td className="text-right font-semibold text-slate-900">
+                    {toIDR(r.effective)}
                   </Td>
 
                   <Td className="text-right">
@@ -222,52 +218,61 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       type="number"
                       min={0}
                       step="100"
-                      className="input w-44 text-right"
-                      defaultValue={r.override?.price ?? ''}
+                      className="
+                        w-44 rounded-md border border-slate-200 bg-white
+                        px-3 py-2 text-right text-sm text-slate-900
+                        placeholder:text-slate-400
+                        focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200
+                      "
+                      defaultValue={r.override?.price ?? ""}
                       placeholder={`Default ${toIDR(Number(defaultPrice))}`}
                       ref={(el) => { inputRefs.current[key] = el; }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           const raw = inputRefs.current[key]?.value;
                           const val = toNum(raw, NaN);
                           if (!Number.isFinite(val) || val <= 0) {
-                            setError('Harga tidak valid.');
+                            setError("Harga tidak valid.");
                             setNotice(null);
                             return;
                           }
                           void onSaveOne(key, val);
                         }
                       }}
-                      aria-label={`Harga override untuk cabang ${r.name}`}
                     />
                   </Td>
 
-                  <Td className="text-right">
-                    <div className="inline-flex items-center gap-2">
+                  <Td className="text-right pr-6">
+                    <div className="flex justify-end gap-2">
                       <button
-                        className="btn-primary disabled:opacity-50"
+                        className="
+                          inline-flex items-center rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white
+                          hover:bg-slate-800 disabled:opacity-50
+                        "
                         disabled={isSaving}
                         onClick={() => {
                           const raw = inputRefs.current[key]?.value;
                           const val = toNum(raw, NaN);
                           if (!Number.isFinite(val) || val <= 0) {
-                            setError('Harga tidak valid.');
+                            setError("Harga tidak valid.");
                             setNotice(null);
                             return;
                           }
                           void onSaveOne(key, val);
                         }}
-                        aria-label={`Simpan harga cabang ${r.name}`}
                       >
-                        {isSaving ? 'Menyimpan…' : 'Simpan'}
+                        {isSaving ? "Menyimpan…" : "Simpan"}
                       </button>
 
                       <button
-                        className="btn-outline"
+                        className="
+                          inline-flex items-center rounded-md border border-slate-200 bg-white
+                          px-3 py-2 text-xs font-semibold text-slate-700
+                          hover:bg-slate-50
+                        "
                         onClick={() => {
-                          // Reset field (lokal) -> kembali ke default (server belum diubah)
                           const ref = inputRefs.current[key];
-                          if (ref) ref.value = '';
+                          if (ref) ref.value = "";
                           setRows((prev) =>
                             prev.map((x) =>
                               toStr(x.id) === key
@@ -275,11 +280,10 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                                 : x
                             )
                           );
-                          setNotice('Override dihapus (kembali ke default). Belum tersimpan ke server.');
+                          setNotice("Override dihapus (kembali ke default). Belum tersimpan ke server.");
                         }}
-                        aria-label={`Kosongkan override cabang ${r.name}`}
                       >
-                        Reset Field
+                        Reset
                       </button>
                     </div>
                   </Td>
@@ -290,21 +294,21 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
         </table>
       </div>
 
-      <div className="px-4 py-3 border-t border-[color:var(--color-border)] text-xs text-gray-500">
-        Tip: Tekan <kbd className="px-1 py-0.5 border rounded">Enter</kbd> pada kolom harga untuk menyimpan cepat.
+      <div className="border-t border-slate-200 px-6 py-3 text-xs text-slate-500">
+        Tekan <kbd className="rounded border px-1 py-0.5">Enter</kbd> pada kolom harga untuk menyimpan cepat.
       </div>
     </section>
   );
 }
 
-/* ---------- Subcomponents UI (konsisten dengan Customers) ---------- */
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+/* Subcomponents */
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+    <th className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}>
       {children}
     </th>
   );
 }
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-6 py-4 align-middle ${className}`}>{children}</td>;
 }

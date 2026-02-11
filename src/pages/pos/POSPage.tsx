@@ -15,6 +15,8 @@ import { useAuth } from '../../store/useAuth';
 import { toIDR } from '../../utils/money';
 import { getLoyaltySummary } from '../../api/loyalty';
 import type { LoyaltySummary } from '../../types/loyalty';
+import { getBranch } from '../../api/branches';
+import type { Branch } from '../../types/branches';
 
 type HttpError = { response?: { status?: number; data?: unknown } };
 
@@ -193,6 +195,11 @@ export default function POSPage() {
   const nav = useNavigate();
   const { user, hasRole } = useAuth;
   const branchId = user?.branch_id ? String(user.branch_id) : '';
+  const [branchName, setBranchName] = useState<string | null>(null);
+  const branchNameFromUser =
+    (user as any)?.branch?.name ??
+    (user as any)?.branch_name ??
+    null;
 
   // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
@@ -224,6 +231,33 @@ export default function POSPage() {
   // voucher
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
+
+  // branch name (display)
+  useEffect(() => {
+    if (!branchId) {
+      setBranchName(null);
+      return;
+    }
+
+    // isi dulu dari payload user jika ada (lebih cepat & tidak tergantung permission getBranch)
+    setBranchName(branchNameFromUser);
+
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getBranch(branchId);
+        const raw = (res as any)?.data?.data ?? (res as any)?.data ?? null;
+        const b = raw as Branch | null;
+        if (alive) setBranchName(b?.name ?? branchNameFromUser ?? null);
+      } catch {
+        if (alive) setBranchName(branchNameFromUser ?? null);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [branchId, branchNameFromUser]);
 
   // quick add customer (POS)
   const [openCustomerCreate, setOpenCustomerCreate] = useState(false);
@@ -433,7 +467,11 @@ export default function POSPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate text-lg font-semibold">Point of Sale</h1>
-              <Badge tone={branchId ? 'brand' : 'warn'}>{branchId ? `Cabang #${branchId}` : 'Cabang belum terikat'}</Badge>
+              <Badge tone={branchId ? 'brand' : 'warn'}>
+                {branchId
+                  ? `Cabang: ${branchName ?? branchNameFromUser ?? `#${branchId}`}`
+                  : 'Cabang belum terikat'}
+              </Badge>
             </div>
             <div className="mt-1 text-xs text-slate-500">
               Alur cepat: cari layanan → pilih customer → set pembayaran → simpan & cetak.

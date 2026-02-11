@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-02-11 19:55:54_  
+_Dihasilkan otomatis: 2026-02-11 20:11:16_  
 **Root:** `/home/galuhdwicandra/workspace/clone_salve/prjk-salve-frontend`
 
 
@@ -9756,8 +9756,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `68d932683496`  
-- Ukuran: 42 KB
+- SHA: `f98b2d771286`  
+- Ukuran: 44 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -10206,6 +10206,57 @@ export default function POSPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral">Enter tambah</Badge>
             <Badge tone="neutral">Del hapus</Badge>
+
+            {/* Icon keranjang (popup) */}
+            <button
+              type="button"
+              onClick={() => setMobileCartOpen(true)}
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100"
+              aria-label="Buka keranjang"
+            >
+              {/* icon cart (inline svg, tanpa file baru) */}
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M6 6H21L20 13H7L6 6Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M6 6L5 3H2"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M7 13L6.5 16H19"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M9 20a1 1 0 100-2 1 1 0 000 2Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M18 20a1 1 0 100-2 1 1 0 000 2Z"
+                  fill="currentColor"
+                />
+              </svg>
+
+              {itemsCount > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[20px] items-center justify-center rounded-full bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                  {itemsCount}
+                </span>
+              )}
+            </button>
+
             <OutlineButton
               onClick={() => {
                 dlog('cancel/back clicked');
@@ -10530,22 +10581,6 @@ export default function POSPage() {
               </div>
             </Card>
 
-            <Card title="Keranjang" subtitle="Atur qty, note, dan hapus item.">
-              <div className="hidden lg:block">
-                <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
-              </div>
-              <div className="lg:hidden">
-                <MobileCartBar
-                  open={mobileCartOpen}
-                  setOpen={setMobileCartOpen}
-                  itemsCount={itemsCount}
-                  total={grand}
-                >
-                  <CartPanel items={items} onChangeQty={onChangeQty} onChangeNote={onChangeNote} onRemove={onRemove} />
-                </MobileCartBar>
-              </div>
-            </Card>
-
             <Card title="Pembayaran" subtitle="Pilih mode pembayaran (Pending/DP/Full).">
               <div className="space-y-3">
                 {/* Mode (ringkas -> buka popup) */}
@@ -10634,6 +10669,47 @@ export default function POSPage() {
           </aside>
         </div>
       </div>
+
+      {/* Popup Keranjang (via icon) */}
+      {mobileCartOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3"
+          onClick={() => setMobileCartOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Keranjang</div>
+                <div className="mt-0.5 text-xs text-slate-500">
+                  {itemsCount} item · Subtotal {toIDR(subtotal)} · Grand {toIDR(grand)}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+                onClick={() => setMobileCartOpen(false)}
+              >
+                Tutup
+              </button>
+            </div>
+
+            <div className="max-h-[70dvh] overflow-auto p-4">
+              <CartPanel
+                items={items}
+                onChangeQty={onChangeQty}
+                onChangeNote={onChangeNote}
+                onRemove={onRemove}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Popup pilih mode pembayaran */}
       {modePickerOpen && (
         <div
