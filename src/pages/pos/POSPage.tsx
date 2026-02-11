@@ -7,6 +7,7 @@ import type { OrderCreatePayload } from '../../types/orders';
 import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
 import type { RoleName } from '../../api/client';
 import CustomerPicker from '../../components/customers/CustomerPicker';
+import { createCustomer } from '../../api/customers';
 import { uploadOrderPhotos } from '../../api/orderPhotos';
 import { applyVoucherToOrder } from '../../api/vouchers';
 import { useNavigate } from 'react-router-dom';
@@ -65,6 +66,14 @@ export default function POSPage() {
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
 
+  // quick add customer (POS)
+  const [openCustomerCreate, setOpenCustomerCreate] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerWa, setNewCustomerWa] = useState('');
+  const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerError, setCustomerError] = useState<string | null>(null);
+
   // Loyalty (preview stamp)
   const [loyRefreshKey, setLoyRefreshKey] = useState(0);
   const [loy, setLoy] = useState<LoyaltySummary | null>(null);
@@ -101,6 +110,8 @@ export default function POSPage() {
     // Kembalikan sebagai "YYYY-MM-DD HH:mm:ss" (lokal-naif)
     return v.trim().replace('T', ' ') + ':00';
   }
+
+  const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
 
   // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
@@ -297,12 +308,26 @@ export default function POSPage() {
             <label className="text-xs">
               Pelanggan <span className="text-red-600">*</span>
             </label>
-            <CustomerPicker
-              value={customerId}
-              onChange={setCustomerId}
-              placeholder="Ketik nama/WA/alamat pelanggan…"
-              requiredText="Pelanggan wajib dipilih dari data terdaftar."
-            />
+            <div className="flex items-start gap-2">
+              <div className="grow">
+                <CustomerPicker
+                  value={customerId}
+                  onChange={setCustomerId}
+                  placeholder="Ketik nama/WA/alamat pelanggan…"
+                  requiredText="Pelanggan wajib dipilih dari data terdaftar."
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-primary whitespace-nowrap"
+                onClick={() => {
+                  setCustomerError(null);
+                  setOpenCustomerCreate(true);
+                }}
+              >
+                + Customer
+              </button>
+            </div>
           </div>
 
           {/* Tanggal Masuk & Selesai */}
@@ -362,6 +387,138 @@ export default function POSPage() {
             />
           </div>
         </div>
+        {openCustomerCreate && (
+          <div
+            className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => { if (!savingCustomer) setOpenCustomerCreate(false); }}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div>
+                  <div className="text-base font-semibold">Tambah Customer</div>
+                  <div className="text-xs text-gray-500">Tanpa keluar dari POS</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-outline px-2 py-1"
+                  disabled={savingCustomer}
+                  onClick={() => setOpenCustomerCreate(false)}
+                >
+                  Tutup
+                </button>
+              </div>
+
+              {customerError && (
+                <div className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2 mb-3">
+                  {customerError}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="grid gap-1">
+                  <label className="text-xs">Nama <span className="text-red-600">*</span></label>
+                  <input
+                    className="input px-3 py-2 w-full"
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    placeholder="Nama pelanggan"
+                    disabled={savingCustomer}
+                  />
+                </div>
+
+                <div className="grid gap-1">
+                  <label className="text-xs">WhatsApp <span className="text-red-600">*</span></label>
+                  <input
+                    className="input px-3 py-2 w-full"
+                    value={newCustomerWa}
+                    onChange={(e) => setNewCustomerWa(e.target.value)}
+                    placeholder="08123456789"
+                    inputMode="numeric"
+                    disabled={savingCustomer}
+                  />
+                </div>
+
+                <div className="grid gap-1">
+                  <label className="text-xs">Alamat (opsional)</label>
+                  <textarea
+                    className="input px-3 py-2 w-full min-h-[84px]"
+                    value={newCustomerAddress}
+                    onChange={(e) => setNewCustomerAddress(e.target.value)}
+                    placeholder="Alamat pelanggan"
+                    disabled={savingCustomer}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  className="btn-outline"
+                  disabled={savingCustomer}
+                  onClick={() => setOpenCustomerCreate(false)}
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={savingCustomer}
+                  onClick={async () => {
+                    if (!newCustomerName.trim() || !newCustomerWa.trim()) {
+                      setCustomerError('Nama dan WhatsApp wajib diisi.');
+                      return;
+                    }
+                    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
+                      setCustomerError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
+                      return;
+                    }
+
+                    try {
+                      setSavingCustomer(true);
+                      setCustomerError(null);
+
+                      const res = await createCustomer({
+                        name: newCustomerName.trim(),
+                        whatsapp: normalizeWa(newCustomerWa),
+                        address: newCustomerAddress.trim() ? newCustomerAddress.trim() : null,
+                        notes: null,
+                      });
+
+                      // auto pilih customer baru
+                      const created = (res as any)?.data?.data ?? (res as any)?.data ?? null;
+                      if (!created || !created.id) {
+                        setCustomerError('Gagal: server tidak mengembalikan data customer (id kosong).');
+                        return;
+                      }
+                      setCustomerId(String(created.id));
+
+                      // reset form
+                      setNewCustomerName('');
+                      setNewCustomerWa('');
+                      setNewCustomerAddress('');
+
+                      setOpenCustomerCreate(false);
+                    } catch (err: any) {
+                      setCustomerError(
+                        err?.response?.data?.message || 'Gagal menambahkan customer.'
+                      );
+                    } finally {
+                      setSavingCustomer(false);
+                    }
+                  }}
+                >
+                  {savingCustomer ? 'Menyimpan…' : 'Simpan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* RIGHT: cart & pembayaran */}

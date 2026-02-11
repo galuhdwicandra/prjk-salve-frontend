@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-01-04 20:55:10_  
+_Dihasilkan otomatis: 2026-02-11 17:10:25_  
 **Root:** `/home/galuhdwicandra/workspace/clone_salve/prjk-salve-frontend`
 
 
@@ -4263,7 +4263,7 @@ function QtyStepper({
 
 ### src/components/pos/CheckoutDialog.tsx
 
-- SHA: `61a587f4382b`  
+- SHA: `c676b47ec039`  
 - Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4275,6 +4275,7 @@ import type { PaymentCreatePayload, PaymentMethod } from "../../types/payments";
 import { applyVoucherToOrder } from "../../api/vouchers";
 import type { Order } from "../../types/orders";
 import { toIDR } from "../../utils/money";
+import type { AxiosError } from 'axios';
 
 type PayMode = 'PENDING' | 'DP' | PaymentMethod;
 
@@ -4343,12 +4344,24 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
       }
 
       setLoading(true);
-      const { order: updated } = await createOrderPayment(order.id, payload);
+      const resp = await createOrderPayment(order.id, payload);
+      const updated = (resp as any)?.order ?? (resp as any)?.data?.order ?? resp;
+      onPaid(updated as Order);
       onPaid(updated);
       onClose();
-    } catch (e) {
-      const m = e instanceof Error ? e.message : 'Gagal menyimpan pembayaran';
-      setErr(m);
+    } catch (ex: unknown) {
+      const ax = ex as AxiosError<any>;
+      if (ax?.response) {
+        if (ax.response.status === 403) {
+          setErr(ax.response.data?.message ?? 'Forbidden: Anda tidak diizinkan melakukan pembayaran untuk order ini.');
+        } else if (ax.response.status === 422) {
+          setErr(ax.response.data?.message ?? 'Validasi gagal (422). Periksa nominal dan syarat pembayaran.');
+        } else {
+          setErr(ax.message ?? 'Gagal menyimpan pembayaran');
+        }
+      } else {
+        setErr((ex as Error)?.message ?? 'Gagal menyimpan pembayaran');
+      }
     } finally {
       setLoading(false);
     }
@@ -4362,7 +4375,7 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
       aria-modal="true"
       aria-labelledby="checkout-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3"
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape' && !loading) onClose(); }}
       onClick={onClose}
     >
       <div
@@ -4433,11 +4446,10 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
                     key={m}
                     type="button"
                     onClick={() => setMode(m)}
-                    className={`px-3 py-1.5 text-sm transition-colors ${
-                      active
-                        ? 'bg-(--color-brand-primary) text-(--color-brand-on)'
-                        : 'bg-white hover:bg-black/5'
-                    }`}
+                    className={`px-3 py-1.5 text-sm transition-colors ${active
+                      ? 'bg-(--color-brand-primary) text-(--color-brand-on)'
+                      : 'bg-white hover:bg-black/5'
+                      }`}
                     aria-pressed={active}
                   >
                     {m}
@@ -9599,7 +9611,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `3fec7e40e879`  
+- SHA: `b5149ef34c4f`  
 - Ukuran: 25 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -9781,9 +9793,8 @@ export default function POSPage() {
 
     setLoading(true); setError(null);
     try {
-      // 1) create order
+      // 1) create order — JANGAN kirim branch_id; backend auto pakai cabang user
       const payload: OrderCreatePayload = {
-        branch_id: branchId || undefined,
         customer_id: customerId,
         items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
         discount: discount || 0,
