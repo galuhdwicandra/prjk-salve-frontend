@@ -479,59 +479,6 @@ export default function POSPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">Enter tambah</Badge>
-            <Badge tone="neutral">Del hapus</Badge>
-
-            {/* Icon keranjang (popup) */}
-            <button
-              type="button"
-              onClick={() => setMobileCartOpen(true)}
-              className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100"
-              aria-label="Buka keranjang"
-            >
-              {/* icon cart (inline svg, tanpa file baru) */}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6 6H21L20 13H7L6 6Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M6 6L5 3H2"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M7 13L6.5 16H19"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M9 20a1 1 0 100-2 1 1 0 000 2Z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M18 20a1 1 0 100-2 1 1 0 000 2Z"
-                  fill="currentColor"
-                />
-              </svg>
-
-              {itemsCount > 0 && (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[20px] items-center justify-center rounded-full bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
-                  {itemsCount}
-                </span>
-              )}
-            </button>
-
             <OutlineButton
               onClick={() => {
                 dlog('cancel/back clicked');
@@ -547,36 +494,7 @@ export default function POSPage() {
         <div className="grid gap-4 lg:grid-cols-[1fr_440px]">
           {/* LEFT */}
           <section className="space-y-4">
-            <Card
-              title="Cari Layanan"
-              subtitle="Gunakan pencarian untuk menambah item ke keranjang."
-              right={<Badge tone="neutral">{itemsCount} item</Badge>}
-            >
-              <ProductSearch onPick={addItem} />
-            </Card>
-
-            <Card
-              title="Foto Pesanan"
-              subtitle="Opsional. Drop file di desktop, atau buka kamera di mobile."
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <UploadBox
-                  title="Before"
-                  isMobile={isMobile}
-                  inputRef={beforeRef}
-                  files={beforeFiles}
-                  onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
-                />
-                <UploadBox
-                  title="After"
-                  isMobile={isMobile}
-                  inputRef={afterRef}
-                  files={afterFiles}
-                  onFiles={(f) => setAfterFiles((prev) => [...prev, ...f])}
-                />
-              </div>
-            </Card>
-
+            {/* 1) DETAIL ORDER (dipindah ke atas) */}
             <Card
               title="Detail Order"
               subtitle="Customer wajib dipilih. Voucher diterapkan saat simpan."
@@ -672,6 +590,70 @@ export default function POSPage() {
                     placeholder="Tulis catatan detail jika diperlukan…"
                   />
                 </div>
+              </div>
+            </Card>
+
+            {/* 2) CARI LAYANAN (dipindah ke tengah) + icon keranjang di kanan */}
+            <Card
+              title={
+                <div className="flex items-center gap-2">
+                  <span>Cari Layanan</span>
+                  <Badge tone="neutral">{itemsCount} item</Badge>
+                </div>
+              }
+              subtitle="Gunakan pencarian untuk menambah item ke keranjang."
+              right={
+                <button
+                  type="button"
+                  onClick={() => setMobileCartOpen(true)}
+                  className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100"
+                  aria-label="Buka keranjang"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M6 6H21L20 13H7L6 6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="M6 6L5 3H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M7 13L6.5 16H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M9 20a1 1 0 100-2 1 1 0 000 2Z" fill="currentColor" />
+                    <path d="M18 20a1 1 0 100-2 1 1 0 000 2Z" fill="currentColor" />
+                  </svg>
+
+                  {itemsCount > 0 && (
+                    <span className="absolute -right-1 -top-1 inline-flex min-w-[20px] items-center justify-center rounded-full bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                      {itemsCount}
+                    </span>
+                  )}
+                </button>
+              }
+            >
+              <ProductSearch onPick={addItem} />
+            </Card>
+
+            {/* 3) FOTO PESANAN (dipindah ke bawah Cari Layanan) */}
+            <Card
+              title="Foto Pesanan"
+              subtitle="Opsional. Drop file di desktop, atau buka kamera di mobile."
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <UploadBox
+                  title="Before"
+                  isMobile={isMobile}
+                  inputRef={beforeRef}
+                  files={beforeFiles}
+                  onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
+                />
+                {/* <UploadBox
+                  title="After"
+                  isMobile={isMobile}
+                  inputRef={afterRef}
+                  files={afterFiles}
+                  onFiles={(f) => setAfterFiles((prev) => [...prev, ...f])}
+                /> */}
               </div>
             </Card>
 
