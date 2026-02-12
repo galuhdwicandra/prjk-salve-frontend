@@ -62,7 +62,10 @@ function highlight(text: string, keyword: string): React.ReactNode {
 
 export default function ProductSearch({ onPick }: Props): React.ReactElement {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
-  const branchId: string | null = user?.branch_id != null ? String(user.branch_id) : null;
+  const branchId: string | null =
+    user?.branch?.id != null ? String(user.branch.id)
+      : user?.branch_id != null ? String(user.branch_id)
+        : null;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const priceCacheRef = useRef<Record<string, ServicePrice[]>>({});
 
@@ -102,7 +105,9 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
         list.map(async (s) => {
           const sid = String(s.id);
           if (priceCacheRef.current[sid]) return [sid, priceCacheRef.current[sid]] as const;
-          const prices = (await listServicePricesByService(sid)).data ?? [];
+          const env = await listServicePricesByService(sid);
+          const pricesRaw = env.data ?? [];
+          const prices = Array.isArray(pricesRaw) ? (pricesRaw as ServicePrice[]) : [];
           priceCacheRef.current[sid] = prices;
           return [sid, prices] as const;
         })
@@ -110,7 +115,7 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 
       setPriceMap((prev) => {
         const next = { ...prev };
-        for (const [sid, prices] of entries) next[sid] = prices ?? [];
+        for (const [sid, prices] of entries) next[sid] = Array.isArray(prices) ? prices : [];
         return next;
       });
 
@@ -364,8 +369,6 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
         </div>
       )
       }
-
-
     </div >
   );
 }

@@ -69,6 +69,10 @@ export const useAuth = {
         state.user = res?.data?.user ?? null;
         persist();
         notify();
+        if (state.token) {
+            // pastikan user lengkap (termasuk branch_id) dari endpoint /me
+            await useAuth.fetchMe();
+        }
         return state.user;
     },
     async fetchMe() {

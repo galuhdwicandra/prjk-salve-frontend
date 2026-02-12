@@ -7,12 +7,14 @@ const api = axios.create({
     headers: { 'Content-Type': 'application/json' },
 });
 
+import type { BranchMini } from '../types/users';
 export type RoleName = 'Superadmin' | 'Admin Cabang' | 'Kasir' | 'Petugas Cuci' | 'Kurir';
 export interface MeUser {
     id: number | string;
     name: string;
     email: string;
     branch_id: number | string | null;
+    branch?: BranchMini | null;
     is_active: boolean;
     roles: RoleName[];
 }

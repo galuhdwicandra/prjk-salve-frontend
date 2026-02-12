@@ -1,5 +1,5 @@
 // src/pages/pos/POSPage.tsx
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useSyncExternalStore } from 'react';
 import ProductSearch from '../../components/pos/ProductSearch';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
 import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
@@ -193,12 +193,24 @@ function Textarea({
 
 export default function POSPage() {
   const nav = useNavigate();
-  const { user, hasRole } = useAuth;
-  const branchId = user?.branch_id ? String(user.branch_id) : '';
-  const [branchName, setBranchName] = useState<string | null>(null);
-  const branchNameFromUser =
-    (user as any)?.branch?.name ??
-    (user as any)?.branch_name ??
+  const user = useSyncExternalStore(
+    useAuth.subscribe,
+    () => useAuth.user,
+    () => useAuth.user
+  );
+  const branchId =
+    (user as any)?.branch_id != null
+      ? String((user as any).branch_id)
+      : (user as any)?.branch?.id != null
+        ? String((user as any).branch.id)
+        : '';
+  useEffect(() => {
+    if (import.meta.env?.DEV) console.log('[POSPage] user:', user, 'branchId:', branchId);
+  }, [user, branchId]);
+  const [branchCode, setBranchCode] = useState<string | null>(null);
+  const branchCodeFromUser =
+    (user as any)?.branch?.code ??
+    (user as any)?.branch_code ??
     null;
 
   // cart & form states
@@ -209,7 +221,7 @@ export default function POSPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const PAY_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir'];
-  const canPay = hasRole(PAY_ROLES);
+  const canPay = useAuth.hasRole(PAY_ROLES);
 
   // photos
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
@@ -235,12 +247,12 @@ export default function POSPage() {
   // branch name (display)
   useEffect(() => {
     if (!branchId) {
-      setBranchName(null);
+      setBranchCode(null);
       return;
     }
 
     // isi dulu dari payload user jika ada (lebih cepat & tidak tergantung permission getBranch)
-    setBranchName(branchNameFromUser);
+    setBranchCode(branchCodeFromUser);
 
     let alive = true;
     (async () => {
@@ -248,16 +260,17 @@ export default function POSPage() {
         const res = await getBranch(branchId);
         const raw = (res as any)?.data?.data ?? (res as any)?.data ?? null;
         const b = raw as Branch | null;
-        if (alive) setBranchName(b?.name ?? branchNameFromUser ?? null);
+        const code = (b as any)?.code ?? (b as any)?.branch_code ?? null;
+        if (alive) setBranchCode(code ?? branchCodeFromUser ?? null);
       } catch {
-        if (alive) setBranchName(branchNameFromUser ?? null);
+        if (alive) setBranchCode(branchCodeFromUser ?? null);
       }
     })();
 
     return () => {
       alive = false;
     };
-  }, [branchId, branchNameFromUser]);
+  }, [branchId, branchCodeFromUser]);
 
   // quick add customer (POS)
   const [openCustomerCreate, setOpenCustomerCreate] = useState(false);
@@ -374,7 +387,7 @@ export default function POSPage() {
   async function onSubmit() {
     dlog('onSubmit start');
     if (items.length === 0) return setError('Keranjang kosong');
-    if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) return setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
+    if (useAuth.hasRole(['Kasir', 'Admin Cabang']) && !branchId) return setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
     if (!customerId) return setError('Pelanggan wajib dipilih.');
     if (dateErr) return setError(dateErr);
     if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) return setError('Nominal DP tidak valid (≤ 0 atau melebihi grand total).');
@@ -469,12 +482,12 @@ export default function POSPage() {
               <h1 className="truncate text-lg font-semibold">Point of Sale</h1>
               <Badge tone={branchId ? 'brand' : 'warn'}>
                 {branchId
-                  ? `Cabang: ${branchName ?? branchNameFromUser ?? `#${branchId}`}`
+                  ? `Cabang: ${branchCode ?? branchCodeFromUser ?? `#${branchId}`}`
                   : 'Cabang belum terikat'}
               </Badge>
             </div>
             <div className="mt-1 text-xs text-slate-500">
-              Alur cepat: cari layanan → pilih customer → set pembayaran → simpan & cetak.
+              Alur cepat: pilih customer → cari layanan → set pembayaran → simpan & cetak.
             </div>
           </div>
 
@@ -735,7 +748,7 @@ export default function POSPage() {
                             setCustomerError('Nama dan WhatsApp wajib diisi.');
                             return;
                           }
-                          if (hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
+                          if (useAuth.hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
                             setCustomerError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
                             return;
                           }

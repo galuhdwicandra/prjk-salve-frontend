@@ -1,12 +1,19 @@
 // src/types/users.ts
 import type { RoleName } from '../api/client';
 
+export interface BranchMini {
+    id: string;
+    code: string;
+    name: string;
+}
+
 export interface User {
     id: string;
     name: string;
     username: string;
     email: string;
     branch_id: string | null;
+    branch?: BranchMini | null;
     is_active: boolean;
     roles: RoleName[];
     created_at?: string | null;
