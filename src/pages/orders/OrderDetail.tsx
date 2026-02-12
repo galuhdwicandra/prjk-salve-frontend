@@ -22,6 +22,8 @@ import { isAxiosError } from 'axios';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
 import { useHasRole } from '../../store/useAuth';
+import { createDelivery, listDeliveries } from '../../api/deliveries';
+import type { DeliveryType } from '../../types/deliveries';
 
 type ApiErrorResponse = {
   message?: string;
@@ -92,8 +94,18 @@ export default function OrderDetail(): React.ReactElement {
   const [saving, setSaving] = useState(false);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
+  const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
 
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
+
+  // Delivery UI
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [deliverySaving, setDeliverySaving] = useState(false);
+  const [deliveryErr, setDeliveryErr] = useState<string | null>(null);
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('delivery');
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [deliveryZoneId, setDeliveryZoneId] = useState<string>('');
+  const [existingDeliveryId, setExistingDeliveryId] = useState<string | null>(null);
 
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptHtml, setReceiptHtml] = useState<string>('');
@@ -129,6 +141,24 @@ export default function OrderDetail(): React.ReactElement {
   }, [id]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    const orderId = row?.id;
+    if (!orderId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const res = await listDeliveries({ q: orderId, per_page: 1 });
+        const latest = (res.data && res.data.length > 0) ? (res.data[0] as any) : null;
+        if (!alive) return;
+        setExistingDeliveryId(latest?.id ?? null);
+      } catch {
+        if (!alive) return;
+        setExistingDeliveryId(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [row?.id]);
 
   useEffect(() => {
     if (!row) return;
@@ -268,6 +298,136 @@ export default function OrderDetail(): React.ReactElement {
         </div>
       )}
 
+      {/* Create Delivery Modal */}
+      {row && deliveryOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+          onClick={() => { if (!deliverySaving) setDeliveryOpen(false); }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-slate-200 px-4 py-3">
+              <div className="text-sm font-semibold text-slate-900">Buat Pengiriman</div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                Order: {row.invoice_no ?? row.number}
+              </div>
+            </div>
+
+            <div className="space-y-3 px-4 py-4">
+              {deliveryErr && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {deliveryErr}
+                </div>
+              )}
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600">Tipe</div>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                  value={deliveryType}
+                  onChange={(e) => setDeliveryType(e.target.value as DeliveryType)}
+                  disabled={deliverySaving}
+                >
+                  <option value="delivery">delivery</option>
+                  <option value="pickup">pickup</option>
+                  <option value="return">return</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="text-xs font-semibold text-slate-600">Ongkir (fee)</div>
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                    value={Number.isFinite(deliveryFee) ? deliveryFee : 0}
+                    onChange={(e) => setDeliveryFee(Number(e.target.value || 0))}
+                    disabled={deliverySaving}
+                  />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-600">Zone ID (opsional)</div>
+                  <input
+                    type="text"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none"
+                    placeholder="UUID zone (jika dipakai)"
+                    value={deliveryZoneId}
+                    onChange={(e) => setDeliveryZoneId(e.target.value)}
+                    disabled={deliverySaving}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+              <button
+                type="button"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+                onClick={() => setDeliveryOpen(false)}
+                disabled={deliverySaving}
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
+                disabled={deliverySaving}
+                onClick={async () => {
+                  if (!row?.id) return;
+                  setDeliverySaving(true);
+                  setDeliveryErr(null);
+                  try {
+                    const payload: any = {
+                      order_id: row.id,
+                      type: deliveryType,
+                      fee: Math.max(0, Number(deliveryFee || 0)),
+                      zone_id: deliveryZoneId.trim() ? deliveryZoneId.trim() : null,
+                    };
+
+                    // Backend store() mengembalikan: { data: { delivery: ... }, meta: { idempotent } }
+                    const res = await createDelivery(payload as any);
+                    const created = (res as any)?.data?.delivery ?? (res as any)?.data ?? null;
+                    const did = created?.id as string | undefined;
+                    if (!did) throw new Error('Delivery tidak terbaca dari response.');
+
+                    setExistingDeliveryId(did);
+                    setDeliveryOpen(false);
+                    navigate(`/deliveries/${encodeURIComponent(did)}`);
+                  } catch (e: unknown) {
+                    let msg = 'Gagal membuat pengiriman';
+                    if (isAxiosError<ApiErrorResponse>(e)) {
+                      const api = e.response?.data;
+                      const errMap = api?.errors;
+                      const firstKey = errMap ? Object.keys(errMap)[0] : null;
+                      const firstVal = firstKey ? errMap?.[firstKey] : null;
+                      const detail =
+                        typeof firstVal === 'string' ? firstVal :
+                          Array.isArray(firstVal) ? firstVal[0] :
+                            undefined;
+                      msg = api?.message ?? detail ?? msg;
+                    } else if (e instanceof Error && e.message) {
+                      msg = e.message;
+                    }
+                    setDeliveryErr(msg);
+                  } finally {
+                    setDeliverySaving(false);
+                  }
+                }}
+              >
+                {deliverySaving ? 'Membuat…' : 'Buat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {row && (
         <>
           {/* Top header */}
@@ -289,6 +449,29 @@ export default function OrderDetail(): React.ReactElement {
 
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-2">
+              {canCreateDelivery && (
+                <>
+                  {typeof existingDeliveryId === 'string' && existingDeliveryId.length > 0 ? (
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => navigate(`/deliveries/${encodeURIComponent(existingDeliveryId)}`)}
+                      title="Lihat pengiriman yang sudah dibuat"
+                    >
+                      Lihat Pengiriman
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => { setDeliveryErr(null); setDeliveryOpen(true); }}
+                      title="Buat pengiriman untuk order ini"
+                    >
+                      Buat Pengiriman
+                    </button>
+                  )}
+                </>
+              )}
               {!isEditing && canEdit && (
                 <button
                   type="button"

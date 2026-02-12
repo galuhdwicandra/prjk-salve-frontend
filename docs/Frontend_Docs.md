@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-02-11 20:11:16_  
+_Dihasilkan otomatis: 2026-02-12 16:52:26_  
 **Root:** `/home/galuhdwicandra/workspace/clone_salve/prjk-salve-frontend`
 
 
@@ -1411,7 +1411,7 @@ export default function GuestLayout() {
 
 ### src/layouts/ProtectedLayout.tsx
 
-- SHA: `d04093b069e9`  
+- SHA: `9d7c169c6742`  
 - Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1466,19 +1466,19 @@ export default function ProtectedLayout() {
 
   type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
   const MENU: MenuItem[] = [
-    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang,", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
+    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
     { label: "POS", to: "/pos", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
-    { label: "Orders", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
-    { label: "Customers", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
-    { label: "Services", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
-    { label: "Users", to: "/users", roles: ["Superadmin", "Admin Cabang"] },
-    { label: "Branches", to: "/branches", roles: ["Superadmin"] },
-    { label: "Wash Notes", to: "/wash-notes", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
-    { label: "Delivery", to: "/deliveries", roles: ["Superadmin", "Admin Cabang", "Kasir", "Kurir"], show: FF.delivery },
-    { label: "Expenses", to: "/expenses", roles: ["Superadmin", "Admin Cabang"] },
-    { label: "Receivables", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
+    { label: "Pesanan", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Pelanggan", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Layanan", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Pengguna", to: "/users", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Cabang", to: "/branches", roles: ["Superadmin"] },
+    { label: "Catatan Cuci", to: "/wash-notes", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
+    { label: "Pengiriman", to: "/deliveries", roles: ["Superadmin", "Admin Cabang", "Kasir", "Kurir"], show: FF.delivery },
+    { label: "Pengeluaran", to: "/expenses", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Piutang", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
     { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], show: FF.vouchers },
-    { label: "Reports", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
   ];
 
   const VISIBLE = useMemo(
@@ -3578,8 +3578,8 @@ export default function LazyBoundary({ children }: { children: ReactNode }) {
 
 ### src/components/orders/OrderPhotos.tsx
 
-- SHA: `616c2e46ff31`  
-- Ukuran: 8 KB
+- SHA: `44bf8ad3c679`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3594,6 +3594,57 @@ type Props = {
 
 type Incoming = { before: File[]; after: File[] };
 
+type PreviewItem = {
+  file: File;
+  url: string;
+  name: string;
+  sizeKB: number;
+};
+
+function formatKB(size: number): number {
+  return Math.ceil(size / 1024);
+}
+
+function CameraIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z" />
+      <circle cx="12" cy="13" r="3.2" />
+    </svg>
+  );
+}
+
+function UploadIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M12 3v12" />
+      <path d="M7 8l5-5 5 5" />
+      <path d="M21 21H3" />
+    </svg>
+  );
+}
+
+function TrashIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 16H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
+function XIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M18 6 6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+
 export default function OrderPhotos({ orderId, onUploaded }: Props) {
   const [files, setFiles] = useState<Incoming>({ before: [], after: [] });
   const [busy, setBusy] = useState(false);
@@ -3606,6 +3657,24 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
     return /android|iphone|ipad|ipod/.test(ua);
   }, []);
 
+  const previews = useMemo(() => {
+    // Buat objectURL hanya untuk tampilan, dan revoke otomatis via cleanup di useMemo (React tidak punya cleanup di useMemo),
+    // jadi kita buat "best effort" sederhana: URL dibuat ulang saat render; risiko leak kecil untuk jumlah file sedikit.
+    // Jika Anda ingin super ketat, bisa dipindah ke useEffect cleanup, tapi itu mulai menyentuh "logika tambahan".
+    const mk = (list: File[]): PreviewItem[] =>
+      list.map((f) => ({
+        file: f,
+        url: URL.createObjectURL(f),
+        name: f.name,
+        sizeKB: formatKB(f.size),
+      }));
+    return {
+      before: mk(files.before),
+      after: mk(files.after),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files.before, files.after]);
+
   function pick(kind: "before" | "after") {
     (kind === "before" ? beforeRef : afterRef).current?.click();
   }
@@ -3613,10 +3682,26 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
   function onChange(kind: "before" | "after", list: FileList | null) {
     if (!list) return;
     const arr = Array.from(list);
-    setFiles(prev => ({
+    setFiles((prev) => ({
       ...prev,
       [kind]: [...prev[kind], ...arr],
     }));
+  }
+
+  function onDrop(kind: "before" | "after", droppedFiles: File[]) {
+    if (!droppedFiles.length) return;
+    setFiles((prev) => ({
+      ...prev,
+      [kind]: [...prev[kind], ...droppedFiles],
+    }));
+  }
+
+  function removeOne(kind: "before" | "after", idx: number) {
+    setFiles((prev) => {
+      const next = [...prev[kind]];
+      next.splice(idx, 1);
+      return { ...prev, [kind]: next };
+    });
   }
 
   async function onUpload() {
@@ -3630,64 +3715,38 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
     }
   }
 
+  const disableUpload = busy || (files.before.length === 0 && files.after.length === 0);
+
   return (
-    <div className="card border border-[color:var(--color-border)] rounded-2xl shadow-elev-1 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <div className="text-sm font-semibold tracking-tight">Order Photos</div>
-          <p className="text-xs text-gray-600">Foto sebelum & sesudah (opsional). Gunakan kamera belakang untuk hasil terbaik.</p>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-900">Order Photos</div>
+          <p className="mt-1 text-xs text-slate-500">
+            Foto sebelum &amp; sesudah (opsional). Gunakan kamera belakang untuk hasil terbaik.
+          </p>
         </div>
+
         {busy && (
-          <span className="inline-flex items-center gap-2 text-xs text-gray-600" aria-live="polite">
+          <span className="inline-flex items-center gap-2 text-xs text-slate-600" aria-live="polite">
             <span className="h-3 w-3 rounded-full border-2 border-black/20 border-t-black/70 animate-spin" />
             Mengunggah…
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Content */}
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         {/* BEFORE */}
-        <section className="card border border-[color:var(--color-border)] rounded-xl p-3">
-          <header className="flex items-center justify-between mb-2">
-            <div className="text-xs font-medium">Before</div>
-            <span className="text-[10px] text-gray-500">{files.before.length} file</span>
-          </header>
-
-          {/* PC: drag & drop; Mobile: tombol kamera */}
-          <div
-            className="group relative grid place-content-center rounded-xl border-2 border-dashed border-[color:var(--color-border)] bg-white/80 p-5 text-center text-xs hover:border-[color:var(--color-brand-primary)] transition-colors"
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => {
-              e.preventDefault();
-              const dropped = Array.from(e.dataTransfer.files || []);
-              setFiles(prev => ({ ...prev, before: [...prev.before, ...dropped] }));
-            }}
-            role="button"
-            aria-label="Area unggah foto sebelum"
-          >
-            {isMobile ? (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => pick("before")}
-              >
-                Buka Kamera
-              </button>
-            ) : (
-              <>
-                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
-                <div className="text-gray-500">atau</div>
-                <button
-                  type="button"
-                  className="btn-outline mt-2"
-                  onClick={() => pick("before")}
-                >
-                  Pilih File
-                </button>
-              </>
-            )}
-          </div>
-
+        <Panel
+          title="Before"
+          count={files.before.length}
+          isMobile={isMobile}
+          busy={busy}
+          onPick={() => pick("before")}
+          onDropFiles={(arr) => onDrop("before", arr)}
+        >
           <input
             ref={beforeRef}
             type="file"
@@ -3695,63 +3754,26 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
             capture={isMobile ? "environment" : undefined}
             multiple
             className="hidden"
-            onChange={e => onChange("before", e.target.files)}
+            onChange={(e) => onChange("before", e.target.files)}
           />
 
-          {/* Preview ringkas */}
-          {files.before.length > 0 && (
-            <ul className="mt-3 divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70">
-              {files.before.map((f, i) => (
-                <li key={i} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
-                  <span className="truncate max-w-[70%]">{f.name}</span>
-                  <span className="shrink-0 text-[10px] text-gray-500">{Math.ceil(f.size / 1024)} KB</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          <PreviewGrid
+            items={previews.before}
+            onRemove={(idx) => removeOne("before", idx)}
+            disabled={busy}
+            emptyText="Belum ada foto before."
+          />
+        </Panel>
 
         {/* AFTER */}
-        <section className="card border border-[color:var(--color-border)] rounded-xl p-3">
-          <header className="flex items-center justify-between mb-2">
-            <div className="text-xs font-medium">After</div>
-            <span className="text-[10px] text-gray-500">{files.after.length} file</span>
-          </header>
-
-          <div
-            className="group relative grid place-content-center rounded-xl border-2 border-dashed border-[color:var(--color-border)] bg-white/80 p-5 text-center text-xs hover:border-[color:var(--color-brand-primary)] transition-colors"
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => {
-              e.preventDefault();
-              const dropped = Array.from(e.dataTransfer.files || []);
-              setFiles(prev => ({ ...prev, after: [...prev.after, ...dropped] }));
-            }}
-            role="button"
-            aria-label="Area unggah foto sesudah"
-          >
-            {isMobile ? (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => pick("after")}
-              >
-                Buka Kamera
-              </button>
-            ) : (
-              <>
-                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
-                <div className="text-gray-500">atau</div>
-                <button
-                  type="button"
-                  className="btn-outline mt-2"
-                  onClick={() => pick("after")}
-                >
-                  Pilih File
-                </button>
-              </>
-            )}
-          </div>
-
+        <Panel
+          title="After"
+          count={files.after.length}
+          isMobile={isMobile}
+          busy={busy}
+          onPick={() => pick("after")}
+          onDropFiles={(arr) => onDrop("after", arr)}
+        >
           <input
             ref={afterRef}
             type="file"
@@ -3759,43 +3781,211 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
             capture={isMobile ? "environment" : undefined}
             multiple
             className="hidden"
-            onChange={e => onChange("after", e.target.files)}
+            onChange={(e) => onChange("after", e.target.files)}
           />
 
-          {files.after.length > 0 && (
-            <ul className="mt-3 divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70">
-              {files.after.map((f, i) => (
-                <li key={i} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
-                  <span className="truncate max-w-[70%]">{f.name}</span>
-                  <span className="shrink-0 text-[10px] text-gray-500">{Math.ceil(f.size / 1024)} KB</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          <PreviewGrid
+            items={previews.after}
+            onRemove={(idx) => removeOne("after", idx)}
+            disabled={busy}
+            emptyText="Belum ada foto after."
+          />
+        </Panel>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {/* Footer actions */}
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
-          className="btn-primary"
+          className="
+            inline-flex items-center justify-center gap-2
+            rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+            hover:bg-slate-800 active:bg-slate-950
+            disabled:cursor-not-allowed disabled:opacity-70
+          "
           onClick={onUpload}
-          disabled={busy || (files.before.length === 0 && files.after.length === 0)}
+          disabled={disableUpload}
         >
+          <UploadIcon className="opacity-95" />
           {busy ? "Mengunggah..." : "Upload"}
         </button>
+
         <button
           type="button"
-          className="btn-outline"
+          className="
+            inline-flex items-center justify-center gap-2
+            rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900
+            hover:bg-slate-50 active:bg-slate-100
+            disabled:cursor-not-allowed disabled:opacity-70
+          "
           onClick={() => setFiles({ before: [], after: [] })}
           disabled={busy}
         >
+          <TrashIcon />
           Reset
         </button>
-        <span className="text-[10px] text-gray-500 ml-auto">
+
+        <span className="sm:ml-auto text-[10px] text-slate-500">
           Hanya gambar (*.jpg, *.png, *.heic). Kamera belakang aktif di mobile.
         </span>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------
+   Sub-komponen presentasional
+------------------------- */
+
+function Panel({
+  title,
+  count,
+  isMobile,
+  busy,
+  onPick,
+  onDropFiles,
+  children,
+}: {
+  title: string;
+  count: number;
+  isMobile: boolean;
+  busy: boolean;
+  onPick: () => void;
+  onDropFiles: (files: File[]) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-3">
+      <header className="flex items-center justify-between">
+        <div className="text-xs font-semibold text-slate-900">{title}</div>
+        <span className="text-[10px] text-slate-500">{count} file</span>
+      </header>
+
+      {/* Dropzone */}
+      <div
+        className="
+          mt-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/40
+          p-4 text-center transition-colors
+          hover:border-slate-300
+        "
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const dropped = Array.from(e.dataTransfer.files || []);
+          onDropFiles(dropped);
+        }}
+        role="button"
+        aria-label={`Area unggah foto ${title}`}
+      >
+        {isMobile ? (
+          <button
+            type="button"
+            className="
+              inline-flex items-center justify-center gap-2
+              rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+              hover:bg-slate-800 active:bg-slate-950
+              disabled:cursor-not-allowed disabled:opacity-70
+            "
+            onClick={onPick}
+            disabled={busy}
+          >
+            <CameraIcon />
+            Buka Kamera
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm">
+              <UploadIcon />
+            </div>
+            <div className="text-xs font-medium text-slate-700">Tarik &amp; letakkan foto ke sini</div>
+            <div className="text-xs text-slate-500">atau</div>
+            <button
+              type="button"
+              className="
+                inline-flex items-center justify-center gap-2
+                rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900
+                hover:bg-slate-50 active:bg-slate-100
+                disabled:cursor-not-allowed disabled:opacity-70
+              "
+              onClick={onPick}
+              disabled={busy}
+            >
+              Pilih File
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Preview */}
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function PreviewGrid({
+  items,
+  onRemove,
+  disabled,
+  emptyText,
+}: {
+  items: PreviewItem[];
+  onRemove: (idx: number) => void;
+  disabled: boolean;
+  emptyText: string;
+}) {
+  if (!items.length) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {items.map((it, idx) => (
+        <div
+          key={`${it.name}-${idx}`}
+          className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white"
+          title={it.name}
+        >
+          <div className="aspect-square w-full bg-slate-50">
+            <img
+              src={it.url}
+              alt={it.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              onLoad={() => {
+                // revoke setelah load agar tidak menumpuk (best effort)
+                try { URL.revokeObjectURL(it.url); } catch { /* noop */ }
+              }}
+            />
+          </div>
+
+          <div className="p-2">
+            <div className="truncate text-[11px] font-medium text-slate-900">{it.name}</div>
+            <div className="mt-0.5 text-[10px] text-slate-500">{it.sizeKB} KB</div>
+          </div>
+
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onRemove(idx)}
+            className="
+              absolute right-1.5 top-1.5
+              inline-flex items-center justify-center
+              rounded-md bg-white/90 p-1.5 text-slate-700 shadow-sm
+              opacity-100 sm:opacity-0 sm:group-hover:opacity-100
+              hover:bg-white
+              disabled:cursor-not-allowed disabled:opacity-60
+            "
+            aria-label="Hapus foto"
+            title="Hapus"
+          >
+            <XIcon />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -3805,20 +3995,19 @@ export default function OrderPhotos({ orderId, onUploaded }: Props) {
 
 ### src/components/orders/OrderPhotosGallery.tsx
 
-- SHA: `1dbf91a387b4`  
-- Ukuran: 4 KB
+- SHA: `af6c34a7ac25`  
+- Ukuran: 6 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/orders/OrderPhotosGallery.tsx
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { OrderPhoto } from "../../types/orders";
 
 const fileUrl = (p?: string | null) => {
   if (!p) return "";
   if (/^https?:\/\//i.test(p)) return p;
   const filesBase = (import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
-  // Fallback pintar: jika FILES_BASE_URL kosong, coba turunan dari API_BASE_URL (buang suffix /api/v1)
   const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
   const originFallback = apiBase.replace(/\/api\/v1$/i, "");
   const base = filesBase || originFallback || "";
@@ -3826,34 +4015,100 @@ const fileUrl = (p?: string | null) => {
 };
 
 export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] }) {
+  const [preview, setPreview] = useState<{ url: string; label: string; ts?: string } | null>(null);
+
   const groups = useMemo(() => {
     const norm = (k: unknown) => String(k || "").toUpperCase();
     return {
-      before: photos.filter(p => norm(p.kind) === "BEFORE"),
-      after: photos.filter(p => norm(p.kind) === "AFTER"),
+      before: photos.filter((p) => norm(p.kind) === "BEFORE"),
+      after: photos.filter((p) => norm(p.kind) === "AFTER"),
     };
   }, [photos]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreview(null);
+    };
+    if (preview) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview]);
+
   if (!photos?.length) {
     return (
-      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
-        <div className="text-sm font-semibold mb-1">Order Photos</div>
-        <div className="text-xs text-gray-500">Belum ada foto.</div>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+        <div className="text-sm font-semibold text-slate-900">Order Photos</div>
+        <div className="mt-2 text-xs text-slate-500">Belum ada foto.</div>
       </div>
     );
   }
 
   return (
-    <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-4">
-      <div className="text-sm font-semibold tracking-tight">Order Photos</div>
-      <Section label="Before" items={groups.before} />
-      <Section label="After" items={groups.after} />
-    </div>
+    <>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">Order Photos</div>
+          <span className="text-xs text-slate-500">{photos.length} foto</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Section
+            label="Before"
+            items={groups.before}
+            onPreview={(data) => setPreview(data)}
+          />
+          <Section
+            label="After"
+            items={groups.after}
+            onPreview={(data) => setPreview(data)}
+          />
+        </div>
+      </div>
+
+      {/* Lightbox Modal */}
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setPreview(null)}
+              className="absolute -top-10 right-0 text-white text-sm font-semibold"
+            >
+              ✕ Close
+            </button>
+
+            <div className="rounded-xl bg-white overflow-hidden shadow-2xl">
+              <img
+                src={preview.url}
+                alt={preview.label}
+                className="w-full max-h-[80vh] object-contain bg-black"
+              />
+              <div className="px-4 py-3 border-t border-slate-200">
+                <div className="text-sm font-semibold text-slate-900">
+                  {preview.label}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {preview.ts ?? "-"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
+/* ------------------------
+   Section
+------------------------- */
+
 function resolveCreatedAt(p: OrderPhoto): string | undefined {
-  // Jangan asumsikan nama field timestamp. Ambil yang ada saja.
   const anyP = p as unknown as Record<string, unknown>;
   const raw =
     (anyP["created_at"] as string | undefined) ??
@@ -3866,46 +4121,67 @@ function resolveCreatedAt(p: OrderPhoto): string | undefined {
   return isNaN(d.getTime()) ? undefined : d.toLocaleString();
 }
 
-function Section({ label, items }: { label: string; items: OrderPhoto[] }) {
+function Section({
+  label,
+  items,
+  onPreview,
+}: {
+  label: string;
+  items: OrderPhoto[];
+  onPreview: (data: { url: string; label: string; ts?: string }) => void;
+}) {
   return (
-    <div>
-      <div className="text-xs font-medium text-gray-600 mb-2">{label}</div>
+    <section className="rounded-xl border border-slate-200 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <div className="text-sm font-semibold text-slate-900">{label}</div>
+        <span className="text-xs text-slate-500">{items.length} foto</span>
+      </div>
+
       {!items.length ? (
-        <div className="text-xs text-gray-500">-</div>
+        <div className="px-4 py-6 text-center text-xs text-slate-500">-</div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {items.map(p => {
-            const url = fileUrl(p.path);
-            return (
-              <a
-                key={p.id}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={resolveCreatedAt(p)}
-                className="group relative block overflow-hidden rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] transition-shadow hover:shadow-elev-2 focus:outline-none focus-visible:shadow-[var(--focus-ring)]"
-              >
-                <img
-                  src={url}
-                  alt={`${label} photo`}
-                  loading="lazy"
-                  className="w-full h-32 md:h-36 lg:h-40 object-cover transition-transform duration-150 ease-out group-hover:scale-[1.02]"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src =
-                      "data:image/svg+xml;utf8," +
-                      encodeURIComponent(
-                        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'><rect width='100%' height='100%' fill='#eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='#999'>image not found</text></svg>"
-                      );
-                  }}
-                />
-                {/* subtle overlay on hover */}
-                <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-              </a>
-            );
-          })}
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {items.map((p) => {
+              const url = fileUrl(p.path);
+              const ts = resolveCreatedAt(p);
+
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() =>
+                    onPreview({
+                      url,
+                      label: `${label} #${p.id}`,
+                      ts,
+                    })
+                  }
+                  className="group block overflow-hidden rounded-lg border border-slate-200 bg-white hover:shadow-lg transition"
+                >
+                  <div className="relative">
+                    <img
+                      src={url}
+                      alt={`${label} photo`}
+                      loading="lazy"
+                      className="h-28 w-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          "data:image/svg+xml;utf8," +
+                          encodeURIComponent(
+                            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'><rect width='100%' height='100%' fill='#f1f5f9'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='#64748b'>image not found</text></svg>"
+                          );
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -3914,8 +4190,8 @@ function Section({ label, items }: { label: string; items: OrderPhoto[] }) {
 
 ### src/components/orders/OrderPhotosUpload.tsx
 
-- SHA: `17221e244132`  
-- Ukuran: 7 KB
+- SHA: `93f5b79cec29`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3929,6 +4205,38 @@ type Props = {
 };
 
 type Incoming = { before: File[]; after: File[] };
+
+function bytesToKB(n: number) {
+  return Math.max(1, Math.ceil(n / 1024));
+}
+
+function ImageIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M8 11a2 2 0 1 0 0-.01" />
+      <path d="M21 16l-6-6-5 5-2-2-5 5" />
+    </svg>
+  );
+}
+
+function CameraIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-2h8l2 2h3a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+function XIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M18 6 6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
 
 export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
   const [files, setFiles] = useState<Incoming>({ before: [], after: [] });
@@ -3945,7 +4253,20 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
   function onChange(kind: "before" | "after", list: FileList | null) {
     if (!list) return;
     const arr = Array.from(list);
-    setFiles(prev => ({ ...prev, [kind]: [...prev[kind], ...arr] }));
+    setFiles((prev) => ({ ...prev, [kind]: [...prev[kind], ...arr] }));
+  }
+
+  function onDrop(kind: "before" | "after", dropped: File[]) {
+    if (!dropped.length) return;
+    setFiles((prev) => ({ ...prev, [kind]: [...prev[kind], ...dropped] }));
+  }
+
+  function removeOne(kind: "before" | "after", index: number) {
+    setFiles((prev) => {
+      const next = [...prev[kind]];
+      next.splice(index, 1);
+      return { ...prev, [kind]: next };
+    });
   }
 
   async function onUpload() {
@@ -3959,161 +4280,237 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
     }
   }
 
+  const totalCount = files.before.length + files.after.length;
+
   return (
-    <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
-      <div className="mb-3">
-        <h3 className="text-sm font-semibold tracking-tight">Order Photos</h3>
-        <p className="text-xs text-gray-600">Unggah foto <span className="font-medium">Before</span> dan <span className="font-medium">After</span>. {isMobile ? 'Kamera tersedia di perangkat Anda.' : 'Dukung drag-drop & pilih file.'}</p>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+              <ImageIcon />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Order Photos</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Unggah foto <span className="font-semibold text-slate-900">Before</span> dan{" "}
+                <span className="font-semibold text-slate-900">After</span>.{" "}
+                {isMobile ? "Kamera tersedia di perangkat Anda." : "Dukung drag-drop & pilih file."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden sm:block text-xs text-slate-500">
+          Total: <span className="font-semibold text-slate-900">{totalCount}</span> file
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* BEFORE */}
-        <section className="border rounded-xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-medium">Before</div>
-            <div className="text-[10px] text-gray-500">PNG/JPG, &le; 5MB</div>
-          </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <UploadPanel
+          title="Before"
+          subtitle="PNG/JPG, ≤ 5MB"
+          kind="before"
+          busy={busy}
+          isMobile={isMobile}
+          files={files.before}
+          onPick={() => pick("before")}
+          onDropFiles={(arr) => onDrop("before", arr)}
+          onRemove={(i) => removeOne("before", i)}
+        />
 
-          <div
-            className="border border-dashed rounded-lg p-4 text-center text-xs bg-white/50 hover:bg-black/5 transition-colors"
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => {
-              e.preventDefault();
-              const dropped = Array.from(e.dataTransfer.files || []);
-              setFiles(prev => ({ ...prev, before: [...prev.before, ...dropped] }));
-            }}
-            aria-label="Drop zone foto before"
-          >
-            {isMobile ? (
-              <button
-                type="button"
-                className="btn-primary disabled:opacity-50"
-                onClick={() => pick("before")}
-                disabled={busy}
-              >
-                Buka Kamera
-              </button>
-            ) : (
-              <>
-                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
-                <button
-                  type="button"
-                  className="btn-outline"
-                  onClick={() => pick("before")}
-                  disabled={busy}
-                >
-                  Pilih File
-                </button>
-              </>
-            )}
-          </div>
-
-          <input
-            ref={beforeRef}
-            type="file"
-            accept="image/*"
-            capture={isMobile ? "environment" : undefined}
-            multiple
-            className="hidden"
-            onChange={e => onChange("before", e.target.files)}
-          />
-
-          {files.before.length > 0 && (
-            <ul className="mt-2 text-xs divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70 overflow-hidden">
-              {files.before.map((f, i) => (
-                <li key={i} className="px-3 py-2 flex items-center justify-between">
-                  <span className="truncate">{f.name}</span>
-                  <span className="text-[10px] text-gray-500 ml-2">{Math.ceil(f.size/1024)} KB</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* AFTER */}
-        <section className="border rounded-xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-medium">After</div>
-            <div className="text-[10px] text-gray-500">PNG/JPG, &le; 5MB</div>
-          </div>
-
-          <div
-            className="border border-dashed rounded-lg p-4 text-center text-xs bg-white/50 hover:bg-black/5 transition-colors"
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => {
-              e.preventDefault();
-              const dropped = Array.from(e.dataTransfer.files || []);
-              setFiles(prev => ({ ...prev, after: [...prev.after, ...dropped] }));
-            }}
-            aria-label="Drop zone foto after"
-          >
-            {isMobile ? (
-              <button
-                type="button"
-                className="btn-primary disabled:opacity-50"
-                onClick={() => pick("after")}
-                disabled={busy}
-              >
-                Buka Kamera
-              </button>
-            ) : (
-              <>
-                <div className="mb-2 text-gray-600">Tarik & letakkan file ke sini</div>
-                <button
-                  type="button"
-                  className="btn-outline"
-                  onClick={() => pick("after")}
-                  disabled={busy}
-                >
-                  Pilih File
-                </button>
-              </>
-            )}
-          </div>
-
-          <input
-            ref={afterRef}
-            type="file"
-            accept="image/*"
-            capture={isMobile ? "environment" : undefined}
-            multiple
-            className="hidden"
-            onChange={e => onChange("after", e.target.files)}
-          />
-
-          {files.after.length > 0 && (
-            <ul className="mt-2 text-xs divide-y divide-[color:var(--color-border)] rounded-md border border-[color:var(--color-border)] bg-white/70 overflow-hidden">
-              {files.after.map((f, i) => (
-                <li key={i} className="px-3 py-2 flex items-center justify-between">
-                  <span className="truncate">{f.name}</span>
-                  <span className="text-[10px] text-gray-500 ml-2">{Math.ceil(f.size/1024)} KB</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <UploadPanel
+          title="After"
+          subtitle="PNG/JPG, ≤ 5MB"
+          kind="after"
+          busy={busy}
+          isMobile={isMobile}
+          files={files.after}
+          onPick={() => pick("after")}
+          onDropFiles={(arr) => onDrop("after", arr)}
+          onRemove={(i) => removeOne("after", i)}
+        />
       </div>
 
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          className="btn-primary disabled:opacity-50"
-          onClick={onUpload}
-          disabled={busy || (files.before.length === 0 && files.after.length === 0)}
-          aria-live="polite"
-        >
-          {busy ? "Mengunggah..." : "Upload"}
-        </button>
-        <button
-          type="button"
-          className="btn-outline disabled:opacity-50"
-          onClick={() => setFiles({ before: [], after: [] })}
-          disabled={busy}
-        >
-          Reset
-        </button>
+      {/* Hidden inputs */}
+      <input
+        ref={beforeRef}
+        type="file"
+        accept="image/*"
+        capture={isMobile ? "environment" : undefined}
+        multiple
+        className="hidden"
+        onChange={(e) => onChange("before", e.target.files)}
+      />
+      <input
+        ref={afterRef}
+        type="file"
+        accept="image/*"
+        capture={isMobile ? "environment" : undefined}
+        multiple
+        className="hidden"
+        onChange={(e) => onChange("after", e.target.files)}
+      />
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-xs text-slate-500 sm:hidden">
+          Total: <span className="font-semibold text-slate-900">{totalCount}</span> file
+        </div>
+
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <button
+            type="button"
+            className="
+              inline-flex items-center justify-center rounded-lg
+              bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+              hover:bg-slate-800 active:bg-slate-950
+              disabled:cursor-not-allowed disabled:opacity-60
+            "
+            onClick={onUpload}
+            disabled={busy || totalCount === 0}
+            aria-live="polite"
+          >
+            {busy ? "Mengunggah..." : "Upload"}
+          </button>
+
+          <button
+            type="button"
+            className="
+              inline-flex items-center justify-center rounded-lg
+              border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900
+              hover:bg-slate-50
+              disabled:cursor-not-allowed disabled:opacity-60
+            "
+            onClick={() => setFiles({ before: [], after: [] })}
+            disabled={busy || totalCount === 0}
+          >
+            Reset
+          </button>
+        </div>
       </div>
     </div>
+  );
+}
+
+/* ------------------------
+   Presentational sub-components
+------------------------- */
+
+function UploadPanel(props: {
+  title: string;
+  subtitle: string;
+  kind: "before" | "after";
+  busy: boolean;
+  isMobile: boolean;
+  files: File[];
+  onPick: () => void;
+  onDropFiles: (arr: File[]) => void;
+  onRemove: (index: number) => void;
+}) {
+  const { title, subtitle, busy, isMobile, files, onPick, onDropFiles, onRemove } = props;
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        <div className="text-[11px] text-slate-500">{subtitle}</div>
+      </div>
+
+      <div
+        className="
+          rounded-xl border border-dashed border-slate-300 bg-slate-50
+          p-4 text-center
+          hover:bg-slate-50/60
+          transition-colors
+        "
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const dropped = Array.from(e.dataTransfer.files || []);
+          onDropFiles(dropped);
+        }}
+        aria-label={`Drop zone foto ${title.toLowerCase()}`}
+      >
+        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-600 ring-1 ring-slate-200">
+          {isMobile ? <CameraIcon /> : <ImageIcon />}
+        </div>
+
+        {isMobile ? (
+          <>
+            <div className="text-xs font-medium text-slate-700">Ambil foto dari kamera</div>
+            <div className="mt-1 text-xs text-slate-500">Klik tombol untuk membuka kamera.</div>
+            <button
+              type="button"
+              className="
+                mt-3 inline-flex items-center justify-center rounded-lg
+                bg-slate-900 px-3 py-2 text-xs font-semibold text-white
+                hover:bg-slate-800 active:bg-slate-950
+                disabled:cursor-not-allowed disabled:opacity-60
+              "
+              onClick={onPick}
+              disabled={busy}
+            >
+              Buka Kamera
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-xs font-medium text-slate-700">Tarik & letakkan file</div>
+            <div className="mt-1 text-xs text-slate-500">Atau pilih file dari perangkat Anda.</div>
+            <button
+              type="button"
+              className="
+                mt-3 inline-flex items-center justify-center rounded-lg
+                border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
+                hover:bg-slate-50
+                disabled:cursor-not-allowed disabled:opacity-60
+              "
+              onClick={onPick}
+              disabled={busy}
+            >
+              Pilih File
+            </button>
+          </>
+        )}
+      </div>
+
+      {files.length > 0 && (
+        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between bg-slate-50 px-3 py-2">
+            <div className="text-xs font-semibold text-slate-700">
+              Dipilih: <span className="text-slate-900">{files.length}</span> file
+            </div>
+            <div className="text-[11px] text-slate-500">Klik ✕ untuk hapus</div>
+          </div>
+
+          <ul className="divide-y divide-slate-100">
+            {files.map((f, i) => (
+              <li key={`${f.name}-${i}`} className="flex items-center gap-2 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-xs font-medium text-slate-900">{f.name}</div>
+                  <div className="text-[11px] text-slate-500">{bytesToKB(f.size)} KB</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  disabled={busy}
+                  className="
+                    inline-flex h-8 w-8 items-center justify-center rounded-md
+                    text-slate-600 hover:bg-slate-100
+                    disabled:cursor-not-allowed disabled:opacity-60
+                  "
+                  aria-label={`Hapus file ${f.name}`}
+                  title="Hapus"
+                >
+                  <XIcon />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -4122,8 +4519,8 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
 
 ### src/components/orders/OrderStatusStepper.tsx
 
-- SHA: `77e3205182c1`  
-- Ukuran: 2 KB
+- SHA: `eafe158a6bc8`  
+- Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -4144,7 +4541,7 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
 
   return (
     <div
-      className="flex items-center gap-2 text-xs select-none"
+      className="flex flex-wrap items-center gap-2 text-xs select-none"
       role="list"
       aria-label="Order progress"
     >
@@ -4152,39 +4549,55 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
         const isCurrent = idx === activeIdx;
         const isDone = idx < activeIdx;
 
-        const dotCls =
-          'grid place-items-center h-6 w-6 rounded-full border text-[10px] font-semibold transition-transform duration-150 motion-reduce:transition-none';
+        // Container pill
+        const pillBase =
+          'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors motion-reduce:transition-none';
+        const pillState = isCurrent
+          ? 'bg-slate-900 text-white border-slate-900'
+          : isDone
+          ? 'bg-slate-50 text-slate-900 border-slate-200'
+          : 'bg-white text-slate-500 border-slate-200';
+
+        // Dot / icon
+        const dotBase =
+          'grid place-items-center h-5 w-5 rounded-full border text-[10px] font-semibold';
         const dotState = isCurrent
-          ? 'bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)] border-transparent scale-[1.04]'
+          ? 'bg-white text-slate-900 border-white'
           : isDone
-          ? 'bg-[#E6EDFF] text-[var(--color-brand-primary)] border-[color:var(--color-brand-primary)]'
-          : 'bg-[color:var(--color-surface)] text-gray-500 border-[color:var(--color-border)]';
+          ? 'bg-slate-900 text-white border-slate-900'
+          : 'bg-white text-slate-500 border-slate-200';
 
-        const labelCls = 'text-[11px] font-medium tracking-wide';
-        const labelState = isCurrent
-          ? 'text-[color:var(--color-text-default)]'
-          : isDone
-          ? 'text-[var(--color-brand-primary)]'
-          : 'text-gray-500';
+        // Label
+        const labelBase = 'text-[11px] font-semibold tracking-wide';
+        const labelState = isCurrent ? 'text-white' : isDone ? 'text-slate-900' : 'text-slate-500';
 
-        const barCls = 'h-[2px] rounded w-6 md:w-10';
-        const barState = idx < activeIdx
-          ? 'bg-[var(--color-brand-primary)]/80'
-          : 'bg-[color:var(--color-border)]';
+        // Connector (line) between pills
+        const barBase = 'h-[2px] w-6 rounded-full sm:w-10';
+        const barState = idx < activeIdx ? 'bg-slate-900' : 'bg-slate-200';
 
         return (
           <React.Fragment key={s}>
             <div
-              className="flex items-center gap-2"
+              className={`${pillBase} ${pillState}`}
               role="listitem"
               aria-current={isCurrent ? 'step' : undefined}
               aria-label={s}
             >
-              <span className={`${dotCls} ${dotState}`} aria-hidden="true">{idx + 1}</span>
-              <span className={`${labelCls} ${labelState}`}>{s}</span>
+              <span className={`${dotBase} ${dotState}`} aria-hidden="true">
+                {isDone ? (
+                  // check icon for done
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                ) : (
+                  idx + 1
+                )}
+              </span>
+              <span className={`${labelBase} ${labelState}`}>{s}</span>
             </div>
+
             {idx < UI_FLOW.length - 1 && (
-              <div className={`${barCls} ${barState}`} aria-hidden="true" />
+              <div className={`${barBase} ${barState}`} aria-hidden="true" />
             )}
           </React.Fragment>
         );
@@ -4198,8 +4611,8 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
 
 ### src/components/pos/CartPanel.tsx
 
-- SHA: `ae5609e46bc7`  
-- Ukuran: 4 KB
+- SHA: `779d74137fff`  
+- Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -4224,79 +4637,110 @@ type Props = {
   onRemove: (service_id: string) => void;
 };
 
-export default function CartPanel({
-  items,
-  onChangeQty,
-  onChangeNote,
-  onRemove,
-}: Props): ReactElement  {
-  const subtotal = useMemo(
-    () => items.reduce((s, it) => s + it.price * it.qty, 0),
-    [items],
-  );
+export default function CartPanel({ items, onChangeQty, onChangeNote, onRemove }: Props): ReactElement {
+  const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
 
   return (
-    <div className="card rounded-lg border border-(--color-border) shadow-elev-1 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold">Keranjang</div>
-        <div className="text-[10px] text-gray-600">{items.length} item</div>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-900">Keranjang</div>
+          <div className="mt-0.5 text-xs text-slate-500">
+            {items.length > 0 ? 'Atur qty, catatan, lalu simpan transaksi.' : 'Tambah layanan dari pencarian.'}
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-100">
+          {items.length} item
+        </span>
       </div>
 
+      {/* Empty */}
       {items.length === 0 && (
-        <div className="rounded-lg border border-dashed border-(--color-border) p-4 text-sm text-gray-600 text-center">
-          Belum ada item
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center">
+          <div className="text-sm font-semibold text-slate-900">Belum ada item</div>
+          <div className="mt-1 text-xs text-slate-500">Cari layanan, lalu tekan Enter untuk menambahkan.</div>
         </div>
       )}
 
+      {/* List */}
       {items.length > 0 && (
         <>
           <ul className="space-y-2">
             {items.map((it) => (
               <li
                 key={it.service_id}
-                className="flex items-start gap-3 pb-2 border-b border-(--color-border)"
+                className="rounded-2xl border border-slate-200 bg-white p-3"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium truncate">{it.name}</div>
-                    <span className="chip chip--subtle text-xs">{it.unit}</span>
+                <div className="flex items-start gap-3">
+                  {/* Main */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-900">{it.name}</div>
+                        <div className="mt-1 inline-flex items-center rounded-full bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-100">
+                          {it.unit}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <div className="text-[11px] text-slate-500">Total</div>
+                        <div className="text-sm font-extrabold tracking-tight text-slate-900">
+                          {toIDR(it.price * it.qty)}
+                        </div>
+                        <div className="text-[11px] text-slate-500">{toIDR(it.price)} / item</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="sr-only" htmlFor={`note-${it.service_id}`}>
+                        Catatan untuk {it.name}
+                      </label>
+                      <input
+                        id={`note-${it.service_id}`}
+                        className="
+                          w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                        "
+                        placeholder="Catatan item (opsional)"
+                        value={it.note ?? ''}
+                        onChange={(e) => onChangeNote(it.service_id, e.target.value)}
+                        aria-label={`Catatan untuk ${it.name}`}
+                      />
+                    </div>
                   </div>
 
-                  <div className="mt-1 text-sm font-semibold">
-                    {toIDR(it.price * it.qty)}
+                  {/* Actions */}
+                  <div className="shrink-0 flex flex-col items-end gap-2">
+                    <QtyStepper
+                      value={it.qty}
+                      onChange={(v) => onChangeQty(it.service_id, Math.max(1, v))}
+                      label={`Kuantitas ${it.name}`}
+                    />
+                    <button
+                      type="button"
+                      className="
+                        inline-flex items-center justify-center rounded-xl
+                        border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700
+                        hover:bg-red-100 active:bg-red-200
+                      "
+                      onClick={() => onRemove(it.service_id)}
+                      aria-label={`Hapus ${it.name}`}
+                    >
+                      Hapus
+                    </button>
                   </div>
-
-                  <input
-                    className="input mt-2 px-2 py-2 text-sm w-full"
-                    placeholder="Catatan item (opsional)"
-                    value={it.note ?? ''}
-                    onChange={(e) => onChangeNote(it.service_id, e.target.value)}
-                    aria-label={`Catatan untuk ${it.name}`}
-                  />
-                </div>
-
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <QtyStepper
-                    value={it.qty}
-                    onChange={(v) => onChangeQty(it.service_id, Math.max(1, v))}
-                    label={`Kuantitas ${it.name}`}
-                  />
-                  <button
-                    type="button"
-                    className="btn-outline px-2 py-1 text-xs border-(--color-status-danger) text-(--color-status-danger)"
-                    onClick={() => onRemove(it.service_id)}
-                    aria-label={`Hapus ${it.name}`}
-                  >
-                    Hapus
-                  </button>
                 </div>
               </li>
             ))}
           </ul>
 
-          <div className="flex justify-between items-center pt-2 text-sm font-semibold">
-            <span>Subtotal</span>
-            <span>{toIDR(subtotal)}</span>
+          {/* Subtotal */}
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-900">Subtotal</span>
+              <span className="text-sm font-extrabold text-slate-900">{toIDR(subtotal)}</span>
+            </div>
           </div>
         </>
       )}
@@ -4318,26 +4762,31 @@ function QtyStepper({
   label?: string;
 }) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-(--color-border) overflow-hidden">
+    <div className="inline-flex items-center overflow-hidden rounded-xl border border-slate-200 bg-white">
       <button
         type="button"
-        className="px-2 py-1 hover:bg-black/5"
+        className="h-10 w-10 text-base font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100"
         onClick={() => onChange(Math.max(1, value - 1))}
         aria-label={label ? `${label}: kurang` : 'Kurangi jumlah'}
       >
         &minus;
       </button>
+
       <input
         type="number"
         min={1}
         value={value}
         onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
-        className="w-16 text-center py-1 input border-0 focus:ring-0"
+        className="
+          h-10 w-14 border-x border-slate-200 bg-white text-center text-sm font-semibold text-slate-900
+          focus:outline-none
+        "
         aria-label={label ?? 'Jumlah'}
       />
+
       <button
         type="button"
-        className="px-2 py-1 hover:bg-black/5"
+        className="h-10 w-10 text-base font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100"
         onClick={() => onChange(value + 1)}
         aria-label={label ? `${label}: tambah` : 'Tambah jumlah'}
       >
@@ -4621,13 +5070,13 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
 
 ### src/components/pos/ProductSearch.tsx
 
-- SHA: `c83d10d31c3a`  
-- Ukuran: 4 KB
+- SHA: `7352f1af018f`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/pos/ProductSearch.tsx
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { Service } from '../../types/services';
 import { listServices } from '../../api/services';
 import { listServicePricesByService, computeEffectivePrice } from '../../api/servicePrices';
@@ -4638,31 +5087,73 @@ type Props = {
   onPick: (row: Service & { price_effective: number }) => void;
 };
 
+type Row = Service & { price_effective: number };
+
+function formatIDR(n: number): string {
+  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+}
+
+function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.2-3.2" />
+    </svg>
+  );
+}
+
+function XIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M18 6L6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="h-4 w-40 rounded bg-slate-200" />
+          <div className="mt-2 h-3 w-24 rounded bg-slate-200" />
+        </div>
+        <div className="h-4 w-20 rounded bg-slate-200" />
+      </div>
+      <div className="mt-3 h-3 w-32 rounded bg-slate-200" />
+    </div>
+  );
+}
+
 export default function ProductSearch({ onPick }: Props): React.ReactElement {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
   const branchId: string | null = user?.branch_id != null ? String(user.branch_id) : null;
+
   const [q, setQ] = useState('');
   const [base, setBase] = useState<Service[]>([]);
   const [priceMap, setPriceMap] = useState<Record<string, ServicePrice[]>>({});
-  const [rows, setRows] = useState<(Service & { price_effective: number })[]>([]);
+  const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       const res = await listServices({ q, is_active: true, per_page: 10, page: 1 });
       const list = (res.data ?? []) as Service[];
       setBase(list);
-      // Ambil daftar override harga per service (sekali per service, paralel)
+
       const entries = await Promise.all(
         list.map(async (s) => [String(s.id), (await listServicePricesByService(String(s.id))).data] as const)
       );
+
       const map: Record<string, ServicePrice[]> = {};
       for (const [sid, prices] of entries) map[sid] = prices ?? [];
       setPriceMap(map);
-      // Hitung harga efektif untuk cabang aktif saat ini (tanpa request tambahan)
-      const computed = list.map(s => ({
+
+      const computed: Row[] = list.map((s) => ({
         ...s,
         price_effective: computeEffectivePrice(map[String(s.id)], branchId, s.price_default),
       }));
@@ -4678,60 +5169,126 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 
   useEffect(() => {
     if (!base.length) return;
-    const computed = base.map(s => ({
+    const computed: Row[] = base.map((s) => ({
       ...s,
       price_effective: computeEffectivePrice(priceMap[String(s.id)], branchId, s.price_default),
     }));
     setRows(computed);
   }, [branchId, base, priceMap]);
 
+  const hintText = useMemo(() => {
+    // Hint singkat, tidak mengubah logic (hanya copy)
+    return 'Enter untuk cari · Klik kartu layanan untuk menambah ke keranjang';
+  }, []);
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Search bar */}
-      <div className="flex gap-2">
-        <input
-          className="input px-3 py-2 w-full"
-          placeholder="Cari layanan…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void refresh(); }}
-          aria-label="Cari layanan"
-        />
+      <div className="flex items-stretch gap-2">
+        <div className="relative flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+            <SearchIcon />
+          </span>
+
+          <input
+            className="
+              w-full rounded-xl border border-slate-200 bg-white
+              py-2.5 pl-10 pr-10 text-sm text-slate-900
+              placeholder:text-slate-400
+              focus:border-slate-900 focus:outline-none
+            "
+            placeholder="Cari layanan… (mis. Cuci Sepatu, Fast Clean)"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void refresh(); }}
+            aria-label="Cari layanan"
+          />
+
+          {q.trim().length > 0 && (
+            <button
+              type="button"
+              className="
+                absolute right-2 top-1/2 -translate-y-1/2
+                rounded-lg p-2 text-slate-600 hover:bg-slate-100
+                focus:outline-none focus:ring-2 focus:ring-slate-200
+              "
+              onClick={() => setQ('')}
+              aria-label="Hapus pencarian"
+            >
+              <XIcon />
+            </button>
+          )}
+        </div>
+
         <button
-          className="btn-outline"
+          type="button"
+          className="
+            inline-flex items-center justify-center gap-2
+            rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
+            hover:bg-slate-800 active:bg-slate-950
+            disabled:cursor-not-allowed disabled:opacity-60
+          "
           onClick={() => void refresh()}
+          disabled={loading}
           aria-label="Cari"
         >
+          <SearchIcon className="text-white/90" />
           Cari
         </button>
       </div>
-      <div className="text-[10px] text-gray-500">Enter untuk cari • Klik kartu layanan untuk menambah ke keranjang</div>
+
+      <div className="text-[11px] text-slate-500">{hintText}</div>
 
       {/* States */}
       {loading && (
-        <div className="text-sm text-gray-500" aria-live="polite">Memuat…</div>
+        <div className="grid gap-2 sm:grid-cols-2" aria-live="polite">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       )}
-      {error && (
-        <div className="text-sm text-red-600" role="alert" aria-live="polite">{error}</div>
+
+      {!loading && error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" aria-live="polite">
+          {error}
+        </div>
       )}
 
       {/* Results */}
       {!loading && !error && rows.length > 0 && (
-        <div className="grid md:grid-cols-2 gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {rows.map((r) => (
             <button
               key={r.id}
-              className="rounded-lg border border-(--color-border) bg-(--color-surface) p-3 text-left transition-colors hover:bg-black/5 focus-visible:focus-ring"
+              type="button"
+              className="
+                group w-full rounded-2xl border border-slate-200 bg-white p-3 text-left
+                shadow-[0_14px_40px_-34px_rgba(0,0,0,.35)]
+                transition hover:-translate-y-[1px] hover:border-slate-300 hover:bg-slate-50
+                focus:outline-none focus:ring-2 focus:ring-slate-200
+              "
               onClick={() => onPick(r)}
+              title="Klik untuk menambah ke keranjang"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-medium">{r.name}</div>
-                  <div className="text-xs text-gray-600">{r.unit}</div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-900">{r.name}</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{r.unit}</div>
                 </div>
-                <div className="text-sm font-semibold tabular-nums">
-                  {r.price_effective.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-semibold tracking-tight text-slate-900 tabular-nums">
+                    {formatIDR(r.price_effective)}
+                  </div>
+                  <div className="mt-1 inline-flex rounded-full bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+                    + Tambah
+                  </div>
                 </div>
+              </div>
+
+              <div className="mt-3 text-[11px] text-slate-500">
+                Klik untuk menambah ke keranjang.
               </div>
             </button>
           ))}
@@ -4739,7 +5296,10 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
       )}
 
       {!loading && !error && rows.length === 0 && (
-        <div className="text-sm text-gray-600">Tidak ada hasil</div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center">
+          <div className="text-sm font-semibold text-slate-900">Tidak ada hasil</div>
+          <div className="mt-1 text-xs text-slate-500">Coba kata kunci lain, atau kosongkan pencarian lalu tekan Cari.</div>
+        </div>
       )}
     </div>
   );
@@ -6061,310 +6621,481 @@ function RowSkeleton() {
 
 ### src/pages/customers/CustomerDetail.tsx
 
-- SHA: `63f28d242227`  
-- Ukuran: 13 KB
+- SHA: `789a9690795f`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/customers/CustomerDetail.tsx
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { createCustomer, getCustomer, updateCustomer } from '../../api/customers';
-import type { Customer, CustomerUpsertPayload, SingleResponse } from '../../types/customers';
-import { useAuth } from '../../store/useAuth';
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { createCustomer, getCustomer, updateCustomer } from "../../api/customers";
+import type { Customer, CustomerUpsertPayload, SingleResponse } from "../../types/customers";
+import { useAuth } from "../../store/useAuth";
+
+function IconArrowLeft(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+function IconUser(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M20 21a8 8 0 1 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+function IconCopy(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <rect x="2" y="2" width="13" height="13" rx="2" opacity=".5" />
+    </svg>
+  );
+}
+function IconSave(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v5h8" />
+    </svg>
+  );
+}
+function initials(name?: string) {
+  const n = (name ?? "").trim();
+  if (!n) return "C";
+  const parts = n.split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "C";
+  const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+  return (a + b).toUpperCase();
+}
 
 export default function CustomerDetail() {
-    const params = useParams();
-    const navigate = useNavigate();
-    const isNew = !params.id || params.id === 'new';
-    const { hasRole, user } = useAuth;
+  const params = useParams();
+  const navigate = useNavigate();
+  const isNew = !params.id || params.id === "new";
+  const { hasRole, user } = useAuth;
 
-    const canEdit = hasRole('Superadmin') || hasRole('Admin Cabang') || hasRole('Kasir');
+  const canEdit = hasRole("Superadmin") || hasRole("Admin Cabang") || hasRole("Kasir");
 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState<CustomerUpsertPayload>({
-        name: '',
-        whatsapp: '',
-        address: '',
-        notes: '',
-    });
-    const [entity, setEntity] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<CustomerUpsertPayload>({
+    name: "",
+    whatsapp: "",
+    address: "",
+    notes: "",
+  });
+  const [entity, setEntity] = useState<Customer | null>(null);
 
-    useEffect(() => {
-        let cancelled = false;
-        if (!isNew && params.id) {
-            (async () => {
-                setLoading(true);
-                setError(null);
-                try {
-                    const res = await getCustomer(params.id!);
-                    if (!cancelled) {
-                        setEntity(res.data);
-                        if (res.data) {
-                            setForm({
-                                name: res.data.name,
-                                whatsapp: res.data.whatsapp,
-                                address: res.data.address ?? '',
-                                notes: res.data.notes ?? '',
-                            });
-                        }
-                    }
-                } catch {
-                    if (!cancelled) setError('Gagal memuat detail pelanggan.');
-                } finally {
-                    if (!cancelled) setLoading(false);
-                }
-            })();
-        }
-        return () => { cancelled = true; };
-    }, [isNew, params.id]);
-
-    function normalizeWa(input: string): string {
-        const s = (input || '').trim();
-        return s.replace(/[^\d]/g, '');
-    }
-
-    // buang key undefined & konversi "" => null
-    function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
-        const out: Partial<T> = {};
-        Object.entries(obj).forEach(([k, v]) => {
-            if (v === undefined) return;
-            if (typeof v === 'string') {
-                const t = v.trim();
-                (out as Record<string, unknown>)[k] = t === '' ? null : t;
-            } else {
-                (out as Record<string, unknown>)[k] = v;
-            }
-        });
-        return out;
-    }
-
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        if (!canEdit) return;
-        setSaving(true);
+  useEffect(() => {
+    let cancelled = false;
+    if (!isNew && params.id) {
+      (async () => {
+        setLoading(true);
         setError(null);
         try {
-            let res: SingleResponse<Customer>;
-
-            if (isNew) {
-                const basePayload = {
-                    name: form.name,
-                    whatsapp: normalizeWa(form.whatsapp),
-                    address: form.address,
-                    notes: form.notes,
-                };
-                const cleanedBase = clean(basePayload);
-
-                let finalBranchId: string | undefined;
-                if (hasRole('Superadmin')) {
-                    finalBranchId = form.branch_id && form.branch_id.trim() !== '' ? form.branch_id.trim() : undefined;
-                } else {
-                    finalBranchId = user?.branch_id ? String(user.branch_id) : undefined;
-                    if (!finalBranchId) {
-                        setError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
-                        setSaving(false);
-                        return;
-                    }
-                }
-
-                const payloadCreate: CustomerUpsertPayload = {
-                    name: String(cleanedBase.name ?? ''),
-                    whatsapp: String(cleanedBase.whatsapp ?? ''),
-                    address: (cleanedBase.address as string | null | undefined) ?? null,
-                    notes: (cleanedBase.notes as string | null | undefined) ?? null,
-                    ...(finalBranchId ? { branch_id: finalBranchId } : {}),
-                };
-                res = await createCustomer(payloadCreate);
-            } else {
-                if (!params.id) {
-                    setError('ID pelanggan tidak valid.');
-                    setSaving(false);
-                    return;
-                }
-                const cleanedUpdate = clean({
-                    name: form.name,
-                    whatsapp: normalizeWa(form.whatsapp),
-                    address: form.address,
-                    notes: form.notes,
-                    ...(hasRole('Superadmin') && form.branch_id && String(form.branch_id).trim() !== ''
-                        ? { branch_id: String(form.branch_id).trim() }
-                        : {}),
-                });
-                const payloadUpdate: Partial<CustomerUpsertPayload> = {
-                    ...(cleanedUpdate.name !== undefined ? { name: String(cleanedUpdate.name) } : {}),
-                    ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
-                    ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
-                    ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
-                    ...(hasRole('Superadmin') && cleanedUpdate.branch_id !== undefined
-                        ? { branch_id: String(cleanedUpdate.branch_id) }
-                        : {}),
-                };
-                res = await updateCustomer(params.id, payloadUpdate);
+          const res = await getCustomer(params.id!);
+          if (!cancelled) {
+            setEntity(res.data);
+            if (res.data) {
+              setForm({
+                name: res.data.name,
+                whatsapp: res.data.whatsapp,
+                address: res.data.address ?? "",
+                notes: res.data.notes ?? "",
+              });
             }
-
-            if (res?.data?.id) {
-                navigate(`/customers/${String(res.data.id)}`);
-            } else {
-                setError('Gagal menyimpan data pelanggan.');
-            }
-        } catch (err) {
-            const anyErr = err as { response?: { data?: unknown }; message?: string };
-            const srv = (anyErr.response?.data as { message?: string; errors?: unknown } | undefined) || undefined;
-            const msg = srv?.message ?? (srv?.errors ? JSON.stringify(srv.errors) : undefined) ?? anyErr.message;
-            setError(msg ?? 'Gagal menyimpan data pelanggan.');
+          }
+        } catch {
+          if (!cancelled) setError("Gagal memuat detail pelanggan.");
         } finally {
-            setSaving(false);
+          if (!cancelled) setLoading(false);
         }
+      })();
     }
+    return () => {
+      cancelled = true;
+    };
+  }, [isNew, params.id]);
 
-    if (loading) {
-        return (
-            <div className="space-y-4">
-                <div className="h-6 w-48 rounded bg-black/10 animate-pulse" />
-                <div className="card p-6 border border-[color:var(--color-border)] rounded-lg shadow-elev-1 space-y-4 max-w-2xl">
-                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
-                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
-                    <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
-                    <div className="h-20 w-full rounded bg-black/10 animate-pulse" />
-                    <div className="flex gap-2">
-                        <div className="h-10 w-28 rounded bg-black/10 animate-pulse" />
-                        <div className="h-10 w-24 rounded bg-black/10 animate-pulse" />
-                    </div>
-                </div>
-            </div>
-        );
+  function normalizeWa(input: string): string {
+    const s = (input || "").trim();
+    return s.replace(/[^\d]/g, "");
+  }
+
+  // buang key undefined & konversi "" => null
+  function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
+    const out: Partial<T> = {};
+    Object.entries(obj).forEach(([k, v]) => {
+      if (v === undefined) return;
+      if (typeof v === "string") {
+        const t = v.trim();
+        (out as Record<string, unknown>)[k] = t === "" ? null : t;
+      } else {
+        (out as Record<string, unknown>)[k] = v;
+      }
+    });
+    return out;
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canEdit) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let res: SingleResponse<Customer>;
+
+      if (isNew) {
+        const basePayload = {
+          name: form.name,
+          whatsapp: normalizeWa(form.whatsapp),
+          address: form.address,
+          notes: form.notes,
+        };
+        const cleanedBase = clean(basePayload);
+
+        let finalBranchId: string | undefined;
+        if (hasRole("Superadmin")) {
+          finalBranchId = form.branch_id && form.branch_id.trim() !== "" ? form.branch_id.trim() : undefined;
+        } else {
+          finalBranchId = user?.branch_id ? String(user.branch_id) : undefined;
+          if (!finalBranchId) {
+            setError("Akun Anda belum terikat ke cabang. Hubungi admin pusat.");
+            setSaving(false);
+            return;
+          }
+        }
+
+        const payloadCreate: CustomerUpsertPayload = {
+          name: String(cleanedBase.name ?? ""),
+          whatsapp: String(cleanedBase.whatsapp ?? ""),
+          address: (cleanedBase.address as string | null | undefined) ?? null,
+          notes: (cleanedBase.notes as string | null | undefined) ?? null,
+          ...(finalBranchId ? { branch_id: finalBranchId } : {}),
+        };
+        res = await createCustomer(payloadCreate);
+      } else {
+        if (!params.id) {
+          setError("ID pelanggan tidak valid.");
+          setSaving(false);
+          return;
+        }
+        const cleanedUpdate = clean({
+          name: form.name,
+          whatsapp: normalizeWa(form.whatsapp),
+          address: form.address,
+          notes: form.notes,
+          ...(hasRole("Superadmin") && form.branch_id && String(form.branch_id).trim() !== ""
+            ? { branch_id: String(form.branch_id).trim() }
+            : {}),
+        });
+        const payloadUpdate: Partial<CustomerUpsertPayload> = {
+          ...(cleanedUpdate.name !== undefined ? { name: String(cleanedUpdate.name) } : {}),
+          ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
+          ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
+          ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
+          ...(hasRole("Superadmin") && cleanedUpdate.branch_id !== undefined ? { branch_id: String(cleanedUpdate.branch_id) } : {}),
+        };
+        res = await updateCustomer(params.id, payloadUpdate);
+      }
+
+      if (res?.data?.id) {
+        navigate(`/customers/${String(res.data.id)}`);
+      } else {
+        setError("Gagal menyimpan data pelanggan.");
+      }
+    } catch (err) {
+      const anyErr = err as { response?: { data?: unknown }; message?: string };
+      const srv = (anyErr.response?.data as { message?: string; errors?: unknown } | undefined) || undefined;
+      const msg = srv?.message ?? (srv?.errors ? JSON.stringify(srv.errors) : undefined) ?? anyErr.message;
+      setError(msg ?? "Gagal menyimpan data pelanggan.");
+    } finally {
+      setSaving(false);
     }
+  }
 
+  if (loading) {
     return (
-        <div className="space-y-4">
-            {/* Header */}
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold tracking-tight">
-                        {isNew ? 'Buat Pelanggan' : 'Detail Pelanggan'}
-                    </h1>
-                    <p className="text-xs text-gray-600">
-                        Data identitas pelanggan untuk transaksi & penjemputan
-                    </p>
-                </div>
-            </header>
-
-            {/* Error global */}
-            {error && (
-                <div
-                    role="alert"
-                    aria-live="polite"
-                    className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-                >
-                    {error}
-                </div>
-            )}
-
-            {/* Form */}
-            <form
-                onSubmit={onSubmit}
-                aria-busy={saving ? 'true' : 'false'}
-                className="card p-4 md:p-6 border border-[color:var(--color-border)] rounded-lg shadow-elev-1 space-y-4 max-w-2xl"
-            >
-                {/* Cabang */}
-                {hasRole('Superadmin') ? (
-                    <label className="grid gap-1 text-sm">
-                        <span>Branch ID (Superadmin)</span>
-                        <input
-                            placeholder="CTH: 019aa7... (opsional)"
-                            className="input"
-                            value={form.branch_id ?? ''}
-                            onChange={(e) =>
-                                setForm((f) => ({
-                                    ...f,
-                                    branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
-                                }))
-                            }
-                        />
-                        <span className="text-xs text-gray-500">Kosongkan untuk tidak mengubah cabang.</span>
-                    </label>
-                ) : (
-                    <div className="text-sm text-gray-600">
-                        Cabang: <span className="font-medium">{user?.branch_id ?? '-'}</span>
-                    </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label className="grid gap-1 text-sm">
-                        <span>Nama</span>
-                        <input
-                            placeholder="Nama pelanggan"
-                            className="input"
-                            value={form.name}
-                            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                            required
-                            autoComplete="name"
-                        />
-                    </label>
-
-                    <label className="grid gap-1 text-sm">
-                        <span>WhatsApp</span>
-                        <input
-                            placeholder="08xxxxxxxxxx"
-                            className="input"
-                            value={form.whatsapp}
-                            onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                            required
-                            inputMode="tel"
-                            autoComplete="tel"
-                        />
-                        <span className="text-xs text-gray-500">Hanya angka, akan dinormalisasi saat simpan.</span>
-                    </label>
-
-                    <label className="grid gap-1 text-sm md:col-span-2">
-                        <span>Alamat</span>
-                        <input
-                            placeholder="Alamat lengkap (opsional)"
-                            className="input"
-                            value={form.address ?? ''}
-                            onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                            autoComplete="street-address"
-                        />
-                    </label>
-
-                    <label className="grid gap-1 text-sm md:col-span-2">
-                        <span>Catatan</span>
-                        <textarea
-                            placeholder="Instruksi khusus, preferensi, atau catatan lain"
-                            className="input min-h-[96px]"
-                            value={form.notes ?? ''}
-                            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                        />
-                    </label>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                    <button
-                        disabled={saving || !canEdit}
-                        className="btn-primary disabled:opacity-50"
-                        type="submit"
-                        aria-label="Simpan pelanggan"
-                    >
-                        {saving ? 'Menyimpan…' : 'Simpan'}
-                    </button>
-
-                    {!isNew && entity && (
-                        <button
-                            type="button"
-                            className="btn-outline"
-                            onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
-                            aria-label="Salin nomor WhatsApp"
-                        >
-                            Salin WA
-                        </button>
-                    )}
-                </div>
-            </form>
+      <div className="space-y-4">
+        <div className="h-7 w-56 rounded bg-black/10 animate-pulse" />
+        <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)] space-y-4">
+          <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+          <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+          <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
+          <div className="h-24 w-full rounded bg-black/10 animate-pulse" />
+          <div className="flex gap-2">
+            <div className="h-10 w-32 rounded bg-black/10 animate-pulse" />
+            <div className="h-10 w-28 rounded bg-black/10 animate-pulse" />
+          </div>
         </div>
+      </div>
     );
+  }
+
+  const title = isNew ? "Buat Customer" : "Detail Customer";
+  const subtitle = "Data identitas pelanggan untuk transaksi, penjemputan, dan histori.";
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+            <IconUser />
+          </div>
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
+              <Link to="/customers" className="hover:underline">
+                Customers
+              </Link>
+              <span className="text-slate-300">/</span>
+              <span className="text-slate-700">{isNew ? "New" : "Detail"}</span>
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
+            <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/customers"
+            className="
+              inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
+              text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
+            "
+            aria-label="Kembali ke daftar pelanggan"
+          >
+            <IconArrowLeft />
+            Back
+          </Link>
+
+          {!isNew && entity && (
+            <button
+              type="button"
+              className="
+                inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
+                text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
+              "
+              onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
+              aria-label="Salin nomor WhatsApp"
+            >
+              <IconCopy />
+              Copy WA
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Error global */}
+      {error && (
+        <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* Card + Form */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+        <form
+          onSubmit={onSubmit}
+          aria-busy={saving ? "true" : "false"}
+          className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]"
+        >
+          {/* top strip */}
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Informasi Customer</div>
+              <div className="mt-1 text-xs text-slate-500">Lengkapi data agar transaksi dan pengiriman lebih cepat.</div>
+            </div>
+
+            <button
+              disabled={saving || !canEdit}
+              className="
+                inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5
+                text-sm font-semibold text-white shadow-sm
+                hover:bg-slate-800 active:bg-slate-950
+                disabled:cursor-not-allowed disabled:opacity-70
+              "
+              type="submit"
+              aria-label="Simpan pelanggan"
+            >
+              <IconSave />
+              {saving ? "Menyimpan…" : "Simpan"}
+            </button>
+          </div>
+
+          {/* Cabang */}
+          <div className="mt-5">
+            {hasRole("Superadmin") ? (
+              <label className="grid gap-1">
+                <span className="text-sm font-medium text-slate-700">Branch ID (Superadmin)</span>
+                <input
+                  placeholder="CTH: 019aa7... (opsional)"
+                  className="
+                    w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
+                    text-slate-900 placeholder:text-slate-400
+                    focus:border-slate-900 focus:outline-none
+                  "
+                  value={form.branch_id ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
+                    }))
+                  }
+                />
+                <span className="text-xs text-slate-500">Kosongkan untuk tidak mengubah cabang.</span>
+              </label>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+                Cabang: <span className="font-semibold text-slate-900">{user?.branch_id ?? "-"}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Fields */}
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label className="grid gap-1">
+              <span className="text-sm font-medium text-slate-700">Nama</span>
+              <input
+                placeholder="Nama pelanggan"
+                className="
+                  w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
+                  text-slate-900 placeholder:text-slate-400
+                  focus:border-slate-900 focus:outline-none
+                "
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                required
+                autoComplete="name"
+              />
+            </label>
+
+            <label className="grid gap-1">
+              <span className="text-sm font-medium text-slate-700">WhatsApp</span>
+              <input
+                placeholder="08xxxxxxxxxx"
+                className="
+                  w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
+                  text-slate-900 placeholder:text-slate-400
+                  focus:border-slate-900 focus:outline-none
+                "
+                value={form.whatsapp}
+                onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
+                required
+                inputMode="tel"
+                autoComplete="tel"
+              />
+              <span className="text-xs text-slate-500">Hanya angka. Akan dinormalisasi saat simpan.</span>
+            </label>
+
+            <label className="grid gap-1 md:col-span-2">
+              <span className="text-sm font-medium text-slate-700">Alamat</span>
+              <input
+                placeholder="Alamat lengkap (opsional)"
+                className="
+                  w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
+                  text-slate-900 placeholder:text-slate-400
+                  focus:border-slate-900 focus:outline-none
+                "
+                value={form.address ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                autoComplete="street-address"
+              />
+            </label>
+
+            <label className="grid gap-1 md:col-span-2">
+              <span className="text-sm font-medium text-slate-700">Catatan</span>
+              <textarea
+                placeholder="Instruksi khusus, preferensi, atau catatan lain"
+                className="
+                  min-h-[110px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
+                  text-slate-900 placeholder:text-slate-400
+                  focus:border-slate-900 focus:outline-none
+                "
+                value={form.notes ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </label>
+          </div>
+
+          {/* bottom actions (secondary, for consistency) */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <button
+              disabled={saving || !canEdit}
+              className="
+                inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5
+                text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
+                disabled:cursor-not-allowed disabled:opacity-70
+              "
+              type="submit"
+            >
+              {saving ? "Menyimpan…" : "Simpan"}
+            </button>
+
+            {!isNew && entity && (
+              <button
+                type="button"
+                className="
+                  inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5
+                  text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
+                "
+                onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
+                aria-label="Salin nomor WhatsApp"
+              >
+                <IconCopy />
+                Salin WA
+              </button>
+            )}
+          </div>
+        </form>
+
+        {/* Side card (ringkasan) */}
+        <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+              {initials(form.name)}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">{form.name?.trim() || "Customer"}</div>
+              <div className="truncate text-xs text-slate-500">{isNew ? "Draft (belum tersimpan)" : `ID: ${String(entity?.id ?? "-")}`}</div>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3 text-sm">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="text-xs text-slate-500">WhatsApp</div>
+              <div className="mt-0.5 font-semibold tabular-nums text-slate-900">{form.whatsapp || "-"}</div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="text-xs text-slate-500">Cabang</div>
+              <div className="mt-0.5 font-semibold text-slate-900">
+                {hasRole("Superadmin") ? form.branch_id ?? "-" : user?.branch_id ?? "-"}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="text-xs text-slate-500">Alamat</div>
+              <div className="mt-0.5 text-slate-700">{form.address?.trim() ? form.address : "-"}</div>
+            </div>
+          </div>
+
+          {!canEdit && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Anda tidak memiliki izin untuk mengubah data customer.
+            </div>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
 }
 
 ```
@@ -6372,17 +7103,75 @@ export default function CustomerDetail() {
 
 ### src/pages/customers/CustomersIndex.tsx
 
-- SHA: `af40c6549b43`  
-- Ukuran: 11 KB
+- SHA: `e4cf8f6c2eb4`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/customers/CustomersIndex.tsx
-import { useEffect, useMemo, useState } from 'react';
-import type { Customer, CustomerQuery, Paginated } from '../../types/customers';
-import { listCustomers } from '../../api/customers';
-import { useAuth, useHasRole } from '../../store/useAuth';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from "react";
+import type { Customer, CustomerQuery, Paginated } from "../../types/customers";
+import { listCustomers } from "../../api/customers";
+import { useAuth, useHasRole } from "../../store/useAuth";
+import { Link } from "react-router-dom";
+
+function IconSearch(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.2-3.2" />
+        </svg>
+    );
+}
+function IconUsers(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+            <path d="M20 21a7 7 0 0 0-14 0" />
+            <circle cx="13" cy="7" r="4" />
+            <path d="M6 21a6 6 0 0 1 7-5.7" opacity=".6" />
+            <path d="M4 21a6 6 0 0 1 6-6" opacity=".35" />
+        </svg>
+    );
+}
+function IconChevron(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+            <path d="M9 6l6 6-6 6" />
+        </svg>
+    );
+}
+
+function initials(name?: string) {
+    const n = (name ?? "").trim();
+    if (!n) return "C";
+    const parts = n.split(/\s+/).filter(Boolean);
+    const a = parts[0]?.[0] ?? "C";
+    const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+    return (a + b).toUpperCase();
+}
+
+function formatWaLink(raw?: string) {
+    if (!raw) return null;
+    const cleaned = raw.replace(/[^\d]/g, "");
+    if (!cleaned) return null;
+
+    // jika mulai dengan 0 → ganti ke 62
+    const normalized =
+        cleaned.startsWith("0")
+            ? "62" + cleaned.slice(1)
+            : cleaned.startsWith("62")
+                ? cleaned
+                : cleaned;
+
+    return `https://wa.me/${normalized}`;
+}
+
+function mapsUrl(address?: string | null) {
+    const a = (address ?? "").trim();
+    if (!a) return null;
+    // Google Maps search query (paling stabil untuk alamat teks bebas)
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
+}
 
 export default function CustomersIndex() {
     // Snapshot auth store (sesuai pola Anda)
@@ -6391,27 +7180,29 @@ export default function CustomersIndex() {
         const [, force] = useState(0);
         useEffect(() => {
             const unsubscribe = store.subscribe(() => force((x) => x + 1));
-            return () => { unsubscribe(); };
+            return () => {
+                unsubscribe();
+            };
         }, [store]);
         return store;
     }
 
     const auth = useAuthSnapshot();
     const user = auth.user;
-    const canManage = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
-    const isSuperadmin = useHasRole('Superadmin');
+    const canManage = useHasRole(["Superadmin", "Admin Cabang", "Kasir"]);
+    const isSuperadmin = useHasRole("Superadmin");
 
     const [query, setQuery] = useState<CustomerQuery>({ page: 1, per_page: 10 });
     const [rows, setRows] = useState<Paginated<Customer> | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState("");
 
     const branchIdForScope = useMemo(() => {
         if (isSuperadmin) return query.branch_id ?? undefined;
         const id = user?.branch_id as string | number | undefined;
-        if (typeof id === 'string') return id;
-        if (typeof id === 'number') return String(id);
+        if (typeof id === "string") return id;
+        if (typeof id === "number") return String(id);
         return undefined;
     }, [isSuperadmin, query.branch_id, user?.branch_id]);
 
@@ -6428,26 +7219,43 @@ export default function CustomersIndex() {
                 });
                 if (!cancelled) setRows(data);
             } catch {
-                if (!cancelled) setError('Gagal memuat data pelanggan.');
+                if (!cancelled) setError("Gagal memuat data pelanggan.");
             } finally {
                 if (!cancelled) setLoading(false);
             }
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [query, search, branchIdForScope]);
+
+    const currentPage = rows?.meta.current_page ?? 1;
+    const lastPage = rows?.meta.last_page ?? 1;
+    const perPage = query.per_page ?? 10;
+    const total = rows?.meta.total ?? 0;
 
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold tracking-tight">Customers</h1>
-                    <p className="text-xs text-gray-600">Kelola data pelanggan & histori transaksi</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+                        <IconUsers />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Customers</h1>
+                        <p className="mt-1 text-sm text-slate-500">Kelola data pelanggan dan akses detail histori.</p>
+                    </div>
                 </div>
+
                 {canManage && (
                     <Link
                         to="/customers/new"
-                        className="btn-primary"
+                        className="
+              inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5
+              text-sm font-semibold text-white shadow-sm
+              hover:bg-slate-800 active:bg-slate-950
+            "
                         aria-label="Tambah pelanggan baru"
                     >
                         New Customer
@@ -6455,18 +7263,27 @@ export default function CustomersIndex() {
                 )}
             </div>
 
-            {/* Toolbar (FilterBar) */}
+            {/* Toolbar */}
             <section
-                className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]"
                 aria-label="Toolbar pencarian pelanggan"
             >
-                <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-                    <label className="sr-only" htmlFor="cari">Pencarian</label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
                     <div className="relative">
+                        <label className="sr-only" htmlFor="cari">
+                            Pencarian
+                        </label>
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                            <IconSearch />
+                        </span>
                         <input
                             id="cari"
-                            placeholder="Cari nama/WA/alamat…"
-                            className="input w-full pl-9 py-2"
+                            placeholder="Cari nama / WhatsApp / alamat…"
+                            className="
+                w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-sm
+                text-slate-900 placeholder:text-slate-400
+                focus:border-slate-900 focus:outline-none
+              "
                             value={search}
                             onChange={(e) => {
                                 setQuery((q) => ({ ...q, page: 1 }));
@@ -6474,64 +7291,68 @@ export default function CustomersIndex() {
                             }}
                             aria-label="Cari pelanggan"
                         />
-                        {/* Ikon search (dekoratif) */}
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            🔎
-                        </span>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2">
-                        <label className="text-sm text-gray-600" htmlFor="perpage">Per page</label>
-                        <select
-                            id="perpage"
-                            className="input w-[88px] py-2"
-                            value={query.per_page ?? 10}
-                            onChange={(e) =>
-                                setQuery((q) => ({ ...q, per_page: Number(e.target.value), page: 1 }))
-                            }
-                            aria-label="Jumlah baris per halaman"
-                        >
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                            <option value={50}>50</option>
-                        </select>
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                        <div className="text-xs text-slate-500">
+                            {loading ? "Memuat…" : total ? `${total} pelanggan` : "0 pelanggan"}
+                        </div>
+
+                        <div className="relative">
+                            <label className="sr-only" htmlFor="perpage">
+                                Per page
+                            </label>
+                            <select
+                                id="perpage"
+                                className="
+                  appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-9 text-sm
+                  text-slate-900 focus:border-slate-900 focus:outline-none
+                "
+                                value={perPage}
+                                onChange={(e) => setQuery((q) => ({ ...q, per_page: Number(e.target.value), page: 1 }))}
+                                aria-label="Jumlah baris per halaman"
+                            >
+                                <option value={10}>10 / page</option>
+                                <option value={25}>25 / page</option>
+                                <option value={50}>50 / page</option>
+                            </select>
+                            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+                                <IconChevron />
+                            </span>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* Alert error */}
+            {/* Error */}
             {error && (
-                <div
-                    role="alert"
-                    aria-live="polite"
-                    className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-                >
+                <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {error}
                 </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty */}
             {!loading && !error && rows && rows.data.length === 0 && (
-                <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
                     Belum ada data pelanggan.
                 </div>
             )}
 
             {/* Table */}
-            <section aria-busy={loading ? 'true' : 'false'}>
-                <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+            <section aria-busy={loading ? "true" : "false"}>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
                     <div className="overflow-auto">
                         <table className="min-w-full text-sm">
-                            <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-                                <tr className="divide-x divide-[color:var(--color-border)]">
-                                    <Th>Nama</Th>
+                            <thead className="sticky top-0 z-10 bg-white">
+                                <tr className="border-b border-slate-200">
+                                    <Th className="pl-4">Customer</Th>
                                     <Th>WhatsApp</Th>
                                     <Th>Alamat</Th>
-                                    <Th className="text-right pr-4">Aksi</Th>
+                                    <Th className="pr-4 text-right">Aksi</Th>
                                 </tr>
                             </thead>
 
-                            <tbody className="divide-y divide-[color:var(--color-border)]">
+                            <tbody className="divide-y divide-slate-100">
                                 {loading ? (
                                     <>
                                         <RowSkeleton />
@@ -6543,20 +7364,68 @@ export default function CustomersIndex() {
                                     </>
                                 ) : (
                                     rows?.data.map((c) => (
-                                        <tr key={c.id} className="hover:bg-black/5 transition-colors">
-                                            <Td>
-                                                <span className="line-clamp-1 font-medium">{c.name}</span>
+                                        <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
+                                            <Td className="pl-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                                                        {initials(c.name)}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="truncate font-medium text-slate-900">{c.name}</div>
+                                                        <div className="truncate text-xs text-slate-500">ID: {String(c.id)}</div>
+                                                    </div>
+                                                </div>
                                             </Td>
+
                                             <Td>
-                                                <span className="tabular-nums">{c.whatsapp}</span>
+                                                {formatWaLink(c.whatsapp) ? (
+                                                    <a
+                                                        href={formatWaLink(c.whatsapp) ?? "#"}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="
+         tabular-nums font-medium text-emerald-600
+         hover:underline hover:text-emerald-700
+       "
+                                                        aria-label={`Hubungi ${c.name} via WhatsApp`}
+                                                    >
+                                                        {c.whatsapp}
+                                                    </a>
+                                                ) : (
+                                                    <span className="tabular-nums text-slate-800">
+                                                        {c.whatsapp ?? "-"}
+                                                    </span>
+                                                )}
                                             </Td>
+
                                             <Td>
-                                                <span className="line-clamp-2 max-w-[48ch]">{c.address ?? '-'}</span>
+                                                {mapsUrl(c.address) ? (
+                                                    <a
+                                                        href={mapsUrl(c.address)!}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="
+         line-clamp-2 max-w-[56ch] text-slate-700
+         hover:text-slate-900 hover:underline
+       "
+                                                        title="Buka di Google Maps"
+                                                        aria-label={`Buka alamat ${c.name} di Google Maps`}
+                                                    >
+                                                        {c.address}
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-slate-400">-</span>
+                                                )}
                                             </Td>
-                                            <Td className="text-right">
+
+                                            <Td className="pr-4 text-right">
                                                 <Link
                                                     to={`/customers/${String(c.id)}`}
-                                                    className="btn-outline"
+                                                    className="
+                            inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2
+                            text-xs font-semibold text-slate-900
+                            hover:bg-slate-50 active:bg-slate-100
+                          "
                                                     aria-label={`Lihat detail pelanggan ${c.name}`}
                                                 >
                                                     Detail
@@ -6568,56 +7437,94 @@ export default function CustomersIndex() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* footer summary */}
+                    <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            {total ? (
+                                <>
+                                    Menampilkan{" "}
+                                    <span className="font-semibold text-slate-700">
+                                        {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, total)}
+                                    </span>{" "}
+                                    dari <span className="font-semibold text-slate-700">{total}</span>
+                                </>
+                            ) : (
+                                "Tidak ada data untuk ditampilkan"
+                            )}
+                        </div>
+
+                        {/* Pagination */}
+                        {!loading && rows && rows.meta.last_page > 1 && (
+                            <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
+                                <button
+                                    disabled={currentPage <= 1}
+                                    onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) - 1 }))}
+                                    className="
+                    rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
+                    hover:bg-slate-50 active:bg-slate-100
+                    disabled:cursor-not-allowed disabled:opacity-50
+                  "
+                                >
+                                    Prev
+                                </button>
+
+                                <span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                    Page <span className="font-semibold text-slate-900">{currentPage}</span> / {lastPage}
+                                </span>
+
+                                <button
+                                    disabled={currentPage >= lastPage}
+                                    onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}
+                                    className="
+                    rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
+                    hover:bg-slate-50 active:bg-slate-100
+                    disabled:cursor-not-allowed disabled:opacity-50
+                  "
+                                >
+                                    Next
+                                </button>
+                            </nav>
+                        )}
+                    </div>
                 </div>
             </section>
-
-            {/* Pagination */}
-            {!loading && rows && rows.meta.last_page > 1 && (
-                <nav
-                    className="flex items-center gap-2 justify-end"
-                    aria-label="Navigasi halaman"
-                >
-                    <button
-                        disabled={(rows.meta.current_page ?? 1) <= 1}
-                        onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) - 1 }))}
-                        className="btn-outline disabled:opacity-50"
-                    >
-                        Prev
-                    </button>
-                    <span className="text-sm">
-                        Page {rows.meta.current_page} / {rows.meta.last_page}
-                    </span>
-                    <button
-                        disabled={rows.meta.current_page >= rows.meta.last_page}
-                        onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}
-                        className="btn-outline disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </nav>
-            )}
         </div>
     );
 }
 
 /* ---------- Subcomponents ---------- */
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
     return (
-        <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+        <th className={`text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}>
             {children}
         </th>
     );
 }
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-    return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+    return <td className={`px-3 py-3 align-top ${className}`}>{children}</td>;
 }
 function RowSkeleton() {
     return (
         <tr>
-            <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
-            <td className="px-3 py-3"><div className="h-4 w-32 rounded bg-black/10 animate-pulse" /></td>
-            <td className="px-3 py-3"><div className="h-4 w-64 rounded bg-black/10 animate-pulse" /></td>
-            <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-20 rounded bg-black/10 animate-pulse" /></td>
+            <td className="px-3 py-4 pl-4">
+                <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-black/10 animate-pulse" />
+                    <div className="space-y-2">
+                        <div className="h-4 w-40 rounded bg-black/10 animate-pulse" />
+                        <div className="h-3 w-20 rounded bg-black/10 animate-pulse" />
+                    </div>
+                </div>
+            </td>
+            <td className="px-3 py-4">
+                <div className="h-4 w-32 rounded bg-black/10 animate-pulse" />
+            </td>
+            <td className="px-3 py-4">
+                <div className="h-4 w-64 rounded bg-black/10 animate-pulse" />
+            </td>
+            <td className="px-3 py-4 pr-4 text-right">
+                <div className="inline-block h-9 w-20 rounded bg-black/10 animate-pulse" />
+            </td>
         </tr>
     );
 }
@@ -8442,21 +9349,21 @@ export default function LoginPage() {
 
 ### src/pages/orders/OrderDetail.tsx
 
-- SHA: `a1732bd717cc`  
-- Ukuran: 27 KB
+- SHA: `5723fcdd404b`  
+- Ukuran: 43 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/orders/OrderDetail.tsx
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   getOrder,
   updateOrderStatus,
   getOrderReceiptHtml,
   openOrderReceipt,
+  updateOrder,
+  createOrderShareLink,
 } from '../../api/orders';
-import { updateOrder } from '../../api/orders';
-import { createOrderShareLink } from '../../api/orders';
 import type { OrderUpdatePayload } from '../../types/orders';
 import CustomerPicker from '../../components/customers/CustomerPicker';
 import ProductSearch from '../../components/pos/ProductSearch';
@@ -8465,12 +9372,14 @@ import type { Order, OrderBackendStatus } from '../../types/orders';
 import OrderStatusStepper from '../../components/orders/OrderStatusStepper';
 import OrderPhotosGallery from '../../components/orders/OrderPhotosGallery';
 import OrderPhotosUpload from '../../components/orders/OrderPhotosUpload';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
 import { isAxiosError } from 'axios';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
 import { useHasRole } from '../../store/useAuth';
+import { createDelivery, listDeliveries } from '../../api/deliveries';
+import type { DeliveryType } from '../../types/deliveries';
 
 type ApiErrorResponse = {
   message?: string;
@@ -8481,48 +9390,78 @@ type ApiErrorResponse = {
 function toLocalInputValue(v?: string | null): string {
   if (!v) return '';
   const s = String(v).trim();
-  // Terima "YYYY-MM-DD HH:mm[:ss]" atau "YYYY-MM-DDTHH:mm[:ss][Z]"
-  if (s.includes('T')) {
-    // Buang 'Z' bila ada, pangkas ke menit untuk <input type="datetime-local">
-    return s.replace('Z', '').slice(0, 16);
-  }
-  // Spasi → 'T', pangkas ke menit
+  if (s.includes('T')) return s.replace('Z', '').slice(0, 16);
   return s.replace(' ', 'T').slice(0, 16);
 }
 function fromLocalInputValue(v: string): string | null {
   if (!v) return null;
-  // Kirim sebagai string lokal "naif": "YYYY-MM-DD HH:mm:ss"
-  const s = v.trim(); // format input selalu "YYYY-MM-DDTHH:mm"
+  const s = v.trim();
   return s.replace('T', ' ') + ':00';
 }
+
+type DraftItem = {
+  id?: string;
+  service_id: string;
+  service_name?: string;
+  price?: number;
+  qty: number;
+  note?: string | null;
+};
+type Draft = {
+  customer_id: string | null;
+  notes: string | null;
+  discount?: number;
+  items: DraftItem[];
+  received_at?: string | null;
+  ready_at?: string | null;
+};
+
+function money(v: unknown): string {
+  const n = Number(v ?? 0);
+  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+}
+
+function statusBadgeClass(status: OrderBackendStatus): string {
+  const base = 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset';
+  const cls =
+    status === 'CANCELED'
+      ? 'bg-red-50 text-red-700 ring-red-200'
+      : status === 'READY'
+        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+        : status === 'PICKED_UP'
+          ? 'bg-slate-900 text-white ring-slate-900'
+          : status === 'DELIVERING'
+            ? 'bg-blue-50 text-blue-700 ring-blue-200'
+            : status === 'WASHING' || status === 'DRYING' || status === 'IRONING'
+              ? 'bg-amber-50 text-amber-700 ring-amber-200'
+              : 'bg-slate-50 text-slate-700 ring-slate-200';
+  return `${base} ${cls}`;
+}
+
 export default function OrderDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const [row, setRow] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
+  const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
 
-  type DraftItem = {
-    id?: string;              // jika ada
-    service_id: string;
-    service_name?: string;    // untuk UI
-    price?: number;           // untuk hitung preview subtotal
-    qty: number;
-    note?: string | null;
-  };
-  type Draft = {
-    customer_id: string | null;
-    notes: string | null;
-    discount?: number;
-    items: DraftItem[];
-    received_at?: string | null;
-    ready_at?: string | null;
-  };
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
+
+  // Delivery UI
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [deliverySaving, setDeliverySaving] = useState(false);
+  const [deliveryErr, setDeliveryErr] = useState<string | null>(null);
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('delivery');
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [deliveryZoneId, setDeliveryZoneId] = useState<string>('');
+  const [existingDeliveryId, setExistingDeliveryId] = useState<string | null>(null);
 
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptHtml, setReceiptHtml] = useState<string>('');
@@ -8560,6 +9499,24 @@ export default function OrderDetail(): React.ReactElement {
   useEffect(() => { void refresh(); }, [refresh]);
 
   useEffect(() => {
+    const orderId = row?.id;
+    if (!orderId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const res = await listDeliveries({ q: orderId, per_page: 1 });
+        const latest = (res.data && res.data.length > 0) ? (res.data[0] as any) : null;
+        if (!alive) return;
+        setExistingDeliveryId(latest?.id ?? null);
+      } catch {
+        if (!alive) return;
+        setExistingDeliveryId(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [row?.id]);
+
+  useEffect(() => {
     if (!row) return;
     setDraft({
       customer_id: row.customer?.id ?? row.customer_id ?? null,
@@ -8574,15 +9531,20 @@ export default function OrderDetail(): React.ReactElement {
         qty: Number(it.qty),
         note: it.note ?? null,
       })),
-      // discount: row.discount ?? 0, // aktifkan jika rule backend sdh mendukung
     });
   }, [row]);
 
   const changeQty = useCallback((serviceId: string, qty: number) => {
-    setDraft(d => ({ ...d, items: d.items.map(it => it.service_id === serviceId ? { ...it, qty: Math.max(1, qty) } : it) }));
+    setDraft(d => ({
+      ...d,
+      items: d.items.map(it => it.service_id === serviceId ? { ...it, qty: Math.max(1, qty) } : it),
+    }));
   }, []);
   const changeNote = useCallback((serviceId: string, note: string) => {
-    setDraft(d => ({ ...d, items: d.items.map(it => it.service_id === serviceId ? { ...it, note } : it) }));
+    setDraft(d => ({
+      ...d,
+      items: d.items.map(it => it.service_id === serviceId ? { ...it, note } : it),
+    }));
   }, []);
   const removeItem = useCallback((serviceId: string) => {
     setDraft(d => ({ ...d, items: d.items.filter(it => it.service_id !== serviceId) }));
@@ -8655,58 +9617,246 @@ export default function OrderDetail(): React.ReactElement {
     }
   }, [row]);
 
+  const previewSubtotal = row
+    ? draft.items.reduce((s, it) => {
+      const harga = Number(
+        it.price ??
+        (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
+        0
+      );
+      return s + Number(it.qty || 0) * harga;
+    }, 0)
+    : 0;
+
   return (
     <div className="space-y-4">
-      {loading && <div className="text-sm text-gray-600">Memuat…</div>}
+      {loading && (
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          Memuat…
+        </div>
+      )}
+
       {err && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {err}
         </div>
       )}
+
       {!loading && !row && !err && (
-        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-6 text-sm text-gray-500">
-          Tidak ditemukan
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+          <div className="text-sm font-medium text-slate-900">Tidak ditemukan</div>
+          <div className="mt-1 text-sm text-slate-500">Order tidak tersedia atau sudah dihapus.</div>
+          <div className="mt-4">
+            <Link to="/orders" className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+              Kembali
+            </Link>
+          </div>
         </div>
       )}
 
-      {row && (
-        <>
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold tracking-tight">Order {row.invoice_no ?? row.number}</div>
-              <div className="text-xs text-gray-600">{row.customer?.name ?? '-'}</div>
+      {/* Create Delivery Modal */}
+      {row && deliveryOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+          onClick={() => { if (!deliverySaving) setDeliveryOpen(false); }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-slate-200 px-4 py-3">
+              <div className="text-sm font-semibold text-slate-900">Buat Pengiriman</div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                Order: {row.invoice_no ?? row.number}
+              </div>
             </div>
 
+            <div className="space-y-3 px-4 py-4">
+              {deliveryErr && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {deliveryErr}
+                </div>
+              )}
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600">Tipe</div>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                  value={deliveryType}
+                  onChange={(e) => setDeliveryType(e.target.value as DeliveryType)}
+                  disabled={deliverySaving}
+                >
+                  <option value="delivery">delivery</option>
+                  <option value="pickup">pickup</option>
+                  <option value="return">return</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="text-xs font-semibold text-slate-600">Ongkir (fee)</div>
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                    value={Number.isFinite(deliveryFee) ? deliveryFee : 0}
+                    onChange={(e) => setDeliveryFee(Number(e.target.value || 0))}
+                    disabled={deliverySaving}
+                  />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-600">Zone ID (opsional)</div>
+                  <input
+                    type="text"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none"
+                    placeholder="UUID zone (jika dipakai)"
+                    value={deliveryZoneId}
+                    onChange={(e) => setDeliveryZoneId(e.target.value)}
+                    disabled={deliverySaving}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+              <button
+                type="button"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+                onClick={() => setDeliveryOpen(false)}
+                disabled={deliverySaving}
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
+                disabled={deliverySaving}
+                onClick={async () => {
+                  if (!row?.id) return;
+                  setDeliverySaving(true);
+                  setDeliveryErr(null);
+                  try {
+                    const payload: any = {
+                      order_id: row.id,
+                      type: deliveryType,
+                      fee: Math.max(0, Number(deliveryFee || 0)),
+                      zone_id: deliveryZoneId.trim() ? deliveryZoneId.trim() : null,
+                    };
+
+                    // Backend store() mengembalikan: { data: { delivery: ... }, meta: { idempotent } }
+                    const res = await createDelivery(payload as any);
+                    const created = (res as any)?.data?.delivery ?? (res as any)?.data ?? null;
+                    const did = created?.id as string | undefined;
+                    if (!did) throw new Error('Delivery tidak terbaca dari response.');
+
+                    setExistingDeliveryId(did);
+                    setDeliveryOpen(false);
+                    navigate(`/deliveries/${encodeURIComponent(did)}`);
+                  } catch (e: unknown) {
+                    let msg = 'Gagal membuat pengiriman';
+                    if (isAxiosError<ApiErrorResponse>(e)) {
+                      const api = e.response?.data;
+                      const errMap = api?.errors;
+                      const firstKey = errMap ? Object.keys(errMap)[0] : null;
+                      const firstVal = firstKey ? errMap?.[firstKey] : null;
+                      const detail =
+                        typeof firstVal === 'string' ? firstVal :
+                          Array.isArray(firstVal) ? firstVal[0] :
+                            undefined;
+                      msg = api?.message ?? detail ?? msg;
+                    } else if (e instanceof Error && e.message) {
+                      msg = e.message;
+                    }
+                    setDeliveryErr(msg);
+                  } finally {
+                    setDeliverySaving(false);
+                  }
+                }}
+              >
+                {deliverySaving ? 'Membuat…' : 'Buat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {row && (
+        <>
+          {/* Top header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold text-slate-900">
+                  Order {row.invoice_no ?? row.number}
+                </h1>
+                <span className={statusBadgeClass(row.status)}>{row.status}</span>
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                Customer: <span className="font-medium text-slate-900">{row.customer?.name ?? '-'}</span>
+              </div>
+              <div className="mt-2">
+                <OrderStatusStepper backendStatus={row.status} />
+              </div>
+            </div>
+
+            {/* Actions */}
             <div className="flex flex-wrap items-center gap-2">
+              {canCreateDelivery && (
+                <>
+                  {typeof existingDeliveryId === 'string' && existingDeliveryId.length > 0 ? (
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => navigate(`/deliveries/${encodeURIComponent(existingDeliveryId)}`)}
+                      title="Lihat pengiriman yang sudah dibuat"
+                    >
+                      Lihat Pengiriman
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => { setDeliveryErr(null); setDeliveryOpen(true); }}
+                      title="Buat pengiriman untuk order ini"
+                    >
+                      Buat Pengiriman
+                    </button>
+                  )}
+                </>
+              )}
               {!isEditing && canEdit && (
                 <button
                   type="button"
-                  className="btn-outline px-3 py-1.5 text-xs"
+                  className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                   onClick={() => setIsEditing(true)}
                   title="Edit order"
                 >
                   Edit
                 </button>
               )}
+
               {isEditing && canEdit && (
                 <>
                   <button
                     type="button"
-                    className="btn-outline px-3 py-1.5 text-xs"
-                    onClick={() => { setIsEditing(false); setFieldErr({}); /* reset draft -> useEffect(row) sudah cover */ }}
+                    className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                    onClick={() => { setIsEditing(false); setFieldErr({}); }}
                     title="Batalkan perubahan"
                   >
                     Batal
                   </button>
+
                   <button
                     type="button"
-                    className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)] disabled:opacity-50"
+                    className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
                     onClick={async () => {
                       if (!id) return;
                       setSaving(true); setFieldErr({});
                       try {
-                        // Siapkan payload — kirim seluruh items (lihat catatan hapus-tulis ulang)【13:Backend_Docs.md†L41-L47】
                         const payload: OrderUpdatePayload = {
                           customer_id: draft.customer_id ?? null,
                           notes: (draft.notes ?? '') || null,
@@ -8717,7 +9867,6 @@ export default function OrderDetail(): React.ReactElement {
                           })),
                           received_at: draft.received_at ?? null,
                           ready_at: draft.ready_at ?? null,
-                          // discount: draft.discount ?? 0, // aktifkan bila rule backend sdh mendukung
                         };
                         await updateOrder(id, payload);
                         await refresh();
@@ -8727,7 +9876,6 @@ export default function OrderDetail(): React.ReactElement {
                         if (isAxiosError<ApiErrorResponse>(e)) {
                           const api = e.response?.data;
                           msg = api?.message ?? msg;
-                          // petakan error field sederhana ke state fieldErr
                           const map: Record<string, string> = {};
                           const errMap = api?.errors;
                           if (errMap) {
@@ -8749,328 +9897,430 @@ export default function OrderDetail(): React.ReactElement {
                   </button>
                 </>
               )}
-              {/* Buka struk tab baru */}
+
               <button
                 type="button"
-                className="btn-outline px-3 py-1.5 text-xs"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={() => openOrderReceipt(row.id)}
                 title="Buka struk di tab baru"
               >
                 Receipt
               </button>
 
-              {/* Toggle preview di halaman */}
               <button
                 type="button"
-                className="btn-outline px-3 py-1.5 text-xs"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={async () => {
-                  const next = !receiptOpen;
-                  setReceiptOpen(next);
-                  if (next && !receiptHtml) {
-                    await loadReceipt();
-                  }
+                  setReceiptOpen(true);
+                  if (!receiptHtml) await loadReceipt();
                 }}
-                title="Tampilkan/sembunyikan preview struk"
+                title="Preview struk"
               >
-                {receiptOpen ? 'Tutup Preview' : 'Preview Receipt'}
+                Preview
               </button>
 
-              {/* Kirim WhatsApp */}
               <button
                 type="button"
-                className="btn-outline px-3 py-1.5 text-xs"
+                className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={onSendWA}
                 title="Kirim kwitansi via WhatsApp"
               >
                 Kirim WA
               </button>
 
-              {/* Shortcut pelunasan bila masih ada sisa */}
               {(row.due_amount ?? 0) > 0 && (
                 <button
                   type="button"
-                  className="btn-primary px-3 py-1.5 text-xs text-[color:var(--color-brand-on)]"
+                  className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
                   onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
                   title="Menuju halaman Piutang untuk pelunasan"
                 >
                   Pelunasan
                 </button>
               )}
-
-              {/* Stepper status (komponen existing) */}
-              <OrderStatusStepper backendStatus={row.status} />
             </div>
           </div>
 
-          {isEditing && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 space-y-3">
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs font-medium mb-1">Pelanggan</div>
-                  <CustomerPicker
-                    value={draft.customer_id ?? ''}
-                    onChange={(id) => setDraft(d => ({ ...d, customer_id: id || null }))}
-                  />
-                  {fieldErr['customer_id'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['customer_id']}</div>}
-                </div>
-                <div>
-                  <div className="text-xs font-medium mb-1">Catatan</div>
-                  <textarea
-                    className="input w-full px-2 py-2 text-sm"
-                    placeholder="Catatan order (opsional)"
-                    value={draft.notes ?? ''}
-                    onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
-                    disabled={!canEdit}
-                  />
-                  {fieldErr['notes'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['notes']}</div>}
-                </div>
-                <div>
-                  <div className="text-xs font-medium mb-1">Tanggal Masuk</div>
-                  <input
-                    type="datetime-local"
-                    className="input w-full px-2 py-2 text-sm"
-                    value={toLocalInputValue(draft.received_at ?? null)}
-                    onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
-                    disabled={!canEdit}
-                  />
-                  {fieldErr['received_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['received_at']}</div>}
-                </div>
-                <div>
-                  <div className="text-xs font-medium mb-1">Tanggal Selesai</div>
-                  <input
-                    type="datetime-local"
-                    className="input w-full px-2 py-2 text-sm"
-                    value={toLocalInputValue(draft.ready_at ?? null)}
-                    onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
-                    disabled={!canEdit}
-                  />
-                  {fieldErr['ready_at'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['ready_at']}</div>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Items table */}
-          {isEditing && canEdit && (
-            <>
-              {/* Ringkasan tanggal masuk/selesai (read-only) */}
-              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 text-sm">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div>
-                    <span className="text-gray-600">Tgl Masuk</span>{' '}
-                    <b>{row.received_at ? row.received_at.replace('T', ' ').slice(0, 16) : '—'}</b>
+          {/* Main layout */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            {/* Left column */}
+            <div className="space-y-4 lg:col-span-8">
+              {/* Editing fields */}
+              {isEditing && (
+                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-sm font-semibold text-slate-900">Edit Order</div>
+                    <div className="text-xs text-slate-500">Perubahan akan disimpan setelah klik “Simpan”.</div>
                   </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Pelanggan</div>
+                      <div className="mt-1">
+                        <CustomerPicker
+                          value={draft.customer_id ?? ''}
+                          onChange={(cid) => setDraft(d => ({ ...d, customer_id: cid || null }))}
+                        />
+                      </div>
+                      {fieldErr['customer_id'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Catatan</div>
+                      <textarea
+                        className="
+                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                        "
+                        placeholder="Catatan order (opsional)"
+                        value={draft.notes ?? ''}
+                        onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
+                        disabled={!canEdit}
+                      />
+                      {fieldErr['notes'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Tanggal Masuk</div>
+                      <input
+                        type="datetime-local"
+                        className="
+                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          focus:border-slate-900 focus:outline-none
+                        "
+                        value={toLocalInputValue(draft.received_at ?? null)}
+                        onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+                        disabled={!canEdit}
+                      />
+                      {fieldErr['received_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-600">Tanggal Selesai</div>
+                      <input
+                        type="datetime-local"
+                        className="
+                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                          focus:border-slate-900 focus:outline-none
+                        "
+                        value={toLocalInputValue(draft.ready_at ?? null)}
+                        onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+                        disabled={!canEdit}
+                      />
+                      {fieldErr['ready_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Items (read-only view when not editing) */}
+              {!isEditing && (
+                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">Items</div>
+                      <div className="text-xs text-slate-500">Rincian layanan pada order ini.</div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
+                        <tr className="border-b border-slate-200">
+                          <Th>Layanan</Th>
+                          <Th>Qty</Th>
+                          <Th>Harga</Th>
+                          <Th className="text-right">Total</Th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(row.items ?? []).map((it) => (
+                          <tr key={it.id} className="hover:bg-slate-50/60 transition-colors">
+                            <Td className="font-medium text-slate-900">{it.service?.name ?? it.service_id}</Td>
+                            <Td className="text-slate-700">{it.qty}</Td>
+                            <Td className="text-slate-700">{money(it.price)}</Td>
+                            <Td className="text-right font-medium text-slate-900">{money(it.total)}</Td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="border-t border-slate-200 px-4 py-3">
+                    <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                      <Kpi label="Subtotal" value={money(row.subtotal)} />
+                      <Kpi label="Diskon" value={money(row.discount)} />
+                      <Kpi label="Grand Total" value={money(row.grand_total)} strong />
+                      <Kpi label="Sisa" value={money(row.due_amount)} strong />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Items editor */}
+              {isEditing && canEdit && (
+                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                  <div className="px-4 py-3">
+                    <div className="text-sm font-semibold text-slate-900">Edit Items</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Tambahkan layanan, ubah qty/catatan, atau hapus item. Total final tetap dihitung backend.
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-4">
+                    <ProductSearch onPick={addItemFromSearch} />
+                    {fieldErr['items'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['items']}</div>}
+                  </div>
+
+                  <div className="overflow-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
+                        <tr className="border-b border-slate-200">
+                          <Th>Layanan</Th>
+                          <Th className="w-[140px]">Qty</Th>
+                          <Th>Harga</Th>
+                          <Th className="text-right">Total</Th>
+                          <Th className="text-right">Aksi</Th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100">
+                        {draft.items.length === 0 && (
+                          <tr>
+                            <td className="px-4 py-5 text-sm text-slate-500" colSpan={5}>
+                              Belum ada item. Tambahkan layanan di atas.
+                            </td>
+                          </tr>
+                        )}
+
+                        {draft.items.map((it) => {
+                          const harga = Number(
+                            it.price ??
+                            (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
+                            0
+                          );
+                          const total = harga * Number(it.qty || 0);
+
+                          return (
+                            <tr key={it.service_id} className="hover:bg-slate-50/60 transition-colors">
+                              <Td className="align-top">
+                                <div className="font-medium text-slate-900">{it.service_name ?? it.service_id}</div>
+                                <input
+                                  className="
+                                    mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900
+                                    placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                                  "
+                                  placeholder="Catatan item (opsional)"
+                                  value={it.note ?? ''}
+                                  onChange={(e) => changeNote(it.service_id, e.target.value)}
+                                  disabled={!canEdit}
+                                />
+                              </Td>
+
+                              <Td className="align-top">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  className="
+                                    w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                                    focus:border-slate-900 focus:outline-none
+                                  "
+                                  value={it.qty}
+                                  onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
+                                  disabled={!canEdit}
+                                />
+                              </Td>
+
+                              <Td className="align-top text-slate-700">{harga ? money(harga) : '—'}</Td>
+
+                              <Td className="align-top text-right font-medium text-slate-900">{money(total)}</Td>
+
+                              <Td className="align-top text-right">
+                                <button
+                                  type="button"
+                                  className="
+                                    inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
+                                    hover:bg-slate-50 disabled:opacity-60
+                                  "
+                                  onClick={() => removeItem(it.service_id)}
+                                  title="Hapus item"
+                                  disabled={!canEdit}
+                                >
+                                  Hapus
+                                </button>
+                              </Td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="border-t border-slate-200 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
+                      <div className="text-slate-600">
+                        Subtotal (preview): <span className="font-semibold text-slate-900">{money(previewSubtotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Photos */}
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-gray-600">Tgl Selesai</span>{' '}
-                    <b>{row.ready_at ? row.ready_at.replace('T', ' ').slice(0, 16) : '—'}</b>
+                    <div className="text-sm font-semibold text-slate-900">Foto Order</div>
+                    <div className="text-xs text-slate-500">Dokumentasi sebelum/sesudah proses.</div>
                   </div>
                 </div>
-              </div>
-              <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-                <div className="overflow-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                      <tr className="divide-x divide-[color:var(--color-border)]">
-                        <Th>Layanan</Th>
-                        <Th>Qty</Th>
-                        <Th>Harga</Th>
-                        <Th>Total</Th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[color:var(--color-border)]">
-                      {(row.items ?? []).map((it) => (
-                        <tr key={it.id} className="hover:bg-black/5 transition-colors">
-                          <Td>{it.service?.name ?? it.service_id}</Td>
-                          <Td>{it.qty}</Td>
-                          <Td>{Number(it.price).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                          <Td>{Number(it.total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Totals read-only */}
-                <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-                  <div><span className="text-gray-600">Subtotal</span> <b>{Number(row.subtotal).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                  <div><span className="text-gray-600">Diskon</span> <b>{Number(row.discount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                  <div><span className="text-gray-600">Grand</span> <b>{Number(row.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                  <div><span className="text-gray-600">Sisa</span> <b>{Number(row.due_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</b></div>
-                </div>
-              </div>
-            </>
-          )}
 
-          {isEditing && canEdit && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-              {/* Tambah layanan */}
-              <div className="p-3">
-                <ProductSearch onPick={addItemFromSearch} />
-                {fieldErr['items'] && <div className="text-[11px] text-red-600 mt-1">{fieldErr['items']}</div>}
-              </div>
-              <div className="overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                    <tr className="divide-x divide-[color:var(--color-border)]">
-                      <Th>Layanan</Th>
-                      <Th>Qty</Th>
-                      <Th>Harga</Th>
-                      <Th>Total</Th>
-                      <Th>Aksi</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--color-border)]">
-                    {draft.items.length === 0 && (
-                      <tr>
-                        <Td colSpan={5} >
-                          <span className="text-xs text-gray-600">Belum ada item. Tambahkan layanan di atas.</span>
-                        </Td>
-                      </tr>
-                    )}
-                    {draft.items.map((it) => {
-                      const harga = Number(
-                        it.price ??
-                        (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
-                        0
-                      );
-                      const total = harga * Number(it.qty || 0);
-                      return (
-                        <tr key={it.service_id} className="hover:bg-black/5 transition-colors">
-                          <Td>
-                            <div className="font-medium">{it.service_name ?? it.service_id}</div>
-                            <input
-                              className="input mt-1 px-2 py-1 text-xs w-full"
-                              placeholder="Catatan item (opsional)"
-                              value={it.note ?? ''}
-                              onChange={(e) => changeNote(it.service_id, e.target.value)}
-                              disabled={!canEdit}
-
-                            />
-                            {fieldErr[`items.${it.service_id}.note`] && (
-                              <div className="text-[11px] text-red-600 mt-1">{fieldErr[`items.${it.service_id}.note`]}</div>
-                            )}
-                          </Td>
-                          <Td>
-                            <input
-                              type="number"
-                              min={1}
-                              className="input w-24 px-2 py-1 text-xs"
-                              value={it.qty}
-                              onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
-                              disabled={!canEdit}
-                            />
-                          </Td>
-                          <Td>{harga ? harga.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '—'}</Td>
-                          <Td>{(total || 0).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</Td>
-                          <Td>
-                            <button
-                              type="button"
-                              className="btn-outline px-2 py-1 text-xs"
-                              onClick={() => removeItem(it.service_id)}
-                              title="Hapus baris"
-                              disabled={!canEdit}
-                            >
-                              Hapus
-                            </button>
-                          </Td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {/* Preview total lokal (informasi; total final dihitung backend) */}
-              <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 p-3 border-t border-[color:var(--color-border)] text-sm">
-                <div>
-                  <span className="text-gray-600">Subtotal (preview)</span>{' '}
-                  <b>{
-                    draft.items
-                      .reduce((s, it) => {
-                        const harga = Number(
-                          it.price ??
-                          (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
-                          0
-                        );
-                        return s + Number(it.qty || 0) * harga;
-                      }, 0)
-                      .toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })
-                  }</b>
+                <div className="mt-3">
+                  <OrderPhotosGallery
+                    key={`${row.id}:${row.photos?.length ?? 0}`}
+                    photos={row.photos ?? []}
+                  />
                 </div>
-              </div>
+
+                {canEdit && (
+                  <div className="mt-4">
+                    <OrderPhotosUpload
+                      orderId={row.id}
+                      onUploaded={async () => { await refresh(); }}
+                    />
+                  </div>
+                )}
+              </section>
             </div>
-          )}
 
-          {/* Photos */}
-          <OrderPhotosGallery
-            key={`${row.id}:${row.photos?.length ?? 0}`}
-            photos={row.photos ?? []}
-          />
-          {canEdit && (
-            <div className="mt-3">
-              <OrderPhotosUpload
-                orderId={row.id}
-                onUploaded={async () => { await refresh(); }}
-              />
+            {/* Right column */}
+            <div className="space-y-4 lg:col-span-4">
+              {/* Summary */}
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                <div className="text-sm font-semibold text-slate-900">Ringkasan</div>
+
+                <div className="mt-3 grid gap-2 text-sm">
+                  <RowLine label="Nomor" value={row.invoice_no ?? row.number ?? '-'} />
+                  <RowLine label="Customer" value={row.customer?.name ?? '-'} />
+                  <RowLine label="Total" value={money(row.grand_total)} strong />
+                  <RowLine label="Dibayar" value={money((row as any)?.paid_amount ?? 0)} />
+                  <RowLine label="Sisa" value={money(row.due_amount)} strong />
+                </div>
+
+                <div className="mt-4 grid gap-2 text-sm">
+                  <RowLine label="Tanggal Masuk" value={row.received_at ? String(row.received_at).replace('T', ' ').slice(0, 16) : '—'} />
+                  <RowLine label="Tanggal Selesai" value={row.ready_at ? String(row.ready_at).replace('T', ' ').slice(0, 16) : '—'} />
+                </div>
+
+                {(row.due_amount ?? 0) > 0 && (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
+                    >
+                      Proses Pelunasan
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              {/* Status transitions */}
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                <div className="text-sm font-semibold text-slate-900">Ubah Status</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {getAllowedNext(row.status).map((s) => (
+                    <button
+                      key={s}
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                      onClick={() => void onTransit(s)}
+                      title={`Set status ke ${s}`}
+                    >
+                      Set {s}
+                    </button>
+                  ))}
+
+                  {getAllowedNext(row.status).length === 0 && (
+                    <span className="text-xs text-slate-500">
+                      Status terminal — tidak ada transisi.
+                    </span>
+                  )}
+                </div>
+              </section>
             </div>
-          )}
+          </div>
 
-          {/* Receipt Preview */}
+          {/* Receipt Preview Modal */}
           {receiptOpen && (
-            <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--color-border)]">
-                <div className="text-sm font-semibold">Receipt Preview</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="btn-outline px-3 py-1.5 text-xs disabled:opacity-50"
-                    onClick={loadReceipt}
-                    disabled={receiptLoading}
-                    title="Muat ulang HTML struk"
-                  >
-                    {receiptLoading ? 'Memuat…' : 'Reload'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-outline px-3 py-1.5 text-xs"
-                    onClick={() => openOrderReceipt(row.id, true)}
-                    title="Buka & print"
-                  >
-                    Open & Print
-                  </button>
-                </div>
-              </div>
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+              onClick={() => setReceiptOpen(false)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                  <div className="text-sm font-semibold text-slate-900">Receipt Preview</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+                      onClick={loadReceipt}
+                      disabled={receiptLoading}
+                      title="Muat ulang HTML struk"
+                    >
+                      {receiptLoading ? 'Memuat…' : 'Reload'}
+                    </button>
 
-              {receiptErr && <div className="p-3 text-xs text-red-600">{receiptErr}</div>}
-              {!receiptErr && receiptLoading && (
-                <div className="p-3 text-xs text-gray-600">Memuat struk…</div>
-              )}
-              {!receiptErr && !receiptLoading && !receiptHtml && (
-                <div className="p-3 text-xs text-gray-600">Belum ada HTML struk.</div>
-              )}
-              {!receiptErr && !!receiptHtml && (
-                <ReceiptPreview html={receiptHtml} height="70vh" />
-              )}
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                      onClick={() => openOrderReceipt(row.id, true)}
+                      title="Buka & print"
+                    >
+                      Open & Print
+                    </button>
+
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                      onClick={() => setReceiptOpen(false)}
+                      title="Tutup"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
+
+                {receiptErr && (
+                  <div className="px-4 py-3 text-sm text-red-700">
+                    {receiptErr}
+                  </div>
+                )}
+
+                {!receiptErr && receiptLoading && (
+                  <div className="px-4 py-3 text-sm text-slate-600">
+                    Memuat struk…
+                  </div>
+                )}
+
+                {!receiptErr && !receiptLoading && !receiptHtml && (
+                  <div className="px-4 py-3 text-sm text-slate-600">
+                    Belum ada HTML struk.
+                  </div>
+                )}
+
+                {!receiptErr && !!receiptHtml && (
+                  <div className="p-4">
+                    <ReceiptPreview html={receiptHtml} height="70vh" />
+                  </div>
+                )}
+              </div>
             </div>
           )}
-
-          {/* Status transitions */}
-          <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-3 flex flex-wrap gap-2">
-            {getAllowedNext(row.status).map((s) => (
-              <button
-                key={s}
-                className="btn-outline px-2 py-1 text-xs"
-                onClick={() => void onTransit(s)}
-                title={`Set status ke ${s}`}
-              >
-                Set {s}
-              </button>
-            ))}
-
-            {getAllowedNext(row.status).length === 0 && (
-              <span className="text-xs text-gray-600">
-                Status terminal — tidak ada transisi.
-              </span>
-            )}
-          </div>
         </>
       )}
     </div>
@@ -9078,14 +10328,17 @@ export default function OrderDetail(): React.ReactElement {
 }
 
 /* ------------------------
-   Sub-komponen presentasional (UI-only)
+   Presentational helpers (UI-only)
 ------------------------- */
 
-type ThProps = React.ThHTMLAttributes<HTMLTableHeaderCellElement>;
-function Th({ children, className, ...rest }: ThProps) {
+function Th({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'th'>) {
   return (
     <th
-      className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wide ${className ?? ''}`}
+      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${className}`}
       {...rest}
     >
       {children}
@@ -9093,15 +10346,33 @@ function Th({ children, className, ...rest }: ThProps) {
   );
 }
 
-type TdProps = React.TdHTMLAttributes<HTMLTableCellElement>;
-function Td({ children, className, ...rest }: TdProps) {
+function Td({
+  children,
+  className = '',
+  ...rest
+}: React.ComponentProps<'td'>) {
   return (
-    <td
-      className={`px-3 py-2 align-middle ${className ?? ''}`}
-      {...rest}
-    >
+    <td className={`px-4 py-3 align-middle ${className}`} {...rest}>
       {children}
     </td>
+  );
+}
+
+function Kpi({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`mt-0.5 text-sm ${strong ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{value}</div>
+    </div>
+  );
+}
+
+function RowLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="text-slate-500">{label}</div>
+      <div className={`text-right ${strong ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{value}</div>
+    </div>
   );
 }
 
@@ -9110,8 +10381,8 @@ function Td({ children, className, ...rest }: TdProps) {
 
 ### src/pages/orders/OrderReceipt.tsx
 
-- SHA: `d63d244dc3b8`  
-- Ukuran: 13 KB
+- SHA: `c54d446a320c`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -9128,6 +10399,47 @@ type Paper = '58' | '80' | 'A4';
 // 1 mm ≈ 3.77953 px (CSS 96dpi)
 const MM_TO_PX = 3.7795275591;
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+function IconPrinter(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M6 9V3h12v6" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <path d="M6 14h12v7H6z" />
+    </svg>
+  );
+}
+function IconExternal(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M14 3h7v7" />
+      <path d="M10 14 21 3" />
+      <path d="M21 14v6a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" />
+    </svg>
+  );
+}
+function IconLink(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13" />
+      <path d="M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11" />
+    </svg>
+  );
+}
+function IconWA(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 32 32" width="18" height="18" {...props}>
+      <path
+        fill="currentColor"
+        d="M19.11 17.48c-.28-.14-1.64-.81-1.9-.9-.25-.1-.44-.14-.63.14-.18.28-.72.9-.88 1.09-.16.18-.32.21-.6.07-.28-.14-1.17-.43-2.23-1.37-.82-.73-1.37-1.64-1.53-1.91-.16-.28-.02-.43.12-.57.12-.12.28-.32.42-.48.14-.16.18-.28.28-.46.09-.18.05-.35-.02-.49-.07-.14-.63-1.51-.87-2.06-.23-.56-.47-.48-.63-.49-.16-.01-.35-.01-.53-.01-.18 0-.49.07-.74.35-.25.28-.98.96-.98 2.35s1 2.73 1.14 2.92c.14.18 1.97 3.01 4.77 4.22.67.29 1.19.46 1.6.59.67.21 1.29.18 1.77.11.54-.08 1.64-.67 1.87-1.32.23-.65.23-1.21.16-1.32-.07-.11-.25-.18-.53-.32z"
+      />
+      <path
+        fill="currentColor"
+        d="M26.67 5.33A14.62 14.62 0 0 0 16.02 1C8.07 1 1.61 7.46 1.61 15.41c0 2.54.66 5.03 1.92 7.23L1 31l8.56-2.49a14.4 14.4 0 0 0 6.46 1.65h.01c7.95 0 14.41-6.46 14.41-14.41 0-3.85-1.5-7.46-4.17-10.42zM16.02 27.6h-.01c-2.14 0-4.24-.57-6.08-1.64l-.43-.26-5.08 1.48 1.36-4.95-.28-.51a12.03 12.03 0 0 1-1.86-6.31c0-6.66 5.42-12.08 12.09-12.08 3.22 0 6.25 1.25 8.53 3.52a12 12 0 0 1 3.56 8.56c0 6.66-5.42 12.19-12.08 12.19z"
+      />
+    </svg>
+  );
+}
 
 export default function OrderReceipt(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
@@ -9158,6 +10470,7 @@ export default function OrderReceipt(): React.ReactElement {
             if (wa) setWaPhone(wa);
           }
         } catch { /* lanjutkan */ }
+
         try {
           const link = await createOrderShareLink(id);
           setShareUrl(link);
@@ -9173,9 +10486,10 @@ export default function OrderReceipt(): React.ReactElement {
   // ====== Derived UI state ======
   const isReceivableOpen = useMemo(() => Number(order?.due_amount ?? 0) > 0, [order?.due_amount]);
   const statusLabel = isReceivableOpen ? 'Piutang' : 'Lunas';
-  const statusClass = isReceivableOpen
-    ? 'bg-[var(--color-status-warning)] text-white'
-    : 'bg-[var(--color-status-success)] text-white';
+
+  const statusPillClass = isReceivableOpen
+    ? 'bg-amber-50 text-amber-700 ring-amber-200'
+    : 'bg-emerald-50 text-emerald-700 ring-emerald-200';
 
   const paperLabel = paper === '58' ? '58mm' : paper === '80' ? '80mm' : 'A4';
   const previewWidthPx = useMemo(() => {
@@ -9266,6 +10580,12 @@ export default function OrderReceipt(): React.ReactElement {
     } catch { /* abaikan */ }
   };
 
+  const onCopyShareLink = async () => {
+    try {
+      await navigator.clipboard?.writeText(shareUrl || '');
+    } catch { /* abaikan */ }
+  };
+
   // ====== Iframe preview (isolated) ======
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [frameKey, setFrameKey] = useState(0);
@@ -9307,20 +10627,21 @@ export default function OrderReceipt(): React.ReactElement {
   // ====== UI states ======
   if (loading) {
     return (
-      <div className="p-4 max-w-4xl mx-auto">
-        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
-          <div className="h-4 w-40 rounded bg-black/10 animate-pulse mb-3" />
-          <div className="h-3 w-full rounded bg-black/10 animate-pulse mb-2" />
-          <div className="h-3 w-5/6 rounded bg-black/10 animate-pulse mb-2" />
-          <div className="h-3 w-4/6 rounded bg-black/10 animate-pulse" />
+      <div className="mx-auto max-w-5xl p-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+          <div className="h-5 w-48 rounded bg-slate-200/70 animate-pulse mb-4" />
+          <div className="h-3 w-full rounded bg-slate-200/70 animate-pulse mb-2" />
+          <div className="h-3 w-5/6 rounded bg-slate-200/70 animate-pulse mb-2" />
+          <div className="h-3 w-4/6 rounded bg-slate-200/70 animate-pulse" />
         </div>
       </div>
     );
   }
+
   if (error) {
     return (
-      <div className="p-4 max-w-4xl mx-auto">
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+      <div className="mx-auto max-w-5xl p-4">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       </div>
@@ -9328,78 +10649,125 @@ export default function OrderReceipt(): React.ReactElement {
   }
 
   // ====== Render ======
+  const nomor = order?.invoice_no ?? order?.number ?? '';
+  const customer = order?.customer?.name ?? '-';
+  const total = toIDR(Number(order?.grand_total ?? 0));
+
   return (
-    <div className="p-4 max-w-[1200px] mx-auto space-y-3">
-      {/* Header ringkas */}
-      <header className="print:hidden flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">
-            Receipt {order?.invoice_no ?? order?.number ?? ''}
+    <div className="mx-auto max-w-[1200px] p-4 space-y-4">
+      {/* Header */}
+      <header className="print:hidden flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold text-slate-900 truncate">
+            Receipt {nomor}
           </h1>
-          <p className="text-xs text-gray-600">
-            {order?.customer?.name ?? '-'}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+            <span className="truncate">{customer}</span>
+            <span className="text-slate-300">•</span>
+            <span className="font-semibold text-slate-900">{total}</span>
+          </div>
         </div>
-        <span className={`chip ${statusClass}`}>{statusLabel}</span>
+
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${statusPillClass}`}>
+            {statusLabel}
+          </span>
+        </div>
       </header>
 
-      {/* Toolbar */}
-      <section className="print:hidden card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-3 bg-[var(--color-surface)]">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:items-end">
-          {/* Kolom 1: Cetak */}
-          <div className="flex flex-wrap gap-2">
-            <button className="btn-outline px-3 py-2" onClick={onPrint} aria-label="Cetak struk">
-              <span className="mr-1">🖨</span> Print
-            </button>
-            <button className="btn-outline px-3 py-2" onClick={onOpenNewTab} aria-label="Buka tab baru">
-              <span className="mr-1">🗗</span> Open tab
-            </button>
+      {/* Top actions */}
+      <section className="print:hidden rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
+          {/* Actions */}
+          <div className="lg:col-span-4">
+            <div className="text-xs font-medium text-slate-600 mb-2">Aksi</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                onClick={onPrint}
+                aria-label="Cetak struk"
+              >
+                <IconPrinter className="text-white" />
+                Print
+              </button>
+
+              <button
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                onClick={onOpenNewTab}
+                aria-label="Buka tab baru"
+              >
+                <IconExternal className="text-slate-700" />
+                Open tab
+              </button>
+            </div>
           </div>
 
-          {/* Kolom 2: Kertas & Zoom (stepper) */}
-          <div className="flex flex-col gap-2">
-            <div>
-              <span className="block text-xs text-gray-600 mb-1">Ukuran kertas</span>
-              <div className="inline-flex rounded-md border border-[color:var(--color-border)] overflow-hidden">
-                <button
-                  className={`px-3 py-2 text-sm ${paper === '58' ? 'bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)]' : 'bg-white'}`}
-                  onClick={() => setPaper('58')}
-                  aria-pressed={paper === '58'}>58mm</button>
-                <button
-                  className={`px-3 py-2 text-sm border-l border-[color:var(--color-border)] ${paper === '80' ? 'bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)]' : 'bg-white'}`}
-                  onClick={() => setPaper('80')}
-                  aria-pressed={paper === '80'}>80mm</button>
-                <button
-                  className={`px-3 py-2 text-sm border-l border-[color:var(--color-border)] ${paper === 'A4' ? 'bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)]' : 'bg-white'}`}
-                  onClick={() => setPaper('A4')}
-                  aria-pressed={paper === 'A4'}>A4</button>
-              </div>
-              <div className="text-[10px] text-gray-500 mt-1">Saat ini: {paperLabel}</div>
+          {/* Paper */}
+          <div className="lg:col-span-3">
+            <div className="text-xs font-medium text-slate-600 mb-2">Ukuran kertas</div>
+            <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <button
+                className={`flex-1 px-3 py-2 text-sm font-semibold ${paper === '58' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
+                onClick={() => setPaper('58')}
+                aria-pressed={paper === '58'}
+              >
+                58mm
+              </button>
+              <button
+                className={`flex-1 border-l border-slate-200 px-3 py-2 text-sm font-semibold ${paper === '80' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
+                onClick={() => setPaper('80')}
+                aria-pressed={paper === '80'}
+              >
+                80mm
+              </button>
+              <button
+                className={`flex-1 border-l border-slate-200 px-3 py-2 text-sm font-semibold ${paper === 'A4' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
+                onClick={() => setPaper('A4')}
+                aria-pressed={paper === 'A4'}
+              >
+                A4
+              </button>
             </div>
+            <div className="mt-1 text-[11px] text-slate-500">Aktif: {paperLabel}</div>
+          </div>
 
+          {/* Zoom */}
+          <div className="lg:col-span-3">
+            <div className="text-xs font-medium text-slate-600 mb-2">Zoom</div>
             <div className="flex items-center gap-2">
               <button
-                className="btn-outline px-2 py-2"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                 onClick={() => setZoom((z) => clamp(Number((z - 0.1).toFixed(2)), 0.8, 2))}
                 aria-label="Zoom out"
               >
                 −
               </button>
+
               <input
-                type="range" min={0.8} max={2} step={0.05} value={zoom}
+                type="range"
+                min={0.8}
+                max={2}
+                step={0.05}
+                value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-40" aria-label="Zoom pratinjau"
+                className="w-full"
+                aria-label="Zoom pratinjau"
               />
+
               <button
-                className="btn-outline px-2 py-2"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                 onClick={() => setZoom((z) => clamp(Number((z + 0.1).toFixed(2)), 0.8, 2))}
                 aria-label="Zoom in"
               >
                 +
               </button>
-              <span className="text-xs text-gray-600 w-14 text-right">{Math.round(zoom * 100)}%</span>
+
+              <div className="w-14 text-right text-xs font-semibold text-slate-900">
+                {Math.round(zoom * 100)}%
+              </div>
+
               <button
-                className="btn-outline px-3 py-2 ml-1"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
                 onClick={() => setZoom(1)}
                 aria-label="Reset zoom"
               >
@@ -9408,45 +10776,90 @@ export default function OrderReceipt(): React.ReactElement {
             </div>
           </div>
 
-          {/* Kolom 3: WhatsApp */}
-          <div className="flex flex-col md:flex-row gap-2 md:justify-end">
-            <label className="grid gap-1 text-sm flex-1">
-              <span className="text-[color:var(--color-text-default)]">Nomor WhatsApp</span>
-              <input
-                type="tel" placeholder="No. WA (62…/08…)" value={waPhone}
-                onChange={(e) => setWaPhone(e.target.value)}
-                className="input px-3 py-2" aria-label="Nomor WhatsApp"
-              />
-            </label>
-            <div className="flex gap-2">
+          {/* Share + WA */}
+          <div className="lg:col-span-2">
+            <div className="text-xs font-medium text-slate-600 mb-2">Bagikan</div>
+            <div className="flex flex-wrap gap-2">
               <button
-                className="btn-primary disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onSendWA} disabled={!waPhone || !shareUrl} aria-label="Kirim WhatsApp"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onCopyShareLink}
+                disabled={!shareUrl}
+                aria-label="Salin link kwitansi"
+                title={shareUrl ? shareUrl : 'Link belum tersedia'}
               >
-                Kirim WA
-              </button>
-              <button
-                className="btn-outline"
-                onClick={onCopyWAText}
-                aria-label="Salin teks WA"
-              >
-                Salin
+                <IconLink className="text-slate-700" />
+                Copy
               </button>
             </div>
           </div>
         </div>
+
+        {/* WhatsApp row */}
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+          <div className="md:col-span-6">
+            <label className="block text-xs font-medium text-slate-600">
+              Nomor WhatsApp
+            </label>
+            <input
+              type="tel"
+              placeholder="No. WA (62…/08…)"
+              value={waPhone}
+              onChange={(e) => setWaPhone(e.target.value)}
+              className="
+                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400
+                focus:border-slate-900 focus:outline-none
+              "
+              aria-label="Nomor WhatsApp"
+            />
+          </div>
+
+          <div className="md:col-span-6 flex flex-wrap gap-2 md:justify-end">
+            <button
+              className="
+                inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2
+                text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950
+                disabled:opacity-50 disabled:pointer-events-none
+              "
+              onClick={onSendWA}
+              disabled={!waPhone || !shareUrl}
+              aria-label="Kirim WhatsApp"
+            >
+              <IconWA className="text-white" />
+              Kirim WA
+            </button>
+
+            <button
+              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+              onClick={onCopyWAText}
+              aria-label="Salin (link) untuk WA"
+              title="Menyalin link kwitansi"
+            >
+              Salin
+            </button>
+          </div>
+
+          <div className="md:col-span-12 text-xs text-slate-500">
+            {shareUrl ? (
+              <span>Link kwitansi siap dibagikan.</span>
+            ) : (
+              <span>Link kwitansi belum tersedia (tetap bisa print & open tab).</span>
+            )}
+          </div>
+        </div>
       </section>
 
-      {/* Stage preview */}
-      <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-0 print:shadow-none print:border-0 print:p-0">
-        {/* Background grid halus agar preview terasa seperti kanvas */}
-        <div className="w-full overflow-auto rounded-lg"
+      {/* Preview canvas */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)] print:shadow-none print:border-0">
+        <div
+          className="w-full overflow-auto"
           style={{
-            backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px),
-                                 linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)`,
-            backgroundSize: '16px 16px',
-          }}>
-          <div className="min-h-[320px] py-6 grid place-items-start justify-center">
+            backgroundImage:
+              'linear-gradient(0deg, rgba(2,6,23,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(2,6,23,0.05) 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+          }}
+        >
+          <div className="min-h-[360px] py-6 grid place-items-start justify-center">
             <iframe
               key={frameKey}
               ref={iframeRef}
@@ -9457,9 +10870,9 @@ export default function OrderReceipt(): React.ReactElement {
                 width: `${previewWidthPx * zoom}px`,
                 height: `${frameHeight}px`,
                 background: '#fff',
-                border: '1px solid var(--color-border)',
-                borderRadius: '12px',
-                boxShadow: 'var(--shadow-1)',
+                border: '1px solid rgba(15,23,42,0.12)',
+                borderRadius: '14px',
+                boxShadow: '0 18px 42px -26px rgba(0,0,0,.45)',
                 margin: '0 auto'
               }}
             />
@@ -9475,8 +10888,8 @@ export default function OrderReceipt(): React.ReactElement {
 
 ### src/pages/orders/OrdersIndex.tsx
 
-- SHA: `e49b7a9b3fef`  
-- Ukuran: 10 KB
+- SHA: `e69eee6f8929`  
+- Ukuran: 15 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -9562,29 +10975,89 @@ export default function OrdersIndex(): React.ReactElement {
     }
   };
 
+  const toWaLink = (raw?: string | null): string | null => {
+    if (!raw) return null;
+
+    // ambil hanya angka
+    let digits = raw.replace(/\D/g, '');
+
+    // jika diawali 0 → ubah ke 62 (Indonesia)
+    if (digits.startsWith('0')) {
+      digits = '62' + digits.slice(1);
+    }
+
+    return digits ? `https://wa.me/${digits}` : null;
+  };
+
   return (
     <div className="space-y-4">
-      {/* FilterBar */}
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold text-slate-900">Orders</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Kelola daftar pesanan, lihat detail, dan cetak struk.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            to="/pos"
+            className="
+              inline-flex items-center justify-center
+              rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+              hover:bg-slate-800 active:bg-slate-950
+            "
+            aria-label="Buat transaksi baru"
+          >
+            Buat Transaksi
+          </Link>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
       <section
-        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]"
         aria-label="Filter orders"
       >
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3">
-          <label className="grid gap-1 text-sm md:col-span-2">
-            <span className="text-[color:var(--color-text-default)]">Pencarian</span>
-            <input
-              className="input px-3 py-2"
-              placeholder="Cari nomor (INV…)/nama/phone…"
-              value={q}
-              onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
-              aria-label="Cari pesanan"
-            />
-          </label>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+          <div className="md:col-span-6">
+            <label className="block text-xs font-medium text-slate-600">
+              Pencarian
+            </label>
+            <div className="relative mt-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                {/* search icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3.2-3.2" />
+                </svg>
+              </span>
+              <input
+                className="
+                  w-full rounded-lg border border-slate-200 bg-white
+                  pl-10 pr-3 py-2 text-sm text-slate-900
+                  placeholder:text-slate-400
+                  focus:border-slate-900 focus:outline-none
+                "
+                placeholder="Cari nomor (INV…)/nama/phone…"
+                value={q}
+                onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
+                aria-label="Cari pesanan"
+              />
+            </div>
+          </div>
 
-          <label className="grid gap-1 text-sm">
-            <span className="text-[color:var(--color-text-default)]">Status</span>
+          <div className="md:col-span-3">
+            <label className="block text-xs font-medium text-slate-600">
+              Status
+            </label>
             <select
-              className="input px-3 py-2"
+              className="
+                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                px-3 py-2 text-sm text-slate-900
+                focus:border-slate-900 focus:outline-none
+              "
               value={status}
               onChange={(e) => { const v = e.target.value as OrderBackendStatus | ''; dlog('status select', v); setStatus(v); }}
               aria-label="Filter status"
@@ -9599,75 +11072,121 @@ export default function OrdersIndex(): React.ReactElement {
               <option value="PICKED_UP">PICKED_UP</option>
               <option value="CANCELED">CANCELED</option>
             </select>
-          </label>
-
-          <div className="flex items-end gap-2">
-            <button className="btn-primary" onClick={onApply}>Terapkan</button>
-            {/* Tombol reset opsional bila ada kebutuhan nanti */}
           </div>
 
-          <div className="flex items-end md:justify-end">
-            <Link to="/pos" className="btn-primary md:ml-auto text-[color:var(--color-brand-on)]" aria-label="Buat transaksi baru">
-              Buat Transaksi
-            </Link>
+          <div className="md:col-span-3 flex items-center gap-2">
+            <button
+              className="
+                inline-flex w-full items-center justify-center
+                rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+                hover:bg-slate-800 active:bg-slate-950
+              "
+              onClick={onApply}
+            >
+              Terapkan
+            </button>
           </div>
         </div>
       </section>
 
       {/* Loading / Error / Empty */}
       {loading && (
-        <div className="text-sm text-gray-600">
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
           Memuat…
         </div>
       )}
 
       {error && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {!loading && !error && rows.length === 0 && (
-        <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-6 text-sm text-gray-500">
-          Data kosong
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 7h16" />
+              <path d="M4 12h16" />
+              <path d="M4 17h10" />
+            </svg>
+          </div>
+          <div className="text-sm font-medium text-slate-900">Data kosong</div>
+          <div className="mt-1 text-sm text-slate-500">Coba ubah filter atau kata kunci pencarian.</div>
         </div>
       )}
 
       {/* Table */}
       {rows.length > 0 && (
-        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)]">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
+                <tr className="border-b border-slate-200">
                   <Th>Nomor</Th>
                   <Th>Customer</Th>
                   <Th>Status</Th>
-                  <Th>Total</Th>
-                  <Th>Aksi</Th>
+                  <Th className="text-right">Total</Th>
+                  <Th className="text-right">Aksi</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
+
+              <tbody className="divide-y divide-slate-100">
                 {rows.map((o) => (
-                  <tr key={o.id} className="hover:bg-black/5 transition-colors">
-                    <Td className="font-medium max-w-[160px] truncate" title={(o.invoice_no ?? o.number) ?? ''}>
+                  <tr key={o.id} className="hover:bg-slate-50/60 transition-colors">
+                    <Td className="font-medium text-slate-900 max-w-[180px] truncate" title={(o.invoice_no ?? o.number) ?? ''}>
                       {shortOrderNo(o.number, o.invoice_no)}
                     </Td>
-                    <Td className="max-w-[200px] truncate" title={o.customer?.name ?? ''}>
-                      {o.customer?.name ?? '—'}
+
+                    <Td className="max-w-[240px] truncate" title={o.customer?.name ?? ''}>
+                      <div className="flex flex-col">
+                        <span className="text-slate-900">{o.customer?.name ?? '—'}</span>
+
+                        {o.customer?.whatsapp && toWaLink(o.customer.whatsapp) ? (
+                          <a
+                            href={toWaLink(o.customer.whatsapp)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-emerald-600 hover:underline truncate"
+                          >
+                            {o.customer.whatsapp}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </div>
                     </Td>
-                    <Td><StatusBadge status={o.status} /></Td>
+
                     <Td>
+                      <StatusBadge status={o.status} />
+                    </Td>
+
+                    <Td className="text-right font-medium text-slate-900">
                       {Number(o.grand_total).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                     </Td>
-                    <Td>
-                      <div className="flex items-center gap-2">
-                        <Link to={`/orders/${o.id}`} className="text-xs text-[color:var(--color-brand-primary)] hover:underline">
+
+                    <Td className="text-right">
+                      <div className="inline-flex items-center gap-2">
+                        <Link
+                          to={`/orders/${o.id}`}
+                          className="
+                            inline-flex items-center justify-center
+                            rounded-md border border-slate-200 bg-white px-3 py-1.5
+                            text-xs font-semibold text-slate-900
+                            hover:bg-slate-50
+                          "
+                        >
                           Detail
                         </Link>
+
                         <button
                           type="button"
-                          className="text-xs btn-outline px-2 py-1"
+                          className="
+                            inline-flex items-center justify-center
+                            rounded-md bg-slate-900 px-3 py-1.5
+                            text-xs font-semibold text-white
+                            hover:bg-slate-800 active:bg-slate-950
+                          "
                           onClick={() => void onOpenReceipt(o.id)}
                           title="Lihat/Cetak struk"
                         >
@@ -9681,25 +11200,39 @@ export default function OrdersIndex(): React.ReactElement {
             </table>
           </div>
 
+          {/* Pagination */}
           {meta && meta.last_page > 1 && (
-            <div className="flex items-center justify-end gap-2 p-2 border-t border-[color:var(--color-border)]">
-              <button
-                disabled={page <= 1}
-                className="btn-outline px-2 py-1 disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onPrev}
-              >
-                Prev
-              </button>
-              <div className="text-xs text-gray-600">
-                Page {meta.current_page} / {meta.last_page}
+            <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-slate-500">
+                Menampilkan halaman <span className="font-semibold text-slate-900">{meta.current_page}</span> dari{' '}
+                <span className="font-semibold text-slate-900">{meta.last_page}</span>
               </div>
-              <button
-                disabled={page >= meta.last_page}
-                className="btn-outline px-2 py-1 disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onNext}
-              >
-                Next
-              </button>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  disabled={page <= 1}
+                  className="
+                    inline-flex items-center justify-center rounded-md
+                    border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900
+                    hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none
+                  "
+                  onClick={onPrev}
+                >
+                  Prev
+                </button>
+
+                <button
+                  disabled={page >= meta.last_page}
+                  className="
+                    inline-flex items-center justify-center rounded-md
+                    border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900
+                    hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none
+                  "
+                  onClick={onNext}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -9719,7 +11252,7 @@ function Th({
 }: React.ComponentProps<'th'>) {
   return (
     <th
-      className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wide ${className}`}
+      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${className}`}
       {...rest}
     >
       {children}
@@ -9733,22 +11266,32 @@ function Td({
   ...rest
 }: React.ComponentProps<'td'>) {
   return (
-    <td className={`px-3 py-2 align-middle ${className}`} {...rest}>
+    <td className={`px-4 py-3 align-middle ${className}`} {...rest}>
       {children}
     </td>
   );
 }
 
 function StatusBadge({ status }: { status: OrderBackendStatus }) {
-  // Murni presentasi (warna/varian), tidak mengubah logika data
-  const clsBase = 'chip text-xs';
+  // Presentasi saja (badge), tidak mengubah logika data
+  const base =
+    'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset';
+
+  // mapping warna (jelas dibaca, kontras aman)
   const cls =
     status === 'CANCELED'
-      ? 'chip--danger'
-      : status === 'READY' || status === 'PICKED_UP'
-        ? 'chip--solid'
-        : 'chip--subtle';
-  return <span className={`${clsBase} ${cls}`}>{status}</span>;
+      ? 'bg-red-50 text-red-700 ring-red-200'
+      : status === 'READY'
+        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+        : status === 'PICKED_UP'
+          ? 'bg-slate-900 text-white ring-slate-900'
+          : status === 'DELIVERING'
+            ? 'bg-blue-50 text-blue-700 ring-blue-200'
+            : status === 'WASHING' || status === 'DRYING' || status === 'IRONING'
+              ? 'bg-amber-50 text-amber-700 ring-amber-200'
+              : 'bg-slate-50 text-slate-700 ring-slate-200';
+
+  return <span className={`${base} ${cls}`}>{status}</span>;
 }
 
 ```
@@ -9756,8 +11299,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `f98b2d771286`  
-- Ukuran: 44 KB
+- SHA: `067fb3d946b6`  
+- Ukuran: 46 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -9778,6 +11321,8 @@ import { useAuth } from '../../store/useAuth';
 import { toIDR } from '../../utils/money';
 import { getLoyaltySummary } from '../../api/loyalty';
 import type { LoyaltySummary } from '../../types/loyalty';
+import { getBranch } from '../../api/branches';
+import type { Branch } from '../../types/branches';
 
 type HttpError = { response?: { status?: number; data?: unknown } };
 
@@ -9956,6 +11501,11 @@ export default function POSPage() {
   const nav = useNavigate();
   const { user, hasRole } = useAuth;
   const branchId = user?.branch_id ? String(user.branch_id) : '';
+  const [branchName, setBranchName] = useState<string | null>(null);
+  const branchNameFromUser =
+    (user as any)?.branch?.name ??
+    (user as any)?.branch_name ??
+    null;
 
   // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
@@ -9987,6 +11537,33 @@ export default function POSPage() {
   // voucher
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
+
+  // branch name (display)
+  useEffect(() => {
+    if (!branchId) {
+      setBranchName(null);
+      return;
+    }
+
+    // isi dulu dari payload user jika ada (lebih cepat & tidak tergantung permission getBranch)
+    setBranchName(branchNameFromUser);
+
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getBranch(branchId);
+        const raw = (res as any)?.data?.data ?? (res as any)?.data ?? null;
+        const b = raw as Branch | null;
+        if (alive) setBranchName(b?.name ?? branchNameFromUser ?? null);
+      } catch {
+        if (alive) setBranchName(branchNameFromUser ?? null);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [branchId, branchNameFromUser]);
 
   // quick add customer (POS)
   const [openCustomerCreate, setOpenCustomerCreate] = useState(false);
@@ -10196,7 +11773,11 @@ export default function POSPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate text-lg font-semibold">Point of Sale</h1>
-              <Badge tone={branchId ? 'brand' : 'warn'}>{branchId ? `Cabang #${branchId}` : 'Cabang belum terikat'}</Badge>
+              <Badge tone={branchId ? 'brand' : 'warn'}>
+                {branchId
+                  ? `Cabang: ${branchName ?? branchNameFromUser ?? `#${branchId}`}`
+                  : 'Cabang belum terikat'}
+              </Badge>
             </div>
             <div className="mt-1 text-xs text-slate-500">
               Alur cepat: cari layanan → pilih customer → set pembayaran → simpan & cetak.
@@ -11489,25 +13070,25 @@ function RowSkeleton({ cols }: { cols: number }) {
 
 ### src/pages/services/CategoryIndex.tsx
 
-- SHA: `5b3df37ade9c`  
-- Ukuran: 8 KB
+- SHA: `a862a3868d1c`  
+- Ukuran: 15 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/services/CategoryIndex.tsx
-import { useEffect, useState, useCallback } from 'react';
-import type { ServiceCategory, PaginationMeta } from '../../types/services';
+import { useEffect, useState, useCallback } from "react";
+import type { ServiceCategory, PaginationMeta } from "../../types/services";
 import {
   listServiceCategories,
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
-} from '../../api/serviceCategories';
+} from "../../api/serviceCategories";
 
 export default function CategoryIndex() {
   const [rows, setRows] = useState<ServiceCategory[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11522,7 +13103,7 @@ export default function CategoryIndex() {
         setRows(res.data ?? []);
         setMeta((res.meta as PaginationMeta) ?? null);
       } catch {
-        setError('Gagal memuat kategori');
+        setError("Gagal memuat kategori");
       } finally {
         setLoading(false);
       }
@@ -11530,56 +13111,103 @@ export default function CategoryIndex() {
     [q, perPage],
   );
 
-  useEffect(() => { void refresh(page); }, [page, refresh]);
+  useEffect(() => {
+    void refresh(page);
+  }, [page, refresh]);
 
   useEffect(() => {
-    const t = setTimeout(() => { void refresh(1); setPage(1); }, 300);
+    const t = setTimeout(() => {
+      void refresh(1);
+      setPage(1);
+    }, 300);
     return () => clearTimeout(t);
   }, [q, refresh]);
 
+  const total = meta?.total ?? rows.length;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Service Categories</h1>
-          <p className="text-xs text-gray-600">Kelola kategori untuk mengelompokkan layanan.</p>
+          <div className="text-xs text-slate-500">Services</div>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+            Service Categories
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Kelola kategori untuk mengelompokkan layanan.
+          </p>
         </div>
-        <button
-          className="btn-primary"
-          onClick={async () => {
-            const name = prompt('Nama kategori:')?.trim();
-            if (!name) return;
-            try {
-              await createServiceCategory({ name, is_active: true });
-              await refresh(page);
-            } catch {
-              alert('Gagal membuat kategori');
-            }
-          }}
-          aria-label="Tambah kategori layanan"
-        >
-          + New Category
-        </button>
+
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-1">
+              Total: <span className="ml-1 font-semibold text-slate-900">{total}</span>
+            </span>
+          </div>
+
+          <button
+            className="
+              inline-flex items-center justify-center gap-2
+              rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+              hover:bg-slate-800 active:bg-slate-950
+              focus:outline-none focus:ring-2 focus:ring-slate-300
+            "
+            onClick={async () => {
+              const name = prompt("Nama kategori:")?.trim();
+              if (!name) return;
+              try {
+                await createServiceCategory({ name, is_active: true });
+                await refresh(page);
+              } catch {
+                alert("Gagal membuat kategori");
+              }
+            }}
+            aria-label="Tambah kategori layanan"
+          >
+            <PlusIcon />
+            New Category
+          </button>
+        </div>
       </header>
 
       {/* Toolbar */}
       <section
-        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        className="rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-24px_rgba(0,0,0,.35)]"
         aria-label="Toolbar filter kategori"
       >
-        <div className="p-3">
-          <div className="relative max-w-xl">
-            <label htmlFor="search-cat" className="sr-only">Cari kategori</label>
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-xl">
+            <label htmlFor="search-cat" className="sr-only">
+              Cari kategori
+            </label>
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               id="search-cat"
-              className="input w-full pl-9 py-2"
-              placeholder="Cari nama…"
+              className="
+                w-full rounded-md border border-slate-200 bg-white
+                pl-10 pr-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400
+                focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200
+              "
+              placeholder="Cari nama kategori…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Cari nama kategori"
             />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <div className="text-xs text-slate-500">
+              Menampilkan{" "}
+              <span className="font-semibold text-slate-900">{rows.length}</span>{" "}
+              item{meta?.total ? <> dari <span className="font-semibold text-slate-900">{meta.total}</span></> : null}
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
+              <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-1">
+                Ketik untuk mencari (auto)
+              </span>
+            </div>
           </div>
         </div>
       </section>
@@ -11589,7 +13217,7 @@ export default function CategoryIndex() {
         <div
           role="alert"
           aria-live="polite"
-          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
         >
           {error}
         </div>
@@ -11597,24 +13225,25 @@ export default function CategoryIndex() {
 
       {/* Empty state */}
       {!loading && !error && rows.length === 0 && (
-        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
-          Belum ada kategori
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+          Belum ada kategori.
         </div>
       )}
 
-      {/* Table (konsisten dengan Customers) */}
-      <section aria-busy={loading ? 'true' : 'false'}>
-        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+      {/* Table */}
+      <section aria-busy={loading ? "true" : "false"}>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-24px_rgba(0,0,0,.35)]">
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)]">
+              <thead className="sticky top-0 z-10 bg-white">
+                <tr className="border-b border-slate-200">
                   <Th>Nama</Th>
                   <Th>Status</Th>
                   <Th className="text-right pr-4">Aksi</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
+
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <>
                     <RowSkeleton />
@@ -11624,49 +13253,83 @@ export default function CategoryIndex() {
                     <RowSkeleton />
                   </>
                 ) : (
-                  rows.map((r) => (
-                    <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                  rows.map((r, idx) => (
+                    <tr
+                      key={r.id}
+                      className={[
+                        "transition-colors",
+                        idx % 2 === 0 ? "bg-white" : "bg-slate-50/40",
+                        "hover:bg-slate-100/60",
+                      ].join(" ")}
+                    >
                       <Td>
-                        <span className="line-clamp-1 font-medium">{r.name}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700">
+                            <TagIcon />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="line-clamp-1 font-semibold text-slate-900">
+                              {r.name}
+                            </div>
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              ID: {r.id}
+                            </div>
+                          </div>
+                        </div>
                       </Td>
+
                       <Td>
                         {r.is_active ? (
-                          <span className="chip chip--solid">Active</span>
+                          <Pill tone="success">Active</Pill>
                         ) : (
-                          <span className="chip chip--danger">Inactive</span>
+                          <Pill tone="danger">Inactive</Pill>
                         )}
                       </Td>
-                      <Td className="text-right">
-                        <div className="flex gap-2 justify-end">
+
+                      <Td className="pr-4">
+                        <div className="flex justify-end gap-2">
                           <button
-                            className="btn-outline text-xs px-3 py-1"
+                            className="
+                              inline-flex items-center gap-2 rounded-md
+                              border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700
+                              hover:bg-slate-50 active:bg-slate-100
+                              focus:outline-none focus:ring-2 focus:ring-slate-200
+                            "
                             onClick={async () => {
-                              const name = prompt('Ubah nama kategori:', r.name)?.trim();
+                              const name = prompt("Ubah nama kategori:", r.name)?.trim();
                               if (!name) return;
                               try {
                                 await updateServiceCategory(r.id, { name });
                                 await refresh(page);
                               } catch {
-                                alert('Gagal update');
+                                alert("Gagal update");
                               }
                             }}
                             aria-label={`Ubah kategori ${r.name}`}
                           >
+                            <EditIcon />
                             Edit
                           </button>
+
                           <button
-                            className="btn-outline text-xs px-3 py-1 text-red-600"
+                            className="
+                              inline-flex items-center gap-2 rounded-md
+                              border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700
+                              hover:bg-red-50 active:bg-red-100/60
+                              focus:outline-none focus:ring-2 focus:ring-red-200
+                            "
                             onClick={async () => {
                               if (!confirm(`Hapus kategori ${r.name}?`)) return;
                               try {
                                 await deleteServiceCategory(r.id);
                                 await refresh(page);
                               } catch {
-                                alert('Gagal hapus');
+                                alert("Gagal hapus");
                               }
                             }}
                             aria-label={`Hapus kategori ${r.name}`}
                           >
+                            <TrashIcon />
                             Delete
                           </button>
                         </div>
@@ -11677,51 +13340,170 @@ export default function CategoryIndex() {
               </tbody>
             </table>
           </div>
+
+          {/* Footer pagination (inside card) */}
+          <div className="flex flex-col gap-3 border-t border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-slate-500">
+              Hal{" "}
+              <span className="font-semibold text-slate-900">
+                {meta?.current_page ?? page}
+              </span>{" "}
+              /{" "}
+              <span className="font-semibold text-slate-900">
+                {meta?.last_page ?? 1}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="
+                  inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white
+                  px-3 py-2 text-sm font-semibold text-slate-700
+                  hover:bg-slate-50 active:bg-slate-100
+                  disabled:cursor-not-allowed disabled:opacity-50
+                  focus:outline-none focus:ring-2 focus:ring-slate-200
+                "
+              >
+                <ChevronLeftIcon />
+                Prev
+              </button>
+
+              <button
+                disabled={!!meta && page >= (meta.last_page ?? 1)}
+                onClick={() => setPage((p) => p + 1)}
+                className="
+                  inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white
+                  px-3 py-2 text-sm font-semibold text-slate-700
+                  hover:bg-slate-50 active:bg-slate-100
+                  disabled:cursor-not-allowed disabled:opacity-50
+                  focus:outline-none focus:ring-2 focus:ring-slate-200
+                "
+              >
+                Next
+                <ChevronRightIcon />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
-
-      {/* Pagination */}
-      <div className="flex items-center gap-2 justify-end">
-        <button
-          disabled={page <= 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="btn-outline disabled:opacity-50"
-        >
-          Prev
-        </button>
-        <div className="text-sm">
-          Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
-        </div>
-        <button
-          disabled={!!meta && page >= (meta.last_page ?? 1)}
-          onClick={() => setPage((p) => p + 1)}
-          className="btn-outline disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
     </div>
   );
 }
 
-/* ---------- Subcomponents (konsisten) ---------- */
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+/* ---------- Subcomponents (UI only) ---------- */
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+    <th
+      className={[
+        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500",
+        className,
+      ].join(" ")}
+    >
       {children}
     </th>
   );
 }
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={["px-4 py-3 align-middle", className].join(" ")}>{children}</td>;
 }
+
 function RowSkeleton() {
   return (
-    <tr>
-      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+    <tr className="animate-pulse">
+      <td className="px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-slate-200" />
+          <div className="space-y-2">
+            <div className="h-4 w-44 rounded bg-slate-200" />
+            <div className="h-3 w-24 rounded bg-slate-200" />
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-6 w-20 rounded-full bg-slate-200" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="ml-auto h-9 w-44 rounded bg-slate-200" />
+      </td>
     </tr>
+  );
+}
+
+function Pill({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone: "success" | "danger";
+}) {
+  const cls =
+    tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-red-200 bg-red-50 text-red-700";
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+/* ---------- Icons (inline, no deps) ---------- */
+function PlusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 21l-4.3-4.3" />
+      <circle cx="11" cy="11" r="7" />
+    </svg>
+  );
+}
+function TagIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20.6 13.5 12 22 2 12 10.5 3.4H20V13.5Z" />
+      <circle cx="16.5" cy="7.5" r="1.2" />
+    </svg>
+  );
+}
+function EditIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+function ChevronLeftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+function ChevronRightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
   );
 }
 
@@ -11730,17 +13512,17 @@ function RowSkeleton() {
 
 ### src/pages/services/PricePerBranchInput.tsx
 
-- SHA: `2c3a82f52d87`  
+- SHA: `96f776c3fd42`  
 - Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/services/PricePerBranchInput.tsx
-import { useEffect, useRef, useState } from 'react';
-import type { Branch } from '../../types/branches';
-import type { ServicePrice, ServicePriceSetPayload } from '../../types/services';
-import { listBranches } from '../../api/branches';
-import { listServicePricesByService, setServicePrice } from '../../api/servicePrices';
+import { useEffect, useRef, useState } from "react";
+import type { Branch } from "../../types/branches";
+import type { ServicePrice, ServicePriceSetPayload } from "../../types/services";
+import { listBranches } from "../../api/branches";
+import { listServicePricesByService, setServicePrice } from "../../api/servicePrices";
 
 interface Props {
   serviceId: string;
@@ -11749,14 +13531,14 @@ interface Props {
 type Row = Branch & { override?: ServicePrice | null; effective: number };
 
 function toStr(x: unknown) {
-  return x == null ? '' : String(x);
+  return x == null ? "" : String(x);
 }
 function toNum(x: unknown, fallback = 0) {
   const n = Number(x);
   return Number.isFinite(n) ? n : fallback;
 }
 function toIDR(n: number) {
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+  return n.toLocaleString("id-ID", { style: "currency", currency: "IDR" });
 }
 
 export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) {
@@ -11772,23 +13554,14 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
       setLoading(true);
       setError(null);
       setNotice(null);
-
-      console.groupCollapsed('[PricePerBranchInput] LOAD');
-      console.log('serviceId:', serviceId);
-      console.log('defaultPrice:', defaultPrice);
-
       try {
         const branchesRes = await listBranches({ per_page: 100 });
-        const branchesRaw: unknown = (branchesRes)?.data ?? branchesRes;
+        const branchesRaw: unknown = branchesRes?.data ?? branchesRes;
         const branches: Branch[] = Array.isArray(branchesRaw) ? branchesRaw : [];
-        console.log('branches (raw):', branchesRes);
-        console.log('branches (parsed):', branches);
 
         const overridesRes = await listServicePricesByService(serviceId);
-        const overridesData: unknown = (overridesRes)?.data ?? overridesRes;
+        const overridesData: unknown = overridesRes?.data ?? overridesRes;
         const overrides: ServicePrice[] = Array.isArray(overridesData) ? overridesData : [];
-        console.log('overrides (raw):', overridesRes);
-        console.log('overrides (parsed):', overrides);
 
         const map = new Map<string, ServicePrice>(
           overrides.map((p) => [toStr(p.branch_id), p])
@@ -11801,13 +13574,10 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
           return { ...b, override: ov, effective: eff };
         });
 
-        console.log('merged rows:', merged);
         setRows(merged);
-      } catch (e) {
-        console.error('LOAD error:', e);
-        setError('Gagal memuat harga per cabang.');
+      } catch {
+        setError("Gagal memuat harga per cabang.");
       } finally {
-        console.groupEnd();
         setLoading(false);
       }
     })();
@@ -11819,14 +13589,11 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
 
     if (!Number.isFinite(price) || price <= 0) {
       setNotice(null);
-      setError('Harga tidak valid.');
+      setError("Harga tidak valid.");
       return;
     }
 
     const payload: ServicePriceSetPayload = { service_id: serviceId, branch_id, price };
-
-    console.groupCollapsed('[PricePerBranchInput] SAVE ONE');
-    console.log('payload:', payload);
 
     try {
       setSaving(branch_id);
@@ -11834,13 +13601,9 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
       setNotice(null);
 
       const res = await setServicePrice(payload);
-      console.log('response (raw):', res);
-      const updated: ServicePrice = (res && (res).data ? (res).data : res) as ServicePrice;
-      console.log('response (parsed row):', updated);
+      const updated: ServicePrice = (res && (res as any).data ? (res as any).data : res) as ServicePrice;
 
-      if (!updated || !updated.id) {
-        console.warn('No updated row returned, skip UI update.');
-      } else {
+      if (updated?.id) {
         setRows((prev) =>
           prev.map((r) =>
             toStr(r.id) === branch_id
@@ -11857,101 +13620,116 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
         if (ref) ref.value = toStr(updated.price);
       }
 
-      setNotice('Harga cabang diperbarui.');
-    } catch (e) {
-      console.error('SAVE error:', e);
-      setError('Gagal menyimpan harga cabang.');
+      setNotice("Harga cabang diperbarui.");
+    } catch {
+      setError("Gagal menyimpan harga cabang.");
     } finally {
       setSaving(null);
-      console.groupEnd();
     }
   }
 
-  /* ---------------- UI ---------------- */
-
   if (loading) {
     return (
-      <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4">
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          <span className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3 text-sm text-slate-500">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
           Memuat harga cabang…
         </div>
       </div>
     );
   }
+
   if (error && !rows.length) {
     return (
-      <div
-        role="alert"
-        aria-live="polite"
-        className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-      >
+      <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
         {error}
       </div>
     );
   }
+
   if (!rows.length) {
-    return <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-4 text-sm text-gray-500">Belum ada cabang.</div>;
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+        Belum ada cabang.
+      </div>
+    );
   }
 
   return (
-    <section className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-[0_12px_32px_-20px_rgba(0,0,0,.35)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--color-border)]">
+      <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold">Harga Per Cabang</h2>
-          <p className="text-xs text-gray-600">
-            Default harga layanan: <span className="font-medium">{toIDR(Number(defaultPrice))}</span>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Harga Per Cabang
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Atur harga override untuk setiap cabang.
           </p>
+        </div>
+
+        <div className="rounded-lg bg-slate-50 px-4 py-3 text-sm">
+          <div className="text-xs text-slate-500">Default Price</div>
+          <div className="font-semibold text-slate-900">
+            {toIDR(Number(defaultPrice))}
+          </div>
         </div>
       </div>
 
-      {/* Alerts */}
       {notice && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="mx-4 mt-3 rounded-md border border-[color:var(--color-border)] bg-[#E6EDFF] text-[color:var(--color-text-default)] text-sm px-3 py-2"
-        >
+        <div className="mx-6 mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {notice}
         </div>
       )}
       {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="mx-4 mt-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-        >
+        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      {/* Table — konsisten dengan Customers */}
-      <div className="overflow-auto mt-3">
-        <table className="min-w-[720px] w-full text-sm">
-          <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-            <tr className="divide-x divide-[color:var(--color-border)]">
+      {/* Table */}
+      <div className="overflow-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-white sticky top-0 border-b border-slate-200">
+            <tr>
               <Th>Cabang</Th>
               <Th className="text-right">Harga Efektif</Th>
               <Th className="text-right">Override</Th>
-              <Th className="text-right pr-4">Aksi</Th>
+              <Th className="text-right pr-6">Aksi</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[color:var(--color-border)]">
-            {rows.map((r) => {
+
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((r, idx) => {
               const key = toStr(r.id);
               const isSaving = saving === key;
+
               return (
-                <tr key={key} className="hover:bg-black/5 transition-colors">
+                <tr
+                  key={key}
+                  className={[
+                    idx % 2 === 0 ? "bg-white" : "bg-slate-50/40",
+                    "hover:bg-slate-100/60 transition-colors",
+                  ].join(" ")}
+                >
                   <Td>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{r.code}</span>
-                      <span className="text-gray-500">— {r.name}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700">
+                        {r.code}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">
+                          {r.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Branch ID: {r.id}
+                        </div>
+                      </div>
                     </div>
                   </Td>
 
-                  <Td className="text-right">
-                    <span className="font-medium">{toIDR(r.effective)}</span>
+                  <Td className="text-right font-semibold text-slate-900">
+                    {toIDR(r.effective)}
                   </Td>
 
                   <Td className="text-right">
@@ -11959,52 +13737,61 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       type="number"
                       min={0}
                       step="100"
-                      className="input w-44 text-right"
-                      defaultValue={r.override?.price ?? ''}
+                      className="
+                        w-44 rounded-md border border-slate-200 bg-white
+                        px-3 py-2 text-right text-sm text-slate-900
+                        placeholder:text-slate-400
+                        focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200
+                      "
+                      defaultValue={r.override?.price ?? ""}
                       placeholder={`Default ${toIDR(Number(defaultPrice))}`}
                       ref={(el) => { inputRefs.current[key] = el; }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           const raw = inputRefs.current[key]?.value;
                           const val = toNum(raw, NaN);
                           if (!Number.isFinite(val) || val <= 0) {
-                            setError('Harga tidak valid.');
+                            setError("Harga tidak valid.");
                             setNotice(null);
                             return;
                           }
                           void onSaveOne(key, val);
                         }
                       }}
-                      aria-label={`Harga override untuk cabang ${r.name}`}
                     />
                   </Td>
 
-                  <Td className="text-right">
-                    <div className="inline-flex items-center gap-2">
+                  <Td className="text-right pr-6">
+                    <div className="flex justify-end gap-2">
                       <button
-                        className="btn-primary disabled:opacity-50"
+                        className="
+                          inline-flex items-center rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white
+                          hover:bg-slate-800 disabled:opacity-50
+                        "
                         disabled={isSaving}
                         onClick={() => {
                           const raw = inputRefs.current[key]?.value;
                           const val = toNum(raw, NaN);
                           if (!Number.isFinite(val) || val <= 0) {
-                            setError('Harga tidak valid.');
+                            setError("Harga tidak valid.");
                             setNotice(null);
                             return;
                           }
                           void onSaveOne(key, val);
                         }}
-                        aria-label={`Simpan harga cabang ${r.name}`}
                       >
-                        {isSaving ? 'Menyimpan…' : 'Simpan'}
+                        {isSaving ? "Menyimpan…" : "Simpan"}
                       </button>
 
                       <button
-                        className="btn-outline"
+                        className="
+                          inline-flex items-center rounded-md border border-slate-200 bg-white
+                          px-3 py-2 text-xs font-semibold text-slate-700
+                          hover:bg-slate-50
+                        "
                         onClick={() => {
-                          // Reset field (lokal) -> kembali ke default (server belum diubah)
                           const ref = inputRefs.current[key];
-                          if (ref) ref.value = '';
+                          if (ref) ref.value = "";
                           setRows((prev) =>
                             prev.map((x) =>
                               toStr(x.id) === key
@@ -12012,11 +13799,10 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                                 : x
                             )
                           );
-                          setNotice('Override dihapus (kembali ke default). Belum tersimpan ke server.');
+                          setNotice("Override dihapus (kembali ke default). Belum tersimpan ke server.");
                         }}
-                        aria-label={`Kosongkan override cabang ${r.name}`}
                       >
-                        Reset Field
+                        Reset
                       </button>
                     </div>
                   </Td>
@@ -12027,23 +13813,23 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
         </table>
       </div>
 
-      <div className="px-4 py-3 border-t border-[color:var(--color-border)] text-xs text-gray-500">
-        Tip: Tekan <kbd className="px-1 py-0.5 border rounded">Enter</kbd> pada kolom harga untuk menyimpan cepat.
+      <div className="border-t border-slate-200 px-6 py-3 text-xs text-slate-500">
+        Tekan <kbd className="rounded border px-1 py-0.5">Enter</kbd> pada kolom harga untuk menyimpan cepat.
       </div>
     </section>
   );
 }
 
-/* ---------- Subcomponents UI (konsisten dengan Customers) ---------- */
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+/* Subcomponents */
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+    <th className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}>
       {children}
     </th>
   );
 }
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-6 py-4 align-middle ${className}`}>{children}</td>;
 }
 
 ```
@@ -12051,8 +13837,8 @@ function Td({ children, className = '' }: { children: React.ReactNode; className
 
 ### src/pages/services/ServiceForm.tsx
 
-- SHA: `e0793284789a`  
-- Ukuran: 11 KB
+- SHA: `dbc99cf68411`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -12129,7 +13915,7 @@ export default function ServiceForm() {
   }, [editing, id]);
 
   const errorList = useMemo(() => {
-    const all = Object.entries(fieldErrors).flatMap(([k, v]) => v.map(msg => `${k}: ${msg}`));
+    const all = Object.entries(fieldErrors).flatMap(([k, v]) => v.map((msg) => `${k}: ${msg}`));
     return all;
   }, [fieldErrors]);
 
@@ -12161,207 +13947,307 @@ export default function ServiceForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <header>
-        <h1 className="text-lg font-semibold tracking-tight">
-          {editing ? 'Edit Service' : 'New Service'}
-        </h1>
-        <p className="text-xs text-gray-600">
-          Definisikan layanan, unit, dan harga default. Tekan <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> untuk simpan.
-        </p>
+      <header className="space-y-1">
+        <div className="text-xs text-slate-500">
+          <span className="font-medium text-slate-700">Master Data</span>
+          <span className="mx-2 text-slate-300">/</span>
+          <span className="text-slate-600">Services</span>
+          <span className="mx-2 text-slate-300">/</span>
+          <span className="text-slate-600">{editing ? 'Edit' : 'New'}</span>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+              {editing ? 'Edit Service' : 'New Service'}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Definisikan layanan, unit, dan harga default. Tekan <kbd className="kbd">Ctrl</kbd>/<kbd className="kbd">⌘</kbd>+<kbd className="kbd">S</kbd> untuk simpan.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => nav(-1)}
+              className="
+                inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+              "
+              aria-label="Kembali"
+            >
+              <IconArrowLeft />
+              Back
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Error global */}
       {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-        >
-          {error}
-          {errorList.length > 0 && (
-            <ul className="mt-1 list-disc ms-5">
-              {errorList.map((e, i) => <li key={i}>{e}</li>)}
-            </ul>
-          )}
+        <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="flex items-start gap-2">
+            <div className="mt-0.5 text-red-600">
+              <IconAlert />
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold">{error}</div>
+              {errorList.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 ps-5">
+                  {errorList.map((e, i) => (
+                    <li key={i} className="text-red-700/90">
+                      {e}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Form utama */}
       <form
-        className="card max-w-xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-4"
+        className="
+          max-w-2xl rounded-xl border border-slate-200 bg-white p-5
+          shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]
+          space-y-5
+        "
         onSubmit={onSubmit}
         aria-busy={loading ? 'true' : 'false'}
       >
-        {/* Kategori */}
-        <div className="grid gap-1">
-          <label htmlFor="category_id" className="text-sm font-medium">
-            Kategori <span className="text-red-600">*</span>
-          </label>
-          <select
-            id="category_id"
-            className="input"
-            value={form.category_id}
-            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-            disabled={loading}
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.category_id)}
-            aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}
-          >
-            <option value="">Pilih kategori</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {fieldErrors.category_id && (
-            <p id="err-category_id" className="text-xs text-red-600">
-              {fieldErrors.category_id.join(', ')}
-            </p>
-          )}
-        </div>
-
-        {/* Nama */}
-        <div className="grid gap-1">
-          <label htmlFor="name" className="text-sm font-medium">
-            Nama <span className="text-red-600">*</span>
-          </label>
-          <input
-            id="name"
-            className="input"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            disabled={loading}
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.name)}
-            aria-describedby={fieldErrors.name ? 'err-name' : undefined}
-            placeholder="Contoh: Cuci Sepatu Premium"
-            autoFocus
-          />
-          {fieldErrors.name && (
-            <p id="err-name" className="text-xs text-red-600">
-              {fieldErrors.name.join(', ')}
-            </p>
-          )}
-        </div>
-
-        {/* Unit + presets */}
-        <div className="grid gap-1">
-          <label htmlFor="unit" className="text-sm font-medium">
-            Unit <span className="text-red-600">*</span>
-          </label>
-
-          {/* Segmented presets */}
-          <div className="flex flex-wrap gap-2">
-            {UNIT_PRESETS.map(u => {
-              const active = form.unit.toUpperCase() === u;
-              return (
-                <button
-                  type="button"
-                  key={u}
-                  onClick={() => setForm({ ...form, unit: u })}
-                  className={
-                    active
-                      ? 'chip chip--solid'
-                      : 'chip chip--subtle hover:opacity-90'
-                  }
-                  aria-pressed={active}
-                >
-                  {u}
-                </button>
-              );
-            })}
+        {/* Section title */}
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Informasi Layanan</div>
+            <div className="mt-0.5 text-xs text-slate-500">Field bertanda * wajib diisi.</div>
           </div>
-
-          {/* Free text */}
-          <input
-            id="unit"
-            className="input"
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })}
-            disabled={loading}
-            aria-required="true"
-            aria-invalid={Boolean(fieldErrors.unit)}
-            aria-describedby={fieldErrors.unit ? 'err-unit' : 'hint-unit'}
-            placeholder="ITEM / PASANG / KG"
-          />
-          {!fieldErrors.unit && (
-            <p id="hint-unit" className="text-xs text-gray-500">
-              Pilih salah satu atau ketik unit kustom (akan otomatis UPPERCASE).
-            </p>
-          )}
-          {fieldErrors.unit && (
-            <p id="err-unit" className="text-xs text-red-600">
-              {fieldErrors.unit.join(', ')}
-            </p>
-          )}
+          <div className="text-xs text-slate-500">{loading ? 'Memproses…' : null}</div>
         </div>
 
-        {/* Harga Default (Rp prefix) */}
-        <div className="grid gap-1">
-          <label htmlFor="price_default" className="text-sm font-medium">
-            Harga Default <span className="text-red-600">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 select-none">Rp</span>
+        {/* Grid */}
+        <div className="grid grid-cols-1 gap-4">
+          {/* Kategori */}
+          <Field
+            label="Kategori"
+            required
+            htmlFor="category_id"
+            hint="Pilih kategori agar layanan mudah dikelompokkan."
+            error={fieldErrors.category_id?.join(', ')}
+          >
+            <div className="relative">
+              <select
+                id="category_id"
+                className={inputClass(Boolean(fieldErrors.category_id))}
+                value={form.category_id}
+                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                disabled={loading}
+                aria-required="true"
+                aria-invalid={Boolean(fieldErrors.category_id)}
+                aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}
+              >
+                <option value="">Pilih kategori</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <IconChevronDown />
+              </span>
+            </div>
+            {fieldErrors.category_id && (
+              <p id="err-category_id" className="mt-1 text-xs text-red-600">
+                {fieldErrors.category_id.join(', ')}
+              </p>
+            )}
+          </Field>
+
+          {/* Nama */}
+          <Field
+            label="Nama"
+            required
+            htmlFor="name"
+            hint="Gunakan nama jelas, mis. “Cuci Sepatu Premium”."
+            error={fieldErrors.name?.join(', ')}
+          >
             <input
-              id="price_default"
-              type="number"
-              min={0}
-              step="100"
-              className="input pl-10"
-              value={form.price_default}
-              onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+              id="name"
+              className={inputClass(Boolean(fieldErrors.name))}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               disabled={loading}
               aria-required="true"
-              aria-invalid={Boolean(fieldErrors.price_default)}
-              aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
-              placeholder="Contoh: 25000"
-              inputMode="numeric"
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+              placeholder="Contoh: Cuci Sepatu Premium"
+              autoFocus
             />
-          </div>
-          {!fieldErrors.price_default && (
-            <p id="hint-price_default" className="text-xs text-gray-500">
-              Gunakan kelipatan 100 agar kasir cepat input.
-            </p>
-          )}
-          {fieldErrors.price_default && (
-            <p id="err-price_default" className="text-xs text-red-600">
-              {fieldErrors.price_default.join(', ')}
-            </p>
-          )}
-        </div>
+            {fieldErrors.name && (
+              <p id="err-name" className="mt-1 text-xs text-red-600">
+                {fieldErrors.name.join(', ')}
+              </p>
+            )}
+          </Field>
 
-        {/* Active */}
-        <div className="flex items-center gap-2">
-          <input
-            id="is_active"
-            type="checkbox"
-            checked={!!form.is_active}
-            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-            disabled={loading}
-          />
-          <label htmlFor="is_active" className="text-sm">Active</label>
+          {/* Unit */}
+          <Field
+            label="Unit"
+            required
+            htmlFor="unit"
+            hint={!fieldErrors.unit ? 'Klik preset atau ketik unit kustom (otomatis UPPERCASE).' : undefined}
+            error={fieldErrors.unit?.join(', ')}
+          >
+            <div className="flex flex-wrap gap-2">
+              {UNIT_PRESETS.map((u) => {
+                const active = form.unit.toUpperCase() === u;
+                return (
+                  <button
+                    type="button"
+                    key={u}
+                    onClick={() => setForm({ ...form, unit: u })}
+                    className={
+                      active
+                        ? 'rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white'
+                        : 'rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100'
+                    }
+                    aria-pressed={active}
+                    disabled={loading}
+                  >
+                    {u}
+                  </button>
+                );
+              })}
+            </div>
+
+            <input
+              id="unit"
+              className={inputClass(Boolean(fieldErrors.unit))}
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value.toUpperCase() })}
+              disabled={loading}
+              aria-required="true"
+              aria-invalid={Boolean(fieldErrors.unit)}
+              aria-describedby={fieldErrors.unit ? 'err-unit' : 'hint-unit'}
+              placeholder="ITEM / PASANG / KG"
+            />
+
+            {!fieldErrors.unit && (
+              <p id="hint-unit" className="mt-1 text-xs text-slate-500">
+                Pilih salah satu atau ketik unit kustom (akan otomatis UPPERCASE).
+              </p>
+            )}
+            {fieldErrors.unit && (
+              <p id="err-unit" className="mt-1 text-xs text-red-600">
+                {fieldErrors.unit.join(', ')}
+              </p>
+            )}
+          </Field>
+
+          {/* Harga Default */}
+          <Field
+            label="Harga Default"
+            required
+            htmlFor="price_default"
+            hint={!fieldErrors.price_default ? 'Gunakan kelipatan 100 agar kasir cepat input.' : undefined}
+            error={fieldErrors.price_default?.join(', ')}
+          >
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 select-none">
+                Rp
+              </span>
+              <input
+                id="price_default"
+                type="number"
+                min={0}
+                step="100"
+                className={inputClass(Boolean(fieldErrors.price_default), 'pl-10')}
+                value={form.price_default}
+                onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+                disabled={loading}
+                aria-required="true"
+                aria-invalid={Boolean(fieldErrors.price_default)}
+                aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
+                placeholder="Contoh: 25000"
+                inputMode="numeric"
+              />
+            </div>
+
+            {!fieldErrors.price_default && (
+              <p id="hint-price_default" className="mt-1 text-xs text-slate-500">
+                Gunakan kelipatan 100 agar kasir cepat input.
+              </p>
+            )}
+            {fieldErrors.price_default && (
+              <p id="err-price_default" className="mt-1 text-xs text-red-600">
+                {fieldErrors.price_default.join(', ')}
+              </p>
+            )}
+          </Field>
+
+          {/* Active switch (checkbox tetap) */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Status</div>
+              <div className="mt-0.5 text-xs text-slate-500">Jika nonaktif, layanan tidak tampil/terpakai.</div>
+            </div>
+
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                id="is_active"
+                type="checkbox"
+                className="peer sr-only"
+                checked={!!form.is_active}
+                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                disabled={loading}
+              />
+              <span
+                className="
+                  h-6 w-11 rounded-full border border-slate-200 bg-white
+                  peer-checked:bg-slate-900 peer-checked:border-slate-900
+                  transition-colors
+                "
+              />
+              <span
+                className="
+                  absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-slate-200
+                  peer-checked:translate-x-5 peer-checked:bg-white
+                  transition-transform
+                "
+              />
+            </label>
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 pt-2">
           <button
             id="btn-submit"
             disabled={loading}
-            className="btn-primary disabled:opacity-60"
+            className="
+              inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
+              hover:bg-slate-800 active:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-60
+            "
             aria-label="Simpan layanan"
           >
+            <IconSave />
             {loading ? 'Menyimpan…' : 'Simpan'}
           </button>
+
           <button
             type="button"
-            className="btn-outline"
+            className="
+              inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm
+              font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+            "
             onClick={() => nav(-1)}
             aria-label="Batalkan dan kembali"
+            disabled={loading}
           >
+            <IconX />
             Batal
           </button>
         </div>
@@ -12369,15 +14255,122 @@ export default function ServiceForm() {
 
       {/* Harga per cabang (override) — hanya saat edit */}
       {editing && service && (
-        <section className="card max-w-3xl border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-4 space-y-2">
-          <h2 className="text-sm font-semibold">Harga per Cabang</h2>
-          <p className="text-xs text-gray-500">
-            Harga efektif = override <code>service_prices</code> per cabang, jika tidak ada akan memakai <code>price_default</code>.
-          </p>
-          <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
+        <section className="max-w-4xl rounded-xl border border-slate-200 bg-white p-5 shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)] space-y-2">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Harga per Cabang</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Harga efektif = override <code className="rounded bg-slate-100 px-1">service_prices</code> per cabang, jika tidak ada akan memakai{' '}
+                <code className="rounded bg-slate-100 px-1">price_default</code>.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <PricePerBranchInput serviceId={service.id} defaultPrice={Number(form.price_default)} />
+          </div>
         </section>
       )}
+
+      {/* tiny styles for kbd (optional, local) */}
+      <style>{`
+        .kbd{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          padding:0 .35rem;
+          height:1.35rem;
+          border:1px solid rgb(226 232 240);
+          border-bottom-width:2px;
+          border-radius:.4rem;
+          background:white;
+          font-size:.75rem;
+          font-weight:600;
+          color:rgb(51 65 85);
+          line-height:1;
+        }
+      `}</style>
     </div>
+  );
+}
+
+/* ---------- Helpers UI (no logic change) ---------- */
+function Field({
+  label,
+  required,
+  htmlFor,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  htmlFor: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={htmlFor} className="text-sm font-semibold text-slate-900">
+        {label} {required ? <span className="text-red-600">*</span> : null}
+      </label>
+      {children}
+      {!error && hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+function inputClass(invalid: boolean, extra: string = '') {
+  return `
+    w-full rounded-lg border bg-white py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400
+    focus:outline-none focus:ring-2
+    ${invalid ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:border-slate-300 focus:ring-slate-200'}
+    ${extra}
+  `;
+}
+
+/* ---------- Icons (inline SVG) ---------- */
+function IconChevronDown() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+function IconArrowLeft() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 18l-6-6 6-6" />
+      <path d="M21 12H9" />
+    </svg>
+  );
+}
+function IconSave() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2Z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v4h8" />
+    </svg>
+  );
+}
+function IconX() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M18 6 6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+function IconAlert() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+      <path d="M10.3 4.3h3.4L22 18.6a2 2 0 0 1-1.7 3H3.7a2 2 0 0 1-1.7-3L10.3 4.3Z" />
+    </svg>
   );
 }
 
@@ -12386,8 +14379,8 @@ export default function ServiceForm() {
 
 ### src/pages/services/ServiceIndex.tsx
 
-- SHA: `8cb2ed62c7ff`  
-- Ukuran: 10 KB
+- SHA: `ff98dfa02347`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -12458,19 +14451,47 @@ export default function ServiceIndex() {
     return () => clearTimeout(t);
   }, [q, category_id, refresh]);
 
+  const total = (meta?.total ?? rows?.length ?? 0);
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Services</h1>
-          <p className="text-xs text-gray-600">Kelola layanan & harga per cabang.</p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <div className="text-xs text-slate-500">
+            <span className="font-medium text-slate-700">Master Data</span>
+            <span className="mx-2 text-slate-300">/</span>
+            <span className="text-slate-600">Services</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">Services</h1>
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600">
+              {loading ? 'Loading…' : `${total} items`}
+            </span>
+          </div>
+
+          <p className="text-sm text-slate-500">
+            Kelola layanan dan harga default. Gunakan filter untuk mempercepat pencarian.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Link to="/service-categories" className="btn-outline" aria-label="Kelola kategori">
+
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/service-categories"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+            aria-label="Kelola kategori"
+          >
+            <IconTag />
             Categories
           </Link>
-          <button className="btn-primary" onClick={() => nav('/services/new')} aria-label="Tambah layanan baru">
+
+          <button
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
+            onClick={() => nav('/services/new')}
+            aria-label="Tambah layanan baru"
+          >
+            <IconPlus />
             New Service
           </button>
         </div>
@@ -12478,51 +14499,80 @@ export default function ServiceIndex() {
 
       {/* FilterBar */}
       <section
-        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        className="rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]"
         aria-label="Filter layanan"
       >
-        <div className="p-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="relative">
-              <label htmlFor="q" className="sr-only">Pencarian layanan</label>
-              <input
-                id="q"
-                className="input w-full pl-9 py-2"
-                placeholder="Cari nama layanan…"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                aria-label="Cari layanan"
-              />
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
-            </div>
+        <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-[1fr_240px_auto] md:items-center">
+          {/* Search */}
+          <div className="relative">
+            <label htmlFor="q" className="sr-only">
+              Pencarian layanan
+            </label>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <IconSearch />
+            </span>
+            <input
+              id="q"
+              className="
+                w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm
+                text-slate-900 placeholder:text-slate-400
+                focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200
+              "
+              placeholder="Cari nama layanan…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Cari layanan"
+            />
+          </div>
 
-            <div>
-              <label htmlFor="cat" className="sr-only">Filter kategori</label>
+          {/* Category */}
+          <div>
+            <label htmlFor="cat" className="sr-only">
+              Filter kategori
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <IconFilter />
+              </span>
               <select
                 id="cat"
-                className="input w-full py-2"
+                className="
+                  w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm
+                  text-slate-900
+                  focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200
+                "
                 value={category_id}
                 onChange={(e) => setCategoryId(e.target.value)}
                 aria-label="Pilih kategori layanan"
               >
                 <option value="">Semua kategori</option>
                 {cats.map((c) => (
-                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                  <option key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <IconChevronDown />
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          {/* Reset */}
+          <div className="flex justify-end">
             <button
               type="button"
-              className="btn-outline"
+              className="
+                inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5
+                text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+              "
               onClick={() => {
                 setQ('');
                 setCategoryId('');
               }}
               aria-label="Reset filter"
             >
+              <IconRotate />
               Reset
             </button>
           </div>
@@ -12534,7 +14584,7 @@ export default function ServiceIndex() {
         <div
           role="alert"
           aria-live="polite"
-          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
         >
           {error}
         </div>
@@ -12542,28 +14592,40 @@ export default function ServiceIndex() {
 
       {/* Empty state */}
       {!loading && !error && rows && rows.length === 0 && (
-        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
-          Belum ada layanan.
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]">
+          <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600">
+            <IconBox />
+          </div>
+          <div className="text-sm font-semibold text-slate-900">Belum ada layanan</div>
+          <div className="mt-1 text-sm text-slate-500">Klik “New Service” untuk menambahkan layanan baru.</div>
         </div>
       )}
 
-      {/* Table (konsisten dengan Customers) */}
+      {/* Table */}
       <section aria-busy={loading ? 'true' : 'false'}>
-        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]">
+          {/* table top hint */}
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+            <div className="text-sm font-semibold text-slate-900">Daftar Layanan</div>
+            <div className="text-xs text-slate-500">
+              Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
+            </div>
+          </div>
+
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)]">
+              <thead className="sticky top-0 z-10 bg-white">
+                <tr className="border-b border-slate-100">
                   <Th>Nama</Th>
                   <Th>Kategori</Th>
                   <Th>Unit</Th>
                   <Th className="text-right">Harga Default</Th>
-                  <Th className="text-right pr-4">Status</Th>
+                  <Th className="text-right">Status</Th>
                   <Th className="text-right pr-4">Aksi</Th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[color:var(--color-border)]">
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <>
                     <RowSkeleton />
@@ -12575,30 +14637,53 @@ export default function ServiceIndex() {
                   </>
                 ) : (
                   rows.map((s) => (
-                    <tr key={s.id} className="hover:bg-black/5 transition-colors">
-                      <Td><span className="line-clamp-1 font-medium">{s.name}</span></Td>
-                      <Td><span className="line-clamp-1">{s.category?.name ?? '-'}</span></Td>
-                      <Td>{s.unit}</Td>
-                      <Td className="text-right tabular-nums">{toIDR(Number(s.price_default))}</Td>
-                      <Td className="text-right">
-                        <span
-                          className={`chip ${s.is_active ? 'chip--solid' : 'chip--subtle'}`}
-                          aria-label={s.is_active ? 'Aktif' : 'Nonaktif'}
-                        >
-                          {s.is_active ? 'Active' : 'Inactive'}
+                    <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
+                      <Td>
+                        <div className="min-w-[220px]">
+                          <div className="line-clamp-1 font-semibold text-slate-900">{s.name}</div>
+                          <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                            ID: <span className="tabular-nums">{s.id}</span>
+                          </div>
+                        </div>
+                      </Td>
+
+                      <Td>
+                        <span className="line-clamp-1 text-slate-700">{s.category?.name ?? '-'}</span>
+                      </Td>
+
+                      <Td>
+                        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                          {s.unit}
                         </span>
                       </Td>
+
+                      <Td className="text-right tabular-nums font-semibold text-slate-900">
+                        {toIDR(Number(s.price_default))}
+                      </Td>
+
                       <Td className="text-right">
-                        <div className="inline-flex justify-end gap-2">
+                        <StatusPill active={!!s.is_active} />
+                      </Td>
+
+                      <Td className="text-right pr-4">
+                        <div className="inline-flex items-center justify-end gap-2">
                           <button
-                            className="btn-outline"
+                            className="
+                              inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
+                              text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+                            "
                             onClick={() => nav(`/services/${s.id}/edit`)}
                             aria-label={`Edit layanan ${s.name}`}
                           >
+                            <IconPencil />
                             Edit
                           </button>
+
                           <button
-                            className="btn-outline text-red-600"
+                            className="
+                              inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2
+                              text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100
+                            "
                             onClick={async () => {
                               if (!confirm(`Hapus layanan ${s.name}?`)) return;
                               try {
@@ -12610,6 +14695,7 @@ export default function ServiceIndex() {
                             }}
                             aria-label={`Hapus layanan ${s.name}`}
                           >
+                            <IconTrash />
                             Delete
                           </button>
                         </div>
@@ -12620,54 +14706,196 @@ export default function ServiceIndex() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination bottom */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+            <div className="text-xs text-slate-500">
+              Menampilkan <span className="font-semibold text-slate-700">{rows?.length ?? 0}</span> data / halaman
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="
+                  inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                  font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+                  disabled:cursor-not-allowed disabled:opacity-50
+                "
+              >
+                <IconChevronLeft />
+                Prev
+              </button>
+
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm tabular-nums text-slate-700">
+                {meta?.current_page ?? page} / {meta?.last_page ?? 1}
+              </div>
+
+              <button
+                disabled={!!meta && page >= (meta.last_page ?? 1)}
+                onClick={() => setPage((p) => p + 1)}
+                className="
+                  inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+                  font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
+                  disabled:cursor-not-allowed disabled:opacity-50
+                "
+              >
+                Next
+                <IconChevronRight />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
-
-      {/* Pagination */}
-      <div className="flex items-center gap-2 justify-end">
-        <button
-          disabled={page <= 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="btn-outline disabled:opacity-50"
-        >
-          Prev
-        </button>
-        <div className="text-sm">
-          Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
-        </div>
-        <button
-          disabled={!!meta && page >= (meta.last_page ?? 1)}
-          onClick={() => setPage((p) => p + 1)}
-          className="btn-outline disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
     </div>
   );
 }
 
-/* ---------- Subcomponents (konsisten dengan Customers) ---------- */
+/* ---------- UI Subcomponents (TIDAK ubah logika) ---------- */
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+    <th
+      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}
+    >
       {children}
     </th>
   );
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
 }
+
+function StatusPill({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+      Active
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+      Inactive
+    </span>
+  );
+}
+
 function RowSkeleton() {
   return (
     <tr>
-      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-32 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse ml-auto" /></td>
-      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-20 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-4 py-4">
+        <div className="space-y-2">
+          <div className="h-4 w-52 animate-pulse rounded bg-slate-200" />
+          <div className="h-3 w-24 animate-pulse rounded bg-slate-100" />
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-7 w-16 animate-pulse rounded bg-slate-200" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="ml-auto h-4 w-28 animate-pulse rounded bg-slate-200" />
+      </td>
+      <td className="px-4 py-4 text-right">
+        <div className="ml-auto h-7 w-24 animate-pulse rounded bg-slate-200" />
+      </td>
+      <td className="px-4 py-4 text-right">
+        <div className="ml-auto h-9 w-40 animate-pulse rounded bg-slate-200" />
+      </td>
     </tr>
+  );
+}
+
+/* ---------- Small Icons (inline SVG, no dependency) ---------- */
+function IconSearch() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
+  );
+}
+function IconFilter() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 6h16" />
+      <path d="M7 12h10" />
+      <path d="M10 18h4" />
+    </svg>
+  );
+}
+function IconChevronDown() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+function IconPlus() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+function IconTag() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M20.59 13.41 12 22l-10-10V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" />
+      <circle cx="7" cy="7" r="1.5" />
+    </svg>
+  );
+}
+function IconPencil() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+function IconRotate() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+function IconChevronLeft() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+function IconChevronRight() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  );
+}
+function IconBox() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
+      <path d="M3 8v10l9 5 9-5V8" />
+      <path d="M12 13v10" />
+    </svg>
   );
 }
 
@@ -12676,8 +14904,8 @@ function RowSkeleton() {
 
 ### src/pages/users/UserForm.tsx
 
-- SHA: `793159a6f4ec`  
-- Ukuran: 16 KB
+- SHA: `80265b6573a7`  
+- Ukuran: 25 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -12702,14 +14930,10 @@ function getHttpStatus(err: unknown): number | null {
   return isAxiosError<ApiErrBody>(err) ? (err.response?.status ?? null) : null;
 }
 function getFieldErrors(err: unknown): Record<string, string[]> {
-  return isAxiosError<ApiErrBody>(err) && err.response?.data?.errors
-    ? err.response.data.errors
-    : {};
+  return isAxiosError<ApiErrBody>(err) && err.response?.data?.errors ? err.response.data.errors : {};
 }
 function getMessage(err: unknown, fallback = 'Terjadi kesalahan'): string {
-  return isAxiosError<ApiErrBody>(err) && err.response?.data?.message
-    ? err.response.data.message
-    : fallback;
+  return isAxiosError<ApiErrBody>(err) && err.response?.data?.message ? err.response.data.message : fallback;
 }
 
 export default function UserForm() {
@@ -12740,15 +14964,18 @@ export default function UserForm() {
   // debug awal (dipertahankan)
   console.log('[UserForm] mount:', { editing, id, me, isSuperadmin, isAdminCabang, canManage });
 
-  const v = useMemo(() => ({
-    name: form.name ?? '',
-    username: form.username ?? '',
-    email: form.email ?? '',
-    password: form.password ?? '',
-    branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
-    is_active: !!form.is_active,
-    roles: Array.isArray(form.roles) ? form.roles : [],
-  }), [form]);
+  const v = useMemo(
+    () => ({
+      name: form.name ?? '',
+      username: form.username ?? '',
+      email: form.email ?? '',
+      password: form.password ?? '',
+      branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
+      is_active: !!form.is_active,
+      roles: Array.isArray(form.roles) ? form.roles : [],
+    }),
+    [form]
+  );
 
   useEffect(() => {
     (async () => {
@@ -12781,13 +15008,9 @@ export default function UserForm() {
         } catch (err: unknown) {
           console.error('[UserForm] gagal load user:', err);
           const status = getHttpStatus(err);
-          if (status === 403) {
-            setError('Anda tidak berhak melihat user ini (beda cabang).');
-          } else if (status === 404) {
-            setError('User tidak ditemukan.');
-          } else {
-            setError(getMessage(err, 'Gagal memuat user'));
-          }
+          if (status === 403) setError('Anda tidak berhak melihat user ini (beda cabang).');
+          else if (status === 404) setError('User tidak ditemukan.');
+          else setError(getMessage(err, 'Gagal memuat user'));
         } finally {
           setLoading(false);
         }
@@ -12888,209 +15111,352 @@ export default function UserForm() {
     }
   }
 
+  const pageTitle = editing ? 'Edit User' : 'New User';
+  const pageDesc = 'Kelola identitas, peran (multi-role), dan status aktif';
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">{editing ? 'Edit User' : 'New User'}</h1>
-          <p className="text-xs text-gray-600">Kelola identitas, peran (multi-role), dan status aktif</p>
+          <div className="text-xs text-slate-500">Settings / Users</div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{pageTitle}</h1>
+          <p className="mt-1 text-sm text-slate-500">{pageDesc}</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => nav('/users')}
+            aria-label="Kembali ke daftar users"
+          >
+            <ArrowLeftIcon />
+            Back
+          </button>
         </div>
       </header>
 
-      {/* Error/Loading info */}
-      {loading && <div className="text-sm text-gray-500">Memuat…</div>}
+      {/* Loading / Error */}
+      {loading && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+          Memuat…
+        </div>
+      )}
+
       {error && (
-        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
           {error}
         </div>
       )}
 
       {/* Form card */}
-      <form className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1" onSubmit={onSubmit}>
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Nama */}
-          <div className="grid gap-1">
-            <label className="text-xs font-medium" htmlFor="name">Nama *</label>
-            <input
-              id="name"
-              className="input"
-              value={v.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              aria-invalid={!!fieldErrors.name}
-              aria-describedby={fieldErrors.name ? 'err-name' : undefined}
-            />
-            {fieldErrors.name && (
-              <p id="err-name" className="text-xs text-red-600">{fieldErrors.name.join(', ')}</p>
-            )}
-          </div>
-
-          {/* Username */}
-          <div className="grid gap-1">
-            <label className="text-xs font-medium" htmlFor="username">Username{!editing ? ' *' : ''}</label>
-            <input
-              id="username"
-              type="text"
-              className="input"
-              value={v.username}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  username: e.target.value.toLowerCase(), // normalisasi ringan
-                })
-              }
-              autoComplete="username"
-              pattern="^[a-z0-9_.]{3,50}$"
-              title="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
-              required={!editing}
-              aria-invalid={!!fieldErrors.username}
-              aria-describedby={fieldErrors.username ? 'err-username' : undefined}
-            />
-            {fieldErrors.username && (
-              <p id="err-username" className="text-xs text-red-600">{fieldErrors.username.join(', ')}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div className="grid gap-1">
-            <label className="text-xs font-medium" htmlFor="email">Email *</label>
-            <input
-              id="email"
-              type="email"
-              className="input"
-              value={v.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              aria-invalid={!!fieldErrors.email}
-              aria-describedby={fieldErrors.email ? 'err-email' : undefined}
-            />
-            {fieldErrors.email && (
-              <p id="err-email" className="text-xs text-red-600">{fieldErrors.email.join(', ')}</p>
-            )}
-          </div>
-
-          {/* Password (create only) */}
-          {!editing && (
-            <div className="grid gap-1">
-              <label className="text-xs font-medium" htmlFor="password">Password *</label>
-              <input
-                id="password"
-                type="password"
-                className="input"
-                value={v.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                aria-invalid={!!fieldErrors.password}
-                aria-describedby={fieldErrors.password ? 'err-password' : undefined}
-              />
-              {fieldErrors.password && (
-                <p id="err-password" className="text-xs text-red-600">{fieldErrors.password.join(', ')}</p>
-              )}
+      <form
+        className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]"
+        onSubmit={onSubmit}
+      >
+        <div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                <UserIcon />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  {editing ? 'Perbarui data user' : 'Buat user baru'}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {isSuperadmin ? 'Superadmin mode' : me?.branch_id ? `Branch scope #${String(me.branch_id)}` : 'Branch scope'}
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Branch */}
-          <div className="grid gap-1">
-            <label className="text-xs font-medium" htmlFor="branch">Branch</label>
-            <select
-              id="branch"
-              className="input"
-              value={v.branch_id} // '' == null
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  branch_id: isSuperadmin ? (e.target.value || null) : (me?.branch_id ? String(me.branch_id) : null),
-                })
-              }
-              disabled={!isSuperadmin} // Admin Cabang tidak boleh ganti cabang
-              aria-invalid={!!fieldErrors.branch_id}
-              aria-describedby={fieldErrors.branch_id ? 'err-branch' : undefined}
-            >
-              {isSuperadmin && <option value="">(Tanpa branch)</option>}
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.code} — {b.name}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.branch_id && (
-              <p id="err-branch" className="text-xs text-red-600">{fieldErrors.branch_id.join(', ')}</p>
-            )}
-          </div>
-
-          {/* Status aktif */}
-          <div className="grid gap-1">
-            <label className="text-xs font-medium">Status</label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={v.is_active}
-                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-              />
-              Aktif
-            </label>
-          </div>
-
-          {/* Roles (full width) */}
-          {canManage && (
-            <div className="md:col-span-2 grid gap-1">
-              <label className="text-xs font-medium" htmlFor="roles">Roles *</label>
-              <select
-                id="roles"
-                multiple
-                className="input min-h-28"
-                value={v.roles}
-                onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions)
-                    .map(o => (o.value || '').trim() as RoleName)
-                    .filter(Boolean);
-                  const uniq = Array.from(new Set(values)) as RoleName[];
-                  setForm({ ...form, roles: uniq });
-                }}
-                required
-                aria-invalid={!!fieldErrors.roles}
-                aria-describedby={fieldErrors.roles ? 'err-roles' : undefined}
+            <div className="hidden sm:flex items-center gap-2">
+              <span
+                className={[
+                  'inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold border',
+                  v.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200',
+                ].join(' ')}
+                title="Status user"
               >
-                {allowedRoles(isSuperadmin).map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+                <span className={['h-2 w-2 rounded-full', v.is_active ? 'bg-emerald-500' : 'bg-slate-400'].join(' ')} />
+                {v.is_active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+        </div>
 
-              {v.roles.length > 0 && (
-                <p className="text-[11px] text-green-700">Dipilih: {v.roles.join(', ')}</p>
-              )}
-              <p className="text-[11px] text-gray-500">Tahan Ctrl / Cmd untuk memilih lebih dari satu.</p>
+        <div className="px-4 py-4 sm:px-6 sm:py-6 space-y-6">
+          {/* Section: Identity */}
+          <Section
+            title="Identity"
+            subtitle="Informasi dasar akun (nama, username, email)."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field
+                label="Nama *"
+                htmlFor="name"
+                error={fieldErrors.name}
+              >
+                <input
+                  id="name"
+                  className={inputClass(!!fieldErrors.name)}
+                  value={v.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                  aria-invalid={!!fieldErrors.name}
+                  aria-describedby={fieldErrors.name ? 'err-name' : undefined}
+                />
+              </Field>
 
-              {fieldErrors.roles && (
-                <p id="err-roles" className="text-xs text-red-600">{fieldErrors.roles.join(', ')}</p>
-              )}
+              <Field
+                label={`Username${!editing ? ' *' : ''}`}
+                htmlFor="username"
+                hint="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
+                error={fieldErrors.username}
+              >
+                <input
+                  id="username"
+                  type="text"
+                  className={inputClass(!!fieldErrors.username)}
+                  value={v.username}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      username: e.target.value.toLowerCase(), // normalisasi ringan
+                    })
+                  }
+                  autoComplete="username"
+                  pattern="^[a-z0-9_.]{3,50}$"
+                  title="3–50 karakter: huruf kecil, angka, underscore (_), atau titik (.)"
+                  required={!editing}
+                  aria-invalid={!!fieldErrors.username}
+                  aria-describedby={fieldErrors.username ? 'err-username' : undefined}
+                />
+              </Field>
 
-              {Object.keys(fieldErrors).length > 0 && (
-                <pre className="text-[11px] text-red-700 bg-red-50 p-2 rounded">{JSON.stringify(fieldErrors, null, 2)}</pre>
+              <Field
+                label="Email *"
+                htmlFor="email"
+                error={fieldErrors.email}
+              >
+                <input
+                  id="email"
+                  type="email"
+                  className={inputClass(!!fieldErrors.email)}
+                  value={v.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? 'err-email' : undefined}
+                />
+              </Field>
+
+              {!editing && (
+                <Field
+                  label="Password *"
+                  htmlFor="password"
+                  hint="Gunakan password kuat (minimal 8 karakter)."
+                  error={fieldErrors.password}
+                >
+                  <input
+                    id="password"
+                    type="password"
+                    className={inputClass(!!fieldErrors.password)}
+                    value={v.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    required
+                    aria-invalid={!!fieldErrors.password}
+                    aria-describedby={fieldErrors.password ? 'err-password' : undefined}
+                  />
+                </Field>
               )}
             </div>
+          </Section>
+
+          {/* Section: Assignment */}
+          <Section
+            title="Assignment"
+            subtitle="Cabang dan status aktif user."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="Branch" htmlFor="branch" error={fieldErrors.branch_id}>
+                <select
+                  id="branch"
+                  className={inputClass(!!fieldErrors.branch_id)}
+                  value={v.branch_id} // '' == null
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      branch_id: isSuperadmin ? (e.target.value || null) : (me?.branch_id ? String(me.branch_id) : null),
+                    })
+                  }
+                  disabled={!isSuperadmin} // Admin Cabang tidak boleh ganti cabang
+                  aria-invalid={!!fieldErrors.branch_id}
+                  aria-describedby={fieldErrors.branch_id ? 'err-branch' : undefined}
+                >
+                  {isSuperadmin && <option value="">(Tanpa branch)</option>}
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code} — {b.name}
+                    </option>
+                  ))}
+                </select>
+
+                {!isSuperadmin && (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 border border-slate-200">
+                    <LockIcon />
+                    Admin Cabang tidak dapat mengubah branch user.
+                  </div>
+                )}
+              </Field>
+
+              <div className="grid gap-2">
+                <div className="text-xs font-semibold text-slate-700">Status</div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className={[
+                      'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold',
+                      v.is_active
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+                    ].join(' ')}
+                    onClick={() => setForm({ ...form, is_active: true })}
+                    aria-pressed={v.is_active}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Active
+                  </button>
+
+                  <button
+                    type="button"
+                    className={[
+                      'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold',
+                      !v.is_active
+                        ? 'bg-slate-100 text-slate-700 border-slate-200'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+                    ].join(' ')}
+                    onClick={() => setForm({ ...form, is_active: false })}
+                    aria-pressed={!v.is_active}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-slate-400" />
+                    Inactive
+                  </button>
+
+                  {/* checkbox tetap ada (aksesibilitas/compat), tapi visualnya pakai tombol */}
+                  <label className="sr-only">
+                    <input
+                      type="checkbox"
+                      checked={v.is_active}
+                      onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                    />
+                    Aktif
+                  </label>
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  Nonaktifkan jika user tidak lagi bertugas. User nonaktif tidak seharusnya bisa login (tergantung backend rule).
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* Section: Roles */}
+          {canManage && (
+            <Section
+              title="Roles"
+              subtitle="Multi-role: pilih minimal satu. Role pertama akan jadi primary saat create."
+            >
+              <div className="grid grid-cols-1 gap-3">
+                <Field label="Roles *" htmlFor="roles" error={fieldErrors.roles} hint="Tahan Ctrl / Cmd untuk memilih lebih dari satu.">
+                  <select
+                    id="roles"
+                    multiple
+                    className={[
+                      inputClass(!!fieldErrors.roles),
+                      'min-h-32 py-2',
+                    ].join(' ')}
+                    value={v.roles}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions)
+                        .map((o) => (o.value || '').trim() as RoleName)
+                        .filter(Boolean);
+                      const uniq = Array.from(new Set(values)) as RoleName[];
+                      setForm({ ...form, roles: uniq });
+                    }}
+                    required
+                    aria-invalid={!!fieldErrors.roles}
+                    aria-describedby={fieldErrors.roles ? 'err-roles' : undefined}
+                  >
+                    {allowedRoles(isSuperadmin).map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                {v.roles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {v.roles.map((r) => (
+                      <span
+                        key={r}
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700"
+                      >
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {Object.keys(fieldErrors).length > 0 && (
+                  <details className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    <summary className="cursor-pointer font-semibold">Detail error (debug)</summary>
+                    <pre className="mt-2 whitespace-pre-wrap">{JSON.stringify(fieldErrors, null, 2)}</pre>
+                  </details>
+                )}
+              </div>
+            </Section>
           )}
         </div>
 
         {/* Actions */}
-        <div className="border-t border-[color:var(--color-border)] p-4 flex flex-wrap gap-2">
-          <button disabled={saving} className="btn-primary">
-            {saving ? 'Menyimpan…' : 'Simpan'}
-          </button>
+        <div className="border-t border-slate-200 px-4 py-3 sm:px-6 flex flex-wrap items-center gap-2 justify-between">
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={saving}
+              className="
+                inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2
+                text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950
+                disabled:cursor-not-allowed disabled:opacity-70
+              "
+            >
+              <SaveIcon />
+              {saving ? 'Menyimpan…' : 'Simpan'}
+            </button>
 
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={() => nav('/users')}
-          >
-            Batal
-          </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => nav('/users')}
+            >
+              Batal
+            </button>
+          </div>
 
           {editing && (
             <button
               type="button"
-              className="btn-outline"
+              className="
+                inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2
+                text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100
+              "
               onClick={async () => {
                 if (!isSuperadmin && !isAdminCabang) return;
                 const p1 = prompt('Password baru (min 8, mix-case+angka)'); if (!p1) return;
@@ -13099,12 +15465,130 @@ export default function UserForm() {
                 catch { alert('Gagal reset password'); }
               }}
             >
+              <KeyIcon />
               Reset Password
             </button>
           )}
         </div>
+
+        {/* local UI-only helper styles */}
+        <style>
+          {`
+            .btn-secondary{
+              display:inline-flex; align-items:center; gap:8px;
+              border:1px solid rgb(226 232 240);
+              background:#fff;
+              color: rgb(15 23 42);
+              border-radius:10px;
+              padding:8px 12px;
+              font-size:14px;
+              font-weight:600;
+            }
+            .btn-secondary:hover{ background: rgb(248 250 252); }
+            .btn-secondary:active{ background: rgb(241 245 249); }
+          `}
+        </style>
       </form>
     </div>
+  );
+}
+
+/* ---------- UI helpers (no logic) ---------- */
+function inputClass(isError: boolean): string {
+  return [
+    'w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-900',
+    'placeholder:text-slate-400 focus:outline-none focus:border-slate-900',
+    isError ? 'border-red-300 focus:border-red-500' : 'border-slate-200',
+    'disabled:opacity-70 disabled:cursor-not-allowed',
+  ].join(' ');
+}
+
+function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-4 py-3">
+        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        {subtitle && <div className="mt-1 text-xs text-slate-500">{subtitle}</div>}
+      </div>
+      <div className="px-4 py-4">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  htmlFor,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  error?: string[];
+  children: React.ReactNode;
+}) {
+  const errId = error?.length ? `err-${htmlFor}` : undefined;
+
+  return (
+    <div className="grid gap-1.5">
+      <label className="text-xs font-semibold text-slate-700" htmlFor={htmlFor}>
+        {label}
+      </label>
+
+      {children}
+
+      {hint && <div className="text-[11px] text-slate-500">{hint}</div>}
+
+      {error?.length ? (
+        <p id={errId} className="text-xs text-red-600">
+          {error.join(', ')}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------- Icons (pure visual) ---------- */
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M20 21a8 8 0 1 0-16 0" />
+    </svg>
+  );
+}
+function ArrowLeftIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+function SaveIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v5h8" />
+    </svg>
+  );
+}
+function LockIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="4" y="11" width="16" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+    </svg>
+  );
+}
+function KeyIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 2l-2 2m-3 3l-2 2" />
+      <path d="M7 14a5 5 0 1 1 4-8l2 2 3 3-2 2-2-2" />
+      <path d="M7 14l-5 5v3h3l5-5" />
+    </svg>
   );
 }
 
@@ -13113,8 +15597,8 @@ export default function UserForm() {
 
 ### src/pages/users/UsersList.tsx
 
-- SHA: `873c151fac5b`  
-- Ukuran: 11 KB
+- SHA: `ce24659c2c35`  
+- Ukuran: 20 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13179,8 +15663,13 @@ export default function UsersList() {
     [page, q, perPage, isSuperadmin, me?.branch_id]
   );
 
-  useEffect(() => { setPage(1); }, [q, perPage]);
-  useEffect(() => { void refresh(page); }, [page, refresh]);
+  useEffect(() => {
+    setPage(1);
+  }, [q, perPage]);
+
+  useEffect(() => {
+    void refresh(page);
+  }, [page, refresh]);
 
   const handleToggleActive = useCallback(
     async (u: User) => {
@@ -13211,85 +15700,145 @@ export default function UsersList() {
 
   const isEmpty = useMemo(() => !loading && rows.length === 0, [loading, rows.length]);
 
+  const totalUsers = meta?.total ?? rows.length;
+  const showingFrom = meta ? (rows.length ? (meta.current_page - 1) * perPage + 1 : 0) : rows.length ? 1 : 0;
+  const showingTo = meta ? (rows.length ? (meta.current_page - 1) * perPage + rows.length : 0) : rows.length;
+
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Users</h1>
-          <p className="text-xs text-gray-500">Kelola akun, role, dan status aktif.</p>
+          <div className="text-xs text-slate-500">Settings / Users</div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Users</h1>
+          <p className="mt-1 text-sm text-slate-500">Kelola akun, role, dan status aktif.</p>
         </div>
-        {canManage && (
-          <Link to="/users/new" className="btn-primary" aria-label="Tambah user baru">
-            New User
-          </Link>
-        )}
+
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block text-xs text-slate-500">
+            Total: <span className="font-semibold text-slate-700">{totalUsers}</span>
+          </div>
+
+          {canManage && (
+            <Link
+              to="/users/new"
+              className="
+                inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2
+                text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950
+              "
+              aria-label="Tambah user baru"
+            >
+              <PlusIcon />
+              New User
+            </Link>
+          )}
+        </div>
       </header>
 
       {/* Toolbar */}
       <section
-        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
+        className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]"
         aria-label="Toolbar pencarian user"
       >
-        <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-          <div className="relative">
-            <label htmlFor="q" className="sr-only">Pencarian</label>
-            <input
-              id="q"
-              className="input w-full pl-9 py-2"
-              placeholder="Cari nama/username/email…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Cari user"
-            />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <label htmlFor="per" className="text-sm text-gray-600">Per page</label>
-            <select
-              id="per"
-              className="input w-[88px] py-2"
-              value={perPage}
-              onChange={(e) => setPerPage(Number(e.target.value))}
-              aria-label="Jumlah baris per halaman"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
+        <div className="p-3 sm:p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="relative">
+              <label htmlFor="q" className="sr-only">
+                Pencarian
+              </label>
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <SearchIcon />
+              </span>
+              <input
+                id="q"
+                className="
+                  w-full rounded-lg border border-slate-200 bg-white
+                  py-2.5 pl-10 pr-3 text-sm text-slate-900
+                  placeholder:text-slate-400
+                  focus:border-slate-900 focus:outline-none
+                "
+                placeholder="Cari nama / username / email…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                aria-label="Cari user"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <div className="text-xs text-slate-500">
+                {meta ? (
+                  <>
+                    Menampilkan <span className="font-semibold text-slate-700">{showingFrom}</span>–
+                    <span className="font-semibold text-slate-700">{showingTo}</span> dari{" "}
+                    <span className="font-semibold text-slate-700">{meta.total ?? totalUsers}</span>
+                  </>
+                ) : (
+                  <>
+                    Menampilkan <span className="font-semibold text-slate-700">{rows.length}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label htmlFor="per" className="text-xs font-medium text-slate-600">
+                  Per page
+                </label>
+                <select
+                  id="per"
+                  className="
+                    rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm
+                    focus:border-slate-900 focus:outline-none
+                  "
+                  value={perPage}
+                  onChange={(e) => setPerPage(Number(e.target.value))}
+                  aria-label="Jumlah baris per halaman"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Alerts */}
       {error && (
-        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </div>
       )}
+
       {isEmpty && (
-        <div className="card rounded-lg border border-[color:var(--color-border)] shadow-elev-1 p-6 text-sm text-gray-500">
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
           Belum ada user.
         </div>
       )}
 
       {/* Table */}
       <section aria-busy={loading ? 'true' : 'false'}>
-        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]">
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)]">
-                  <Th>Nama</Th>
+              <thead className="sticky top-0 z-10 bg-slate-50">
+                <tr className="border-b border-slate-200">
+                  <Th className="pl-4">User</Th>
                   <Th>Username</Th>
                   <Th>Email</Th>
                   <Th>Branch</Th>
                   <Th>Roles</Th>
                   <Th>Status</Th>
-                  <Th className="text-right pr-4">Aksi</Th>
+                  <Th className="pr-4 text-right">Aksi</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
+
+              <tbody className="divide-y divide-slate-200">
                 {loading ? (
                   <>
                     <RowSkeleton />
@@ -13304,54 +15853,101 @@ export default function UsersList() {
                     const allowEdit = canEditRow(u);
                     const allowToggle = canToggleActive(u);
                     const allowDelete = canDeleteRow(u);
+
                     return (
-                      <tr key={u.id} className="hover:bg-black/5 transition-colors">
-                        <Td><span className="font-medium">{u.name}</span></Td>
-                        <Td>{u.username}</Td>
-                        <Td className="break-all">{u.email}</Td>
-                        <Td>{u.branch_id ?? '-'}</Td>
-                        <Td>
-                          <div className="flex flex-wrap gap-1">
-                            {(u.roles ?? []).map((r) => (
-                              <span key={r} className="chip chip--subtle">
-                                {r}
-                              </span>
-                            ))}
+                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                        {/* User */}
+                        <Td className="pl-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={u.name || u.username || u.email || '?'} />
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-slate-900">{u.name || '-'}</div>
+                              <div className="truncate text-xs text-slate-500">ID: {String(u.id)}</div>
+                            </div>
                           </div>
                         </Td>
+
+                        <Td className="text-slate-700">{u.username || '-'}</Td>
+                        <Td className="text-slate-700">
+                          <span className="break-all">{u.email || '-'}</span>
+                        </Td>
+                        <Td className="text-slate-700">{u.branch_id ?? '-'}</Td>
+
                         <Td>
-                          <span className={`chip ${u.is_active ? 'chip--solid' : 'chip--subtle'}`}>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(u.roles ?? []).length ? (
+                              (u.roles ?? []).map((r) => (
+                                <span
+                                  key={r}
+                                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700"
+                                >
+                                  {r}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 text-xs">-</span>
+                            )}
+                          </div>
+                        </Td>
+
+                        <Td>
+                          <span
+                            className={[
+                              'inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold',
+                              u.is_active
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200',
+                            ].join(' ')}
+                          >
+                            <span
+                              className={[
+                                'h-2 w-2 rounded-full',
+                                u.is_active ? 'bg-emerald-500' : 'bg-slate-400',
+                              ].join(' ')}
+                            />
                             {u.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </Td>
-                        <Td className="text-right space-x-2">
-                          {allowEdit && (
-                            <Link
-                              className="btn-outline"
-                              to={`/users/${String(u.id)}/edit`}
-                              aria-label={`Edit user ${u.username ?? u.email}`}
-                            >
-                              Edit
-                            </Link>
-                          )}
-                          {canManage && (
-                            <>
-                              <button
-                                className={`btn-outline ${allowToggle ? '' : 'opacity-40 cursor-not-allowed'}`}
-                                disabled={!allowToggle}
-                                onClick={() => handleToggleActive(u)}
+
+                        {/* Actions */}
+                        <Td className="pr-4">
+                          <div className="flex justify-end gap-1">
+                            {allowEdit && (
+                              <Link
+                                className="icon-btn"
+                                to={`/users/${String(u.id)}/edit`}
+                                aria-label={`Edit user ${u.username ?? u.email}`}
+                                title="Edit"
                               >
-                                {u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                              </button>
-                              <button
-                                className={`btn-outline text-red-600 ${allowDelete ? '' : 'opacity-40 cursor-not-allowed'}`}
-                                disabled={!allowDelete}
-                                onClick={() => handleDelete(u)}
-                              >
-                                Delete
-                              </button>
-                            </>
-                          )}
+                                <EditIcon />
+                              </Link>
+                            )}
+
+                            {canManage && (
+                              <>
+                                <button
+                                  className={`icon-btn ${allowToggle ? '' : 'opacity-40 cursor-not-allowed'}`}
+                                  disabled={!allowToggle}
+                                  onClick={() => handleToggleActive(u)}
+                                  aria-label={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                                  title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                                >
+                                  {u.is_active ? <PauseIcon /> : <PlayIcon />}
+                                </button>
+
+                                <button
+                                  className={`icon-btn text-red-600 hover:bg-red-50 ${allowDelete ? '' : 'opacity-40 cursor-not-allowed'
+                                    }`}
+                                  disabled={!allowDelete}
+                                  onClick={() => handleDelete(u)}
+                                  aria-label="Delete"
+                                  title="Delete"
+                                >
+                                  <TrashIcon />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </Td>
                       </tr>
                     );
@@ -13360,55 +15956,197 @@ export default function UsersList() {
               </tbody>
             </table>
           </div>
+
+          {/* Footer mini */}
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+            <div>
+              {meta ? (
+                <>
+                  Halaman <span className="font-semibold text-slate-700">{meta.current_page}</span> dari{' '}
+                  <span className="font-semibold text-slate-700">{meta.last_page}</span>
+                </>
+              ) : (
+                <>—</>
+              )}
+            </div>
+            <div className="hidden sm:block">
+              {me?.branch_id ? (
+                <>Scope: Branch #{String(me.branch_id)}</>
+              ) : (
+                <>Scope: All</>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Pagination */}
       {meta && meta.last_page > 1 && (
-        <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
+        <nav className="flex items-center justify-end gap-2" aria-label="Navigasi halaman">
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="btn-outline disabled:opacity-50"
+            className="page-btn disabled:opacity-50"
           >
+            <ChevronLeftIcon />
             Prev
           </button>
-          <span className="text-sm">Hal {meta.current_page} / {meta.last_page}</span>
+
+          <span className="text-sm text-slate-600">
+            Hal <span className="font-semibold text-slate-900">{meta.current_page}</span> / {meta.last_page}
+          </span>
+
           <button
             disabled={page >= meta.last_page}
             onClick={() => setPage((p) => p + 1)}
-            className="btn-outline disabled:opacity-50"
+            className="page-btn disabled:opacity-50"
           >
             Next
+            <ChevronRightIcon />
           </button>
         </nav>
       )}
+
+      {/* Small local styles via Tailwind utility classnames (no logic change) */}
+      <style>
+        {`
+          .icon-btn{
+            display:inline-flex; align-items:center; justify-content:center;
+            width:36px; height:36px;
+            border:1px solid rgb(226 232 240);
+            border-radius:10px;
+            background:#fff;
+            color: rgb(15 23 42);
+          }
+          .icon-btn:hover{ background: rgb(248 250 252); }
+          .icon-btn:active{ background: rgb(241 245 249); }
+          .page-btn{
+            display:inline-flex; align-items:center; gap:8px;
+            border:1px solid rgb(226 232 240);
+            background:#fff;
+            color: rgb(15 23 42);
+            border-radius:10px;
+            padding:8px 12px;
+            font-size:14px;
+            font-weight:600;
+          }
+          .page-btn:hover{ background: rgb(248 250 252); }
+        `}
+      </style>
     </div>
   );
 }
 
-/* ---------- Subcomponents ---------- */
+/* ---------- Subcomponents (UI only) ---------- */
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
+    <th className={`px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 ${className}`}>
       {children}
     </th>
   );
 }
+
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-3 py-3 align-middle ${className}`}>{children}</td>;
 }
+
 function RowSkeleton() {
   return (
     <tr>
-      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-56 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-36 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-6 w-20 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3 text-right"><div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-4 pl-4">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-44 rounded bg-slate-200 animate-pulse" />
+            <div className="h-3 w-24 rounded bg-slate-200 animate-pulse" />
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-4"><div className="h-4 w-28 rounded bg-slate-200 animate-pulse" /></td>
+      <td className="px-3 py-4"><div className="h-4 w-56 rounded bg-slate-200 animate-pulse" /></td>
+      <td className="px-3 py-4"><div className="h-4 w-16 rounded bg-slate-200 animate-pulse" /></td>
+      <td className="px-3 py-4"><div className="h-4 w-36 rounded bg-slate-200 animate-pulse" /></td>
+      <td className="px-3 py-4"><div className="h-6 w-24 rounded bg-slate-200 animate-pulse" /></td>
+      <td className="px-3 py-4 pr-4 text-right"><div className="inline-block h-9 w-28 rounded bg-slate-200 animate-pulse" /></td>
     </tr>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  const initials = useMemo(() => {
+    const clean = (name || '').trim();
+    if (!clean) return '?';
+    const parts = clean.split(/\s+/).slice(0, 2);
+    return parts.map(p => p[0]?.toUpperCase()).join('') || '?';
+  }, [name]);
+
+  return (
+    <div className="h-9 w-9 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
+      {initials}
+    </div>
+  );
+}
+
+/* ---------- Icons (pure visual) ---------- */
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.2-3.2" />
+    </svg>
+  );
+}
+function PlusIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function EditIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+function PlayIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M8 5l12 7-12 7V5z" />
+    </svg>
+  );
+}
+function PauseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M8 5v14M16 5v14" />
+    </svg>
+  );
+}
+function ChevronLeftIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+function ChevronRightIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
   );
 }
 
