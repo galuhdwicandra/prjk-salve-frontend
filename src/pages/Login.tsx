@@ -40,41 +40,6 @@ function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function BrandStar() {
-  return (
-    <svg viewBox="0 0 64 64" className="h-10 w-10 text-white/95">
-      <path
-        fill="currentColor"
-        d="M32 4c2.2 0 4 1.8 4 4v16h16c2.2 0 4 1.8 4 4s-1.8 4-4 4H36v16c0 2.2-1.8 4-4 4s-4-1.8-4-4V36H12c-2.2 0-4-1.8-4-4s1.8-4 4-4h16V8c0-2.2 1.8-4 4-4z"
-      />
-    </svg>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5">
-      <path
-        fill="#EA4335"
-        d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.6-5.5 3.6-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.6-4.1 9.6-9.8 0-.7-.1-1.2-.2-1.7H12z"
-      />
-      <path
-        fill="#34A853"
-        d="M3.6 7.3l3.2 2.3C7.7 7.7 9.7 6.3 12 6.3c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 8.2 2 4.9 4.1 3.6 7.3z"
-        opacity=".001"
-      />
-      <path
-        fill="#FBBC05"
-        d="M12 22c3.1 0 5.7-1 7.6-2.8l-3.5-2.9c-.9.6-2 1-4.1 1-3.3 0-6-2.7-6-6 0-.6.1-1.2.3-1.7L3 7.2C2.4 8.7 2 10.3 2 12c0 5.5 4.5 10 10 10z"
-      />
-      <path
-        fill="#4285F4"
-        d="M21.6 12.2c0-.7-.1-1.2-.2-1.7H12v3.9h5.5c-.3 1.4-1.6 3.6-5.5 3.6v4c5.8 0 9.6-4.1 9.6-9.8z"
-      />
-    </svg>
-  );
-}
-
 export default function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();

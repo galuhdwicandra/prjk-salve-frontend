@@ -225,9 +225,8 @@ export default function POSPage() {
 
   // photos
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
-  const [afterFiles, setAfterFiles] = useState<File[]>([]);
+  const [afterFiles] = useState<File[]>([]);
   const beforeRef = useRef<HTMLInputElement>(null);
-  const afterRef = useRef<HTMLInputElement>(null);
 
   // device / UI
   const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
