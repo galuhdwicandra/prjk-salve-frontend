@@ -74,26 +74,44 @@ export default function DashboardHome() {
     load();
   }, [load]);
 
+  const rangeText = `${meta?.from ?? from} — ${meta?.to ?? to}${meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}`;
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-base sm:text-lg font-semibold tracking-tight text-[color:var(--color-text-default)]">
-            Dashboard
-          </h1>
-          <p className="text-xs text-gray-600">Ringkasan kinerja & laporan</p>
-        </div>
+      <header className="relative overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-elev-1">
+        {/* Decorative gradient (UI only) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-80"
+          style={{
+            background:
+              "radial-gradient(900px 240px at 10% 0%, rgba(79,70,229,0.16) 0%, rgba(79,70,229,0.00) 60%)," +
+              "radial-gradient(680px 220px at 92% 10%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 55%)",
+          }}
+        />
+        <div className="relative p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight text-[color:var(--color-text-default)]">
+                Dashboard
+              </h1>
+              <p className="text-xs text-[color:var(--color-text-muted)]">Ringkasan kinerja & laporan</p>
+            </div>
 
-        <div className="text-xs text-gray-500">
-          {meta?.from ?? from} — {meta?.to ?? to}
-          {meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}
+            <div className="flex items-center gap-2">
+              <span className="chip border border-[color:var(--color-border)] bg-white/60 dark:bg-white/5 text-[color:var(--color-text-default)]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-brand-primary)]" />
+                <span className="tabular-nums text-[11px]">{rangeText}</span>
+              </span>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* FilterBar */}
       <section
-        className="bg-[var(--color-surface)] border border-[color:var(--color-border)] rounded-xl shadow-elev-1"
+        className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl shadow-elev-1"
         aria-label="Filter ringkas dashboard"
       >
         <div className="p-3 sm:p-4">
@@ -104,7 +122,7 @@ export default function DashboardHome() {
                 <select
                   value={branchId}
                   onChange={(e) => setBranchId(e.target.value)}
-                  className="input px-3 py-2 bg-white text-[color:var(--color-text-default)]"
+                  className="input px-3 py-2 bg-[color:var(--color-surface)] text-[color:var(--color-text-default)]"
                 >
                   <option value="">Semua Cabang</option>
                   {branchList.map((b) => (
@@ -122,7 +140,7 @@ export default function DashboardHome() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="input px-3 py-2 bg-white"
+                className="input px-3 py-2 bg-[color:var(--color-surface)]"
               />
             </label>
 
@@ -132,7 +150,7 @@ export default function DashboardHome() {
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="input px-3 py-2 bg-white"
+                className="input px-3 py-2 bg-[color:var(--color-surface)]"
               />
             </label>
 
@@ -166,57 +184,74 @@ export default function DashboardHome() {
         <div
           role="alert"
           aria-live="polite"
-          className="rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+          className="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2 shadow-elev-1"
         >
           {err}
         </div>
       ) : null}
 
       {/* KPI Cards (mobile: horizontal scroll) */}
-      <section aria-busy={loading ? "true" : "false"}>
+      <section aria-busy={loading ? "true" : "false"} className="space-y-2">
+        <div className="flex items-end justify-between">
+          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">Ringkasan</h2>
+          <span className="text-xs text-[color:var(--color-text-muted)]">KPI utama pada rentang terpilih</span>
+        </div>
+
         <div className="hidden md:grid grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} />
-          <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} />
+          <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} tone="brand" />
+          <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} tone="neutral" />
           <KpiCard
             title="Voucher Terpakai"
             value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
             loading={loading}
+            tone="accent"
           />
-          <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} />
+          <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} tone="accent2" />
           <KpiCard
             title="Piutang Terbuka"
             value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
             loading={loading}
+            tone="warning"
           />
           <KpiCard
             title="Outstanding DP"
             value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
             loading={loading}
+            tone="warning2"
           />
         </div>
 
         <div className="md:hidden -mx-4 px-4 overflow-x-auto">
           <div className="flex gap-3 min-w-max pb-1">
-            <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} compact />
-            <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} compact />
+            <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} compact tone="brand" />
+            <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} compact tone="neutral" />
             <KpiCard
               title="Voucher"
               value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
               loading={loading}
               compact
+              tone="accent"
             />
-            <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} compact />
+            <KpiCard
+              title="Ongkir"
+              value={toIDR(Number(data?.delivery_shipping_fee ?? 0))}
+              loading={loading}
+              compact
+              tone="accent2"
+            />
             <KpiCard
               title="Piutang"
               value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
               loading={loading}
               compact
+              tone="warning"
             />
             <KpiCard
               title="DP"
               value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
               loading={loading}
               compact
+              tone="warning2"
             />
           </div>
         </div>
@@ -226,41 +261,42 @@ export default function DashboardHome() {
       <section className="space-y-2">
         <div className="flex items-end justify-between">
           <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">Top Layanan</h2>
-          <span className="text-xs text-gray-500">Top layanan berdasarkan pendapatan</span>
+          <span className="text-xs text-[color:var(--color-text-muted)]">Top layanan berdasarkan pendapatan</span>
         </div>
 
-        <div className="bg-[var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-          <div className="overflow-auto">
-            <table className="min-w-[560px] w-full text-sm">
-              <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)]">
-                  <Th>Layanan</Th>
-                  <Th className="text-right">Qty</Th>
-                  <Th className="text-right">Pendapatan</Th>
+        <CardTable>
+          <table className="min-w-[560px] w-full text-sm">
+            <thead className="sticky top-0 z-10">
+              <tr className="divide-x divide-[color:var(--color-border)] bg-[rgba(79,70,229,0.10)]">
+                <Th>Layanan</Th>
+                <Th className="text-right">Qty</Th>
+                <Th className="text-right">Pendapatan</Th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[color:var(--color-border)]">
+              {loading ? (
+                <RowSkeleton colSpan={3} />
+              ) : (data?.top_services?.length ?? 0) === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-3 py-4 text-center text-[color:var(--color-text-muted)]">
+                    Belum ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
-                {loading ? (
-                  <RowSkeleton colSpan={3} />
-                ) : (data?.top_services?.length ?? 0) === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-3 py-4 text-center text-gray-500">
-                      Belum ada data
-                    </td>
+              ) : (
+                (data?.top_services ?? []).map((r) => (
+                  <tr
+                    key={`${r.service_id}-${r.name}`}
+                    className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
+                  >
+                    <Td className="font-medium">{r.name}</Td>
+                    <Td className="text-right tabular-nums">{r.qty}</Td>
+                    <Td className="text-right tabular-nums">{toIDR(Number(r.amount))}</Td>
                   </tr>
-                ) : (
-                  (data?.top_services ?? []).map((r) => (
-                    <tr key={`${r.service_id}-${r.name}`} className="hover:bg-black/5 transition-colors">
-                      <Td className="font-medium">{r.name}</Td>
-                      <Td className="text-right tabular-nums">{r.qty}</Td>
-                      <Td className="text-right tabular-nums">{toIDR(Number(r.amount))}</Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </CardTable>
       </section>
 
       {/* Omzet harian & bulanan */}
@@ -268,6 +304,7 @@ export default function DashboardHome() {
         <SimpleTable
           title="Omzet Harian"
           subtitle="Ringkasan omzet per tanggal"
+          headTone="brand"
           cols={[
             { label: "Tanggal", align: "left" },
             { label: "Omzet", align: "right" },
@@ -276,7 +313,10 @@ export default function DashboardHome() {
           empty={(data?.omzet_daily?.length ?? 0) === 0}
         >
           {(data?.omzet_daily ?? []).map((d) => (
-            <tr key={d.date} className="hover:bg-black/5 transition-colors">
+            <tr
+              key={d.date}
+              className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
+            >
               <Td className="tabular-nums">{d.date}</Td>
               <Td className="text-right tabular-nums">{toIDR(Number(d.amount))}</Td>
             </tr>
@@ -286,6 +326,7 @@ export default function DashboardHome() {
         <SimpleTable
           title="Omzet Bulanan"
           subtitle="Ringkasan omzet per bulan"
+          headTone="accent"
           cols={[
             { label: "Bulan", align: "left" },
             { label: "Omzet", align: "right" },
@@ -294,7 +335,10 @@ export default function DashboardHome() {
           empty={(data?.omzet_monthly?.length ?? 0) === 0}
         >
           {(data?.omzet_monthly ?? []).map((m) => (
-            <tr key={m.month} className="hover:bg-black/5 transition-colors">
+            <tr
+              key={m.month}
+              className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
+            >
               <Td className="tabular-nums">{m.month}</Td>
               <Td className="text-right tabular-nums">{toIDR(Number(m.amount))}</Td>
             </tr>
@@ -303,7 +347,7 @@ export default function DashboardHome() {
       </section>
 
       {/* Meta (bottom) */}
-      <footer className="text-xs text-gray-500">
+      <footer className="text-xs text-[color:var(--color-text-muted)]">
         Rentang data: {meta?.from ?? from} s.d. {meta?.to ?? to}
         {meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}
       </footer>
@@ -315,17 +359,57 @@ export default function DashboardHome() {
    Subcomponents (UI only)
 ------------------------ */
 
-function KpiCard(props: { title: string; value: string; loading?: boolean; compact?: boolean }) {
+function CardTable(props: { children: React.ReactNode }) {
+  return (
+    <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+      <div className="overflow-auto">{props.children}</div>
+    </div>
+  );
+}
+
+type KpiTone = "brand" | "neutral" | "accent" | "accent2" | "warning" | "warning2";
+
+function KpiCard(props: { title: string; value: string; loading?: boolean; compact?: boolean; tone?: KpiTone }) {
+  const tone = props.tone ?? "neutral";
+
+  const accentStyle: Record<KpiTone, string> = {
+    brand: "bg-[color:var(--color-brand-primary)]",
+    neutral: "bg-black/10 dark:bg-white/15",
+    accent: "bg-[color:var(--color-accent)]",
+    accent2: "bg-[rgba(59,130,246,0.90)]", // blue-ish
+    warning: "bg-[rgba(245,158,11,0.95)]", // amber-ish
+    warning2: "bg-[rgba(244,63,94,0.90)]", // rose-ish
+  };
+
   return (
     <div
       className={[
-        "bg-[var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
+        "relative overflow-hidden bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
+        "transition-transform duration-150 hover:-translate-y-[1px]",
         props.compact ? "p-3 w-[240px] shrink-0" : "p-3",
       ].join(" ")}
     >
-      <div className="text-[11px] uppercase tracking-wide text-gray-500">{props.title}</div>
-      <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
-        {props.loading ? <span className="inline-block h-5 w-24 rounded bg-black/10 animate-pulse" /> : props.value}
+      {/* Accent bar */}
+      <div className={`absolute left-0 top-0 h-full w-1 ${accentStyle[tone]}`} aria-hidden="true" />
+      {/* Subtle tint */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-70"
+        aria-hidden="true"
+        style={{
+          background:
+            tone === "brand"
+              ? "radial-gradient(420px 220px at 20% 0%, rgba(79,70,229,0.12) 0%, rgba(79,70,229,0.00) 60%)"
+              : tone === "accent"
+                ? "radial-gradient(420px 220px at 20% 0%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 60%)"
+                : "radial-gradient(420px 220px at 20% 0%, rgba(15,23,42,0.05) 0%, rgba(15,23,42,0.00) 60%)",
+        }}
+      />
+
+      <div className="relative">
+        <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">{props.title}</div>
+        <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
+          {props.loading ? <span className="inline-block h-5 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" /> : props.value}
+        </div>
       </div>
     </div>
   );
@@ -333,22 +417,22 @@ function KpiCard(props: { title: string; value: string; loading?: boolean; compa
 
 function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide ${className}`}>
+    <th className={`text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-text-default)] ${className}`}>
       {children}
     </th>
   );
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-3 py-2 text-[color:var(--color-text-default)] ${className}`}>{children}</td>;
 }
 function RowSkeleton({ colSpan }: { colSpan: number }) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-3 py-4">
         <div className="flex items-center justify-center gap-3">
-          <span className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
-          <span className="h-4 w-40 rounded bg-black/10 animate-pulse" />
-          <span className="h-4 w-24 rounded bg-black/10 animate-pulse" />
+          <span className="h-4 w-4 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />
+          <span className="h-4 w-40 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+          <span className="h-4 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
         </div>
       </td>
     </tr>
@@ -362,20 +446,29 @@ function SimpleTable(props: {
   loading: boolean;
   empty: boolean;
   children: React.ReactNode;
+  headTone?: "brand" | "accent" | "neutral";
 }) {
+  const headTone = props.headTone ?? "neutral";
+  const headBg =
+    headTone === "brand"
+      ? "bg-[rgba(79,70,229,0.10)]"
+      : headTone === "accent"
+        ? "bg-[rgba(6,182,212,0.10)]"
+        : "bg-black/5 dark:bg-white/5";
+
   return (
     <div>
       <div className="mb-2 flex items-end justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">{props.title}</h2>
-          {props.subtitle ? <p className="text-xs text-gray-500">{props.subtitle}</p> : null}
+          {props.subtitle ? <p className="text-xs text-[color:var(--color-text-muted)]">{props.subtitle}</p> : null}
         </div>
       </div>
 
-      <div className="bg-[var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+      <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
         <div className="overflow-auto">
           <table className="min-w-[420px] w-full text-sm">
-            <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+            <thead className={`sticky top-0 z-10 ${headBg}`}>
               <tr className="divide-x divide-[color:var(--color-border)]">
                 {props.cols.map((c) => (
                   <Th key={c.label} className={c.align === "right" ? "text-right" : "text-left"}>
@@ -389,7 +482,7 @@ function SimpleTable(props: {
                 <RowSkeleton colSpan={props.cols.length} />
               ) : props.empty ? (
                 <tr>
-                  <td colSpan={props.cols.length} className="px-3 py-4 text-center text-gray-500">
+                  <td colSpan={props.cols.length} className="px-3 py-4 text-center text-[color:var(--color-text-muted)]">
                     Belum ada data
                   </td>
                 </tr>

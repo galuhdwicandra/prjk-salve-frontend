@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-02-12 20:54:57_  
+_Dihasilkan otomatis: 2026-02-20 00:18:10_  
 **Root:** `/home/galuhdwicandra/workspace/clone_salve/prjk-salve-frontend`
 
 
@@ -161,7 +161,7 @@ export async function deleteBranch(id: string) {
 
 ### src/api/client.ts
 
-- SHA: `7b0531c076a2`  
+- SHA: `5a88c5a5015a`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -175,12 +175,14 @@ const api = axios.create({
     headers: { 'Content-Type': 'application/json' },
 });
 
+import type { BranchMini } from '../types/users';
 export type RoleName = 'Superadmin' | 'Admin Cabang' | 'Kasir' | 'Petugas Cuci' | 'Kurir';
 export interface MeUser {
     id: number | string;
     name: string;
     email: string;
     branch_id: number | string | null;
+    branch?: BranchMini | null;
     is_active: boolean;
     roles: RoleName[];
 }
@@ -2835,7 +2837,7 @@ export interface ServicePriceSetPayload {
 
 ### src/types/users.ts
 
-- SHA: `cc5d6364bed5`  
+- SHA: `f52e16321303`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2843,12 +2845,19 @@ export interface ServicePriceSetPayload {
 // src/types/users.ts
 import type { RoleName } from '../api/client';
 
+export interface BranchMini {
+    id: string;
+    code: string;
+    name: string;
+}
+
 export interface User {
     id: string;
     name: string;
     username: string;
     email: string;
     branch_id: string | null;
+    branch?: BranchMini | null;
     is_active: boolean;
     roles: RoleName[];
     created_at?: string | null;
@@ -5074,7 +5083,7 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
 
 ### src/components/pos/ProductSearch.tsx
 
-- SHA: `3f839d51e1a1`  
+- SHA: `4b45e7bc8de6`  
 - Ukuran: 14 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -5143,7 +5152,10 @@ function highlight(text: string, keyword: string): React.ReactNode {
 
 export default function ProductSearch({ onPick }: Props): React.ReactElement {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
-  const branchId: string | null = user?.branch_id != null ? String(user.branch_id) : null;
+  const branchId: string | null =
+    user?.branch?.id != null ? String(user.branch.id)
+      : user?.branch_id != null ? String(user.branch_id)
+        : null;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const priceCacheRef = useRef<Record<string, ServicePrice[]>>({});
 
@@ -5183,7 +5195,9 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
         list.map(async (s) => {
           const sid = String(s.id);
           if (priceCacheRef.current[sid]) return [sid, priceCacheRef.current[sid]] as const;
-          const prices = (await listServicePricesByService(sid)).data ?? [];
+          const env = await listServicePricesByService(sid);
+          const pricesRaw = env.data ?? [];
+          const prices = Array.isArray(pricesRaw) ? (pricesRaw as ServicePrice[]) : [];
           priceCacheRef.current[sid] = prices;
           return [sid, prices] as const;
         })
@@ -5191,7 +5205,7 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 
       setPriceMap((prev) => {
         const next = { ...prev };
-        for (const [sid, prices] of entries) next[sid] = prices ?? [];
+        for (const [sid, prices] of entries) next[sid] = Array.isArray(prices) ? prices : [];
         return next;
       });
 
@@ -5445,8 +5459,6 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
         </div>
       )
       }
-
-
     </div >
   );
 }
@@ -9222,8 +9234,8 @@ function RowSkeleton({ showBranch, showAction }: { showBranch: boolean; showActi
 
 ### src/pages/Login.tsx
 
-- SHA: `3b9a0d80dfab`  
-- Ukuran: 10 KB
+- SHA: `0fc472dbdccf`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -9265,41 +9277,6 @@ function EyeOffIcon(props: React.SVGProps<SVGSVGElement>) {
       <path d="M1 12s4-7 11-7a12 12 0 0 1 5.6 1.4" />
       <path d="M23 12s-4 7-11 7A12 12 0 0 1 6.4 18.6" />
       <line x1="3" y1="3" x2="21" y2="21" />
-    </svg>
-  );
-}
-
-function BrandStar() {
-  return (
-    <svg viewBox="0 0 64 64" className="h-10 w-10 text-white/95">
-      <path
-        fill="currentColor"
-        d="M32 4c2.2 0 4 1.8 4 4v16h16c2.2 0 4 1.8 4 4s-1.8 4-4 4H36v16c0 2.2-1.8 4-4 4s-4-1.8-4-4V36H12c-2.2 0-4-1.8-4-4s1.8-4 4-4h16V8c0-2.2 1.8-4 4-4z"
-      />
-    </svg>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5">
-      <path
-        fill="#EA4335"
-        d="M12 10.2v3.9h5.5c-.2 1.2-1.4 3.6-5.5 3.6-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 6.5 2 2 6.5 2 12s4.5 10 10 10c5.8 0 9.6-4.1 9.6-9.8 0-.7-.1-1.2-.2-1.7H12z"
-      />
-      <path
-        fill="#34A853"
-        d="M3.6 7.3l3.2 2.3C7.7 7.7 9.7 6.3 12 6.3c1.9 0 3.1.8 3.8 1.5l2.6-2.5C17.8 3.2 15.2 2 12 2 8.2 2 4.9 4.1 3.6 7.3z"
-        opacity=".001"
-      />
-      <path
-        fill="#FBBC05"
-        d="M12 22c3.1 0 5.7-1 7.6-2.8l-3.5-2.9c-.9.6-2 1-4.1 1-3.3 0-6-2.7-6-6 0-.6.1-1.2.3-1.7L3 7.2C2.4 8.7 2 10.3 2 12c0 5.5 4.5 10 10 10z"
-      />
-      <path
-        fill="#4285F4"
-        d="M21.6 12.2c0-.7-.1-1.2-.2-1.7H12v3.9h5.5c-.3 1.4-1.6 3.6-5.5 3.6v4c5.8 0 9.6-4.1 9.6-9.8z"
-      />
     </svg>
   );
 }
@@ -11445,8 +11422,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src/pages/pos/POSPage.tsx
 
-- SHA: `f988d882a9ec`  
-- Ukuran: 46 KB
+- SHA: `0aeb278445b4`  
+- Ukuran: 44 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -11677,9 +11654,8 @@ export default function POSPage() {
 
   // photos
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
-  const [afterFiles, setAfterFiles] = useState<File[]>([]);
+  const [afterFiles] = useState<File[]>([]);
   const beforeRef = useRef<HTMLInputElement>(null);
-  const afterRef = useRef<HTMLInputElement>(null);
 
   // device / UI
   const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
@@ -12573,67 +12549,6 @@ function UploadBox({
   );
 }
 
-function MobileCartBar({
-  open,
-  setOpen,
-  itemsCount,
-  total,
-  children,
-}: {
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  itemsCount: number;
-  total: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <>
-      {/* sticky bottom bar on mobile */}
-      <div className="fixed inset-x-0 bottom-0 z-30 lg:hidden">
-        <div className="mx-auto max-w-[1280px] px-3 pb-[env(safe-area-inset-bottom)]">
-          <div className="rounded-t-2xl border border-slate-200 bg-white shadow-[0_-18px_45px_-35px_rgba(0,0,0,.35)] p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-xs font-semibold">{itemsCount} item</div>
-                <div className="text-xs text-slate-500 truncate">Total {toIDR(total)}</div>
-              </div>
-              <PrimaryButton onClick={() => setOpen(true)} aria-expanded={open} aria-controls="mobile-cart-sheet">
-                Buka Keranjang
-              </PrimaryButton>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* bottom sheet */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="mobile-cart-title"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            id="mobile-cart-sheet"
-            className="absolute inset-x-0 bottom-0 max-h-[82dvh] overflow-auto rounded-t-3xl border border-slate-200 bg-white shadow-[0_-28px_70px_-40px_rgba(0,0,0,.55)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <div id="mobile-cart-title" className="text-sm font-semibold">
-                Keranjang
-              </div>
-              <OutlineButton className="px-3 py-2" onClick={() => setOpen(false)}>
-                Tutup
-              </OutlineButton>
-            </div>
-            <div className="px-4 py-4">{children}</div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
 
 ```
 </details>
