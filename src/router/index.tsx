@@ -232,6 +232,15 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        // ini untuk link publik dari backend: /r/receipt/{order} (signed)
+        path: '/r/receipt/:id',
+        element: (
+          <LazyBoundary>
+            <OrderReceipt />
+          </LazyBoundary>
+        ),
+      },
+      {
         path: '/deliveries',
         element: (
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
