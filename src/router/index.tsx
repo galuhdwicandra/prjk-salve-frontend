@@ -36,7 +36,18 @@ const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 export const router = createBrowserRouter([
   {
     element: <GuestLayout />,
-    children: [{ path: '/login', element: <LoginPage /> }],
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      {
+        // route publik untuk share link backend: /r/receipt/{id}
+        path: '/r/receipt/:id',
+        element: (
+          <LazyBoundary>
+            <OrderReceipt />
+          </LazyBoundary>
+        ),
+      },
+    ],
   },
   {
     element: <ProtectedLayout />,
