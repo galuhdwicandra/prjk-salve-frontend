@@ -8,6 +8,7 @@ export type OrderBackendStatus =
 export type OrderUiStep = 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
 
 export type PaymentStatus = 'PENDING' | 'DP' | 'PAID' | 'UNPAID' | 'SETTLED';
+export type PaymentMethod = 'PENDING' | 'DP' | 'CASH' | 'QRIS' | 'TRANSFER';
 
 export const UI_TO_BACKEND_STATUS: Record<OrderUiStep, OrderBackendStatus> = {
     QUEUE: 'QUEUE',
@@ -57,7 +58,8 @@ export interface Order {
     grand_total: number;
     due_amount: number;
     notes: string | null;
-    payment_status: 'PENDING' | 'DP' | 'PAID' | 'UNPAID' | 'SETTLED';
+    payment_status: PaymentStatus;
+    latest_payment_method?: PaymentMethod | null;
     dp_amount: number;
     paid_amount: number;
     paid_at: string | null;
@@ -103,6 +105,16 @@ export interface OrderUpdatePayload {
 export interface OrderQuery {
     q?: string;
     status?: OrderBackendStatus;
+    payment_status?: PaymentStatus;
+    payment_method?: PaymentMethod;
+    from?: string;
+    to?: string;
+    received_from?: string;
+    received_to?: string;
+    ready_from?: string;
+    ready_to?: string;
+    sort_by?: 'created_at' | 'received_at' | 'ready_at';
+    sort_dir?: 'asc' | 'desc';
     page?: number;
     per_page?: number;
     branch_id?: string;
@@ -113,6 +125,8 @@ export interface PaginationMeta {
     per_page: number;
     total: number;
     last_page: number;
+    sort_by?: 'created_at' | 'received_at' | 'ready_at';
+    sort_dir?: 'asc' | 'desc';
 }
 
 export interface Paginated<T> {

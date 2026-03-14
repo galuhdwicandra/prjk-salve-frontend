@@ -1,126 +1,126 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-02-20 00:18:10_  
-**Root:** `/home/galuhdwicandra/workspace/clone_salve/prjk-salve-frontend`
+_Dihasilkan otomatis: 2026-03-15 00:24:23_  
+**Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
 ## Daftar Isi
 
 - [API (src/api)](#api-srcapi)
-  - [src/api/branches.ts](#file-srcapibranchests)
-  - [src/api/client.ts](#file-srcapiclientts)
-  - [src/api/customers.ts](#file-srcapicustomersts)
-  - [src/api/dashboard.ts](#file-srcapidashboardts)
-  - [src/api/deliveries.ts](#file-srcapideliveriests)
-  - [src/api/expenses.ts](#file-srcapiexpensests)
-  - [src/api/invoiceCounters.ts](#file-srcapiinvoicecountersts)
-  - [src/api/loyalty.ts](#file-srcapiloyaltyts)
-  - [src/api/orderPhotos.ts](#file-srcapiorderphotosts)
-  - [src/api/orders.ts](#file-srcapiordersts)
-  - [src/api/receivables.ts](#file-srcapireceivablests)
-  - [src/api/reports.ts](#file-srcapireportsts)
-  - [src/api/serviceCategories.ts](#file-srcapiservicecategoriests)
-  - [src/api/servicePrices.ts](#file-srcapiservicepricests)
-  - [src/api/services.ts](#file-srcapiservicests)
-  - [src/api/users.ts](#file-srcapiusersts)
-  - [src/api/vouchers.ts](#file-srcapivouchersts)
-  - [src/api/washNotes.ts](#file-srcapiwashnotests)
+  - [src\api\branches.ts](#file-srcapibranchests)
+  - [src\api\client.ts](#file-srcapiclientts)
+  - [src\api\customers.ts](#file-srcapicustomersts)
+  - [src\api\dashboard.ts](#file-srcapidashboardts)
+  - [src\api\deliveries.ts](#file-srcapideliveriests)
+  - [src\api\expenses.ts](#file-srcapiexpensests)
+  - [src\api\invoiceCounters.ts](#file-srcapiinvoicecountersts)
+  - [src\api\loyalty.ts](#file-srcapiloyaltyts)
+  - [src\api\orderPhotos.ts](#file-srcapiorderphotosts)
+  - [src\api\orders.ts](#file-srcapiordersts)
+  - [src\api\receivables.ts](#file-srcapireceivablests)
+  - [src\api\reports.ts](#file-srcapireportsts)
+  - [src\api\serviceCategories.ts](#file-srcapiservicecategoriests)
+  - [src\api\servicePrices.ts](#file-srcapiservicepricests)
+  - [src\api\services.ts](#file-srcapiservicests)
+  - [src\api\users.ts](#file-srcapiusersts)
+  - [src\api\vouchers.ts](#file-srcapivouchersts)
+  - [src\api\washNotes.ts](#file-srcapiwashnotests)
 
 - [Store (src/store)](#store-srcstore)
-  - [src/store/useAuth.ts](#file-srcstoreuseauthts)
+  - [src\store\useAuth.ts](#file-srcstoreuseauthts)
 
 - [layouts (src/layouts)](#layouts-srclayouts)
-  - [src/layouts/GuestLayout.tsx](#file-srclayoutsguestlayouttsx)
-  - [src/layouts/ProtectedLayout.tsx](#file-srclayoutsprotectedlayouttsx)
+  - [src\layouts\GuestLayout.tsx](#file-srclayoutsguestlayouttsx)
+  - [src\layouts\ProtectedLayout.tsx](#file-srclayoutsprotectedlayouttsx)
 
 - [router (src/reouter)](#router-srcreouter)
-  - [src/router/Guarded.tsx](#file-srcrouterguardedtsx)
-  - [src/router/index.tsx](#file-srcrouterindextsx)
+  - [src\router\Guarded.tsx](#file-srcrouterguardedtsx)
+  - [src\router\index.tsx](#file-srcrouterindextsx)
 
 - [Types (src/types)](#types-srctypes)
-  - [src/types/branches.ts](#file-srctypesbranchests)
-  - [src/types/customers.ts](#file-srctypescustomersts)
-  - [src/types/dashboard.ts](#file-srctypesdashboardts)
-  - [src/types/deliveries.ts](#file-srctypesdeliveriests)
-  - [src/types/expenses.ts](#file-srctypesexpensests)
-  - [src/types/loyalty.ts](#file-srctypesloyaltyts)
-  - [src/types/orders.ts](#file-srctypesordersts)
-  - [src/types/payments.ts](#file-srctypespaymentsts)
-  - [src/types/receivables.ts](#file-srctypesreceivablests)
-  - [src/types/services.ts](#file-srctypesservicests)
-  - [src/types/users.ts](#file-srctypesusersts)
-  - [src/types/vouchers.ts](#file-srctypesvouchersts)
-  - [src/types/wash-notes.ts](#file-srctypeswash-notests)
+  - [src\types\branches.ts](#file-srctypesbranchests)
+  - [src\types\customers.ts](#file-srctypescustomersts)
+  - [src\types\dashboard.ts](#file-srctypesdashboardts)
+  - [src\types\deliveries.ts](#file-srctypesdeliveriests)
+  - [src\types\expenses.ts](#file-srctypesexpensests)
+  - [src\types\loyalty.ts](#file-srctypesloyaltyts)
+  - [src\types\orders.ts](#file-srctypesordersts)
+  - [src\types\payments.ts](#file-srctypespaymentsts)
+  - [src\types\receivables.ts](#file-srctypesreceivablests)
+  - [src\types\services.ts](#file-srctypesservicests)
+  - [src\types\users.ts](#file-srctypesusersts)
+  - [src\types\vouchers.ts](#file-srctypesvouchersts)
+  - [src\types\wash-notes.ts](#file-srctypeswash-notests)
 
 - [Components (src/components)](#components-srccomponents)
-  - [src/components/ConfirmDialog.tsx](#file-srccomponentsconfirmdialogtsx)
-  - [src/components/customers/CustomerPicker.tsx](#file-srccomponentscustomerscustomerpickertsx)
-  - [src/components/DataTable.tsx](#file-srccomponentsdatatabletsx)
-  - [src/components/delivery/AssignCourierSelect.tsx](#file-srccomponentsdeliveryassigncourierselecttsx)
-  - [src/components/delivery/DeliveryStatusStepper.tsx](#file-srccomponentsdeliverydeliverystatussteppertsx)
-  - [src/components/Dropzone.tsx](#file-srccomponentsdropzonetsx)
-  - [src/components/FilterBar.tsx](#file-srccomponentsfilterbartsx)
-  - [src/components/LazyBoundary.tsx](#file-srccomponentslazyboundarytsx)
-  - [src/components/orders/OrderPhotos.tsx](#file-srccomponentsordersorderphotostsx)
-  - [src/components/orders/OrderPhotosGallery.tsx](#file-srccomponentsordersorderphotosgallerytsx)
-  - [src/components/orders/OrderPhotosUpload.tsx](#file-srccomponentsordersorderphotosuploadtsx)
-  - [src/components/orders/OrderStatusStepper.tsx](#file-srccomponentsordersorderstatussteppertsx)
-  - [src/components/pos/CartPanel.tsx](#file-srccomponentsposcartpaneltsx)
-  - [src/components/pos/CheckoutDialog.tsx](#file-srccomponentsposcheckoutdialogtsx)
-  - [src/components/pos/ProductSearch.tsx](#file-srccomponentsposproductsearchtsx)
-  - [src/components/ReceiptPreview.tsx](#file-srccomponentsreceiptpreviewtsx)
-  - [src/components/receivables/SettleReceivableDialog.tsx](#file-srccomponentsreceivablessettlereceivabledialogtsx)
-  - [src/components/Toast.tsx](#file-srccomponentstoasttsx)
+  - [src\components\ConfirmDialog.tsx](#file-srccomponentsconfirmdialogtsx)
+  - [src\components\customers\CustomerPicker.tsx](#file-srccomponentscustomerscustomerpickertsx)
+  - [src\components\DataTable.tsx](#file-srccomponentsdatatabletsx)
+  - [src\components\delivery\AssignCourierSelect.tsx](#file-srccomponentsdeliveryassigncourierselecttsx)
+  - [src\components\delivery\DeliveryStatusStepper.tsx](#file-srccomponentsdeliverydeliverystatussteppertsx)
+  - [src\components\Dropzone.tsx](#file-srccomponentsdropzonetsx)
+  - [src\components\FilterBar.tsx](#file-srccomponentsfilterbartsx)
+  - [src\components\LazyBoundary.tsx](#file-srccomponentslazyboundarytsx)
+  - [src\components\orders\OrderPhotos.tsx](#file-srccomponentsordersorderphotostsx)
+  - [src\components\orders\OrderPhotosGallery.tsx](#file-srccomponentsordersorderphotosgallerytsx)
+  - [src\components\orders\OrderPhotosUpload.tsx](#file-srccomponentsordersorderphotosuploadtsx)
+  - [src\components\orders\OrderStatusStepper.tsx](#file-srccomponentsordersorderstatussteppertsx)
+  - [src\components\pos\CartPanel.tsx](#file-srccomponentsposcartpaneltsx)
+  - [src\components\pos\CheckoutDialog.tsx](#file-srccomponentsposcheckoutdialogtsx)
+  - [src\components\pos\ProductSearch.tsx](#file-srccomponentsposproductsearchtsx)
+  - [src\components\ReceiptPreview.tsx](#file-srccomponentsreceiptpreviewtsx)
+  - [src\components\receivables\SettleReceivableDialog.tsx](#file-srccomponentsreceivablessettlereceivabledialogtsx)
+  - [src\components\Toast.tsx](#file-srccomponentstoasttsx)
 
 - [Pages (src/pages)](#pages-srcpages)
-  - [src/pages/branches/BranchForm.tsx](#file-srcpagesbranchesbranchformtsx)
-  - [src/pages/branches/BranchIndex.tsx](#file-srcpagesbranchesbranchindextsx)
-  - [src/pages/branches/InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
-  - [src/pages/customers/CustomerDetail.tsx](#file-srcpagescustomerscustomerdetailtsx)
-  - [src/pages/customers/CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
-  - [src/pages/dashboard/DashboardHome.tsx](#file-srcpagesdashboarddashboardhometsx)
-  - [src/pages/deliveries/DeliveryDetail.tsx](#file-srcpagesdeliveriesdeliverydetailtsx)
-  - [src/pages/deliveries/DeliveryIndex.tsx](#file-srcpagesdeliveriesdeliveryindextsx)
-  - [src/pages/expenses/ExpenseForm.tsx](#file-srcpagesexpensesexpenseformtsx)
-  - [src/pages/expenses/ExpensesIndex.tsx](#file-srcpagesexpensesexpensesindextsx)
-  - [src/pages/Login.tsx](#file-srcpageslogintsx)
-  - [src/pages/orders/OrderDetail.tsx](#file-srcpagesordersorderdetailtsx)
-  - [src/pages/orders/OrderReceipt.tsx](#file-srcpagesordersorderreceipttsx)
-  - [src/pages/orders/OrdersIndex.tsx](#file-srcpagesordersordersindextsx)
-  - [src/pages/pos/POSPage.tsx](#file-srcpagespospospagetsx)
-  - [src/pages/receivables/ReceivablesIndex.tsx](#file-srcpagesreceivablesreceivablesindextsx)
-  - [src/pages/reports/ReportsIndex.tsx](#file-srcpagesreportsreportsindextsx)
-  - [src/pages/services/CategoryIndex.tsx](#file-srcpagesservicescategoryindextsx)
-  - [src/pages/services/PricePerBranchInput.tsx](#file-srcpagesservicespriceperbranchinputtsx)
-  - [src/pages/services/ServiceForm.tsx](#file-srcpagesservicesserviceformtsx)
-  - [src/pages/services/ServiceIndex.tsx](#file-srcpagesservicesserviceindextsx)
-  - [src/pages/users/UserForm.tsx](#file-srcpagesusersuserformtsx)
-  - [src/pages/users/UsersList.tsx](#file-srcpagesusersuserslisttsx)
-  - [src/pages/vouchers/VoucherForm.tsx](#file-srcpagesvouchersvoucherformtsx)
-  - [src/pages/vouchers/VouchersIndex.tsx](#file-srcpagesvouchersvouchersindextsx)
-  - [src/pages/wash-notes/WashNoteForm.tsx](#file-srcpageswash-noteswashnoteformtsx)
-  - [src/pages/wash-notes/WashNotesIndex.tsx](#file-srcpageswash-noteswashnotesindextsx)
+  - [src\pages\branches\BranchForm.tsx](#file-srcpagesbranchesbranchformtsx)
+  - [src\pages\branches\BranchIndex.tsx](#file-srcpagesbranchesbranchindextsx)
+  - [src\pages\branches\InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
+  - [src\pages\customers\CustomerDetail.tsx](#file-srcpagescustomerscustomerdetailtsx)
+  - [src\pages\customers\CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
+  - [src\pages\dashboard\DashboardHome.tsx](#file-srcpagesdashboarddashboardhometsx)
+  - [src\pages\deliveries\DeliveryDetail.tsx](#file-srcpagesdeliveriesdeliverydetailtsx)
+  - [src\pages\deliveries\DeliveryIndex.tsx](#file-srcpagesdeliveriesdeliveryindextsx)
+  - [src\pages\expenses\ExpenseForm.tsx](#file-srcpagesexpensesexpenseformtsx)
+  - [src\pages\expenses\ExpensesIndex.tsx](#file-srcpagesexpensesexpensesindextsx)
+  - [src\pages\Login.tsx](#file-srcpageslogintsx)
+  - [src\pages\orders\OrderDetail.tsx](#file-srcpagesordersorderdetailtsx)
+  - [src\pages\orders\OrderReceipt.tsx](#file-srcpagesordersorderreceipttsx)
+  - [src\pages\orders\OrdersIndex.tsx](#file-srcpagesordersordersindextsx)
+  - [src\pages\pos\POSPage.tsx](#file-srcpagespospospagetsx)
+  - [src\pages\receivables\ReceivablesIndex.tsx](#file-srcpagesreceivablesreceivablesindextsx)
+  - [src\pages\reports\ReportsIndex.tsx](#file-srcpagesreportsreportsindextsx)
+  - [src\pages\services\CategoryIndex.tsx](#file-srcpagesservicescategoryindextsx)
+  - [src\pages\services\PricePerBranchInput.tsx](#file-srcpagesservicespriceperbranchinputtsx)
+  - [src\pages\services\ServiceForm.tsx](#file-srcpagesservicesserviceformtsx)
+  - [src\pages\services\ServiceIndex.tsx](#file-srcpagesservicesserviceindextsx)
+  - [src\pages\users\UserForm.tsx](#file-srcpagesusersuserformtsx)
+  - [src\pages\users\UsersList.tsx](#file-srcpagesusersuserslisttsx)
+  - [src\pages\vouchers\VoucherForm.tsx](#file-srcpagesvouchersvoucherformtsx)
+  - [src\pages\vouchers\VouchersIndex.tsx](#file-srcpagesvouchersvouchersindextsx)
+  - [src\pages\wash-notes\WashNoteForm.tsx](#file-srcpageswash-noteswashnoteformtsx)
+  - [src\pages\wash-notes\WashNotesIndex.tsx](#file-srcpageswash-noteswashnotesindextsx)
 
 - [Pages (src/utils)](#pages-srcutils)
-  - [src/utils/date.ts](#file-srcutilsdatets)
-  - [src/utils/files.ts](#file-srcutilsfilests)
-  - [src/utils/money.ts](#file-srcutilsmoneyts)
-  - [src/utils/order-status.ts](#file-srcutilsorder-statusts)
-  - [src/utils/receipt-wa.ts](#file-srcutilsreceipt-wats)
-  - [src/utils/theme.ts](#file-srcutilsthemets)
-  - [src/utils/wa.ts](#file-srcutilswats)
+  - [src\utils\date.ts](#file-srcutilsdatets)
+  - [src\utils\files.ts](#file-srcutilsfilests)
+  - [src\utils\money.ts](#file-srcutilsmoneyts)
+  - [src\utils\order-status.ts](#file-srcutilsorder-statusts)
+  - [src\utils\receipt-wa.ts](#file-srcutilsreceipt-wats)
+  - [src\utils\theme.ts](#file-srcutilsthemets)
+  - [src\utils\wa.ts](#file-srcutilswats)
 
 - [Entry Files](#entry-files)
-  - [src/App.tsx](#file-srcapptsx)
-  - [src/main.tsx](#file-srcmaintsx)
+  - [src\App.tsx](#file-srcapptsx)
+  - [src\main.tsx](#file-srcmaintsx)
 
 
 
 ## API (src/api)
 
-### src/api/branches.ts
+### src\api\branches.ts
 
-- SHA: `6e7bc78ba8f6`  
+- SHA: `b449cb453b97`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -159,9 +159,9 @@ export async function deleteBranch(id: string) {
 ```
 </details>
 
-### src/api/client.ts
+### src\api\client.ts
 
-- SHA: `5a88c5a5015a`  
+- SHA: `0275216f4569`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -270,9 +270,9 @@ export { api };
 ```
 </details>
 
-### src/api/customers.ts
+### src\api\customers.ts
 
-- SHA: `55f48245371e`  
+- SHA: `4ad83e2224c4`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -359,10 +359,10 @@ export async function resolveOrCreateCustomerByWA(
 ```
 </details>
 
-### src/api/dashboard.ts
+### src\api\dashboard.ts
 
-- SHA: `b5b7cbd6f727`  
-- Ukuran: 513 B
+- SHA: `b31c4073a060`  
+- Ukuran: 531 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -388,9 +388,9 @@ export async function getDashboardSummary(params: DashboardSummaryQuery) {
 ```
 </details>
 
-### src/api/deliveries.ts
+### src\api\deliveries.ts
 
-- SHA: `4a338c480c40`  
+- SHA: `c2aa9a3c5ca2`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -453,9 +453,9 @@ export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPa
 ```
 </details>
 
-### src/api/expenses.ts
+### src\api\expenses.ts
 
-- SHA: `366273253174`  
+- SHA: `aadd05d019de`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -592,9 +592,9 @@ export async function deleteExpense(id: string) {
 ```
 </details>
 
-### src/api/invoiceCounters.ts
+### src\api\invoiceCounters.ts
 
-- SHA: `8591808346ee`  
+- SHA: `d576f3c5ff10`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -659,10 +659,10 @@ export async function resetCounterNow(id: string) {
 ```
 </details>
 
-### src/api/loyalty.ts
+### src\api\loyalty.ts
 
-- SHA: `3460dc811e86`  
-- Ukuran: 621 B
+- SHA: `e31608617585`  
+- Ukuran: 633 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -682,10 +682,10 @@ export async function getLoyaltySummary(customerId: string, branchId?: string) {
 ```
 </details>
 
-### src/api/orderPhotos.ts
+### src\api\orderPhotos.ts
 
-- SHA: `2c2c206554e4`  
-- Ukuran: 459 B
+- SHA: `6c8c10af24b3`  
+- Ukuran: 474 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -708,9 +708,9 @@ export async function uploadOrderPhotos(
 ```
 </details>
 
-### src/api/orders.ts
+### src\api\orders.ts
 
-- SHA: `cbc7ad31f765`  
+- SHA: `7f3a1b9ceaf4`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -815,9 +815,9 @@ export async function createOrderShareLink(id: string): Promise<string> {
 ```
 </details>
 
-### src/api/receivables.ts
+### src\api\receivables.ts
 
-- SHA: `4180e50f6920`  
+- SHA: `f9f5cf061a71`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -885,9 +885,9 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 ```
 </details>
 
-### src/api/reports.ts
+### src\api\reports.ts
 
-- SHA: `1afa41b5c804`  
+- SHA: `ba89fb214c56`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -934,9 +934,9 @@ export async function exportReport(kind: ReportKind, params: ReportQuery & { for
 ```
 </details>
 
-### src/api/serviceCategories.ts
+### src\api\serviceCategories.ts
 
-- SHA: `103d2837c411`  
+- SHA: `0357275092ce`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -968,10 +968,10 @@ export async function deleteServiceCategory(id: string) {
 ```
 </details>
 
-### src/api/servicePrices.ts
+### src\api\servicePrices.ts
 
-- SHA: `1f175f2f1a30`  
-- Ukuran: 1 KB
+- SHA: `5ac5a902e4af`  
+- Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -1011,10 +1011,10 @@ export async function getEffectivePrice(service: { id: string; price_default: nu
 ```
 </details>
 
-### src/api/services.ts
+### src\api\services.ts
 
-- SHA: `0ab43f358e65`  
-- Ukuran: 1001 B
+- SHA: `41d4495af7bd`  
+- Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -1045,9 +1045,9 @@ export async function deleteService(id: string) {
 ```
 </details>
 
-### src/api/users.ts
+### src\api\users.ts
 
-- SHA: `0bcc8ef09c29`  
+- SHA: `e15511274403`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1109,9 +1109,9 @@ export async function resetUserPassword(id: string, new_password: string) {
 ```
 </details>
 
-### src/api/vouchers.ts
+### src\api\vouchers.ts
 
-- SHA: `77de151cb26f`  
+- SHA: `61199a3ce1a9`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1155,9 +1155,9 @@ export async function applyVoucherToOrder(orderId: ID, payload: ApplyVoucherPayl
 ```
 </details>
 
-### src/api/washNotes.ts
+### src\api\washNotes.ts
 
-- SHA: `3fe62f8fac9d`  
+- SHA: `870776529137`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1252,10 +1252,10 @@ export async function searchOrderCandidates(params: SearchOrderCandidatesParams)
 
 ## Store (src/store)
 
-### src/store/useAuth.ts
+### src\store\useAuth.ts
 
-- SHA: `bb8943834f9e`  
-- Ukuran: 3 KB
+- SHA: `efb9fc1f4b1d`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -1384,10 +1384,10 @@ export function useHasRole(required: RoleName | RoleName[]): boolean {
 
 ## layouts (src/layouts)
 
-### src/layouts/GuestLayout.tsx
+### src\layouts\GuestLayout.tsx
 
-- SHA: `57fcc9161a87`  
-- Ukuran: 595 B
+- SHA: `ed413075957a`  
+- Ukuran: 615 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1415,10 +1415,10 @@ export default function GuestLayout() {
 ```
 </details>
 
-### src/layouts/ProtectedLayout.tsx
+### src\layouts\ProtectedLayout.tsx
 
-- SHA: `9d7c169c6742`  
-- Ukuran: 12 KB
+- SHA: `1a4c170a182e`  
+- Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1497,19 +1497,26 @@ export default function ProtectedLayout() {
   const showSubtitle = roleText && roleText.toLowerCase() !== (me.name ?? "").toLowerCase();
 
   return (
-    <div
-      className="min-h-dvh text-[var(--color-text-default)]"
-      style={{
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 92%, #ffffff) 0%, var(--color-surface) 100%)",
-      }}
-    >
+    <div className="min-h-dvh text-[color:var(--color-text-default)]">
+      {/* Background canvas (UI only) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(1000px 420px at 10% 0%, rgba(79,70,229,0.14) 0%, rgba(79,70,229,0.00) 60%)," +
+            "radial-gradient(820px 380px at 92% 10%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 55%)," +
+            "linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 92%, #ffffff) 0%, var(--color-surface) 100%)",
+        }}
+      />
+
       {/* Topbar */}
-      <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-surface)]/85 backdrop-blur shadow-[0_10px_30px_-25px_rgba(0,0,0,.35)]">
+      <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 backdrop-blur">
         <div className="container-app flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 min-w-0">
             {/* Toggle drawer (mobile) */}
             <button
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-white/80 hover:bg-white transition-colors"
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-white/70 dark:bg-white/5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors shadow-[0_10px_30px_-22px_rgba(0,0,0,.45)]"
               aria-label="Open menu"
               onClick={() => setOpen(true)}
             >
@@ -1519,33 +1526,45 @@ export default function ProtectedLayout() {
             </button>
 
             <div className="flex items-center gap-2 min-w-0">
-              <div className="h-9 w-9 rounded-xl overflow-hidden bg-white shadow-sm border border-[var(--color-border)] flex items-center justify-center">
-                <img
-                  src="/logo-salve.png"
-                  alt="Logo Salve"
-                  className="h-7 w-7 object-contain"
+              <div className="relative h-9 w-9 rounded-2xl overflow-hidden border border-[color:var(--color-border)] bg-white/80 dark:bg-white/10 shadow-[0_10px_26px_-22px_rgba(0,0,0,.55)] flex items-center justify-center">
+                {/* subtle ring */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 opacity-70"
+                  style={{
+                    background:
+                      "radial-gradient(28px 28px at 30% 20%, rgba(79,70,229,0.18) 0%, rgba(79,70,229,0.00) 70%)",
+                  }}
                 />
+                <img src="/logo-salve.png" alt="Logo Salve" className="relative h-7 w-7 object-contain" />
               </div>
+
               <div className="min-w-0">
                 <div className="font-semibold leading-5 truncate">SALVE</div>
-                <div className="text-[11px] leading-4 text-black/55 dark:text-white/60 truncate">
-                  {"POS Laundry"}
-                </div>
+                <div className="text-[11px] leading-4 text-[color:var(--color-text-muted)] truncate">{"POS Laundry"}</div>
               </div>
             </div>
           </div>
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-white px-2 py-1 shadow-[0_8px_20px_-16px_rgba(0,0,0,.35)]">
-              <div className="h-8 w-8 rounded-full bg-black/10 flex items-center justify-center text-xs font-bold">
-                {(me.name ?? "U").slice(0, 1).toUpperCase()}
+            <div className="flex items-center gap-2 rounded-2xl border border-[color:var(--color-border)] bg-white/70 dark:bg-white/5 px-2 py-1 shadow-[0_14px_34px_-28px_rgba(0,0,0,.55)]">
+              <div className="relative h-8 w-8 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs font-bold overflow-hidden">
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 opacity-70"
+                  style={{
+                    background:
+                      "radial-gradient(24px 24px at 30% 20%, rgba(6,182,212,0.16) 0%, rgba(6,182,212,0.00) 70%)",
+                  }}
+                />
+                <span className="relative">{(me.name ?? "U").slice(0, 1).toUpperCase()}</span>
               </div>
 
               <div className="hidden sm:block leading-tight pr-1">
                 <div className="text-sm font-semibold truncate max-w-[180px]">{me.name}</div>
                 {showSubtitle ? (
-                  <div className="text-[11px] text-black/55 dark:text-white/60 truncate max-w-[180px]">
+                  <div className="text-[11px] text-[color:var(--color-text-muted)] truncate max-w-[180px]">
                     {roleText}
                   </div>
                 ) : null}
@@ -1556,91 +1575,131 @@ export default function ProtectedLayout() {
                   await useAuth.logout();
                   nav("/login", { replace: true });
                 }}
-                className="inline-flex h-8 items-center rounded-lg border border-[var(--color-border)] bg-white px-3 text-xs font-semibold hover:bg-slate-50 transition-colors"
+                className="inline-flex h-8 items-center rounded-xl border border-[color:var(--color-border)] bg-white/80 dark:bg-white/5 px-3 text-xs font-semibold hover:bg-white dark:hover:bg-white/10 transition-colors"
               >
                 Logout
               </button>
             </div>
           </div>
         </div>
+
+        {/* subtle bottom shadow */}
+        <div
+          aria-hidden="true"
+          className="h-[1px]"
+          style={{ boxShadow: "0 14px 34px -30px rgba(0,0,0,.55)" }}
+        />
       </header>
 
       <div className="container-app grid grid-cols-1 md:grid-cols-[17rem_1fr] gap-4 md:gap-6 py-4 md:py-6">
         {/* Sidebar (desktop) */}
         <aside className="hidden md:block">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white/90 p-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-            <UserCard name={me.name} roles={me.roles ?? []} />
-            <nav className="mt-4 space-y-1">
-              {VISIBLE.map((m) => (
-                <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
-                  <span className="truncate">{m.label}</span>
-                  <span className="ml-auto text-[10px] opacity-60">{isActiveDot(m.to, location.pathname)}</span>
-                </NavLink>
-              ))}
-            </nav>
+          <div className="relative overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white/70 dark:bg-white/5 p-4 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                background:
+                  "radial-gradient(520px 260px at 20% 0%, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.00) 60%)",
+              }}
+            />
 
-            <div className="mt-4 border-t border-[var(--color-border)] pt-4">
-              <button
-                onClick={async () => {
-                  await useAuth.logout();
-                  nav("/login", { replace: true });
-                }}
-                className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-white/80 px-3 py-2 text-sm hover:bg-white transition-colors"
-              >
-                Logout
-              </button>
+            <div className="relative">
+              <UserCard name={me.name} roles={me.roles ?? []} />
+              <nav className="mt-4 space-y-1">
+                {VISIBLE.map((m) => (
+                  <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
+                    <span className="truncate">{m.label}</span>
+                    <span className="ml-auto text-[10px] opacity-60">{isActiveDot(m.to, location.pathname)}</span>
+                  </NavLink>
+                ))}
+              </nav>
+
+              <div className="mt-4 border-t border-[color:var(--color-border)] pt-4">
+                <button
+                  onClick={async () => {
+                    await useAuth.logout();
+                    nav("/login", { replace: true });
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-white/70 dark:bg-white/5 px-3 py-2 text-sm hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </aside>
 
         {/* Drawer Sidebar (mobile) */}
         <MobileDrawer open={open} onClose={() => setOpen(false)}>
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">Menu</div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-white hover:bg-slate-50"
-                aria-label="Close menu"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6 6 18" />
-                  <path d="M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+          <div className="relative h-full">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-70"
+              style={{
+                background:
+                  "radial-gradient(520px 260px at 20% 0%, rgba(79,70,229,0.12) 0%, rgba(79,70,229,0.00) 60%)," +
+                  "radial-gradient(520px 260px at 92% 20%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 60%)",
+              }}
+            />
 
-            <div className="mt-4">
-              <UserCard name={me.name} roles={me.roles ?? []} />
-            </div>
+            <div className="relative p-4">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold">Menu</div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6 6 18" />
+                    <path d="M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <nav className="mt-4 space-y-1">
-              {VISIBLE.map((m) => (
-                <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
-                  <span className="truncate">{m.label}</span>
-                </NavLink>
-              ))}
-            </nav>
+              <div className="mt-4">
+                <UserCard name={me.name} roles={me.roles ?? []} />
+              </div>
 
-            <div className="mt-4">
-              <button
-                onClick={async () => {
-                  await useAuth.logout();
-                  nav("/login", { replace: true });
-                }}
-                className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm hover:bg-slate-50 transition-colors"
-              >
-                Logout
-              </button>
+              <nav className="mt-4 space-y-1">
+                {VISIBLE.map((m) => (
+                  <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
+                    <span className="truncate">{m.label}</span>
+                  </NavLink>
+                ))}
+              </nav>
+
+              <div className="mt-4">
+                <button
+                  onClick={async () => {
+                    await useAuth.logout();
+                    nav("/login", { replace: true });
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-white/80 dark:bg-white/5 px-3 py-2 text-sm hover:bg-white dark:hover:bg-white/10 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </MobileDrawer>
 
         {/* Konten */}
         <main className="min-w-0">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white/90 p-4 md:p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-            <Outlet />
+          <div className="relative overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white/70 dark:bg-white/5 p-4 md:p-6 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-55"
+              style={{
+                background:
+                  "radial-gradient(760px 320px at 20% 0%, rgba(15,23,42,0.05) 0%, rgba(15,23,42,0.00) 60%)",
+              }}
+            />
+            <div className="relative">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>
@@ -1650,11 +1709,11 @@ export default function ProtectedLayout() {
 
 function navItemClass(isActive: boolean) {
   return [
-    "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+    "group flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15",
     isActive
-      ? "bg-[var(--color-brand-primary)] text-[var(--color-brand-on)] shadow-[0_10px_22px_-18px_rgba(0,0,0,.45)]"
-      : "text-[var(--color-text-default)] hover:bg-black/5",
+      ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-brand-on)] shadow-[0_16px_34px_-28px_rgba(0,0,0,.55)]"
+      : "text-[color:var(--color-text-default)] hover:bg-black/5 dark:hover:bg-white/5",
   ].join(" ");
 }
 
@@ -1665,14 +1724,22 @@ function isActiveDot(_to: string, _pathname: string) {
 
 function UserCard(props: { name: string; roles: string[] }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-2xl bg-black/10 flex items-center justify-center font-bold">
+    <div className="relative overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-3">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-70"
+        style={{
+          background:
+            "radial-gradient(520px 220px at 20% 0%, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.00) 60%)",
+        }}
+      />
+      <div className="relative flex items-center gap-3">
+        <div className="h-10 w-10 rounded-2xl bg-black/10 dark:bg-white/10 flex items-center justify-center font-bold">
           {(props.name ?? "U").slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0">
           <div className="font-semibold leading-5 truncate">{props.name}</div>
-          <div className="mt-0.5 text-xs text-black/60 dark:text-white/70 truncate">
+          <div className="mt-0.5 text-xs text-[color:var(--color-text-muted)] truncate">
             {props.roles?.join(", ")}
           </div>
         </div>
@@ -1696,7 +1763,7 @@ function MobileDrawer(props: { open: boolean; onClose: () => void; children: Rea
       {/* Panel */}
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-50 w-[82vw] max-w-[320px] border-r border-[var(--color-border)] bg-white shadow-[0_20px_60px_-30px_rgba(0,0,0,.6)] transition-transform md:hidden",
+          "fixed inset-y-0 left-0 z-50 w-[82vw] max-w-[320px] border-r border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[0_26px_80px_-44px_rgba(0,0,0,.80)] transition-transform md:hidden",
           props.open ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
         role="dialog"
@@ -1723,10 +1790,10 @@ export function RequireRole(props: { roles: RoleName[]; children: React.ReactNod
 
 ## router (src/reouter)
 
-### src/router/Guarded.tsx
+### src\router\Guarded.tsx
 
-- SHA: `588b0d2ac55c`  
-- Ukuran: 947 B
+- SHA: `280f7ccd52bc`  
+- Ukuran: 974 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1761,10 +1828,10 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 ```
 </details>
 
-### src/router/index.tsx
+### src\router\index.tsx
 
-- SHA: `d077b9476fd9`  
-- Ukuran: 10 KB
+- SHA: `d9ef6cb8db4a`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1806,7 +1873,18 @@ const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 export const router = createBrowserRouter([
   {
     element: <GuestLayout />,
-    children: [{ path: '/login', element: <LoginPage /> }],
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      {
+        // route publik untuk share link backend: /r/receipt/{id}
+        path: '/r/receipt/:id',
+        element: (
+          <LazyBoundary>
+            <OrderReceipt />
+          </LazyBoundary>
+        ),
+      },
+    ],
   },
   {
     element: <ProtectedLayout />,
@@ -2002,6 +2080,15 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        // ini untuk link publik dari backend: /r/receipt/{order} (signed)
+        path: '/r/receipt/:id',
+        element: (
+          <LazyBoundary>
+            <OrderReceipt />
+          </LazyBoundary>
+        ),
+      },
+      {
         path: '/deliveries',
         element: (
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']}>
@@ -2146,9 +2233,9 @@ export const router = createBrowserRouter([
 
 ## Types (src/types)
 
-### src/types/branches.ts
+### src\types\branches.ts
 
-- SHA: `4969acb7da70`  
+- SHA: `3e46ec2c2abf`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2215,9 +2302,9 @@ export interface InvoiceCounterQuery {
 ```
 </details>
 
-### src/types/customers.ts
+### src\types\customers.ts
 
-- SHA: `a990c8398134`  
+- SHA: `5a60ed132dfe`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2273,10 +2360,10 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src/types/dashboard.ts
+### src\types\dashboard.ts
 
-- SHA: `fb03c8625a8d`  
-- Ukuran: 987 B
+- SHA: `f19b2c95ae6d`  
+- Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -2332,9 +2419,9 @@ export interface DashboardSummaryMeta {
 ```
 </details>
 
-### src/types/deliveries.ts
+### src\types\deliveries.ts
 
-- SHA: `fb09a36e6ca4`  
+- SHA: `b2b468d2a0d9`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2426,9 +2513,9 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src/types/expenses.ts
+### src\types\expenses.ts
 
-- SHA: `8527b92302de`  
+- SHA: `dcfe7dfed3e1`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2494,10 +2581,10 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src/types/loyalty.ts
+### src\types\loyalty.ts
 
-- SHA: `f4db26e1ab8e`  
-- Ukuran: 143 B
+- SHA: `c0fb4243e013`  
+- Ukuran: 149 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -2511,10 +2598,10 @@ export interface LoyaltySummary {
 ```
 </details>
 
-### src/types/orders.ts
+### src\types\orders.ts
 
-- SHA: `723bf44f6706`  
-- Ukuran: 3 KB
+- SHA: `a6c2d4463181`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -2528,6 +2615,7 @@ export type OrderBackendStatus =
 export type OrderUiStep = 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
 
 export type PaymentStatus = 'PENDING' | 'DP' | 'PAID' | 'UNPAID' | 'SETTLED';
+export type PaymentMethod = 'PENDING' | 'DP' | 'CASH' | 'QRIS' | 'TRANSFER';
 
 export const UI_TO_BACKEND_STATUS: Record<OrderUiStep, OrderBackendStatus> = {
     QUEUE: 'QUEUE',
@@ -2577,7 +2665,8 @@ export interface Order {
     grand_total: number;
     due_amount: number;
     notes: string | null;
-    payment_status: 'PENDING' | 'DP' | 'PAID' | 'UNPAID' | 'SETTLED';
+    payment_status: PaymentStatus;
+    latest_payment_method?: PaymentMethod | null;
     dp_amount: number;
     paid_amount: number;
     paid_at: string | null;
@@ -2623,6 +2712,16 @@ export interface OrderUpdatePayload {
 export interface OrderQuery {
     q?: string;
     status?: OrderBackendStatus;
+    payment_status?: PaymentStatus;
+    payment_method?: PaymentMethod;
+    from?: string;
+    to?: string;
+    received_from?: string;
+    received_to?: string;
+    ready_from?: string;
+    ready_to?: string;
+    sort_by?: 'created_at' | 'received_at' | 'ready_at';
+    sort_dir?: 'asc' | 'desc';
     page?: number;
     per_page?: number;
     branch_id?: string;
@@ -2633,6 +2732,8 @@ export interface PaginationMeta {
     per_page: number;
     total: number;
     last_page: number;
+    sort_by?: 'created_at' | 'received_at' | 'ready_at';
+    sort_dir?: 'asc' | 'desc';
 }
 
 export interface Paginated<T> {
@@ -2652,10 +2753,10 @@ export interface SingleResponse<T> {
 ```
 </details>
 
-### src/types/payments.ts
+### src\types\payments.ts
 
-- SHA: `a3a68e2ecd8b`  
-- Ukuran: 410 B
+- SHA: `ff0ef2ffdb24`  
+- Ukuran: 428 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -2681,9 +2782,9 @@ export type Payment = {
 ```
 </details>
 
-### src/types/receivables.ts
+### src\types\receivables.ts
 
-- SHA: `bc843ad5b3c3`  
+- SHA: `ebf9ee3621f5`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2751,9 +2852,9 @@ export interface ReceivableSettleResult {
 ```
 </details>
 
-### src/types/services.ts
+### src\types\services.ts
 
-- SHA: `8c3c6f2e0ddb`  
+- SHA: `dd0fb3400323`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2835,9 +2936,9 @@ export interface ServicePriceSetPayload {
 ```
 </details>
 
-### src/types/users.ts
+### src\types\users.ts
 
-- SHA: `f52e16321303`  
+- SHA: `c81a94251f78`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2900,9 +3001,9 @@ export interface Envelope<T, M = unknown> {
 ```
 </details>
 
-### src/types/vouchers.ts
+### src\types\vouchers.ts
 
-- SHA: `40392fcaeff8`  
+- SHA: `df6e049bbf01`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2966,10 +3067,10 @@ export type ApplyVoucherResponse = {
 ```
 </details>
 
-### src/types/wash-notes.ts
+### src\types\wash-notes.ts
 
-- SHA: `d9c1406d2fc9`  
-- Ukuran: 755 B
+- SHA: `b1463b4e73a3`  
+- Ukuran: 785 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -3011,10 +3112,10 @@ export interface OrderLite {
 
 ## Components (src/components)
 
-### src/components/ConfirmDialog.tsx
+### src\components\ConfirmDialog.tsx
 
-- SHA: `5d2261ec27f2`  
-- Ukuran: 261 B
+- SHA: `2bbd7e43a208`  
+- Ukuran: 271 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3032,9 +3133,9 @@ export default function ConfirmDialog(props: Props) {
 ```
 </details>
 
-### src/components/customers/CustomerPicker.tsx
+### src\components\customers\CustomerPicker.tsx
 
-- SHA: `41ab43d06c00`  
+- SHA: `fe9959f4108d`  
 - Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -3322,9 +3423,9 @@ function highlight(text?: string | null, q?: string) {
 ```
 </details>
 
-### src/components/DataTable.tsx
+### src\components\DataTable.tsx
 
-- SHA: `84c0672f24bd`  
+- SHA: `65bd88623999`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -3386,9 +3487,9 @@ export default function DataTable<T extends object>({
 ```
 </details>
 
-### src/components/delivery/AssignCourierSelect.tsx
+### src\components\delivery\AssignCourierSelect.tsx
 
-- SHA: `2ab750179e2f`  
+- SHA: `d60cbc8a2252`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -3477,9 +3578,9 @@ export default function AssignCourierSelect({ value, onChange, disabled = false 
 ```
 </details>
 
-### src/components/delivery/DeliveryStatusStepper.tsx
+### src\components\delivery\DeliveryStatusStepper.tsx
 
-- SHA: `bfdc8abff0a2`  
+- SHA: `5923e4d70f86`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -3539,7 +3640,7 @@ export default function DeliveryStatusStepper({ status }: { status: DeliveryStat
 ```
 </details>
 
-### src/components/Dropzone.tsx
+### src\components\Dropzone.tsx
 
 - SHA: `1ea7e5280ea4`  
 - Ukuran: 51 B
@@ -3550,7 +3651,7 @@ export default function Dropzone() { return null; }
 ```
 </details>
 
-### src/components/FilterBar.tsx
+### src\components\FilterBar.tsx
 
 - SHA: `3605319a8f83`  
 - Ukuran: 52 B
@@ -3561,10 +3662,10 @@ export default function FilterBar() { return null; }
 ```
 </details>
 
-### src/components/LazyBoundary.tsx
+### src\components\LazyBoundary.tsx
 
-- SHA: `8ed0e79357ac`  
-- Ukuran: 470 B
+- SHA: `5e431d3566b6`  
+- Ukuran: 487 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3589,10 +3690,10 @@ export default function LazyBoundary({ children }: { children: ReactNode }) {
 ```
 </details>
 
-### src/components/orders/OrderPhotos.tsx
+### src\components\orders\OrderPhotos.tsx
 
-- SHA: `44bf8ad3c679`  
-- Ukuran: 12 KB
+- SHA: `93bfbbcb2ba5`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -4006,10 +4107,10 @@ function PreviewGrid({
 ```
 </details>
 
-### src/components/orders/OrderPhotosGallery.tsx
+### src\components\orders\OrderPhotosGallery.tsx
 
-- SHA: `af6c34a7ac25`  
-- Ukuran: 6 KB
+- SHA: `a7fd333afbd1`  
+- Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -4201,9 +4302,9 @@ function Section({
 ```
 </details>
 
-### src/components/orders/OrderPhotosUpload.tsx
+### src\components\orders\OrderPhotosUpload.tsx
 
-- SHA: `93f5b79cec29`  
+- SHA: `9f5ed1a848f2`  
 - Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4530,9 +4631,9 @@ function UploadPanel(props: {
 ```
 </details>
 
-### src/components/orders/OrderStatusStepper.tsx
+### src\components\orders\OrderStatusStepper.tsx
 
-- SHA: `eafe158a6bc8`  
+- SHA: `2de6ba7c2b25`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4622,9 +4723,9 @@ export default function OrderStatusStepper({ backendStatus }: Props): React.Reac
 ```
 </details>
 
-### src/components/pos/CartPanel.tsx
+### src\components\pos\CartPanel.tsx
 
-- SHA: `779d74137fff`  
+- SHA: `25678720b590`  
 - Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4812,10 +4913,10 @@ function QtyStepper({
 ```
 </details>
 
-### src/components/pos/CheckoutDialog.tsx
+### src\components\pos\CheckoutDialog.tsx
 
-- SHA: `c676b47ec039`  
-- Ukuran: 9 KB
+- SHA: `95318b387247`  
+- Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5081,10 +5182,10 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
 ```
 </details>
 
-### src/components/pos/ProductSearch.tsx
+### src\components\pos\ProductSearch.tsx
 
-- SHA: `4b45e7bc8de6`  
-- Ukuran: 14 KB
+- SHA: `86d59d6e7792`  
+- Ukuran: 15 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5466,10 +5567,10 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
 ```
 </details>
 
-### src/components/ReceiptPreview.tsx
+### src\components\ReceiptPreview.tsx
 
-- SHA: `18bf2c4f8876`  
-- Ukuran: 7 KB
+- SHA: `1dddaf7210e4`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5703,9 +5804,9 @@ export default function ReceiptPreview({
 ```
 </details>
 
-### src/components/receivables/SettleReceivableDialog.tsx
+### src\components\receivables\SettleReceivableDialog.tsx
 
-- SHA: `b2b34e1e2b79`  
+- SHA: `c1867e7f8ee7`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -5962,10 +6063,10 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
 ```
 </details>
 
-### src/components/Toast.tsx
+### src\components\Toast.tsx
 
-- SHA: `6a7bcbf0b950`  
-- Ukuran: 102 B
+- SHA: `f91adb685224`  
+- Ukuran: 103 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5978,9 +6079,9 @@ export default function Toast() { return null; }
 
 ## Pages (src/pages)
 
-### src/pages/branches/BranchForm.tsx
+### src\pages\branches\BranchForm.tsx
 
-- SHA: `62d2f1a2ad8c`  
+- SHA: `3f89ca9ec33f`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6213,10 +6314,10 @@ export default function BranchForm() {
 ```
 </details>
 
-### src/pages/branches/BranchIndex.tsx
+### src\pages\branches\BranchIndex.tsx
 
-- SHA: `7b8bc435f5cc`  
-- Ukuran: 8 KB
+- SHA: `c6e08979928c`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -6448,9 +6549,9 @@ function RowSkeleton() {
 ```
 </details>
 
-### src/pages/branches/InvoiceSettings.tsx
+### src\pages\branches\InvoiceSettings.tsx
 
-- SHA: `f26e77ae11b8`  
+- SHA: `2975c8b55d9d`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6777,9 +6878,9 @@ function RowSkeleton() {
 ```
 </details>
 
-### src/pages/customers/CustomerDetail.tsx
+### src\pages\customers\CustomerDetail.tsx
 
-- SHA: `789a9690795f`  
+- SHA: `926df983624f`  
 - Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7259,10 +7360,10 @@ export default function CustomerDetail() {
 ```
 </details>
 
-### src/pages/customers/CustomersIndex.tsx
+### src\pages\customers\CustomersIndex.tsx
 
-- SHA: `e4cf8f6c2eb4`  
-- Ukuran: 19 KB
+- SHA: `c3d8ae9be3e5`  
+- Ukuran: 20 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7690,10 +7791,10 @@ function RowSkeleton() {
 ```
 </details>
 
-### src/pages/dashboard/DashboardHome.tsx
+### src\pages\dashboard\DashboardHome.tsx
 
-- SHA: `bf13b07751f2`  
-- Ukuran: 15 KB
+- SHA: `ce386ed7831a`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7773,26 +7874,44 @@ export default function DashboardHome() {
     load();
   }, [load]);
 
+  const rangeText = `${meta?.from ?? from} — ${meta?.to ?? to}${meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}`;
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-base sm:text-lg font-semibold tracking-tight text-[color:var(--color-text-default)]">
-            Dashboard
-          </h1>
-          <p className="text-xs text-gray-600">Ringkasan kinerja & laporan</p>
-        </div>
+      <header className="relative overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-elev-1">
+        {/* Decorative gradient (UI only) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-80"
+          style={{
+            background:
+              "radial-gradient(900px 240px at 10% 0%, rgba(79,70,229,0.16) 0%, rgba(79,70,229,0.00) 60%)," +
+              "radial-gradient(680px 220px at 92% 10%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 55%)",
+          }}
+        />
+        <div className="relative p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight text-[color:var(--color-text-default)]">
+                Dashboard
+              </h1>
+              <p className="text-xs text-[color:var(--color-text-muted)]">Ringkasan kinerja & laporan</p>
+            </div>
 
-        <div className="text-xs text-gray-500">
-          {meta?.from ?? from} — {meta?.to ?? to}
-          {meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}
+            <div className="flex items-center gap-2">
+              <span className="chip border border-[color:var(--color-border)] bg-white/60 dark:bg-white/5 text-[color:var(--color-text-default)]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-brand-primary)]" />
+                <span className="tabular-nums text-[11px]">{rangeText}</span>
+              </span>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* FilterBar */}
       <section
-        className="bg-[var(--color-surface)] border border-[color:var(--color-border)] rounded-xl shadow-elev-1"
+        className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl shadow-elev-1"
         aria-label="Filter ringkas dashboard"
       >
         <div className="p-3 sm:p-4">
@@ -7803,7 +7922,7 @@ export default function DashboardHome() {
                 <select
                   value={branchId}
                   onChange={(e) => setBranchId(e.target.value)}
-                  className="input px-3 py-2 bg-white text-[color:var(--color-text-default)]"
+                  className="input px-3 py-2 bg-[color:var(--color-surface)] text-[color:var(--color-text-default)]"
                 >
                   <option value="">Semua Cabang</option>
                   {branchList.map((b) => (
@@ -7821,7 +7940,7 @@ export default function DashboardHome() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="input px-3 py-2 bg-white"
+                className="input px-3 py-2 bg-[color:var(--color-surface)]"
               />
             </label>
 
@@ -7831,7 +7950,7 @@ export default function DashboardHome() {
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="input px-3 py-2 bg-white"
+                className="input px-3 py-2 bg-[color:var(--color-surface)]"
               />
             </label>
 
@@ -7865,57 +7984,74 @@ export default function DashboardHome() {
         <div
           role="alert"
           aria-live="polite"
-          className="rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+          className="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2 shadow-elev-1"
         >
           {err}
         </div>
       ) : null}
 
       {/* KPI Cards (mobile: horizontal scroll) */}
-      <section aria-busy={loading ? "true" : "false"}>
+      <section aria-busy={loading ? "true" : "false"} className="space-y-2">
+        <div className="flex items-end justify-between">
+          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">Ringkasan</h2>
+          <span className="text-xs text-[color:var(--color-text-muted)]">KPI utama pada rentang terpilih</span>
+        </div>
+
         <div className="hidden md:grid grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} />
-          <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} />
+          <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} tone="brand" />
+          <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} tone="neutral" />
           <KpiCard
             title="Voucher Terpakai"
             value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
             loading={loading}
+            tone="accent"
           />
-          <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} />
+          <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} tone="accent2" />
           <KpiCard
             title="Piutang Terbuka"
             value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
             loading={loading}
+            tone="warning"
           />
           <KpiCard
             title="Outstanding DP"
             value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
             loading={loading}
+            tone="warning2"
           />
         </div>
 
         <div className="md:hidden -mx-4 px-4 overflow-x-auto">
           <div className="flex gap-3 min-w-max pb-1">
-            <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} compact />
-            <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} compact />
+            <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} compact tone="brand" />
+            <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} compact tone="neutral" />
             <KpiCard
               title="Voucher"
               value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
               loading={loading}
               compact
+              tone="accent"
             />
-            <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} compact />
+            <KpiCard
+              title="Ongkir"
+              value={toIDR(Number(data?.delivery_shipping_fee ?? 0))}
+              loading={loading}
+              compact
+              tone="accent2"
+            />
             <KpiCard
               title="Piutang"
               value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
               loading={loading}
               compact
+              tone="warning"
             />
             <KpiCard
               title="DP"
               value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
               loading={loading}
               compact
+              tone="warning2"
             />
           </div>
         </div>
@@ -7925,41 +8061,42 @@ export default function DashboardHome() {
       <section className="space-y-2">
         <div className="flex items-end justify-between">
           <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">Top Layanan</h2>
-          <span className="text-xs text-gray-500">Top layanan berdasarkan pendapatan</span>
+          <span className="text-xs text-[color:var(--color-text-muted)]">Top layanan berdasarkan pendapatan</span>
         </div>
 
-        <div className="bg-[var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-          <div className="overflow-auto">
-            <table className="min-w-[560px] w-full text-sm">
-              <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)]">
-                  <Th>Layanan</Th>
-                  <Th className="text-right">Qty</Th>
-                  <Th className="text-right">Pendapatan</Th>
+        <CardTable>
+          <table className="min-w-[560px] w-full text-sm">
+            <thead className="sticky top-0 z-10">
+              <tr className="divide-x divide-[color:var(--color-border)] bg-[rgba(79,70,229,0.10)]">
+                <Th>Layanan</Th>
+                <Th className="text-right">Qty</Th>
+                <Th className="text-right">Pendapatan</Th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[color:var(--color-border)]">
+              {loading ? (
+                <RowSkeleton colSpan={3} />
+              ) : (data?.top_services?.length ?? 0) === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-3 py-4 text-center text-[color:var(--color-text-muted)]">
+                    Belum ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
-                {loading ? (
-                  <RowSkeleton colSpan={3} />
-                ) : (data?.top_services?.length ?? 0) === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-3 py-4 text-center text-gray-500">
-                      Belum ada data
-                    </td>
+              ) : (
+                (data?.top_services ?? []).map((r) => (
+                  <tr
+                    key={`${r.service_id}-${r.name}`}
+                    className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
+                  >
+                    <Td className="font-medium">{r.name}</Td>
+                    <Td className="text-right tabular-nums">{r.qty}</Td>
+                    <Td className="text-right tabular-nums">{toIDR(Number(r.amount))}</Td>
                   </tr>
-                ) : (
-                  (data?.top_services ?? []).map((r) => (
-                    <tr key={`${r.service_id}-${r.name}`} className="hover:bg-black/5 transition-colors">
-                      <Td className="font-medium">{r.name}</Td>
-                      <Td className="text-right tabular-nums">{r.qty}</Td>
-                      <Td className="text-right tabular-nums">{toIDR(Number(r.amount))}</Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </CardTable>
       </section>
 
       {/* Omzet harian & bulanan */}
@@ -7967,6 +8104,7 @@ export default function DashboardHome() {
         <SimpleTable
           title="Omzet Harian"
           subtitle="Ringkasan omzet per tanggal"
+          headTone="brand"
           cols={[
             { label: "Tanggal", align: "left" },
             { label: "Omzet", align: "right" },
@@ -7975,7 +8113,10 @@ export default function DashboardHome() {
           empty={(data?.omzet_daily?.length ?? 0) === 0}
         >
           {(data?.omzet_daily ?? []).map((d) => (
-            <tr key={d.date} className="hover:bg-black/5 transition-colors">
+            <tr
+              key={d.date}
+              className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
+            >
               <Td className="tabular-nums">{d.date}</Td>
               <Td className="text-right tabular-nums">{toIDR(Number(d.amount))}</Td>
             </tr>
@@ -7985,6 +8126,7 @@ export default function DashboardHome() {
         <SimpleTable
           title="Omzet Bulanan"
           subtitle="Ringkasan omzet per bulan"
+          headTone="accent"
           cols={[
             { label: "Bulan", align: "left" },
             { label: "Omzet", align: "right" },
@@ -7993,7 +8135,10 @@ export default function DashboardHome() {
           empty={(data?.omzet_monthly?.length ?? 0) === 0}
         >
           {(data?.omzet_monthly ?? []).map((m) => (
-            <tr key={m.month} className="hover:bg-black/5 transition-colors">
+            <tr
+              key={m.month}
+              className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
+            >
               <Td className="tabular-nums">{m.month}</Td>
               <Td className="text-right tabular-nums">{toIDR(Number(m.amount))}</Td>
             </tr>
@@ -8002,7 +8147,7 @@ export default function DashboardHome() {
       </section>
 
       {/* Meta (bottom) */}
-      <footer className="text-xs text-gray-500">
+      <footer className="text-xs text-[color:var(--color-text-muted)]">
         Rentang data: {meta?.from ?? from} s.d. {meta?.to ?? to}
         {meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}
       </footer>
@@ -8014,17 +8159,57 @@ export default function DashboardHome() {
    Subcomponents (UI only)
 ------------------------ */
 
-function KpiCard(props: { title: string; value: string; loading?: boolean; compact?: boolean }) {
+function CardTable(props: { children: React.ReactNode }) {
+  return (
+    <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+      <div className="overflow-auto">{props.children}</div>
+    </div>
+  );
+}
+
+type KpiTone = "brand" | "neutral" | "accent" | "accent2" | "warning" | "warning2";
+
+function KpiCard(props: { title: string; value: string; loading?: boolean; compact?: boolean; tone?: KpiTone }) {
+  const tone = props.tone ?? "neutral";
+
+  const accentStyle: Record<KpiTone, string> = {
+    brand: "bg-[color:var(--color-brand-primary)]",
+    neutral: "bg-black/10 dark:bg-white/15",
+    accent: "bg-[color:var(--color-accent)]",
+    accent2: "bg-[rgba(59,130,246,0.90)]", // blue-ish
+    warning: "bg-[rgba(245,158,11,0.95)]", // amber-ish
+    warning2: "bg-[rgba(244,63,94,0.90)]", // rose-ish
+  };
+
   return (
     <div
       className={[
-        "bg-[var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
+        "relative overflow-hidden bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
+        "transition-transform duration-150 hover:-translate-y-[1px]",
         props.compact ? "p-3 w-[240px] shrink-0" : "p-3",
       ].join(" ")}
     >
-      <div className="text-[11px] uppercase tracking-wide text-gray-500">{props.title}</div>
-      <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
-        {props.loading ? <span className="inline-block h-5 w-24 rounded bg-black/10 animate-pulse" /> : props.value}
+      {/* Accent bar */}
+      <div className={`absolute left-0 top-0 h-full w-1 ${accentStyle[tone]}`} aria-hidden="true" />
+      {/* Subtle tint */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-70"
+        aria-hidden="true"
+        style={{
+          background:
+            tone === "brand"
+              ? "radial-gradient(420px 220px at 20% 0%, rgba(79,70,229,0.12) 0%, rgba(79,70,229,0.00) 60%)"
+              : tone === "accent"
+                ? "radial-gradient(420px 220px at 20% 0%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 60%)"
+                : "radial-gradient(420px 220px at 20% 0%, rgba(15,23,42,0.05) 0%, rgba(15,23,42,0.00) 60%)",
+        }}
+      />
+
+      <div className="relative">
+        <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">{props.title}</div>
+        <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
+          {props.loading ? <span className="inline-block h-5 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" /> : props.value}
+        </div>
       </div>
     </div>
   );
@@ -8032,22 +8217,22 @@ function KpiCard(props: { title: string; value: string; loading?: boolean; compa
 
 function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide ${className}`}>
+    <th className={`text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-text-default)] ${className}`}>
       {children}
     </th>
   );
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-3 py-2 text-[color:var(--color-text-default)] ${className}`}>{children}</td>;
 }
 function RowSkeleton({ colSpan }: { colSpan: number }) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-3 py-4">
         <div className="flex items-center justify-center gap-3">
-          <span className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
-          <span className="h-4 w-40 rounded bg-black/10 animate-pulse" />
-          <span className="h-4 w-24 rounded bg-black/10 animate-pulse" />
+          <span className="h-4 w-4 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />
+          <span className="h-4 w-40 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+          <span className="h-4 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
         </div>
       </td>
     </tr>
@@ -8061,20 +8246,29 @@ function SimpleTable(props: {
   loading: boolean;
   empty: boolean;
   children: React.ReactNode;
+  headTone?: "brand" | "accent" | "neutral";
 }) {
+  const headTone = props.headTone ?? "neutral";
+  const headBg =
+    headTone === "brand"
+      ? "bg-[rgba(79,70,229,0.10)]"
+      : headTone === "accent"
+        ? "bg-[rgba(6,182,212,0.10)]"
+        : "bg-black/5 dark:bg-white/5";
+
   return (
     <div>
       <div className="mb-2 flex items-end justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">{props.title}</h2>
-          {props.subtitle ? <p className="text-xs text-gray-500">{props.subtitle}</p> : null}
+          {props.subtitle ? <p className="text-xs text-[color:var(--color-text-muted)]">{props.subtitle}</p> : null}
         </div>
       </div>
 
-      <div className="bg-[var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
+      <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
         <div className="overflow-auto">
           <table className="min-w-[420px] w-full text-sm">
-            <thead className="bg-[#E6EDFF] text-[color:var(--color-text-default)] sticky top-0 z-10">
+            <thead className={`sticky top-0 z-10 ${headBg}`}>
               <tr className="divide-x divide-[color:var(--color-border)]">
                 {props.cols.map((c) => (
                   <Th key={c.label} className={c.align === "right" ? "text-right" : "text-left"}>
@@ -8088,7 +8282,7 @@ function SimpleTable(props: {
                 <RowSkeleton colSpan={props.cols.length} />
               ) : props.empty ? (
                 <tr>
-                  <td colSpan={props.cols.length} className="px-3 py-4 text-center text-gray-500">
+                  <td colSpan={props.cols.length} className="px-3 py-4 text-center text-[color:var(--color-text-muted)]">
                     Belum ada data
                   </td>
                 </tr>
@@ -8106,10 +8300,10 @@ function SimpleTable(props: {
 ```
 </details>
 
-### src/pages/deliveries/DeliveryDetail.tsx
+### src\pages\deliveries\DeliveryDetail.tsx
 
-- SHA: `8c04c5408bb6`  
-- Ukuran: 10 KB
+- SHA: `7e406ae3c6d2`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -8358,9 +8552,9 @@ function statusChipClass(s: DeliveryStatus) {
 ```
 </details>
 
-### src/pages/deliveries/DeliveryIndex.tsx
+### src\pages\deliveries\DeliveryIndex.tsx
 
-- SHA: `3e5ebb43f20a`  
+- SHA: `a02d5c48bbb4`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -8686,10 +8880,10 @@ function chipClass(s: DeliveryStatus) {
 ```
 </details>
 
-### src/pages/expenses/ExpenseForm.tsx
+### src\pages\expenses\ExpenseForm.tsx
 
-- SHA: `a1c3f7d6344a`  
-- Ukuran: 7 KB
+- SHA: `c57373336b09`  
+- Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -8915,9 +9109,9 @@ export default function ExpenseForm() {
 ```
 </details>
 
-### src/pages/expenses/ExpensesIndex.tsx
+### src\pages\expenses\ExpensesIndex.tsx
 
-- SHA: `51d043f5920a`  
+- SHA: `4d11f74daf4a`  
 - Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -9232,9 +9426,9 @@ function RowSkeleton({ showBranch, showAction }: { showBranch: boolean; showActi
 ```
 </details>
 
-### src/pages/Login.tsx
+### src\pages\Login.tsx
 
-- SHA: `0fc472dbdccf`  
+- SHA: `a16bf506ef43`  
 - Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -9470,10 +9664,10 @@ export default function LoginPage() {
 ```
 </details>
 
-### src/pages/orders/OrderDetail.tsx
+### src\pages\orders\OrderDetail.tsx
 
-- SHA: `5723fcdd404b`  
-- Ukuran: 43 KB
+- SHA: `90901b2ddf34`  
+- Ukuran: 44 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -10502,10 +10696,10 @@ function RowLine({ label, value, strong }: { label: string; value: string; stron
 ```
 </details>
 
-### src/pages/orders/OrderReceipt.tsx
+### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `c54d446a320c`  
-- Ukuran: 19 KB
+- SHA: `dbbe181e91fe`  
+- Ukuran: 20 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -11009,17 +11203,17 @@ export default function OrderReceipt(): React.ReactElement {
 ```
 </details>
 
-### src/pages/orders/OrdersIndex.tsx
+### src\pages\orders\OrdersIndex.tsx
 
-- SHA: `e69eee6f8929`  
-- Ukuran: 15 KB
+- SHA: `802a2006d7ba`  
+- Ukuran: 29 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/orders/OrdersIndex.tsx
 import { useCallback, useEffect, useState } from 'react';
 import { listOrders, openOrderReceipt } from '../../api/orders';
-import type { Order, OrderBackendStatus, PaginationMeta } from '../../types/orders';
+import type { Order, OrderBackendStatus, PaginationMeta, PaymentMethod, PaymentStatus } from '../../types/orders';
 import { Link } from 'react-router-dom';
 
 const dlog = (...args: unknown[]) => {
@@ -11034,21 +11228,136 @@ const shortOrderNo = (number?: string | null, invoiceNo?: string | null): string
   return `#${tail}`;
 };
 
+const paymentStatusLabel = (status?: PaymentStatus | null): string => {
+  switch (status) {
+    case 'PAID':
+    case 'SETTLED':
+      return 'Lunas';
+    case 'DP':
+      return 'DP';
+    case 'PENDING':
+      return 'Pending';
+    case 'UNPAID':
+      return 'Belum Bayar';
+    default:
+      return '-';
+  }
+};
+
+const paymentStatusClass = (status?: PaymentStatus | null): string => {
+  switch (status) {
+    case 'PAID':
+    case 'SETTLED':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+    case 'DP':
+      return 'bg-amber-50 text-amber-700 ring-amber-200';
+    case 'PENDING':
+      return 'bg-sky-50 text-sky-700 ring-sky-200';
+    case 'UNPAID':
+      return 'bg-rose-50 text-rose-700 ring-rose-200';
+    default:
+      return 'bg-slate-50 text-slate-600 ring-slate-200';
+  }
+};
+
+const paymentMethodLabel = (method?: PaymentMethod | null): string => {
+  switch (method) {
+    case 'CASH':
+      return 'Cash';
+    case 'QRIS':
+      return 'QRIS';
+    case 'TRANSFER':
+      return 'Transfer';
+    case 'DP':
+      return 'DP';
+    case 'PENDING':
+      return 'Pending';
+    default:
+      return '-';
+  }
+};
+
+const paymentMethodClass = (method?: PaymentMethod | null): string => {
+  switch (method) {
+    case 'CASH':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+    case 'QRIS':
+      return 'bg-sky-50 text-sky-700 ring-sky-200';
+    case 'TRANSFER':
+      return 'bg-violet-50 text-violet-700 ring-violet-200';
+    case 'DP':
+      return 'bg-amber-50 text-amber-700 ring-amber-200';
+    case 'PENDING':
+      return 'bg-slate-100 text-slate-700 ring-slate-200';
+    default:
+      return 'bg-slate-50 text-slate-600 ring-slate-200';
+  }
+};
+
+const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ['PENDING', 'DP', 'PAID', 'UNPAID', 'SETTLED'];
+const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = ['PENDING', 'DP', 'CASH', 'QRIS', 'TRANSFER'];
+type SortBy = 'created_at' | 'received_at' | 'ready_at';
+type SortDir = 'asc' | 'desc';
+
 export default function OrdersIndex(): React.ReactElement {
   const [rows, setRows] = useState<Order[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<OrderBackendStatus | ''>('');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | ''>('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [receivedFrom, setReceivedFrom] = useState('');
+  const [receivedTo, setReceivedTo] = useState('');
+  const [readyFrom, setReadyFrom] = useState('');
+  const [readyTo, setReadyTo] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('created_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(1);
   const perPage = 10;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (p = 1) => {
-    dlog('refresh start', { q: q || undefined, status: status || undefined, page: p, perPage });
-    setLoading(true); setError(null);
+    dlog('refresh start', {
+      q: q || undefined,
+      status: status || undefined,
+      payment_status: paymentStatus || undefined,
+      payment_method: paymentMethod || undefined,
+      from: from || undefined,
+      to: to || undefined,
+      received_from: receivedFrom || undefined,
+      received_to: receivedTo || undefined,
+      ready_from: readyFrom || undefined,
+      ready_to: readyTo || undefined,
+      sort_by: sortBy,
+      sort_dir: sortDir,
+      page: p,
+      perPage,
+    });
+
+    setLoading(true);
+    setError(null);
+
     try {
-      const res = await listOrders({ q: q || undefined, status: status || undefined, page: p, per_page: perPage });
+      const res = await listOrders({
+        q: q || undefined,
+        status: status || undefined,
+        payment_status: paymentStatus || undefined,
+        payment_method: paymentMethod || undefined,
+        from: from || undefined,
+        to: to || undefined,
+        received_from: receivedFrom || undefined,
+        received_to: receivedTo || undefined,
+        ready_from: readyFrom || undefined,
+        ready_to: readyTo || undefined,
+        sort_by: sortBy,
+        sort_dir: sortDir,
+        page: p,
+        per_page: perPage,
+      });
+
       dlog('refresh success', { count: (res.data ?? []).length, meta: res.meta });
       setRows(res.data ?? []);
       setMeta(res.meta as PaginationMeta);
@@ -11060,7 +11369,20 @@ export default function OrdersIndex(): React.ReactElement {
       setLoading(false);
       dlog('refresh finally: loading=false');
     }
-  }, [q, status]);
+  }, [
+    q,
+    status,
+    paymentStatus,
+    paymentMethod,
+    from,
+    to,
+    receivedFrom,
+    receivedTo,
+    readyFrom,
+    readyTo,
+    sortBy,
+    sortDir,
+  ]);
 
   useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
   useEffect(() => { dlog('query changed', q); }, [q]);
@@ -11068,11 +11390,33 @@ export default function OrdersIndex(): React.ReactElement {
   useEffect(() => { dlog('page changed', page); }, [page]);
   useEffect(() => { dlog('rows/meta updated', { rows: rows.length, meta }); }, [rows, meta]);
   useEffect(() => { dlog('loading/error', { loading, error }); }, [loading, error]);
+  useEffect(() => { dlog('paymentStatus changed', paymentStatus); }, [paymentStatus]);
+  useEffect(() => { dlog('paymentMethod changed', paymentMethod); }, [paymentMethod]);
+  useEffect(() => { dlog('date filters changed', { from, to, receivedFrom, receivedTo, readyFrom, readyTo }); }, [from, to, receivedFrom, receivedTo, readyFrom, readyTo]);
+  useEffect(() => { dlog('sorting changed', { sortBy, sortDir }); }, [sortBy, sortDir]);
 
   useEffect(() => { void refresh(1); }, [refresh]);
 
   const onApply = () => {
     dlog('apply filter clicked');
+    void refresh(1);
+  };
+
+  const onReset = () => {
+    dlog('reset filter clicked');
+    setQ('');
+    setStatus('');
+    setPaymentStatus('');
+    setPaymentMethod('');
+    setFrom('');
+    setTo('');
+    setReceivedFrom('');
+    setReceivedTo('');
+    setReadyFrom('');
+    setReadyTo('');
+    setSortBy('created_at');
+    setSortDir('desc');
+    setError(null);
     void refresh(1);
   };
 
@@ -11144,13 +11488,12 @@ export default function OrdersIndex(): React.ReactElement {
         aria-label="Filter orders"
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
-          <div className="md:col-span-6">
+          <div className="md:col-span-4">
             <label className="block text-xs font-medium text-slate-600">
               Pencarian
             </label>
             <div className="relative mt-1">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                {/* search icon */}
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <circle cx="11" cy="11" r="7" />
                   <path d="M20 20l-3.2-3.2" />
@@ -11158,12 +11501,12 @@ export default function OrdersIndex(): React.ReactElement {
               </span>
               <input
                 className="
-                  w-full rounded-lg border border-slate-200 bg-white
-                  pl-10 pr-3 py-2 text-sm text-slate-900
-                  placeholder:text-slate-400
-                  focus:border-slate-900 focus:outline-none
-                "
-                placeholder="Cari nomor (INV…)/nama/phone…"
+          w-full rounded-lg border border-slate-200 bg-white
+          pl-10 pr-3 py-2 text-sm text-slate-900
+          placeholder:text-slate-400
+          focus:border-slate-900 focus:outline-none
+        "
+                placeholder="No order / invoice / nama / WhatsApp / catatan"
                 value={q}
                 onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
                 aria-label="Cari pesanan"
@@ -11171,19 +11514,23 @@ export default function OrdersIndex(): React.ReactElement {
             </div>
           </div>
 
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <label className="block text-xs font-medium text-slate-600">
-              Status
+              Status Order
             </label>
             <select
               className="
-                mt-1 w-full rounded-lg border border-slate-200 bg-white
-                px-3 py-2 text-sm text-slate-900
-                focus:border-slate-900 focus:outline-none
-              "
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
               value={status}
-              onChange={(e) => { const v = e.target.value as OrderBackendStatus | ''; dlog('status select', v); setStatus(v); }}
-              aria-label="Filter status"
+              onChange={(e) => {
+                const v = e.target.value as OrderBackendStatus | '';
+                dlog('status select', v);
+                setStatus(v);
+              }}
+              aria-label="Filter status order"
             >
               <option value="">Semua Status</option>
               <option value="QUEUE">QUEUE</option>
@@ -11197,13 +11544,246 @@ export default function OrdersIndex(): React.ReactElement {
             </select>
           </div>
 
-          <div className="md:col-span-3 flex items-center gap-2">
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Status Bayar
+            </label>
+            <select
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={paymentStatus}
+              onChange={(e) => {
+                const v = e.target.value as PaymentStatus | '';
+                dlog('payment status select', v);
+                setPaymentStatus(v);
+              }}
+              aria-label="Filter status bayar"
+            >
+              <option value="">Semua Status Bayar</option>
+              {PAYMENT_STATUS_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {paymentStatusLabel(item)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Metode Bayar
+            </label>
+            <select
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={paymentMethod}
+              onChange={(e) => {
+                const v = e.target.value as PaymentMethod | '';
+                dlog('payment method select', v);
+                setPaymentMethod(v);
+              }}
+              aria-label="Filter metode bayar"
+            >
+              <option value="">Semua Metode Bayar</option>
+              {PAYMENT_METHOD_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {paymentMethodLabel(item)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Urutkan
+            </label>
+            <select
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={sortBy}
+              onChange={(e) => {
+                const v = e.target.value as SortBy;
+                dlog('sortBy select', v);
+                setSortBy(v);
+              }}
+              aria-label="Urutkan berdasarkan"
+            >
+              <option value="created_at">Tanggal Order</option>
+              <option value="received_at">Tanggal Diterima</option>
+              <option value="ready_at">Tanggal Jadi</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Arah Urutan
+            </label>
+            <select
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={sortDir}
+              onChange={(e) => {
+                const v = e.target.value as SortDir;
+                dlog('sortDir select', v);
+                setSortDir(v);
+              }}
+              aria-label="Arah urutan"
+            >
+              <option value="desc">Terbaru</option>
+              <option value="asc">Terlama</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Order Dari
+            </label>
+            <input
+              type="date"
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={from}
+              onChange={(e) => {
+                dlog('from date', e.target.value);
+                setFrom(e.target.value);
+              }}
+              aria-label="Filter tanggal order dari"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Order Sampai
+            </label>
+            <input
+              type="date"
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={to}
+              onChange={(e) => {
+                dlog('to date', e.target.value);
+                setTo(e.target.value);
+              }}
+              aria-label="Filter tanggal order sampai"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Diterima Dari
+            </label>
+            <input
+              type="date"
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={receivedFrom}
+              onChange={(e) => {
+                dlog('receivedFrom date', e.target.value);
+                setReceivedFrom(e.target.value);
+              }}
+              aria-label="Filter tanggal diterima dari"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Diterima Sampai
+            </label>
+            <input
+              type="date"
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={receivedTo}
+              onChange={(e) => {
+                dlog('receivedTo date', e.target.value);
+                setReceivedTo(e.target.value);
+              }}
+              aria-label="Filter tanggal diterima sampai"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Jadi Dari
+            </label>
+            <input
+              type="date"
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={readyFrom}
+              onChange={(e) => {
+                dlog('readyFrom date', e.target.value);
+                setReadyFrom(e.target.value);
+              }}
+              aria-label="Filter tanggal jadi dari"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600">
+              Jadi Sampai
+            </label>
+            <input
+              type="date"
+              className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white
+        px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+              value={readyTo}
+              onChange={(e) => {
+                dlog('readyTo date', e.target.value);
+                setReadyTo(e.target.value);
+              }}
+              aria-label="Filter tanggal jadi sampai"
+            />
+          </div>
+
+          <div className="md:col-span-12 flex flex-wrap items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              className="
+        inline-flex items-center justify-center
+        rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700
+        hover:bg-slate-50
+      "
+              onClick={onReset}
+            >
+              Reset
+            </button>
+
             <button
               className="
-                inline-flex w-full items-center justify-center
-                rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                hover:bg-slate-800 active:bg-slate-950
-              "
+        inline-flex items-center justify-center
+        rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+        hover:bg-slate-800 active:bg-slate-950
+      "
               onClick={onApply}
             >
               Terapkan
@@ -11248,7 +11828,9 @@ export default function OrdersIndex(): React.ReactElement {
                 <tr className="border-b border-slate-200">
                   <Th>Nomor</Th>
                   <Th>Customer</Th>
-                  <Th>Status</Th>
+                  <Th>Status Order</Th>
+                  <Th>Status Bayar</Th>
+                  <Th>Metode Bayar</Th>
                   <Th className="text-right">Total</Th>
                   <Th className="text-right">Aksi</Th>
                 </tr>
@@ -11261,7 +11843,7 @@ export default function OrdersIndex(): React.ReactElement {
                       {shortOrderNo(o.number, o.invoice_no)}
                     </Td>
 
-                    <Td className="max-w-[240px] truncate" title={o.customer?.name ?? ''}>
+                    <Td className="max-w-60 truncate" title={o.customer?.name ?? ''}>
                       <div className="flex flex-col">
                         <span className="text-slate-900">{o.customer?.name ?? '—'}</span>
 
@@ -11282,6 +11864,28 @@ export default function OrdersIndex(): React.ReactElement {
 
                     <Td>
                       <StatusBadge status={o.status} />
+                    </Td>
+
+                    <Td>
+                      <span
+                        className={[
+                          'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
+                          paymentStatusClass(o.payment_status),
+                        ].join(' ')}
+                      >
+                        {paymentStatusLabel(o.payment_status)}
+                      </span>
+                    </Td>
+
+                    <Td>
+                      <span
+                        className={[
+                          'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
+                          paymentMethodClass(o.latest_payment_method),
+                        ].join(' ')}
+                      >
+                        {paymentMethodLabel(o.latest_payment_method)}
+                      </span>
                     </Td>
 
                     <Td className="text-right font-medium text-slate-900">
@@ -11420,10 +12024,10 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 ```
 </details>
 
-### src/pages/pos/POSPage.tsx
+### src\pages\pos\POSPage.tsx
 
-- SHA: `0aeb278445b4`  
-- Ukuran: 44 KB
+- SHA: `f429c12f5766`  
+- Ukuran: 45 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -12553,9 +13157,9 @@ function UploadBox({
 ```
 </details>
 
-### src/pages/receivables/ReceivablesIndex.tsx
+### src\pages\receivables\ReceivablesIndex.tsx
 
-- SHA: `9d7d05f047f7`  
+- SHA: `efdb4dca6a09`  
 - Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -12843,10 +13447,10 @@ function renderStatusChip(s?: ReceivableStatus) {
 ```
 </details>
 
-### src/pages/reports/ReportsIndex.tsx
+### src\pages\reports\ReportsIndex.tsx
 
-- SHA: `2683dbc5b2ff`  
-- Ukuran: 12 KB
+- SHA: `8ef55f13a033`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13124,10 +13728,10 @@ function RowSkeleton({ cols }: { cols: number }) {
 ```
 </details>
 
-### src/pages/services/CategoryIndex.tsx
+### src\pages\services\CategoryIndex.tsx
 
-- SHA: `a862a3868d1c`  
-- Ukuran: 15 KB
+- SHA: `61431b4fddaa`  
+- Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13566,9 +14170,9 @@ function ChevronRightIcon() {
 ```
 </details>
 
-### src/pages/services/PricePerBranchInput.tsx
+### src\pages\services\PricePerBranchInput.tsx
 
-- SHA: `96f776c3fd42`  
+- SHA: `a063265130aa`  
 - Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -13891,9 +14495,9 @@ function Td({ children, className = "" }: { children: React.ReactNode; className
 ```
 </details>
 
-### src/pages/services/ServiceForm.tsx
+### src\pages\services\ServiceForm.tsx
 
-- SHA: `dbc99cf68411`  
+- SHA: `995f7d66b98b`  
 - Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -14433,9 +15037,9 @@ function IconAlert() {
 ```
 </details>
 
-### src/pages/services/ServiceIndex.tsx
+### src\pages\services\ServiceIndex.tsx
 
-- SHA: `ff98dfa02347`  
+- SHA: `fa0ada1f993b`  
 - Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -14958,10 +15562,10 @@ function IconBox() {
 ```
 </details>
 
-### src/pages/users/UserForm.tsx
+### src\pages\users\UserForm.tsx
 
-- SHA: `80265b6573a7`  
-- Ukuran: 25 KB
+- SHA: `adf77a7c88b7`  
+- Ukuran: 26 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -15651,9 +16255,9 @@ function KeyIcon() {
 ```
 </details>
 
-### src/pages/users/UsersList.tsx
+### src\pages\users\UsersList.tsx
 
-- SHA: `ce24659c2c35`  
+- SHA: `f889b7541b69`  
 - Ukuran: 20 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -16209,10 +16813,10 @@ function ChevronRightIcon() {
 ```
 </details>
 
-### src/pages/vouchers/VoucherForm.tsx
+### src\pages\vouchers\VoucherForm.tsx
 
-- SHA: `937798c10c4c`  
-- Ukuran: 8 KB
+- SHA: `32d30a96a212`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -16475,9 +17079,9 @@ export default function VoucherForm() {
 ```
 </details>
 
-### src/pages/vouchers/VouchersIndex.tsx
+### src\pages\vouchers\VouchersIndex.tsx
 
-- SHA: `108bf6b6088f`  
+- SHA: `18ae8441ae43`  
 - Ukuran: 10 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -16739,10 +17343,10 @@ function RowSkeleton() {
 ```
 </details>
 
-### src/pages/wash-notes/WashNoteForm.tsx
+### src\pages\wash-notes\WashNoteForm.tsx
 
-- SHA: `7c0a2815aa78`  
-- Ukuran: 24 KB
+- SHA: `6f5a6cec2214`  
+- Ukuran: 25 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -17258,9 +17862,9 @@ function RowSkeleton({ cols = [160, 240, 100, 100] }: { cols?: number[] }) {
 ```
 </details>
 
-### src/pages/wash-notes/WashNotesIndex.tsx
+### src\pages\wash-notes\WashNotesIndex.tsx
 
-- SHA: `1599f0b5e4bb`  
+- SHA: `3099b34e7c3c`  
 - Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -17494,10 +18098,10 @@ function RowSkeleton() {
 
 ## Pages (src/utils)
 
-### src/utils/date.ts
+### src\utils\date.ts
 
-- SHA: `68b1716f3273`  
-- Ukuran: 742 B
+- SHA: `1ad4f47d047d`  
+- Ukuran: 762 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -17525,10 +18129,10 @@ export function toLocalYMD(input?: string): string {
 ```
 </details>
 
-### src/utils/files.ts
+### src\utils\files.ts
 
-- SHA: `b56d905529c2`  
-- Ukuran: 332 B
+- SHA: `770f831288af`  
+- Ukuran: 340 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -17544,10 +18148,10 @@ export function fileUrl(path?: string | null): string {
 ```
 </details>
 
-### src/utils/money.ts
+### src\utils\money.ts
 
-- SHA: `9de3e1039356`  
-- Ukuran: 169 B
+- SHA: `65dd1ed1739b`  
+- Ukuran: 172 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -17558,10 +18162,10 @@ export function toIDR(n: number): string {
 ```
 </details>
 
-### src/utils/order-status.ts
+### src\utils\order-status.ts
 
-- SHA: `7da4ce0c9d21`  
-- Ukuran: 568 B
+- SHA: `1b2e1640e123`  
+- Ukuran: 585 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -17586,9 +18190,9 @@ export function getAllowedNext(current: OrderBackendStatus): OrderBackendStatus[
 ```
 </details>
 
-### src/utils/receipt-wa.ts
+### src\utils\receipt-wa.ts
 
-- SHA: `2a1968aa5ccb`  
+- SHA: `b2ce84c4c39f`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -17642,10 +18246,10 @@ export function buildReceiptMessage(order: Order, shareUrl: string): string {
 ```
 </details>
 
-### src/utils/theme.ts
+### src\utils\theme.ts
 
-- SHA: `cd5508d93cc6`  
-- Ukuran: 544 B
+- SHA: `7dc12dfe024f`  
+- Ukuran: 565 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -17674,10 +18278,10 @@ export function initTheme() {
 ```
 </details>
 
-### src/utils/wa.ts
+### src\utils\wa.ts
 
-- SHA: `2d7fbbae0f1e`  
-- Ukuran: 443 B
+- SHA: `48dc03565a06`  
+- Ukuran: 456 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -17702,10 +18306,10 @@ export function buildWhatsAppLink(phone: string, message: string): string {
 
 ## Entry Files
 
-### src/App.tsx
+### src\App.tsx
 
-- SHA: `82cfea01d538`  
-- Ukuran: 165 B
+- SHA: `45721658cc50`  
+- Ukuran: 170 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -17718,10 +18322,10 @@ export default function App() {
 ```
 </details>
 
-### src/main.tsx
+### src\main.tsx
 
-- SHA: `59751734a779`  
-- Ukuran: 287 B
+- SHA: `bdde479e4002`  
+- Ukuran: 300 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
