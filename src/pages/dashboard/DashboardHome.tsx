@@ -299,6 +299,170 @@ export default function DashboardHome() {
         </CardTable>
       </section>
 
+      {/* Ringkasan Pembayaran */}
+      <section aria-busy={loading ? "true" : "false"} className="space-y-2">
+        <div className="flex items-end justify-between">
+          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">
+            Ringkasan Pembayaran
+          </h2>
+          <span className="text-xs text-[color:var(--color-text-muted)]">
+            Breakdown metode bayar dan status order
+          </span>
+        </div>
+
+        <div className="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <PaymentCard
+            title="DP Masuk"
+            value={toIDR(Number(data?.payment_method_totals?.dp_amount ?? 0))}
+            subtitle={`Order DP: ${data?.payment_status_totals?.dp_count ?? 0}`}
+            tone="dp"
+            loading={loading}
+          />
+          <PaymentCard
+            title="Cash"
+            value={toIDR(Number(data?.payment_method_totals?.cash_amount ?? 0))}
+            subtitle="Pembayaran tunai"
+            tone="cash"
+            loading={loading}
+          />
+          <PaymentCard
+            title="Transfer"
+            value={toIDR(Number(data?.payment_method_totals?.transfer_amount ?? 0))}
+            subtitle="Pembayaran transfer"
+            tone="transfer"
+            loading={loading}
+          />
+          <PaymentCard
+            title="QRIS"
+            value={toIDR(Number(data?.payment_method_totals?.qris_amount ?? 0))}
+            subtitle="Pembayaran QRIS"
+            tone="qris"
+            loading={loading}
+          />
+          <PaymentCard
+            title="Pending"
+            value={toIDR(Number(data?.payment_status_totals?.pending_amount ?? 0))}
+            subtitle={`Order pending: ${data?.payment_status_totals?.pending_count ?? 0}`}
+            tone="pending"
+            loading={loading}
+          />
+        </div>
+
+        <div className="md:hidden -mx-4 px-4 overflow-x-auto">
+          <div className="flex gap-3 min-w-max pb-1">
+            <PaymentCard
+              title="DP Masuk"
+              value={toIDR(Number(data?.payment_method_totals?.dp_amount ?? 0))}
+              subtitle={`Order DP: ${data?.payment_status_totals?.dp_count ?? 0}`}
+              tone="dp"
+              loading={loading}
+              compact
+            />
+            <PaymentCard
+              title="Cash"
+              value={toIDR(Number(data?.payment_method_totals?.cash_amount ?? 0))}
+              subtitle="Pembayaran tunai"
+              tone="cash"
+              loading={loading}
+              compact
+            />
+            <PaymentCard
+              title="Transfer"
+              value={toIDR(Number(data?.payment_method_totals?.transfer_amount ?? 0))}
+              subtitle="Pembayaran transfer"
+              tone="transfer"
+              loading={loading}
+              compact
+            />
+            <PaymentCard
+              title="QRIS"
+              value={toIDR(Number(data?.payment_method_totals?.qris_amount ?? 0))}
+              subtitle="Pembayaran QRIS"
+              tone="qris"
+              loading={loading}
+              compact
+            />
+            <PaymentCard
+              title="Pending"
+              value={toIDR(Number(data?.payment_status_totals?.pending_amount ?? 0))}
+              subtitle={`Order pending: ${data?.payment_status_totals?.pending_count ?? 0}`}
+              tone="pending"
+              loading={loading}
+              compact
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 p-3">
+            <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
+              Status Order Pembayaran
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <div className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-300">Pending</div>
+                <div className="mt-1 text-lg font-semibold text-[color:var(--color-text-default)]">
+                  {loading ? (
+                    <span className="inline-block h-5 w-12 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                  ) : (
+                    data?.payment_status_totals?.pending_count ?? 0
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-300">DP</div>
+                <div className="mt-1 text-lg font-semibold text-[color:var(--color-text-default)]">
+                  {loading ? (
+                    <span className="inline-block h-5 w-12 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                  ) : (
+                    data?.payment_status_totals?.dp_count ?? 0
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Paid</div>
+                <div className="mt-1 text-lg font-semibold text-[color:var(--color-text-default)]">
+                  {loading ? (
+                    <span className="inline-block h-5 w-12 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                  ) : (
+                    data?.payment_status_totals?.paid_count ?? 0
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 p-3">
+            <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
+              Sisa Tagihan DP
+            </div>
+            <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
+              {loading ? (
+                <span className="inline-block h-6 w-32 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+              ) : (
+                toIDR(Number(data?.payment_status_totals?.dp_due_amount ?? 0))
+              )}
+            </div>
+            <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+              Total sisa pembayaran dari order yang masih berstatus DP
+            </p>
+          </div>
+
+          {/* <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 p-3">
+            <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
+              Keterangan
+            </div>
+            <div className="mt-2 space-y-1 text-xs text-[color:var(--color-text-muted)] leading-relaxed">
+              <p>DP, Cash, Transfer, dan QRIS diambil dari data pembayaran yang benar-benar masuk.</p>
+              <p>Pending, DP, dan Paid diambil dari status pembayaran order.</p>
+              <p>Pemisahan ini membuat dashboard lebih jelas antara uang masuk dan status transaksi.</p>
+            </div>
+          </div> */}
+        </div>
+      </section>
+
       {/* Omzet harian & bulanan */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <SimpleTable
@@ -363,6 +527,73 @@ function CardTable(props: { children: React.ReactNode }) {
   return (
     <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
       <div className="overflow-auto">{props.children}</div>
+    </div>
+  );
+}
+
+type PaymentTone = "dp" | "cash" | "transfer" | "qris" | "pending";
+
+function PaymentCard(props: {
+  title: string;
+  value: string;
+  subtitle?: string;
+  loading?: boolean;
+  compact?: boolean;
+  tone?: PaymentTone;
+}) {
+  const tone = props.tone ?? "cash";
+
+  const accentStyle: Record<PaymentTone, string> = {
+    dp: "bg-[rgba(245,158,11,0.95)]",
+    cash: "bg-[rgba(16,185,129,0.95)]",
+    transfer: "bg-[rgba(139,92,246,0.95)]",
+    qris: "bg-[rgba(14,165,233,0.95)]",
+    pending: "bg-[rgba(244,63,94,0.90)]",
+  };
+
+  const tintStyle: Record<PaymentTone, string> = {
+    dp: "radial-gradient(420px 220px at 20% 0%, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.00) 60%)",
+    cash: "radial-gradient(420px 220px at 20% 0%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.00) 60%)",
+    transfer: "radial-gradient(420px 220px at 20% 0%, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.00) 60%)",
+    qris: "radial-gradient(420px 220px at 20% 0%, rgba(14,165,233,0.12) 0%, rgba(14,165,233,0.00) 60%)",
+    pending: "radial-gradient(420px 220px at 20% 0%, rgba(244,63,94,0.12) 0%, rgba(244,63,94,0.00) 60%)",
+  };
+
+  return (
+    <div
+      className={[
+        "relative overflow-hidden bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
+        "transition-transform duration-150 hover:-translate-y-[1px]",
+        props.compact ? "p-3 w-[240px] shrink-0" : "p-3",
+      ].join(" ")}
+    >
+      <div className={`absolute left-0 top-0 h-full w-1 ${accentStyle[tone]}`} aria-hidden="true" />
+
+      <div
+        className="pointer-events-none absolute inset-0 opacity-70"
+        aria-hidden="true"
+        style={{ background: tintStyle[tone] }}
+      />
+
+      <div className="relative">
+        <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
+          {props.title}
+        </div>
+
+        <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
+          {props.loading ? (
+            <span className="inline-block h-5 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+          ) : (
+            props.value
+          )}
+        </div>
+
+        {props.subtitle ? (
+          <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+            {props.subtitle}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

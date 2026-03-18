@@ -16,6 +16,21 @@ export interface OmzetMonthlyPoint {
   amount: number;
 }
 
+export interface PaymentMethodTotals {
+  dp_amount: number;
+  cash_amount: number;
+  transfer_amount: number;
+  qris_amount: number;
+}
+
+export interface PaymentStatusTotals {
+  pending_count: number;
+  pending_amount: number;
+  dp_count: number;
+  dp_due_amount: number;
+  paid_count: number;
+}
+
 /**
  * Cerminan tepat dari payload backend /dashboard/summary
  * Lihat Backend_Docs.md M11 DashboardController::summary()
@@ -23,6 +38,9 @@ export interface OmzetMonthlyPoint {
 export interface DashboardSummary {
   omzet_total: number;
   orders_count: number;
+
+  payment_method_totals: PaymentMethodTotals;
+  payment_status_totals: PaymentStatusTotals;
 
   top_services: TopServiceRow[];
 
@@ -44,5 +62,5 @@ export interface DashboardSummary {
 export interface DashboardSummaryMeta {
   from: string;
   to: string;
-  branch_id?: string | null;  // UUID cabang atau null/undefined = semua
+  branch_id?: string | null; // UUID cabang atau null/undefined = semua
 }
