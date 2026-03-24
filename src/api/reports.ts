@@ -22,17 +22,26 @@ export interface PaginatedMeta {
     columns: string[];
 }
 
-type PreviewResp = ApiEnvelope<any[], PaginatedMeta>;
+export type ReportRow = Record<string, unknown>;
+
+type PreviewResp = ApiEnvelope<ReportRow[], PaginatedMeta>;
 
 export async function getReportPreview(kind: ReportKind, params: ReportQuery): Promise<PreviewResp> {
     const { data } = await api.get<PreviewResp>(`/reports/${kind}`, { params });
     return data;
 }
 
-export async function exportReport(kind: ReportKind, params: ReportQuery & { format?: 'csv' | 'xlsx', delimiter?: 'comma' | 'semicolon' | 'tab' }) {
+export async function exportReport(
+    kind: ReportKind,
+    params: ReportQuery & {
+        format?: 'csv';
+        delimiter?: 'comma' | 'semicolon' | 'tab';
+    }
+): Promise<Blob> {
     const { data } = await api.get(`/reports/${kind}/export`, {
         params,
         responseType: 'blob',
     });
+
     return data as Blob;
 }
