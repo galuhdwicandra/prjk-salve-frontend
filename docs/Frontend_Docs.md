@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-03-24 18:26:56_  
+_Dihasilkan otomatis: 2026-03-25 04:17:42_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -887,7 +887,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 
 ### src\api\reports.ts
 
-- SHA: `ba89fb214c56`  
+- SHA: `74fa9a5ffba2`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -916,21 +916,29 @@ export interface PaginatedMeta {
     columns: string[];
 }
 
-type PreviewResp = ApiEnvelope<any[], PaginatedMeta>;
+export type ReportRow = Record<string, unknown>;
+
+type PreviewResp = ApiEnvelope<ReportRow[], PaginatedMeta>;
 
 export async function getReportPreview(kind: ReportKind, params: ReportQuery): Promise<PreviewResp> {
     const { data } = await api.get<PreviewResp>(`/reports/${kind}`, { params });
     return data;
 }
 
-export async function exportReport(kind: ReportKind, params: ReportQuery & { format?: 'csv' | 'xlsx', delimiter?: 'comma' | 'semicolon' | 'tab' }) {
+export async function exportReport(
+    kind: ReportKind,
+    params: ReportQuery & {
+        format?: 'csv';
+        delimiter?: 'comma' | 'semicolon' | 'tab';
+    }
+): Promise<Blob> {
     const { data } = await api.get(`/reports/${kind}/export`, {
         params,
         responseType: 'blob',
     });
+
     return data as Blob;
 }
-
 ```
 </details>
 
@@ -13697,17 +13705,18 @@ function renderStatusChip(s?: ReceivableStatus) {
 
 ### src\pages\reports\ReportsIndex.tsx
 
-- SHA: `8ef55f13a033`  
-- Ukuran: 13 KB
+- SHA: `f5435ebb8b63`  
+- Ukuran: 14 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/reports/ReportsIndex.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { getReportPreview, exportReport, type ReportKind } from '../../api/reports';
+import { getReportPreview, exportReport, type ReportKind, type ReportRow } from '../../api/reports';
 import { listBranches } from '../../api/branches';
 
 type Branch = { id: string; name: string };
+type BranchListItem = { id: string; name: string };
 
 const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services'];
 
@@ -13721,8 +13730,13 @@ export default function ReportsIndex() {
     const [page, setPage] = useState<number>(1);
 
     const [columns, setColumns] = useState<string[]>([]);
-    const [rows, setRows] = useState<any[]>([]);
-    const [pageInfo, setPageInfo] = useState({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
+    const [rows, setRows] = useState<ReportRow[]>([]);
+    const [pageInfo, setPageInfo] = useState({
+        current_page: 1,
+        last_page: 1,
+        per_page: 20,
+        total: 0,
+    });
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -13730,10 +13744,10 @@ export default function ReportsIndex() {
     useEffect(() => {
         listBranches({ per_page: 100 })
             .then((res) => {
-                const list = Array.isArray(res.data) ? res.data : [];
-                setBranches(list.map((b: any) => ({ id: b.id, name: b.name })));
+                const list: BranchListItem[] = Array.isArray(res.data) ? (res.data as BranchListItem[]) : [];
+                setBranches(list.map((b) => ({ id: b.id, name: b.name })));
             })
-            .catch(() => { });
+            .catch(() => {});
     }, []);
 
     const params = useMemo(
@@ -13752,6 +13766,7 @@ export default function ReportsIndex() {
     async function load() {
         setLoading(true);
         setError(null);
+
         try {
             const resp = await getReportPreview(kind, params);
             setColumns(resp.meta.columns ?? []);
@@ -13770,19 +13785,32 @@ export default function ReportsIndex() {
     }
 
     useEffect(() => {
-        load(); // auto-load saat mount / filter berubah
+        load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [kind, params]);
 
-    async function onExport(format: 'csv' | 'xlsx' = 'csv') {
-        const blob = await exportReport(kind, { ...params, format, delimiter: 'semicolon' });
-        const fname = `${kind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.${format}`;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fname;
-        a.click();
-        URL.revokeObjectURL(url);
+    async function onExport() {
+        try {
+            const blob = await exportReport(kind, {
+                ...params,
+                format: 'csv',
+                delimiter: 'semicolon',
+            });
+
+            const fname = `${kind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.csv`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+
+            a.href = url;
+            a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            URL.revokeObjectURL(url);
+        } catch {
+            setError('Gagal mengunduh file laporan.');
+        }
     }
 
     return (
@@ -13791,18 +13819,17 @@ export default function ReportsIndex() {
                 <h1 className="text-lg font-semibold tracking-tight">Reports</h1>
             </header>
 
-            {/* Tabs (segmented) */}
             <div className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-2 w-max">
                 <div className="flex gap-1">
                     {KINDS.map((k) => {
                         const active = k === kind;
+
                         return (
                             <button
                                 key={k}
                                 onClick={() => {
                                     setKind(k);
                                     setPage(1);
-                                    // Reset filter khusus agar tidak “nempel” saat pindah tab
                                     setMethod('');
                                     setStatus('');
                                 }}
@@ -13816,27 +13843,49 @@ export default function ReportsIndex() {
                 </div>
             </div>
 
-            {/* Filter bar */}
             <section className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
                 <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 items-end">
                     <label className="grid gap-1 text-sm">
                         <span>Dari Tanggal</span>
-                        <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="input py-2" />
+                        <input
+                            type="date"
+                            value={from}
+                            onChange={(e) => {
+                                setFrom(e.target.value);
+                                setPage(1);
+                            }}
+                            className="input py-2"
+                        />
                     </label>
+
                     <label className="grid gap-1 text-sm">
                         <span>Sampai Tanggal</span>
-                        <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="input py-2" />
+                        <input
+                            type="date"
+                            value={to}
+                            onChange={(e) => {
+                                setTo(e.target.value);
+                                setPage(1);
+                            }}
+                            className="input py-2"
+                        />
                     </label>
+
                     <label className="grid gap-1 text-sm">
                         <span>Cabang</span>
                         <select
                             value={branchId ?? ''}
-                            onChange={(e) => { setBranchId(e.target.value || null); setPage(1); }}
+                            onChange={(e) => {
+                                setBranchId(e.target.value || null);
+                                setPage(1);
+                            }}
                             className="input py-2"
                         >
                             <option value="">(Semua)</option>
                             {branches.map((b) => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
+                                <option key={b.id} value={b.id}>
+                                    {b.name}
+                                </option>
                             ))}
                         </select>
                     </label>
@@ -13844,7 +13893,14 @@ export default function ReportsIndex() {
                     {kind === 'sales' && (
                         <label className="grid gap-1 text-sm">
                             <span>Metode</span>
-                            <select value={method} onChange={(e) => { setMethod(e.target.value); setPage(1); }} className="input py-2">
+                            <select
+                                value={method}
+                                onChange={(e) => {
+                                    setMethod(e.target.value);
+                                    setPage(1);
+                                }}
+                                className="input py-2"
+                            >
                                 <option value="">(Semua)</option>
                                 <option value="CASH">CASH</option>
                                 <option value="QRIS">QRIS</option>
@@ -13859,7 +13915,10 @@ export default function ReportsIndex() {
                             <span>Status</span>
                             <input
                                 value={status}
-                                onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+                                onChange={(e) => {
+                                    setStatus(e.target.value);
+                                    setPage(1);
+                                }}
                                 className="input py-2"
                                 placeholder="cth: OPEN / PARTIAL / ..."
                             />
@@ -13867,21 +13926,32 @@ export default function ReportsIndex() {
                     )}
 
                     <div className="flex gap-2">
-                        <button onClick={() => { setPage(1); load(); }} className="btn-primary">Terapkan</button>
-                        <button onClick={() => onExport('csv')} className="btn-outline">Export CSV</button>
-                        <button onClick={() => onExport('xlsx')} className="btn-outline">Export XLSX</button>
+                        <button
+                            onClick={() => {
+                                setPage(1);
+                                load();
+                            }}
+                            className="btn-primary"
+                        >
+                            Terapkan
+                        </button>
+                        <button onClick={onExport} className="btn-outline">
+                            Export CSV
+                        </button>
                     </div>
                 </div>
             </section>
 
-            {/* Error */}
             {error && (
-                <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
+                >
                     {error}
                 </div>
             )}
 
-            {/* Preview table — gaya konsisten dengan CustomersIndex */}
             <section aria-busy={loading ? 'true' : 'false'}>
                 <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
                     <div className="overflow-auto">
@@ -13893,6 +13963,7 @@ export default function ReportsIndex() {
                                     ))}
                                 </tr>
                             </thead>
+
                             <tbody className="divide-y divide-[color:var(--color-border)]">
                                 {loading ? (
                                     <>
@@ -13912,8 +13983,8 @@ export default function ReportsIndex() {
                                     rows.map((r, i) => (
                                         <tr key={i} className="hover:bg-black/5 transition-colors">
                                             {columns.map((col) => {
-                                                const key = col.toLowerCase().replaceAll(' ', '_');
-                                                return <Td key={col}>{String(r[key] ?? '')}</Td>;
+                                                const value = r[col];
+                                                return <Td key={col}>{String(value ?? '')}</Td>;
                                             })}
                                         </tr>
                                     ))
@@ -13924,7 +13995,6 @@ export default function ReportsIndex() {
                 </div>
             </section>
 
-            {/* Pagination */}
             {!loading && pageInfo.last_page > 1 && (
                 <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
                     <button
@@ -13958,9 +14028,11 @@ function Th({ children, className = '' }: { children: React.ReactNode; className
         </th>
     );
 }
+
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return <td className={`px-3 py-2 ${className}`}>{children}</td>;
 }
+
 function RowSkeleton({ cols }: { cols: number }) {
     return (
         <tr>
@@ -13972,7 +14044,6 @@ function RowSkeleton({ cols }: { cols: number }) {
         </tr>
     );
 }
-
 ```
 </details>
 
