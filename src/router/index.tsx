@@ -1,11 +1,12 @@
 // src/router/index.tsx
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import GuestLayout from '../layouts/GuestLayout';
 import ProtectedLayout from '../layouts/ProtectedLayout';
 import LoginPage from '../pages/Login';
 import { lazy } from 'react';
 import Guarded from './Guarded';
 import LazyBoundary from '../components/LazyBoundary';
+import SettingsLayout from '../layouts/SettingsLayout';
 
 const BranchIndex = lazy(() => import('../pages/branches/BranchIndex'));
 const BranchForm = lazy(() => import('../pages/branches/BranchForm'));
@@ -32,6 +33,7 @@ const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
 const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
+const WhatsappTemplatesPage = lazy(() => import('../pages/settings/WhatsappTemplatesPage'));
 
 export const router = createBrowserRouter([
   {
@@ -382,6 +384,27 @@ export const router = createBrowserRouter([
                 </LazyBoundary>
               </Guarded>
             ),
+          },
+          {
+            path: '/settings',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <SettingsLayout />
+                </LazyBoundary>
+              </Guarded>
+            ),
+            children: [
+              { index: true, element: <Navigate to="whatsapp-templates" replace /> },
+              {
+                path: 'whatsapp-templates',
+                element: (
+                  <LazyBoundary>
+                    <WhatsappTemplatesPage />
+                  </LazyBoundary>
+                ),
+              },
+            ],
           },
         ]
         : []),

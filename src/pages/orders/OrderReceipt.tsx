@@ -2,7 +2,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
+import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import { buildWhatsAppLink } from '../../utils/wa';
+import { buildReceiptMessage } from '../../utils/receipt-wa';
 import type { Order } from '../../types/orders';
 import { toIDR } from '../../utils/money';
 
@@ -61,7 +63,7 @@ export default function OrderReceipt(): React.ReactElement {
   const [waPhone, setWaPhone] = useState<string>('');
   const [order, setOrder] = useState<Order | null>(null);
   const [shareUrl, setShareUrl] = useState<string>('');
-
+  const [waBusy, setWaBusy] = useState(false);
   const [paper, setPaper] = useState<Paper>('58');
   const [zoom, setZoom] = useState<number>(1); // 1 = 100%
 
@@ -151,45 +153,51 @@ export default function OrderReceipt(): React.ReactElement {
   };
 
   // ====== WhatsApp helpers ======
-  const buildWAMessage = () => {
-    const nomor = order?.invoice_no ?? order?.number ?? '-';
-    const total = toIDR(Number(order?.grand_total ?? 0));
-    const kwitansi = shareUrl || '';
-    const name = order?.customer?.name ?? 'Pelanggan';
-    const isUnpaid = Number(order?.due_amount ?? 0) > 0;
+  const getResolvedTemplate = async () => {
+    if (!order) return null;
 
-    if (isUnpaid) {
-      return [
-        `Halo ${name},`,
-        'Berikut tagihan laundry Anda.',
-        `Kwitansi: ${kwitansi}`,
-        `No: ${nomor}`,
-        `Total: ${total}`,
-        'Mohon melakukan pembayaran.',
-        'Salve Laundry',
-      ].join('\n');
+    const isUnpaid = Number(order.due_amount ?? 0) > 0;
+    const key = isUnpaid ? 'receipt_pending' : 'receipt_paid';
+
+    try {
+      const res = await resolveWhatsappTemplate(key, order.branch_id);
+      return res.data ?? null;
+    } catch {
+      return null;
     }
-
-    return [
-      `Halo ${name},`,
-      'Terima kasih atas pembayarannya.',
-      `Kwitansi: ${kwitansi}`,
-      `No: ${nomor}`,
-      `Total: ${total}`,
-      'Terima Kasih Sudah Menggunakan Layanan.',
-      'Salve Laundry',
-    ].join('\n');
   };
 
-  const onSendWA = () => {
-    if (!waPhone || !shareUrl) return;
-    window.open(buildWhatsAppLink(waPhone, buildWAMessage()), '_blank');
+  const buildWAMessage = async () => {
+    if (!order) return '';
+
+    const templateRow = await getResolvedTemplate();
+    return buildReceiptMessage(order, shareUrl || '', templateRow);
+  };
+
+  const onSendWA = async () => {
+    if (!waPhone || !shareUrl || !order) return;
+
+    try {
+      setWaBusy(true);
+      const message = await buildWAMessage();
+      window.open(buildWhatsAppLink(waPhone, message), '_blank', 'noopener,noreferrer');
+    } finally {
+      setWaBusy(false);
+    }
   };
 
   const onCopyWAText = async () => {
+    if (!order) return;
+
     try {
-      await navigator.clipboard?.writeText(shareUrl || '');
-    } catch { /* abaikan */ }
+      setWaBusy(true);
+      const message = await buildWAMessage();
+      await navigator.clipboard?.writeText(message);
+    } catch {
+      /* abaikan */
+    } finally {
+      setWaBusy(false);
+    }
   };
 
   const onCopyShareLink = async () => {
@@ -434,7 +442,7 @@ export default function OrderReceipt(): React.ReactElement {
                 disabled:opacity-50 disabled:pointer-events-none
               "
               onClick={onSendWA}
-              disabled={!waPhone || !shareUrl}
+              disabled={!waPhone || !shareUrl || !order || waBusy}
               aria-label="Kirim WhatsApp"
             >
               <IconWA className="text-white" />
@@ -442,10 +450,11 @@ export default function OrderReceipt(): React.ReactElement {
             </button>
 
             <button
-              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
               onClick={onCopyWAText}
-              aria-label="Salin (link) untuk WA"
-              title="Menyalin link kwitansi"
+              disabled={!order || waBusy}
+              aria-label="Salin teks WhatsApp"
+              title="Menyalin teks pesan WhatsApp"
             >
               Salin
             </button>

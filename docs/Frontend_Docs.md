@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-03-25 04:17:42_  
+_Dihasilkan otomatis: 2026-04-15 09:17:06_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -25,6 +25,7 @@ _Dihasilkan otomatis: 2026-03-25 04:17:42_
   - [src\api\users.ts](#file-srcapiusersts)
   - [src\api\vouchers.ts](#file-srcapivouchersts)
   - [src\api\washNotes.ts](#file-srcapiwashnotests)
+  - [src\api\whatsappTemplates.ts](#file-srcapiwhatsapptemplatests)
 
 - [Store (src/store)](#store-srcstore)
   - [src\store\useAuth.ts](#file-srcstoreuseauthts)
@@ -51,6 +52,7 @@ _Dihasilkan otomatis: 2026-03-25 04:17:42_
   - [src\types\users.ts](#file-srctypesusersts)
   - [src\types\vouchers.ts](#file-srctypesvouchersts)
   - [src\types\wash-notes.ts](#file-srctypeswash-notests)
+  - [src\types\whatsapp-templates.ts](#file-srctypeswhatsapp-templatests)
 
 - [Components (src/components)](#components-srccomponents)
   - [src\components\ConfirmDialog.tsx](#file-srccomponentsconfirmdialogtsx)
@@ -94,6 +96,7 @@ _Dihasilkan otomatis: 2026-03-25 04:17:42_
   - [src\pages\services\PricePerBranchInput.tsx](#file-srcpagesservicespriceperbranchinputtsx)
   - [src\pages\services\ServiceForm.tsx](#file-srcpagesservicesserviceformtsx)
   - [src\pages\services\ServiceIndex.tsx](#file-srcpagesservicesserviceindextsx)
+  - [src\pages\settings\WhatsappTemplatesPage.tsx](#file-srcpagessettingswhatsapptemplatespagetsx)
   - [src\pages\users\UserForm.tsx](#file-srcpagesusersuserformtsx)
   - [src\pages\users\UsersList.tsx](#file-srcpagesusersuserslisttsx)
   - [src\pages\vouchers\VoucherForm.tsx](#file-srcpagesvouchersvoucherformtsx)
@@ -1256,6 +1259,65 @@ export async function searchOrderCandidates(params: SearchOrderCandidatesParams)
 ```
 </details>
 
+### src\api\whatsappTemplates.ts
+
+- SHA: `77730a24a559`  
+- Ukuran: 2 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+import { api, type ApiEnvelope } from './client';
+import type {
+    WhatsappTemplate,
+    WhatsappTemplateQuery,
+    WhatsappTemplateUpsertPayload,
+    PaginationMeta,
+} from '../types/whatsapp-templates';
+
+export async function listWhatsappTemplates(params: WhatsappTemplateQuery = {}) {
+    const { data } = await api.get<ApiEnvelope<WhatsappTemplate[], PaginationMeta | null>>(
+        '/whatsapp-templates',
+        { params }
+    );
+    return data;
+}
+
+export async function getWhatsappTemplate(id: string) {
+    const { data } = await api.get<ApiEnvelope<WhatsappTemplate, null>>(`/whatsapp-templates/${id}`);
+    return data;
+}
+
+export async function createWhatsappTemplate(payload: WhatsappTemplateUpsertPayload) {
+    const { data } = await api.post<ApiEnvelope<WhatsappTemplate, null>>('/whatsapp-templates', payload);
+    return data;
+}
+
+export async function updateWhatsappTemplate(id: string, payload: Partial<WhatsappTemplateUpsertPayload>) {
+    const { data } = await api.put<ApiEnvelope<WhatsappTemplate, null>>(`/whatsapp-templates/${id}`, payload);
+    return data;
+}
+
+export async function deleteWhatsappTemplate(id: string) {
+    const { data } = await api.delete<ApiEnvelope<null, null>>(`/whatsapp-templates/${id}`);
+    return data;
+}
+
+export async function resolveWhatsappTemplate(
+    key: 'receipt_pending' | 'receipt_paid',
+    branch_id?: string | null,
+) {
+    const params: Record<string, string> = { key };
+    if (branch_id) params.branch_id = branch_id;
+
+    const { data } = await api.get<ApiEnvelope<WhatsappTemplate | null, { fallback_global: boolean }>>(
+        '/whatsapp-templates/resolve',
+        { params }
+    );
+    return data;
+}
+```
+</details>
+
 
 
 ## Store (src/store)
@@ -1425,7 +1487,7 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `1a4c170a182e`  
+- SHA: `a7c07e699796`  
 - Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1493,6 +1555,7 @@ export default function ProtectedLayout() {
     { label: "Piutang", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
     { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], show: FF.vouchers },
     { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Settings", to: "/settings", roles: ["Superadmin", "Admin Cabang",] }
   ];
 
   const VISIBLE = useMemo(
@@ -1838,8 +1901,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `d9ef6cb8db4a`  
-- Ukuran: 11 KB
+- SHA: `1a37f3ab2b09`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1877,6 +1940,7 @@ const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
 const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
+const WhatsappTemplatesPage = lazy(() => import('../pages/settings/WhatsappTemplatesPage'));
 
 export const router = createBrowserRouter([
   {
@@ -2224,6 +2288,16 @@ export const router = createBrowserRouter([
               <Guarded roles={['Petugas Cuci']}>
                 <LazyBoundary>
                   <WashNoteForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: '/settings/whatsapp-templates',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <WhatsappTemplatesPage />
                 </LazyBoundary>
               </Guarded>
             ),
@@ -3130,6 +3204,50 @@ export interface OrderLite {
     default_qty?: number;
 }
 
+```
+</details>
+
+### src\types\whatsapp-templates.ts
+
+- SHA: `cf92ed54ba4b`  
+- Ukuran: 816 B
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+export interface WhatsappTemplate {
+    id: string;
+    branch_id: string | null;
+    key: 'receipt_pending' | 'receipt_paid';
+    name: string;
+    content: string;
+    is_active: boolean;
+    created_at?: string | null;
+    updated_at?: string | null;
+    branch?: { id: string; name: string } | null;
+}
+
+export interface WhatsappTemplateQuery {
+    key?: 'receipt_pending' | 'receipt_paid';
+    branch_id?: string | 'global';
+    is_active?: boolean;
+    page?: number;
+    per_page?: number;
+}
+
+export interface WhatsappTemplateUpsertPayload {
+    branch_id?: string | null;
+    key: 'receipt_pending' | 'receipt_paid';
+    name: string;
+    content: string;
+    is_active?: boolean;
+}
+
+export interface PaginationMeta {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+}
 ```
 </details>
 
@@ -10954,7 +11072,7 @@ function RowLine({ label, value, strong }: { label: string; value: string; stron
 
 ### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `dbbe181e91fe`  
+- SHA: `18ea6e9eb23a`  
 - Ukuran: 20 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -10963,7 +11081,9 @@ function RowLine({ label, value, strong }: { label: string; value: string; stron
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
+import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import { buildWhatsAppLink } from '../../utils/wa';
+import { buildReceiptMessage } from '../../utils/receipt-wa';
 import type { Order } from '../../types/orders';
 import { toIDR } from '../../utils/money';
 
@@ -11022,7 +11142,7 @@ export default function OrderReceipt(): React.ReactElement {
   const [waPhone, setWaPhone] = useState<string>('');
   const [order, setOrder] = useState<Order | null>(null);
   const [shareUrl, setShareUrl] = useState<string>('');
-
+  const [waBusy, setWaBusy] = useState(false);
   const [paper, setPaper] = useState<Paper>('58');
   const [zoom, setZoom] = useState<number>(1); // 1 = 100%
 
@@ -11112,45 +11232,51 @@ export default function OrderReceipt(): React.ReactElement {
   };
 
   // ====== WhatsApp helpers ======
-  const buildWAMessage = () => {
-    const nomor = order?.invoice_no ?? order?.number ?? '-';
-    const total = toIDR(Number(order?.grand_total ?? 0));
-    const kwitansi = shareUrl || '';
-    const name = order?.customer?.name ?? 'Pelanggan';
-    const isUnpaid = Number(order?.due_amount ?? 0) > 0;
+  const getResolvedTemplate = async () => {
+    if (!order) return null;
 
-    if (isUnpaid) {
-      return [
-        `Halo ${name},`,
-        'Berikut tagihan laundry Anda.',
-        `Kwitansi: ${kwitansi}`,
-        `No: ${nomor}`,
-        `Total: ${total}`,
-        'Mohon melakukan pembayaran.',
-        'Salve Laundry',
-      ].join('\n');
+    const isUnpaid = Number(order.due_amount ?? 0) > 0;
+    const key = isUnpaid ? 'receipt_pending' : 'receipt_paid';
+
+    try {
+      const res = await resolveWhatsappTemplate(key, order.branch_id);
+      return res.data ?? null;
+    } catch {
+      return null;
     }
-
-    return [
-      `Halo ${name},`,
-      'Terima kasih atas pembayarannya.',
-      `Kwitansi: ${kwitansi}`,
-      `No: ${nomor}`,
-      `Total: ${total}`,
-      'Terima Kasih Sudah Menggunakan Layanan.',
-      'Salve Laundry',
-    ].join('\n');
   };
 
-  const onSendWA = () => {
-    if (!waPhone || !shareUrl) return;
-    window.open(buildWhatsAppLink(waPhone, buildWAMessage()), '_blank');
+  const buildWAMessage = async () => {
+    if (!order) return '';
+
+    const templateRow = await getResolvedTemplate();
+    return buildReceiptMessage(order, shareUrl || '', templateRow);
+  };
+
+  const onSendWA = async () => {
+    if (!waPhone || !shareUrl || !order) return;
+
+    try {
+      setWaBusy(true);
+      const message = await buildWAMessage();
+      window.open(buildWhatsAppLink(waPhone, message), '_blank', 'noopener,noreferrer');
+    } finally {
+      setWaBusy(false);
+    }
   };
 
   const onCopyWAText = async () => {
+    if (!order) return;
+
     try {
-      await navigator.clipboard?.writeText(shareUrl || '');
-    } catch { /* abaikan */ }
+      setWaBusy(true);
+      const message = await buildWAMessage();
+      await navigator.clipboard?.writeText(message);
+    } catch {
+      /* abaikan */
+    } finally {
+      setWaBusy(false);
+    }
   };
 
   const onCopyShareLink = async () => {
@@ -11395,7 +11521,7 @@ export default function OrderReceipt(): React.ReactElement {
                 disabled:opacity-50 disabled:pointer-events-none
               "
               onClick={onSendWA}
-              disabled={!waPhone || !shareUrl}
+              disabled={!waPhone || !shareUrl || !order || waBusy}
               aria-label="Kirim WhatsApp"
             >
               <IconWA className="text-white" />
@@ -11403,10 +11529,11 @@ export default function OrderReceipt(): React.ReactElement {
             </button>
 
             <button
-              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
               onClick={onCopyWAText}
-              aria-label="Salin (link) untuk WA"
-              title="Menyalin link kwitansi"
+              disabled={!order || waBusy}
+              aria-label="Salin teks WhatsApp"
+              title="Menyalin teks pesan WhatsApp"
             >
               Salin
             </button>
@@ -15881,6 +16008,384 @@ function IconBox() {
 ```
 </details>
 
+### src\pages\settings\WhatsappTemplatesPage.tsx
+
+- SHA: `95bb5951190e`  
+- Ukuran: 10 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  listWhatsappTemplates,
+  createWhatsappTemplate,
+  updateWhatsappTemplate,
+} from '../../api/whatsappTemplates';
+import { listBranches } from '../../api/branches';
+import { useAuth } from '../../store/useAuth';
+
+type BranchOption = {
+  id: string;
+  name: string;
+};
+
+type FormState = {
+  id?: string;
+  branch_id: string | null;
+  key: 'receipt_pending' | 'receipt_paid';
+  name: string;
+  content: string;
+  is_active: boolean;
+};
+
+type ApiErrorShape = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
+type TemplateCardProps = {
+  title: string;
+  form: FormState;
+  setForm: React.Dispatch<React.SetStateAction<FormState>>;
+  onSave: () => void;
+  saving: boolean;
+  branches: BranchOption[];
+  isSuperadmin: boolean;
+  helpPlaceholders: string[];
+};
+
+const DEFAULT_PENDING = `Halo {{customer_name}},
+Berikut tagihan laundry Anda.
+Kwitansi: {{share_url}}
+No: {{invoice_no}}
+Total: {{grand_total}}
+Mohon melakukan pembayaran.
+{{app_name}}`;
+
+const DEFAULT_PAID = `Halo {{customer_name}},
+Terima kasih atas pembayarannya.
+Kwitansi: {{share_url}}
+No: {{invoice_no}}
+Total: {{grand_total}}
+Terima kasih sudah menggunakan layanan kami.
+{{app_name}}`;
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  const err = error as ApiErrorShape;
+  return err.response?.data?.message ?? fallback;
+}
+
+export default function WhatsappTemplatesPage() {
+  const me = useAuth.user;
+
+  const isSuperadmin = useMemo(
+    () => (me?.roles ?? []).includes('Superadmin'),
+    [me?.roles]
+  );
+
+  const branchIdFromAuth =
+    typeof me?.branch_id === 'string' ? me.branch_id : null;
+
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+
+  const [pending, setPending] = useState<FormState>({
+    branch_id: isSuperadmin ? null : branchIdFromAuth,
+    key: 'receipt_pending',
+    name: 'Receipt Pending',
+    content: DEFAULT_PENDING,
+    is_active: true,
+  });
+
+  const [paid, setPaid] = useState<FormState>({
+    branch_id: isSuperadmin ? null : branchIdFromAuth,
+    key: 'receipt_paid',
+    name: 'Receipt Paid',
+    content: DEFAULT_PAID,
+    is_active: true,
+  });
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isSuperadmin) {
+        const br = await listBranches({ per_page: 100 });
+        const mappedBranches: BranchOption[] = (br.data ?? []).map((branch) => ({
+          id: branch.id,
+          name: branch.name,
+        }));
+        setBranches(mappedBranches);
+      } else {
+        setBranches([]);
+      }
+
+      const res = await listWhatsappTemplates({ per_page: 100 });
+      const items = res.data ?? [];
+
+      const rowPending = items.find((item) => item.key === 'receipt_pending');
+      const rowPaid = items.find((item) => item.key === 'receipt_paid');
+
+      if (rowPending) {
+        setPending({
+          id: rowPending.id,
+          branch_id: rowPending.branch_id,
+          key: rowPending.key,
+          name: rowPending.name,
+          content: rowPending.content,
+          is_active: rowPending.is_active,
+        });
+      } else {
+        setPending({
+          branch_id: isSuperadmin ? null : branchIdFromAuth,
+          key: 'receipt_pending',
+          name: 'Receipt Pending',
+          content: DEFAULT_PENDING,
+          is_active: true,
+        });
+      }
+
+      if (rowPaid) {
+        setPaid({
+          id: rowPaid.id,
+          branch_id: rowPaid.branch_id,
+          key: rowPaid.key,
+          name: rowPaid.name,
+          content: rowPaid.content,
+          is_active: rowPaid.is_active,
+        });
+      } else {
+        setPaid({
+          branch_id: isSuperadmin ? null : branchIdFromAuth,
+          key: 'receipt_paid',
+          name: 'Receipt Paid',
+          content: DEFAULT_PAID,
+          is_active: true,
+        });
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memuat template WhatsApp.'));
+    } finally {
+      setLoading(false);
+    }
+  }, [branchIdFromAuth, isSuperadmin]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  async function saveOne(form: FormState): Promise<void> {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = {
+        branch_id: form.branch_id,
+        key: form.key,
+        name: form.name,
+        content: form.content,
+        is_active: form.is_active,
+      };
+
+      if (form.id) {
+        await updateWhatsappTemplate(form.id, payload);
+      } else {
+        await createWhatsappTemplate(payload);
+      }
+
+      await loadData();
+      window.alert(`Template ${form.key} berhasil disimpan.`);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, `Gagal menyimpan template ${form.key}.`));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const helpPlaceholders = [
+    '{{customer_name}}',
+    '{{invoice_no}}',
+    '{{order_no}}',
+    '{{grand_total}}',
+    '{{payment_status}}',
+    '{{share_url}}',
+    '{{app_name}}',
+  ];
+
+  return (
+    <div className="space-y-4">
+      <header>
+        <div className="text-xs text-slate-500">Settings / WhatsApp Templates</div>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+          WhatsApp Templates
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Kelola template pesan WhatsApp untuk receipt pending dan receipt paid.
+        </p>
+      </header>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+          Memuat…
+        </div>
+      ) : (
+        <>
+          <TemplateCard
+            title="Receipt Pending"
+            form={pending}
+            setForm={setPending}
+            onSave={() => {
+              void saveOne(pending);
+            }}
+            saving={saving}
+            branches={branches}
+            isSuperadmin={isSuperadmin}
+            helpPlaceholders={helpPlaceholders}
+          />
+
+          <TemplateCard
+            title="Receipt Paid"
+            form={paid}
+            setForm={setPaid}
+            onSave={() => {
+              void saveOne(paid);
+            }}
+            saving={saving}
+            branches={branches}
+            isSuperadmin={isSuperadmin}
+            helpPlaceholders={helpPlaceholders}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function TemplateCard({
+  title,
+  form,
+  setForm,
+  onSave,
+  saving,
+  branches,
+  isSuperadmin,
+  helpPlaceholders,
+}: TemplateCardProps) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]">
+      <div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      </div>
+
+      <div className="space-y-4 px-4 py-4 sm:px-6">
+        {isSuperadmin && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Scope
+            </label>
+            <select
+              className="input w-full"
+              value={form.branch_id ?? ''}
+              onChange={(e) => {
+                const value = e.target.value || null;
+                setForm((prev) => ({ ...prev, branch_id: value }));
+              }}
+            >
+              <option value="">Global</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Nama Template
+          </label>
+          <input
+            className="input w-full"
+            value={form.name}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm((prev) => ({ ...prev, name: value }));
+            }}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Isi Template
+          </label>
+          <textarea
+            className="input min-h-[220px] w-full"
+            value={form.content}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm((prev) => ({ ...prev, content: value }));
+            }}
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setForm((prev) => ({ ...prev, is_active: checked }));
+            }}
+          />
+          Aktif
+        </label>
+
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+          <div className="font-semibold text-slate-700">
+            Placeholder yang bisa dipakai:
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {helpPlaceholders.map((placeholder) => (
+              <code
+                key={placeholder}
+                className="rounded bg-white px-2 py-1 text-[11px]"
+              >
+                {placeholder}
+              </code>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+            onClick={onSave}
+            disabled={saving}
+          >
+            Simpan
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+```
+</details>
+
 ### src\pages\users\UserForm.tsx
 
 - SHA: `adf77a7c88b7`  
@@ -18511,13 +19016,13 @@ export function getAllowedNext(current: OrderBackendStatus): OrderBackendStatus[
 
 ### src\utils\receipt-wa.ts
 
-- SHA: `b2ce84c4c39f`  
-- Ukuran: 1 KB
+- SHA: `997ac557721c`  
+- Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
-// src/utils/receipt-wa.ts
 import type { Order } from '../types/orders';
+import type { WhatsappTemplate } from '../types/whatsapp-templates';
 
 export function formatIDR(n: number): string {
     try {
@@ -18531,37 +19036,96 @@ export function formatIDR(n: number): string {
     }
 }
 
-export function buildReceiptMessage(order: Order, shareUrl: string): string {
-    const name = order?.customer?.name || 'Pelanggan';
-    const nomor = (order as any)?.invoice_no || (order as any)?.number || '';
-    const total = formatIDR(Number((order as any)?.grand_total ?? (order as any)?.total ?? 0));
-
-    const status = (order as any)?.payment_status;
-    const isLunas = status === 'PAID' || status === 'SETTLED';
-
-    const lines = isLunas
-        ? [
-            `Halo ${name},`,
-            'Terima kasih atas pembayarannya.',
-            `Kwitansi: ${shareUrl}`,
-            `No: ${nomor}`,
-            `Total: ${total}`,
-            'Terima Kasih Sudah Menggunakan Layanan.',
-            'Salve Laundry',
-        ]
-        : [
-            `Halo ${name},`,
-            'Berikut tagihan laundry Anda.',
-            `Kwitansi: ${shareUrl}`,
-            `No: ${nomor}`,
-            `Total: ${total}`,
-            'Mohon melakukan pembayaran.',
-            'Salve Laundry',
-        ];
-
-    return lines.join('\n');
+function normalizeText(v: unknown, fallback = ''): string {
+    if (v === null || v === undefined) return fallback;
+    return String(v);
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+    if (value && typeof value === 'object') {
+        return value as Record<string, unknown>;
+    }
+    return {};
+}
+
+function pickString(obj: Record<string, unknown>, key: string, fallback = ''): string {
+    const value = obj[key];
+    if (value === null || value === undefined || value === '') {
+        return fallback;
+    }
+    return String(value);
+}
+
+function pickNumber(obj: Record<string, unknown>, key: string, fallback = 0): number {
+    const value = obj[key];
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+        const parsed = Number(value);
+        return Number.isNaN(parsed) ? fallback : parsed;
+    }
+    return fallback;
+}
+
+export function applyTemplate(
+    template: string,
+    vars: Record<string, string>,
+): string {
+    return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => {
+        return vars[key] ?? '';
+    });
+}
+
+export function buildReceiptMessage(
+    order: Order,
+    shareUrl: string,
+    templateRow?: WhatsappTemplate | null,
+): string {
+    const rawOrder = asObject(order);
+
+    const customerName = normalizeText(order.customer?.name, 'Pelanggan');
+    const invoiceNo = pickString(rawOrder, 'invoice_no') || pickString(rawOrder, 'number', '-');
+    const orderNo = pickString(rawOrder, 'number', '-');
+    const grandTotal = formatIDR(
+        pickNumber(rawOrder, 'grand_total', pickNumber(rawOrder, 'total', 0)),
+    );
+    const paymentStatus = pickString(rawOrder, 'payment_status', 'PENDING');
+
+    const vars: Record<string, string> = {
+        customer_name: customerName,
+        invoice_no: invoiceNo,
+        order_no: orderNo,
+        grand_total: grandTotal,
+        payment_status: paymentStatus,
+        share_url: shareUrl,
+        app_name: 'Salve Laundry',
+    };
+
+    if (templateRow?.content?.trim()) {
+        return applyTemplate(templateRow.content, vars);
+    }
+
+    const isPaid = paymentStatus === 'PAID' || paymentStatus === 'SETTLED';
+
+    return isPaid
+        ? [
+            `Halo ${customerName},`,
+            'Terima kasih atas pembayarannya.',
+            `Kwitansi: ${shareUrl}`,
+            `No: ${invoiceNo}`,
+            `Total: ${grandTotal}`,
+            'Terima kasih sudah menggunakan layanan kami.',
+            'Salve Laundry',
+        ].join('\n')
+        : [
+            `Halo ${customerName},`,
+            'Berikut tagihan laundry Anda.',
+            `Kwitansi: ${shareUrl}`,
+            `No: ${invoiceNo}`,
+            `Total: ${grandTotal}`,
+            'Mohon melakukan pembayaran.',
+            'Salve Laundry',
+        ].join('\n');
+}
 ```
 </details>
 

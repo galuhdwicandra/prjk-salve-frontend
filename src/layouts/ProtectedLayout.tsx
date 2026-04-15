@@ -36,15 +36,11 @@ export default function ProtectedLayout() {
     };
   }, [open]);
 
-  if (!me) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
-
-  const FF = {
+  const FF = useMemo(() => ({
     vouchers: import.meta.env.VITE_FEATURE_VOUCHER === "true",
     delivery: import.meta.env.VITE_FEATURE_DELIVERY === "true",
     receivables: import.meta.env.VITE_FEATURE_RECEIVABLES === "true",
-  };
+  }), []);
 
   type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
   const MENU: MenuItem[] = [
@@ -61,16 +57,23 @@ export default function ProtectedLayout() {
     { label: "Piutang", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
     { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], show: FF.vouchers },
     { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Settings", to: "/settings", roles: ["Superadmin", "Admin Cabang"] }
   ];
+
+  const safeRoles = me?.roles ?? [];
 
   const VISIBLE = useMemo(
     () =>
-      MENU.filter((m) => (m.show ?? true) && (me.roles ?? []).some((r) => m.roles.includes(r as RoleName))),
-    [me.roles, FF.delivery, FF.receivables, FF.vouchers],
+      MENU.filter((m) => (m.show ?? true) && safeRoles.some((r) => m.roles.includes(r as RoleName))),
+    [safeRoles, FF.delivery, FF.receivables, FF.vouchers],
   );
 
-  const roleText = (me.roles ?? []).join(", ");
-  const showSubtitle = roleText && roleText.toLowerCase() !== (me.name ?? "").toLowerCase();
+  const roleText = safeRoles.join(", ");
+  const showSubtitle = !!roleText && roleText.toLowerCase() !== (me?.name ?? "").toLowerCase();
+
+  if (!me) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
 
   return (
     <div className="min-h-dvh text-[color:var(--color-text-default)]">
@@ -186,7 +189,7 @@ export default function ProtectedLayout() {
                 {VISIBLE.map((m) => (
                   <NavLink key={m.to} to={m.to} className={({ isActive }) => navItemClass(isActive)}>
                     <span className="truncate">{m.label}</span>
-                    <span className="ml-auto text-[10px] opacity-60">{isActiveDot(m.to, location.pathname)}</span>
+                    <span className="ml-auto text-[10px] opacity-60">{isActiveDot()}</span>
                   </NavLink>
                 ))}
               </nav>
@@ -294,7 +297,7 @@ function navItemClass(isActive: boolean) {
 }
 
 // kecil saja, supaya tidak mengubah logika: ini hanya untuk penanda UI
-function isActiveDot(_to: string, _pathname: string) {
+function isActiveDot() {
   return "";
 }
 
