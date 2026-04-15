@@ -5,6 +5,9 @@ import type { Service, ServiceUpsertPayload, ServiceCategory } from '../../types
 import { createService, getService, updateService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
 import PricePerBranchInput from './PricePerBranchInput';
+import { normalizeApiError } from '../../api/client';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
 
 const UNIT_PRESETS = ['ITEM', 'PASANG', 'KG'] as const;
 
@@ -25,6 +28,25 @@ export default function ServiceForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const { toast, showSuccess, hideToast } = useToast();
+
+  function focusFirstErrorField(errors: Record<string, string[]>) {
+    const firstKey = Object.keys(errors)[0];
+    if (!firstKey) return;
+
+    const el = document.getElementById(firstKey) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null;
+
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      el.focus();
+    }, 150);
+  }
 
   // Keyboard shortcuts: Ctrl/Cmd+S submit, Esc back
   useEffect(() => {
@@ -62,8 +84,9 @@ export default function ServiceForm() {
             is_active: s.is_active,
           });
         }
-      } catch {
-        setError('Gagal memuat data');
+      } catch (err) {
+        const e = normalizeApiError(err);
+        setError(e.message || 'Gagal memuat data');
       } finally {
         setLoading(false);
       }
@@ -81,22 +104,50 @@ export default function ServiceForm() {
     setError(null);
     setFieldErrors({});
 
-    if (!form.category_id || !form.name.trim() || !form.unit.trim() || Number(form.price_default) <= 0) {
+    const clientErrors: Record<string, string[]> = {};
+
+    if (!form.category_id) {
+      clientErrors.category_id = ['Kategori wajib dipilih'];
+    }
+
+    if (!form.name.trim()) {
+      clientErrors.name = ['Nama layanan wajib diisi'];
+    }
+
+    if (!form.unit.trim()) {
+      clientErrors.unit = ['Unit wajib diisi'];
+    }
+
+    if (Number(form.price_default) <= 0) {
+      clientErrors.price_default = ['Harga default harus lebih dari 0'];
+    }
+
+    if (Object.keys(clientErrors).length > 0) {
       setLoading(false);
-      setError('Kategori, Nama, Unit, dan Harga Default wajib diisi');
+      setFieldErrors(clientErrors);
+      setError('Masih ada data yang belum benar. Silakan periksa form.');
+      focusFirstErrorField(clientErrors);
       return;
     }
 
     try {
       if (editing) await updateService(id!, form);
       else await createService(form);
-      alert('Tersimpan');
-      nav('/services', { replace: true });
-    } catch (err: unknown) {
-      const withResp = err as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
-      const fe = withResp.response?.data?.errors ?? {};
-      if (fe && typeof fe === 'object') setFieldErrors(fe);
-      setError(withResp.response?.data?.message ?? 'Gagal menyimpan');
+
+      showSuccess(editing ? 'Layanan berhasil diperbarui.' : 'Layanan berhasil disimpan.');
+
+      window.setTimeout(() => {
+        nav('/services', { replace: true });
+      }, 700);
+
+    } catch (err) {
+      const e = normalizeApiError(err);
+      setError(e.message || 'Gagal menyimpan data');
+      setFieldErrors(e.errors);
+
+      if (Object.keys(e.errors).length > 0) {
+        focusFirstErrorField(e.errors);
+      }
     } finally {
       setLoading(false);
     }
@@ -104,6 +155,13 @@ export default function ServiceForm() {
 
   return (
     <div className="space-y-5">
+      <Toast
+        show={toast.open}
+        kind={toast.kind}
+        message={toast.message}
+        onClose={hideToast}
+      />
+
       {/* Header */}
       <header className="space-y-1">
         <div className="text-xs text-slate-500">

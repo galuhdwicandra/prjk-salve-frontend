@@ -57,6 +57,96 @@ type ApiErrorResponse = {
     errors?: Record<string, string[]>;
 };
 
+export type FieldErrors = Record<string, string[]>;
+
+export interface NormalizedApiError {
+    status: number | null;
+    message: string;
+    errors: FieldErrors;
+    isNetworkError: boolean;
+    isValidationError: boolean;
+    isUnauthorized: boolean;
+    isForbidden: boolean;
+    isNotFound: boolean;
+    raw: unknown;
+}
+
+function firstErrorMessage(errors?: FieldErrors | null): string | null {
+    if (!errors) return null;
+
+    for (const messages of Object.values(errors)) {
+        if (Array.isArray(messages) && messages.length > 0) {
+            const first = messages.find((msg) => typeof msg === 'string' && msg.trim() !== '');
+            if (first) return first;
+        }
+    }
+
+    return null;
+}
+
+export function normalizeApiError(err: unknown): NormalizedApiError {
+    if (!axios.isAxiosError(err)) {
+        return {
+            status: null,
+            message: 'Terjadi kesalahan yang tidak dikenali.',
+            errors: {},
+            isNetworkError: false,
+            isValidationError: false,
+            isUnauthorized: false,
+            isForbidden: false,
+            isNotFound: false,
+            raw: err,
+        };
+    }
+
+    const status = err.response?.status ?? null;
+    const data = err.response?.data as ApiErrorResponse | undefined;
+    const errors = data?.errors ?? {};
+    const messageFromField = firstErrorMessage(errors);
+
+    let message =
+        data?.message?.trim() ||
+        messageFromField ||
+        err.message ||
+        'Terjadi kesalahan pada permintaan.';
+
+    // Rapikan pesan untuk kasus umum
+    if (!err.response) {
+        message = 'Tidak dapat terhubung ke server. Periksa koneksi atau backend Anda.';
+    } else if (status === 401 && !data?.message) {
+        message = 'Sesi Anda telah berakhir. Silakan login kembali.';
+    } else if (status === 403 && !data?.message) {
+        message = 'Anda tidak memiliki izin untuk melakukan aksi ini.';
+    } else if (status === 404 && !data?.message) {
+        message = 'Data yang diminta tidak ditemukan.';
+    } else if (status === 422 && !data?.message && messageFromField) {
+        message = messageFromField;
+    } else if (status !== null && status >= 500) {
+        message = data?.message?.trim() || 'Terjadi kesalahan pada server.';
+    }
+
+    return {
+        status,
+        message,
+        errors,
+        isNetworkError: !err.response,
+        isValidationError: status === 422,
+        isUnauthorized: status === 401,
+        isForbidden: status === 403,
+        isNotFound: status === 404,
+        raw: err,
+    };
+}
+
+export function getFieldErrors(err: unknown): FieldErrors {
+    return normalizeApiError(err).errors;
+}
+
+export function getErrorMessage(err: unknown, fallback = 'Terjadi kesalahan.'): string {
+    const normalized = normalizeApiError(err);
+    return normalized.message || fallback;
+}
+
 function clearAuthSideEffects(): void {
     if (typeof window === 'undefined') return;
     try {

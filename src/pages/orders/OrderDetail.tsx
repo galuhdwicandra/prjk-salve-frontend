@@ -23,11 +23,34 @@ import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
 import { useHasRole } from '../../store/useAuth';
 import { createDelivery, listDeliveries } from '../../api/deliveries';
-import type { DeliveryType } from '../../types/deliveries';
+import type { Delivery, DeliveryType } from '../../types/deliveries';
 
 type ApiErrorResponse = {
   message?: string;
   errors?: Record<string, string[] | string>;
+};
+
+type ShareLinkResponse = {
+  share_url?: string;
+  url?: string;
+};
+
+type OrderWithOptionalPhone = Order & {
+  customer?: (Order['customer'] & { phone?: string | null }) | null;
+};
+
+type CreateDeliveryPayloadLocal = {
+  order_id: string;
+  type: DeliveryType;
+  fee: number;
+  zone_id: string | null;
+};
+
+type CreateDeliveryResponseLocal = {
+  data?: {
+    delivery?: Delivery;
+    id?: string;
+  } | Delivery | null;
 };
 
 // Helpers konversi datetime-local <-> ISO string
@@ -149,7 +172,7 @@ export default function OrderDetail(): React.ReactElement {
     (async () => {
       try {
         const res = await listDeliveries({ q: orderId, per_page: 1 });
-        const latest = (res.data && res.data.length > 0) ? (res.data[0] as any) : null;
+        const latest: Delivery | null = res.data && res.data.length > 0 ? res.data[0] : null;
         if (!alive) return;
         setExistingDeliveryId(latest?.id ?? null);
       } catch {
@@ -237,9 +260,10 @@ export default function OrderDetail(): React.ReactElement {
 
   const onSendWA = useCallback(async () => {
     if (!row) return;
+    const orderRow = row as OrderWithOptionalPhone;
     const wa =
-      (row as any)?.customer?.whatsapp ||
-      (row as any)?.customer?.phone ||
+      orderRow.customer?.whatsapp ||
+      orderRow.customer?.phone ||
       '';
     if (!wa) {
       alert('Nomor WhatsApp pelanggan belum tersedia.');
@@ -247,8 +271,9 @@ export default function OrderDetail(): React.ReactElement {
     }
     try {
       const link = await createOrderShareLink(row.id);
+      const sharePayload = link as ShareLinkResponse;
       const shareUrl =
-        typeof link === 'string' ? link : (link as any)?.share_url || (link as any)?.url || '';
+        typeof link === 'string' ? link : sharePayload.share_url || sharePayload.url || '';
       if (!shareUrl) {
         alert('Gagal menghasilkan tautan kwitansi.');
         return;
@@ -383,7 +408,7 @@ export default function OrderDetail(): React.ReactElement {
                   setDeliverySaving(true);
                   setDeliveryErr(null);
                   try {
-                    const payload: any = {
+                    const payload: CreateDeliveryPayloadLocal = {
                       order_id: row.id,
                       type: deliveryType,
                       fee: Math.max(0, Number(deliveryFee || 0)),
@@ -391,9 +416,14 @@ export default function OrderDetail(): React.ReactElement {
                     };
 
                     // Backend store() mengembalikan: { data: { delivery: ... }, meta: { idempotent } }
-                    const res = await createDelivery(payload as any);
-                    const created = (res as any)?.data?.delivery ?? (res as any)?.data ?? null;
-                    const did = created?.id as string | undefined;
+                    const res = await createDelivery(payload);
+                    const deliveryRes = res as CreateDeliveryResponseLocal;
+                    const created =
+                      deliveryRes.data && !Array.isArray(deliveryRes.data) && 'delivery' in deliveryRes.data
+                        ? deliveryRes.data.delivery ?? null
+                        : (deliveryRes.data as Delivery | null);
+
+                    const did = created?.id;
                     if (!did) throw new Error('Delivery tidak terbaca dari response.');
 
                     setExistingDeliveryId(did);
@@ -584,6 +614,14 @@ export default function OrderDetail(): React.ReactElement {
               )}
             </div>
           </div>
+
+          {/* Catatan order */}
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+            <div className="text-sm font-semibold text-slate-900">Catatan Pesanan</div>
+            <div className="mt-2 text-sm leading-6 text-slate-600 whitespace-pre-line">
+              {row.notes && row.notes.trim() !== '' ? row.notes : '-'}
+            </div>
+          </section>
 
           {/* Main layout */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -847,7 +885,7 @@ export default function OrderDetail(): React.ReactElement {
                   <RowLine label="Nomor" value={row.invoice_no ?? row.number ?? '-'} />
                   <RowLine label="Customer" value={row.customer?.name ?? '-'} />
                   <RowLine label="Total" value={money(row.grand_total)} strong />
-                  <RowLine label="Dibayar" value={money((row as any)?.paid_amount ?? 0)} />
+                  <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
                   <RowLine label="Sisa" value={money(row.due_amount)} strong />
                 </div>
 

@@ -2,27 +2,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createUser, getUser, updateUser, setUserRoles, resetUserPassword } from '../../api/users';
 import type { UserUpsertPayload } from '../../types/users';
-import type { RoleName } from '../../api/client';
+import { normalizeApiError, type RoleName } from '../../api/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import { listBranches } from '../../api/branches';
 import type { Branch } from '../../types/branches';
 import { useAuth, useHasRole } from '../../store/useAuth';
-import { isAxiosError } from 'axios';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
 
 const ALL_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir'];
 function allowedRoles(isSuperadmin: boolean): RoleName[] {
   return isSuperadmin ? ALL_ROLES : (ALL_ROLES.filter(r => r !== 'Superadmin') as RoleName[]);
-}
-
-type ApiErrBody = { message?: string; errors?: Record<string, string[]> };
-function getHttpStatus(err: unknown): number | null {
-  return isAxiosError<ApiErrBody>(err) ? (err.response?.status ?? null) : null;
-}
-function getFieldErrors(err: unknown): Record<string, string[]> {
-  return isAxiosError<ApiErrBody>(err) && err.response?.data?.errors ? err.response.data.errors : {};
-}
-function getMessage(err: unknown, fallback = 'Terjadi kesalahan'): string {
-  return isAxiosError<ApiErrBody>(err) && err.response?.data?.message ? err.response.data.message : fallback;
 }
 
 export default function UserForm() {
@@ -49,6 +39,33 @@ export default function UserForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  const { toast, showSuccess, showError, showToast, hideToast } = useToast();
+
+  function focusFirstErrorField(errors: Record<string, string[]>) {
+    const firstKey = Object.keys(errors)[0];
+    if (!firstKey) return;
+
+    const idMap: Record<string, string> = {
+      branch_id: 'branch',
+      roles: 'roles',
+    };
+
+    const targetId = idMap[firstKey] ?? firstKey;
+
+    const el = document.getElementById(targetId) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null;
+
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      el.focus();
+    }, 150);
+  }
 
   // debug awal (dipertahankan)
   console.log('[UserForm] mount:', { editing, id, me, isSuperadmin, isAdminCabang, canManage });
@@ -94,12 +111,13 @@ export default function UserForm() {
             roles: Array.isArray(u?.roles) ? (u.roles as RoleName[]) : [],
             password: '',
           });
-        } catch (err: unknown) {
+        } catch (err) {
           console.error('[UserForm] gagal load user:', err);
-          const status = getHttpStatus(err);
-          if (status === 403) setError('Anda tidak berhak melihat user ini (beda cabang).');
-          else if (status === 404) setError('User tidak ditemukan.');
-          else setError(getMessage(err, 'Gagal memuat user'));
+          const e = normalizeApiError(err);
+
+          if (e.isForbidden) setError('Anda tidak berhak melihat user ini (beda cabang).');
+          else if (e.isNotFound) setError('User tidak ditemukan.');
+          else setError(e.message || 'Gagal memuat user');
         } finally {
           setLoading(false);
         }
@@ -125,6 +143,36 @@ export default function UserForm() {
     setError(null);
     setFieldErrors({});
 
+    const clientErrors: Record<string, string[]> = {};
+
+    if (!v.name.trim()) {
+      clientErrors.name = ['Nama wajib diisi'];
+    }
+
+    if (!v.username.trim()) {
+      clientErrors.username = ['Username wajib diisi'];
+    }
+
+    if (!v.email.trim()) {
+      clientErrors.email = ['Email wajib diisi'];
+    }
+
+    if (!editing && !v.password.trim()) {
+      clientErrors.password = ['Password wajib diisi'];
+    }
+
+    if (!Array.isArray(v.roles) || v.roles.length === 0) {
+      clientErrors.roles = ['Pilih minimal satu role'];
+    }
+
+    if (Object.keys(clientErrors).length > 0) {
+      setSaving(false);
+      setFieldErrors(clientErrors);
+      setError('Masih ada data yang belum benar. Silakan periksa form.');
+      focusFirstErrorField(clientErrors);
+      return;
+    }
+
     try {
       if (editing) {
         const payload: Partial<UserUpsertPayload> = {
@@ -148,9 +196,12 @@ export default function UserForm() {
           await setUserRoles(id!, v.roles ?? []);
         } catch (err: unknown) {
           console.error('[UserForm] gagal setUserRoles:', err);
-          if (getHttpStatus(err) === 403) {
-            alert('Perubahan roles ditolak (kewenangan/cabang tidak sesuai). Data lain tetap tersimpan.');
-          } else throw err;
+          const e = normalizeApiError(err);
+          if (e.isForbidden) {
+            showToast('Perubahan role ditolak. Data user tetap berhasil disimpan.', 'info');
+          } else {
+            throw err;
+          }
         }
       } else {
         if (v.roles.length === 0) {
@@ -173,27 +224,45 @@ export default function UserForm() {
         console.log('[UserForm] createUser payload:', payload);
 
         const created = await createUser(payload);
-        const newUserId = String(created.data.id);
+        const newUserId = created?.data?.id ? String(created.data.id) : '';
         console.log('[UserForm] created user:', created.data);
+
+        if (!newUserId) {
+          throw new Error('ID user baru tidak diterima dari server.');
+        }
 
         try {
           console.log('[UserForm] setUserRoles (after create):', v.roles);
           await setUserRoles(newUserId, v.roles);
         } catch (err: unknown) {
           console.error('[UserForm] gagal setUserRoles setelah create:', err);
-          if (getHttpStatus(err) === 403) {
-            alert('User berhasil dibuat, tetapi perubahan roles sebagian ditolak (kewenangan/cabang).');
-          } else throw err;
+          const e = normalizeApiError(err);
+          if (e.isForbidden) {
+            showToast('User berhasil dibuat, tetapi pengaturan role sebagian ditolak.', 'info');
+          } else {
+            throw err;
+          }
         }
       }
 
-      alert('Tersimpan');
+      showSuccess(editing ? 'User berhasil diperbarui.' : 'User berhasil disimpan.');
       console.log('[UserForm] selesai simpan, redirect ke /users');
-      nav('/users', { replace: true });
-    } catch (err: unknown) {
+
+      window.setTimeout(() => {
+        nav('/users', { replace: true });
+      }, 700);
+    } catch (err) {
       console.error('[UserForm] error saat submit:', err);
-      setFieldErrors(getFieldErrors(err));
-      setError(getMessage(err, 'Gagal menyimpan'));
+
+      const e = normalizeApiError(err);
+      setFieldErrors(e.errors);
+      setError(e.message || 'Gagal menyimpan');
+
+      if (Object.keys(e.errors).length > 0) {
+        focusFirstErrorField(e.errors);
+      } else {
+        showError(e.message || 'Gagal menyimpan');
+      }
     } finally {
       console.log('[UserForm] submit selesai');
       setSaving(false);
@@ -205,6 +274,12 @@ export default function UserForm() {
 
   return (
     <div className="space-y-4">
+      <Toast
+        show={toast.open}
+        kind={toast.kind}
+        message={toast.message}
+        onClose={hideToast}
+      />
       {/* Header */}
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -548,10 +623,23 @@ export default function UserForm() {
               "
               onClick={async () => {
                 if (!isSuperadmin && !isAdminCabang) return;
-                const p1 = prompt('Password baru (min 8, mix-case+angka)'); if (!p1) return;
-                const p2 = prompt('Konfirmasi password baru'); if (p2 !== p1) { alert('Konfirmasi tidak cocok'); return; }
-                try { await resetUserPassword(id!, p1); alert('Password direset'); }
-                catch { alert('Gagal reset password'); }
+                const p1 = prompt('Password baru (min 8, mix-case+angka)');
+
+                if (!p1) return;
+                const p2 = prompt('Konfirmasi password baru');
+
+                if (p2 !== p1) {
+                  showError('Konfirmasi password tidak cocok.');
+                  return;
+                }
+
+                try {
+                  await resetUserPassword(id!, p1);
+                  showSuccess('Password berhasil direset.');
+                } catch (err) {
+                  const e = normalizeApiError(err);
+                  showError(e.message || 'Gagal reset password');
+                }
               }}
             >
               <KeyIcon />

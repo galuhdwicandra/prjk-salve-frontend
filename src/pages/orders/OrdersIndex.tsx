@@ -616,6 +616,7 @@ export default function OrdersIndex(): React.ReactElement {
                 <tr className="border-b border-slate-200">
                   <Th>Nomor</Th>
                   <Th>Customer</Th>
+                  <Th>Catatan</Th>
                   <Th>Status Order</Th>
                   <Th>Status Bayar</Th>
                   <Th>Metode Bayar</Th>
@@ -647,6 +648,12 @@ export default function OrdersIndex(): React.ReactElement {
                         ) : (
                           <span className="text-xs text-slate-400">—</span>
                         )}
+                      </div>
+                    </Td>
+
+                    <Td className="max-w-[220px]">
+                      <div className="text-slate-600 text-xs line-clamp-2 whitespace-pre-line">
+                        {o.notes && o.notes.trim() !== '' ? o.notes : '-'}
                       </div>
                     </Td>
 
