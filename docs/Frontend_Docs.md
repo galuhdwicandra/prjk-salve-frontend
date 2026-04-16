@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-16 13:50:13_  
+_Dihasilkan otomatis: 2026-04-16 14:45:02_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -10716,7 +10716,7 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `aee9a85b5e3c`  
+- SHA: `1c3ebd70d8e1`  
 - Ukuran: 45 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -11633,23 +11633,38 @@ export default function OrderDetail(): React.ReactElement {
               {/* Status transitions */}
               <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
                 <div className="text-sm font-semibold text-slate-900">Ubah Status</div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {getAllowedNext(row.status).map((s) => (
-                    <button
-                      key={s}
-                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                      onClick={() => void onTransit(s)}
-                      title={`Set status ke ${s}`}
-                    >
-                      Set {s}
-                    </button>
-                  ))}
 
-                  {getAllowedNext(row.status).length === 0 && (
-                    <span className="text-xs text-slate-500">
-                      Status terminal — tidak ada transisi.
-                    </span>
-                  )}
+                <div className="mt-2 text-xs text-slate-500">
+                  Status saat ini: <span className="font-semibold text-slate-700">{row.status}</span>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <select
+                    id="order-status-select"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none sm:max-w-xs"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const value = e.target.value as OrderBackendStatus | '';
+                      if (!value) return;
+
+                      const ok = window.confirm(`Yakin ingin mengubah status order menjadi ${value}?`);
+                      if (!ok) {
+                        e.currentTarget.value = '';
+                        return;
+                      }
+
+                      void onTransit(value);
+                      e.currentTarget.value = '';
+                    }}
+                  >
+                    <option value="">-- Pilih status --</option>
+
+                    {getAllowedNext(row.status).map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </section>
             </div>
@@ -13130,8 +13145,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `4f63ceac817e`  
-- Ukuran: 49 KB
+- SHA: `632221b1e3a4`  
+- Ukuran: 55 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13185,6 +13200,32 @@ function getUserBranchId(user: MeUser | null): string {
 function getUserBranchCode(user: MeUser | null): string | null {
   if (!user) return null;
   return user.branch?.code ?? null;
+}
+
+const CUSTOMER_TAG_OPTIONS = [
+  "VIP",
+  "Langganan",
+  "Corporate",
+  "Member",
+  "Prioritas",
+  "Outlet",
+  "Komplain",
+  "Blacklist",
+] as const;
+
+const TAG_STYLES: Record<string, string> = {
+  VIP: "border-amber-200 bg-amber-50 text-amber-700",
+  Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Corporate: "border-blue-200 bg-blue-50 text-blue-700",
+  Member: "border-violet-200 bg-violet-50 text-violet-700",
+  Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
+  Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  Komplain: "border-orange-200 bg-orange-50 text-orange-700",
+  Blacklist: "border-red-200 bg-red-50 text-red-700",
+};
+
+function customerTagClass(tag: string): string {
+  return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
@@ -13465,6 +13506,7 @@ export default function POSPage() {
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerWa, setNewCustomerWa] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [newCustomerTags, setNewCustomerTags] = useState<string[]>([]);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [customerError, setCustomerError] = useState<string | null>(null);
 
@@ -13942,7 +13984,16 @@ export default function POSPage() {
                   className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3"
                   role="dialog"
                   aria-modal="true"
-                  onClick={() => { if (!savingCustomer) setOpenCustomerCreate(false); }}
+                  onClick={() => {
+                    if (!savingCustomer) {
+                      setOpenCustomerCreate(false);
+                      setCustomerError(null);
+                      setNewCustomerName('');
+                      setNewCustomerWa('');
+                      setNewCustomerAddress('');
+                      setNewCustomerTags([]);
+                    }
+                  }}
                 >
                   <div
                     className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-[0_28px_70px_-40px_rgba(0,0,0,.5)]"
@@ -13953,7 +14004,18 @@ export default function POSPage() {
                         <div className="text-base font-semibold">Tambah Customer</div>
                         <div className="text-xs text-slate-500">Tanpa keluar dari POS</div>
                       </div>
-                      <OutlineButton disabled={savingCustomer} onClick={() => setOpenCustomerCreate(false)} className="px-3 py-2">
+                      <OutlineButton
+                        disabled={savingCustomer}
+                        onClick={() => {
+                          setOpenCustomerCreate(false);
+                          setCustomerError(null);
+                          setNewCustomerName('');
+                          setNewCustomerWa('');
+                          setNewCustomerAddress('');
+                          setNewCustomerTags([]);
+                        }}
+                        className="px-3 py-2"
+                      >
                         Tutup
                       </OutlineButton>
                     </div>
@@ -14001,10 +14063,80 @@ export default function POSPage() {
                             disabled={savingCustomer}
                           />
                         </div>
+                        <div className="grid gap-1">
+                          <label className="text-xs font-medium text-slate-700">Tags / Label</label>
+
+                          <select
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                            value=""
+                            disabled={savingCustomer}
+                            onChange={(e) => {
+                              const selected = e.target.value;
+                              if (!selected) return;
+
+                              setNewCustomerTags((prev) => {
+                                if (prev.includes(selected)) return prev;
+                                return [...prev, selected].slice(0, 10);
+                              });
+
+                              e.currentTarget.value = "";
+                            }}
+                          >
+                            <option value="">Pilih tag customer</option>
+                            {CUSTOMER_TAG_OPTIONS.map((tag) => (
+                              <option
+                                key={tag}
+                                value={tag}
+                                disabled={newCustomerTags.includes(tag)}
+                              >
+                                {tag}
+                              </option>
+                            ))}
+                          </select>
+
+                          <span className="text-[11px] text-slate-500">
+                            Pilih dari daftar agar label customer konsisten.
+                          </span>
+
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {newCustomerTags.length > 0 ? (
+                              newCustomerTags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium ${customerTagClass(tag)}`}
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    className="text-current/80 hover:text-current"
+                                    onClick={() =>
+                                      setNewCustomerTags((prev) => prev.filter((t) => t !== tag))
+                                    }
+                                    disabled={savingCustomer}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-slate-400">Belum ada tag dipilih.</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="mt-4 flex justify-end gap-2">
-                        <OutlineButton disabled={savingCustomer} onClick={() => setOpenCustomerCreate(false)}>
+                        <OutlineButton
+                          disabled={savingCustomer}
+                          onClick={() => {
+                            setOpenCustomerCreate(false);
+                            setCustomerError(null);
+                            setNewCustomerName('');
+                            setNewCustomerWa('');
+                            setNewCustomerAddress('');
+                            setNewCustomerTags([]);
+                          }}
+                        >
                           Batal
                         </OutlineButton>
                         <PrimaryButton
@@ -14028,6 +14160,7 @@ export default function POSPage() {
                                 whatsapp: normalizeWa(newCustomerWa),
                                 address: newCustomerAddress.trim() ? newCustomerAddress.trim() : null,
                                 notes: null,
+                                tags: newCustomerTags,
                               });
 
                               const created = res.data;
@@ -14040,6 +14173,7 @@ export default function POSPage() {
                               setNewCustomerName('');
                               setNewCustomerWa('');
                               setNewCustomerAddress('');
+                              setNewCustomerTags([]);
 
                               setOpenCustomerCreate(false);
                             } catch (err: unknown) {
@@ -20363,29 +20497,27 @@ export function toIDR(n: number): string {
 
 ### src\utils\order-status.ts
 
-- SHA: `1b2e1640e123`  
-- Ukuran: 585 B
+- SHA: `1fb73f7f7b41`  
+- Ukuran: 395 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
-// src/utils/order-status.ts
 import type { OrderBackendStatus } from '../types/orders';
 
-export const ALLOWED_NEXT: Record<OrderBackendStatus, OrderBackendStatus[]> = {
-  QUEUE: ['WASHING', 'CANCELED'],
-  WASHING: ['DRYING', 'CANCELED'],
-  DRYING: ['IRONING', 'READY', 'CANCELED'],
-  IRONING: ['READY', 'CANCELED'],
-  READY: ['DELIVERING', 'PICKED_UP', 'CANCELED'],
-  DELIVERING: ['PICKED_UP', 'CANCELED'],
-  PICKED_UP: [],
-  CANCELED: [],
-};
+export const ALL_ORDER_STATUSES: OrderBackendStatus[] = [
+  'QUEUE',
+  'WASHING',
+  'DRYING',
+  'IRONING',
+  'READY',
+  'DELIVERING',
+  'PICKED_UP',
+  'CANCELED',
+];
 
 export function getAllowedNext(current: OrderBackendStatus): OrderBackendStatus[] {
-  return ALLOWED_NEXT[current] ?? [];
+  return ALL_ORDER_STATUSES.filter((status) => status !== current);
 }
-
 ```
 </details>
 
