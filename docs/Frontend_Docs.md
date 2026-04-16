@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-16 15:20:01_  
+_Dihasilkan otomatis: 2026-04-16 18:34:41_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -8,6 +8,7 @@ _Dihasilkan otomatis: 2026-04-16 15:20:01_
 
 - [API (src/api)](#api-srcapi)
   - [src\api\branches.ts](#file-srcapibranchests)
+  - [src\api\cashSessions.ts](#file-srcapicashsessionsts)
   - [src\api\client.ts](#file-srcapiclientts)
   - [src\api\customers.ts](#file-srcapicustomersts)
   - [src\api\dashboard.ts](#file-srcapidashboardts)
@@ -41,6 +42,7 @@ _Dihasilkan otomatis: 2026-04-16 15:20:01_
 
 - [Types (src/types)](#types-srctypes)
   - [src\types\branches.ts](#file-srctypesbranchests)
+  - [src\types\cash.ts](#file-srctypescashts)
   - [src\types\customers.ts](#file-srctypescustomersts)
   - [src\types\dashboard.ts](#file-srctypesdashboardts)
   - [src\types\deliveries.ts](#file-srctypesdeliveriests)
@@ -79,6 +81,8 @@ _Dihasilkan otomatis: 2026-04-16 15:20:01_
   - [src\pages\branches\BranchForm.tsx](#file-srcpagesbranchesbranchformtsx)
   - [src\pages\branches\BranchIndex.tsx](#file-srcpagesbranchesbranchindextsx)
   - [src\pages\branches\InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
+  - [src\pages\cash\CashSessionsIndex.tsx](#file-srcpagescashcashsessionsindextsx)
+  - [src\pages\cash\CashTodayPage.tsx](#file-srcpagescashcashtodaypagetsx)
   - [src\pages\customers\CustomerDetail.tsx](#file-srcpagescustomerscustomerdetailtsx)
   - [src\pages\customers\CustomersIndex.tsx](#file-srcpagescustomerscustomersindextsx)
   - [src\pages\dashboard\DashboardHome.tsx](#file-srcpagesdashboarddashboardhometsx)
@@ -160,6 +164,68 @@ export async function deleteBranch(id: string) {
     return data;
 }
 
+```
+</details>
+
+### src\api\cashSessions.ts
+
+- SHA: `4b1effff5c80`  
+- Ukuran: 2 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+import { api } from './client';
+import type {
+  CashSession,
+  CashMutation,
+  CashSessionQuery,
+  Envelope,
+  PaginationMeta,
+  OpenCashSessionPayload,
+  CloseCashSessionPayload,
+  WithdrawalPayload,
+} from '../types/cash';
+
+export async function listCashSessions(params: CashSessionQuery = {}) {
+  const { data } = await api.get<Envelope<CashSession[], PaginationMeta>>('/cash-sessions', { params });
+  return data;
+}
+
+export async function getCashSession(id: string) {
+  const { data } = await api.get<Envelope<CashSession, { system_closing: number }>>(`/cash-sessions/${encodeURIComponent(id)}`);
+  return data;
+}
+
+export async function openCashSession(payload: OpenCashSessionPayload) {
+  const { data } = await api.post<Envelope<CashSession, null>>('/cash-sessions/open', payload);
+  return data;
+}
+
+export async function closeCashSession(id: string, payload: CloseCashSessionPayload) {
+  const { data } = await api.post<Envelope<CashSession, null>>(`/cash-sessions/${encodeURIComponent(id)}/close`, payload);
+  return data;
+}
+
+export async function createCashWithdrawal(id: string, payload: WithdrawalPayload) {
+  const { data } = await api.post<Envelope<CashMutation, null>>(`/cash-sessions/${encodeURIComponent(id)}/withdrawals`, payload);
+  return data;
+}
+
+export type CashTodayMeta = {
+  system_closing: number;
+  cash_in_total: number;
+  cash_out_total: number;
+  withdrawal_total: number;
+  has_open_session: boolean;
+  business_date?: string;
+};
+
+export async function getCashToday(params?: { branch_id?: string; business_date?: string }) {
+  const { data } = await api.get<Envelope<CashSession | null, CashTodayMeta>>('/cash-sessions/today', {
+    params,
+  });
+  return data;
+}
 ```
 </details>
 
@@ -549,8 +615,8 @@ export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPa
 
 ### src\api\expenses.ts
 
-- SHA: `aadd05d019de`  
-- Ukuran: 4 KB
+- SHA: `9fc504b6d996`  
+- Ukuran: 5 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -625,6 +691,7 @@ export async function createExpense(payload: ExpenseCreatePayload): Promise<Sing
         if (payload.branch_id) fd.append('branch_id', payload.branch_id);
         fd.append('category', payload.category);
         fd.append('amount', String(payload.amount ?? 0));
+        fd.append('payment_source', payload.payment_source ?? 'NON_CASH');
         if (typeof payload.note !== 'undefined') fd.append('note', payload.note ?? '');
         fd.append('proof', payload.proof);
         const { data } = await api.post<SingleResponse<Expense>>('/expenses', fd, {
@@ -637,10 +704,12 @@ export async function createExpense(payload: ExpenseCreatePayload): Promise<Sing
         branch_id?: string;
         category: string;
         amount: number;
+        payment_source: 'NON_CASH' | 'CASH_BOX';
         note?: string | null;
     } = {
         category: payload.category,
         amount: payload.amount,
+        payment_source: payload.payment_source ?? 'NON_CASH',
     };
     if (payload.branch_id) json.branch_id = payload.branch_id;
     if (typeof payload.note !== 'undefined') json.note = payload.note;
@@ -657,6 +726,7 @@ export async function updateExpense(
         const fd = new FormData();
         fd.append('category', payload.category);
         fd.append('amount', String(payload.amount ?? 0));
+        fd.append('payment_source', payload.payment_source ?? 'NON_CASH');
         if (typeof payload.note !== 'undefined') fd.append('note', payload.note ?? '');
         fd.append('proof', payload.proof);
         const { data } = await api.put<SingleResponse<Expense>>(`/expenses/${encodeURIComponent(id)}`, fd, {
@@ -668,10 +738,12 @@ export async function updateExpense(
     const json: {
         category: string;
         amount: number;
+        payment_source: 'NON_CASH' | 'CASH_BOX';
         note?: string | null;
     } = {
         category: payload.category,
         amount: payload.amount,
+        payment_source: payload.payment_source ?? 'NON_CASH',
     };
     if (typeof payload.note !== 'undefined') json.note = payload.note;
 
@@ -981,7 +1053,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 
 ### src\api\reports.ts
 
-- SHA: `74fa9a5ffba2`  
+- SHA: `3f6ba05b77f9`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -990,7 +1062,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 import { api } from './client';
 import type { ApiEnvelope } from './client';
 
-export type ReportKind = 'sales' | 'orders' | 'receivables' | 'expenses' | 'services';
+export type ReportKind = 'sales' | 'orders' | 'receivables' | 'expenses' | 'services' | 'cash';
 
 export interface ReportQuery {
     from: string; // 'YYYY-MM-DD'
@@ -1578,7 +1650,7 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `d05b25b864c7`  
+- SHA: `e3893a858339`  
 - Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1639,6 +1711,8 @@ export default function ProtectedLayout() {
     { label: "Catatan Cuci", to: "/wash-notes", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
     { label: "Pengiriman", to: "/deliveries", roles: ["Superadmin", "Admin Cabang", "Kasir", "Kurir"], show: FF.delivery },
     { label: "Pengeluaran", to: "/expenses", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Cash Box", to: "/cash-sessions", roles: ["Superadmin", "Admin Cabang"] },
+    { label: "Kas Hari Ini", to: "/cash-today", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
     { label: "Piutang", to: "/receivables", roles: ["Superadmin", "Admin Cabang", "Kasir"], show: FF.receivables },
     { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], show: FF.vouchers },
     { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
@@ -2026,8 +2100,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `97ffee2afa41`  
-- Ukuran: 12 KB
+- SHA: `5c8669e4cf65`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -2062,6 +2136,8 @@ const VoucherForm = lazy(() => import('../pages/vouchers/VoucherForm'));
 const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesIndex'));
 const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
+const CashSessionsIndex = lazy(() => import('../pages/cash/CashSessionsIndex'));
+const CashTodayPage = lazy(() => import('../pages/cash/CashTodayPage'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
@@ -2346,6 +2422,26 @@ export const router = createBrowserRouter([
           </Guarded>
         ),
       },
+      {
+        path: '/cash-sessions',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <CashSessionsIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/cash-today',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <CashTodayPage />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
       ...(import.meta.env.VITE_FEATURE_VOUCHER === 'true'
         ? [
           {
@@ -2521,6 +2617,99 @@ export interface InvoiceCounterQuery {
 ```
 </details>
 
+### src\types\cash.ts
+
+- SHA: `59229da9edcb`  
+- Ukuran: 2 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+export interface CashMutation {
+  id: string;
+  cash_session_id: string;
+  branch_id: string;
+  type:
+    | 'OPENING_FLOAT'
+    | 'SALE_CASH'
+    | 'RECEIVABLE_CASH_SETTLEMENT'
+    | 'EXPENSE_CASH'
+    | 'WITHDRAWAL'
+    | 'ADJUSTMENT_IN'
+    | 'ADJUSTMENT_OUT';
+  direction: 'IN' | 'OUT';
+  amount: number;
+  source_type?: string | null;
+  source_id?: string | null;
+  reference_no?: string | null;
+  note?: string | null;
+  created_by?: number | null;
+  effective_at: string | null;
+  creator?: { id: number; name: string } | null;
+}
+
+export interface CashSession {
+  id: string;
+  branch_id: string;
+  business_date: string;
+  status: 'OPEN' | 'CLOSED';
+  opened_by: number;
+  opened_at: string | null;
+  opening_cash: number;
+  closed_by?: number | null;
+  closed_at?: string | null;
+  closing_cash_system?: number | null;
+  closing_cash_counted?: number | null;
+  difference_amount?: number | null;
+  notes?: string | null;
+  branch?: { id: string; name: string } | null;
+  opener?: { id: number; name: string } | null;
+  closer?: { id: number; name: string } | null;
+  mutations?: CashMutation[];
+}
+
+export interface CashSessionQuery {
+  branch_id?: string;
+  status?: 'OPEN' | 'CLOSED';
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface PaginationMeta {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+}
+
+export interface Envelope<T, M = unknown> {
+  data: T;
+  meta: M;
+  message: string | null;
+  errors: Record<string, string[]> | null;
+}
+
+export interface OpenCashSessionPayload {
+  branch_id?: string;
+  business_date: string;
+  opening_cash: number;
+  notes?: string | null;
+}
+
+export interface CloseCashSessionPayload {
+  closing_cash_counted: number;
+  notes?: string | null;
+}
+
+export interface WithdrawalPayload {
+  amount: number;
+  effective_at?: string | null;
+  note?: string | null;
+}
+```
+</details>
+
 ### src\types\customers.ts
 
 - SHA: `0cfc76b8c7c8`  
@@ -2588,8 +2777,8 @@ export interface SingleResponse<T> {
 
 ### src\types\dashboard.ts
 
-- SHA: `d3b5c951643b`  
-- Ukuran: 1 KB
+- SHA: `b57af9701378`  
+- Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -2649,6 +2838,12 @@ export interface DashboardSummary {
 
   dp_outstanding_count: number;
   dp_outstanding_amount: number;
+
+  cash_in_total: number;
+  cash_out_total: number;
+  cash_withdrawal_total: number;
+  cash_on_hand_now: number;
+  cash_difference_last_closed: number;
 
   omzet_daily: OmzetDailyPoint[];
   omzet_monthly: OmzetMonthlyPoint[];
@@ -2758,7 +2953,7 @@ export interface SingleResponse<T> {
 
 ### src\types\expenses.ts
 
-- SHA: `dcfe7dfed3e1`  
+- SHA: `a6b0f7e32269`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2769,18 +2964,19 @@ export interface Expense {
   branch_id: string;
   category: string;
   amount: number;
+  payment_source: 'NON_CASH' | 'CASH_BOX';
   note: string | null;
   proof_path: string | null;
   created_at: string | null;
   updated_at: string | null;
-  // Optional eager loaded relation
   branch?: { id: string; name: string } | null;
 }
 
 export interface ExpenseCreatePayload {
-  branch_id?: string; // required untuk Superadmin (divalidasi backend)
+  branch_id?: string;
   category: string;
   amount: number;
+  payment_source?: 'NON_CASH' | 'CASH_BOX';
   note?: string | null;
   proof?: File | null;
 }
@@ -2788,8 +2984,9 @@ export interface ExpenseCreatePayload {
 export interface ExpenseUpdatePayload {
   category: string;
   amount: number;
+  payment_source?: 'NON_CASH' | 'CASH_BOX';
   note?: string | null;
-  proof?: File | null; // jika diisi: mengganti bukti lama
+  proof?: File | null;
 }
 
 export interface ExpenseQuery {
@@ -7392,6 +7589,451 @@ function RowSkeleton() {
 ```
 </details>
 
+### src\pages\cash\CashSessionsIndex.tsx
+
+- SHA: `06ea356693e0`  
+- Ukuran: 8 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useCallback, useEffect, useState } from 'react';
+import { listCashSessions, openCashSession, closeCashSession, createCashWithdrawal, getCashSession } from '../../api/cashSessions';
+import type { CashSession } from '../../types/cash';
+import { listBranches } from '../../api/branches';
+import { useAuth } from '../../store/useAuth';
+
+function toIDR(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
+}
+
+export default function CashSessionsIndex() {
+  const me = useAuth.user;
+  const isSuperadmin = (me?.roles ?? []).includes('Superadmin');
+
+  const [rows, setRows] = useState<CashSession[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [branchId, setBranchId] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  const [openDate, setOpenDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [openingCash, setOpeningCash] = useState<number>(0);
+
+  const [selected, setSelected] = useState<CashSession | null>(null);
+  const [closingCash, setClosingCash] = useState<number>(0);
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [withdrawNote, setWithdrawNote] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await listCashSessions({
+        branch_id: isSuperadmin ? (branchId || undefined) : undefined,
+        per_page: 50,
+      });
+      setRows(res.data ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [branchId, isSuperadmin]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!isSuperadmin) return;
+    listBranches({ per_page: 100 })
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setBranches(list.map((b: { id: string; name: string }) => ({ id: b.id, name: b.name })));
+      })
+      .catch(() => {});
+  }, [isSuperadmin]);
+
+  const onOpen = async () => {
+    await openCashSession({
+      branch_id: isSuperadmin ? (branchId || undefined) : undefined,
+      business_date: openDate,
+      opening_cash: Number(openingCash),
+    });
+    await load();
+  };
+
+  const onSelect = async (id: string) => {
+    const res = await getCashSession(id);
+    setSelected(res.data ?? null);
+  };
+
+  const onClose = async () => {
+    if (!selected) return;
+    await closeCashSession(selected.id, {
+      closing_cash_counted: Number(closingCash),
+    });
+    await onSelect(selected.id);
+    await load();
+  };
+
+  const onWithdraw = async () => {
+    if (!selected) return;
+    await createCashWithdrawal(selected.id, {
+      amount: Number(withdrawAmount),
+      note: withdrawNote || null,
+    });
+    setWithdrawAmount(0);
+    setWithdrawNote('');
+    await onSelect(selected.id);
+    await load();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Cash Box</h1>
+        <p className="text-sm text-slate-500">Buka/tutup sesi kas harian dan lihat ledger kas fisik.</p>
+      </div>
+
+      <section className="rounded-xl border p-4 space-y-3">
+        <h2 className="font-semibold">Buka Sesi Kas</h2>
+
+        {isSuperadmin && (
+          <select className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <option value="">-- Pilih Cabang --</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        )}
+
+        <div className="grid md:grid-cols-3 gap-3">
+          <input className="input" type="date" value={openDate} onChange={(e) => setOpenDate(e.target.value)} />
+          <input className="input" type="number" value={openingCash} onChange={(e) => setOpeningCash(Number(e.target.value))} placeholder="Modal awal" />
+          <button className="btn" onClick={onOpen}>Buka Sesi</button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border p-4">
+        <h2 className="font-semibold mb-3">Daftar Sesi</h2>
+
+        {loading ? (
+          <div>Memuat…</div>
+        ) : (
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left p-2">Tanggal</th>
+                  <th className="text-left p-2">Cabang</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-right p-2">Modal Awal</th>
+                  <th className="text-right p-2">Selisih</th>
+                  <th className="text-right p-2">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-t">
+                    <td className="p-2">{r.business_date}</td>
+                    <td className="p-2">{r.branch?.name ?? r.branch_id}</td>
+                    <td className="p-2">{r.status}</td>
+                    <td className="p-2 text-right">{toIDR(Number(r.opening_cash))}</td>
+                    <td className="p-2 text-right">{toIDR(Number(r.difference_amount ?? 0))}</td>
+                    <td className="p-2 text-right">
+                      <button className="btn-outline" onClick={() => onSelect(r.id)}>Detail</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {selected && (
+        <section className="rounded-xl border p-4 space-y-4">
+          <div>
+            <h2 className="font-semibold">Detail Sesi</h2>
+            <p className="text-sm text-slate-500">
+              {selected.business_date} · {selected.branch?.name ?? selected.branch_id} · {selected.status}
+            </p>
+          </div>
+
+          {selected.status === 'OPEN' && (
+            <>
+              <div className="grid md:grid-cols-2 gap-3">
+                <input className="input" type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(Number(e.target.value))} placeholder="Nominal penarikan" />
+                <input className="input" value={withdrawNote} onChange={(e) => setWithdrawNote(e.target.value)} placeholder="Catatan penarikan" />
+              </div>
+              <button className="btn-outline" onClick={onWithdraw}>Simpan Withdrawal</button>
+
+              <div className="grid md:grid-cols-2 gap-3">
+                <input className="input" type="number" value={closingCash} onChange={(e) => setClosingCash(Number(e.target.value))} placeholder="Saldo fisik saat tutup" />
+                <button className="btn" onClick={onClose}>Tutup Sesi</button>
+              </div>
+            </>
+          )}
+
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left p-2">Waktu</th>
+                  <th className="text-left p-2">Tipe</th>
+                  <th className="text-left p-2">Arah</th>
+                  <th className="text-right p-2">Nominal</th>
+                  <th className="text-left p-2">Ref</th>
+                  <th className="text-left p-2">Catatan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(selected.mutations ?? []).map((m) => (
+                  <tr key={m.id} className="border-t">
+                    <td className="p-2">{m.effective_at ?? '-'}</td>
+                    <td className="p-2">{m.type}</td>
+                    <td className="p-2">{m.direction}</td>
+                    <td className="p-2 text-right">{toIDR(Number(m.amount))}</td>
+                    <td className="p-2">{m.reference_no ?? '-'}</td>
+                    <td className="p-2">{m.note ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\cash\CashTodayPage.tsx
+
+- SHA: `908e6d7795df`  
+- Ukuran: 8 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useState } from 'react';
+import { getCashToday, type CashTodayMeta } from '../../api/cashSessions';
+import { useAuth } from '../../store/useAuth';
+import { getErrorMessage } from '../../api/client';
+import type { CashSession } from '../../types/cash';
+
+function toIDR(n: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(Number(n || 0));
+}
+
+type TodayResponse = {
+  session: CashSession | null;
+  meta: CashTodayMeta | null;
+};
+
+export default function CashTodayPage() {
+  const me = useAuth.user;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [state, setState] = useState<TodayResponse>({
+    session: null,
+    meta: null,
+  });
+
+  async function load() {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await getCashToday();
+      setState({
+        session: res.data ?? null,
+        meta: res.meta ?? null,
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat kas hari ini.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const session = state.session;
+  const meta = state.meta;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Kas Hari Ini</h1>
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Ringkasan kas harian cabang aktif. Halaman ini hanya untuk melihat data, tanpa aksi buka/tutup kas.
+        </p>
+      </div>
+
+      {loading && (
+        <div className="rounded-2xl border border-[color:var(--color-border)] p-4 text-sm">
+          Memuat data kas hari ini...
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card
+              title="Status Sesi"
+              value={meta?.has_open_session ? 'Masih Buka' : 'Tidak Ada / Sudah Tutup'}
+              subtitle={meta?.business_date || '-'}
+            />
+            <Card
+              title="Saldo Sistem"
+              value={toIDR(meta?.system_closing ?? 0)}
+              subtitle="Perhitungan sistem"
+            />
+            <Card
+              title="Total Kas Masuk"
+              value={toIDR(meta?.cash_in_total ?? 0)}
+              subtitle="Akumulasi mutasi masuk"
+            />
+            <Card
+              title="Total Kas Keluar"
+              value={toIDR(meta?.cash_out_total ?? 0)}
+              subtitle="Akumulasi mutasi keluar"
+            />
+          </section>
+
+          <section className="rounded-2xl border border-[color:var(--color-border)] p-4">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Informasi Sesi</h2>
+                <p className="text-sm text-[color:var(--color-text-muted)]">
+                  Ditampilkan berdasarkan cabang user yang login.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="rounded-xl border border-[color:var(--color-border)] px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {!session ? (
+              <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-4 text-sm text-[color:var(--color-text-muted)]">
+                Belum ada sesi kas untuk hari ini di cabang Anda.
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <Info label="Cabang" value={session.branch?.name ?? String(session.branch_id)} />
+                <Info label="Tanggal Bisnis" value={session.business_date ?? '-'} />
+                <Info label="Status" value={session.status ?? '-'} />
+                <Info label="Kas Awal" value={toIDR(session.opening_cash ?? 0)} />
+                <Info label="Dibuka Oleh" value={session.opener?.name ?? '-'} />
+                <Info label="Waktu Buka" value={session.opened_at ?? '-'} />
+                <Info label="Closed By" value={session.closer?.name ?? '-'} />
+                <Info label="Waktu Tutup" value={session.closed_at ?? '-'} />
+                <Info label="Hitung Fisik Saat Tutup" value={toIDR(session.closing_cash_counted ?? 0)} />
+                <Info label="Selisih" value={toIDR(session.difference_amount ?? 0)} />
+                <Info label="Total Withdrawal" value={toIDR(meta?.withdrawal_total ?? 0)} />
+                <Info label="Catatan" value={session.notes || '-'} />
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-[color:var(--color-border)] p-4">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Mutasi Kas</h2>
+              <p className="text-sm text-[color:var(--color-text-muted)]">
+                Hanya tampilan baca. Kasir tidak dapat menambah withdrawal atau menutup sesi dari halaman ini.
+              </p>
+            </div>
+
+            {!session?.mutations?.length ? (
+              <div className="text-sm text-[color:var(--color-text-muted)]">Belum ada mutasi.</div>
+            ) : (
+              <div className="overflow-auto rounded-xl border border-[color:var(--color-border)]">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-black/5 dark:bg-white/5">
+                    <tr>
+                      <Th>Tipe</Th>
+                      <Th>Arah</Th>
+                      <Th>Jumlah</Th>
+                      <Th>Referensi</Th>
+                      <Th>Catatan</Th>
+                      <Th>Dibuat Oleh</Th>
+                      <Th>Waktu Efektif</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {session.mutations.map((row) => (
+                      <tr key={row.id} className="border-t border-[color:var(--color-border)]">
+                        <Td>{row.type}</Td>
+                        <Td>{row.direction}</Td>
+                        <Td>{toIDR(row.amount)}</Td>
+                        <Td>{row.reference_no || '-'}</Td>
+                        <Td>{row.note || '-'}</Td>
+                        <Td>{row.creator?.name || '-'}</Td>
+                        <Td>{row.effective_at || '-'}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            User login: <strong>{me?.name ?? '-'}</strong>. Halaman ini bersifat read-only untuk operasional kasir.
+            Pembukaan sesi, withdrawal, dan penutupan final tetap dilakukan Admin Cabang atau Pemilik.
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Card(props: { title: string; value: string; subtitle?: string }) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] p-4">
+      <div className="text-sm text-[color:var(--color-text-muted)]">{props.title}</div>
+      <div className="mt-2 text-xl font-semibold">{props.value}</div>
+      {props.subtitle ? (
+        <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">{props.subtitle}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function Info(props: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+      <div className="text-xs text-[color:var(--color-text-muted)]">{props.label}</div>
+      <div className="mt-1 text-sm font-medium break-words">{props.value}</div>
+    </div>
+  );
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">{children}</th>;
+}
+
+function Td({ children }: { children: React.ReactNode }) {
+  return <td className="px-3 py-2 align-top">{children}</td>;
+}
+```
+</details>
+
 ### src\pages\customers\CustomerDetail.tsx
 
 - SHA: `d7b8bfe58cb9`  
@@ -10716,7 +11358,7 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `2746160b4090`  
+- SHA: `ab50ed78bd1c`  
 - Ukuran: 48 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -10773,17 +11415,14 @@ type CreateDeliveryResponseLocal = {
   } | Delivery | null;
 };
 
-// Helpers konversi datetime-local <-> ISO string
-function toLocalInputValue(v?: string | null): string {
+function toDateInputValue(v?: string | null): string {
   if (!v) return '';
-  const s = String(v).trim();
-  if (s.includes('T')) return s.replace('Z', '').slice(0, 16);
-  return s.replace(' ', 'T').slice(0, 16);
+  return String(v).slice(0, 10);
 }
-function fromLocalInputValue(v: string): string | null {
-  if (!v) return null;
+
+function fromDateInputValue(v: string): string | null {
   const s = v.trim();
-  return s.replace('T', ' ') + ':00';
+  return s ? s : null;
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
@@ -11407,33 +12046,45 @@ export default function OrderDetail(): React.ReactElement {
                       </div>
 
                       <div>
-                        <div className="text-xs font-semibold text-slate-600">Tanggal Masuk</div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          Tanggal Masuk <span className="text-red-600">*</span>
+                        </div>
                         <input
-                          type="datetime-local"
+                          id="received_at"
+                          type="date"
                           className="
-                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                          focus:border-slate-900 focus:outline-none
-                        "
-                          value={toLocalInputValue(draft.received_at ?? null)}
-                          onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+      focus:border-slate-900 focus:outline-none
+    "
+                          value={toDateInputValue(draft.received_at ?? null)}
+                          onChange={(e) => setDraft(d => ({ ...d, received_at: fromDateInputValue(e.target.value) }))}
                           disabled={!canEdit}
+                          required
                         />
-                        {fieldErr['received_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>}
+                        {fieldErr['received_at'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>
+                        )}
                       </div>
 
                       <div>
-                        <div className="text-xs font-semibold text-slate-600">Tanggal Selesai</div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          Tanggal Selesai <span className="text-red-600">*</span>
+                        </div>
                         <input
-                          type="datetime-local"
+                          id="ready_at"
+                          type="date"
                           className="
-                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                          focus:border-slate-900 focus:outline-none
-                        "
-                          value={toLocalInputValue(draft.ready_at ?? null)}
-                          onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+      focus:border-slate-900 focus:outline-none
+    "
+                          value={toDateInputValue(draft.ready_at ?? null)}
+                          onChange={(e) => setDraft(d => ({ ...d, ready_at: fromDateInputValue(e.target.value) }))}
                           disabled={!canEdit}
+                          required
                         />
-                        {fieldErr['ready_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>}
+                        {fieldErr['ready_at'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>
+                        )}
                       </div>
                     </div>
                   </section>
@@ -12349,7 +13000,7 @@ export default function OrderReceipt(): React.ReactElement {
 
 ### src\pages\orders\OrdersIndex.tsx
 
-- SHA: `d6f3ffc328f5`  
+- SHA: `1d81cec244dc`  
 - Ukuran: 29 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -12442,6 +13093,11 @@ const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ['PENDING', 'DP', 'PAID', 'UNPAI
 const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = ['PENDING', 'DP', 'CASH', 'QRIS', 'TRANSFER'];
 type SortBy = 'created_at' | 'received_at' | 'ready_at';
 type SortDir = 'asc' | 'desc';
+
+function formatDateOnly(v?: string | null): string {
+  if (!v) return '-';
+  return String(v).slice(0, 10);
+}
 
 export default function OrdersIndex(): React.ReactElement {
   const [rows, setRows] = useState<Order[]>([]);
@@ -12973,6 +13629,8 @@ export default function OrdersIndex(): React.ReactElement {
                   <Th>Nomor</Th>
                   <Th>Customer</Th>
                   <Th>Catatan</Th>
+                  <Th>Tanggal Masuk</Th>
+                  <Th>Tanggal Selesai</Th>
                   <Th>Status Order</Th>
                   <Th>Status Bayar</Th>
                   <Th>Metode Bayar</Th>
@@ -13011,6 +13669,14 @@ export default function OrdersIndex(): React.ReactElement {
                       <div className="text-slate-600 text-xs line-clamp-2 whitespace-pre-line">
                         {o.notes && o.notes.trim() !== '' ? o.notes : '-'}
                       </div>
+                    </Td>
+
+                    <Td className="text-slate-700">
+                      {formatDateOnly(o.received_at)}
+                    </Td>
+
+                    <Td className="text-slate-700">
+                      {formatDateOnly(o.ready_at)}
                     </Td>
 
                     <Td>
@@ -13177,7 +13843,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `632221b1e3a4`  
+- SHA: `83ebd5f6b45c`  
 - Ukuran: 55 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -13564,18 +14230,19 @@ export default function POSPage() {
     const d = new Date();
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
   };
-  const [receivedAt, setReceivedAt] = useState<string>(() => nowLocal());
-  const [readyAt, setReadyAt] = useState<string | null>(null);
+  const [receivedAt, setReceivedAt] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
+  const [readyAt, setReadyAt] = useState<string>('');
 
-  function toLocalInputValue(v?: string | null): string {
+  function toDateInputValue(v?: string | null): string {
     if (!v) return '';
-    const s = String(v).trim();
-    if (s.includes('T')) return s.replace('Z', '').slice(0, 16);
-    return s.replace(' ', 'T').slice(0, 16);
+    return String(v).slice(0, 10);
   }
-  function fromLocalInputValue(v: string): string | null {
-    if (!v) return null;
-    return v.trim().replace('T', ' ') + ':00';
+
+  function fromDateInputValue(v: string): string {
+    return v.trim();
   }
 
   const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
@@ -13608,12 +14275,14 @@ export default function POSPage() {
 
   const parseForCompare = (s?: string | null) => {
     if (!s) return NaN;
-    const t = s.includes('T') ? s : s.replace(' ', 'T');
-    return Date.parse(t);
+    return Date.parse(`${s}T00:00:00`);
   };
+
   const dateErr = useMemo(() => {
-    if (!readyAt) return null;
-    return parseForCompare(readyAt) >= parseForCompare(receivedAt) ? null : 'Tanggal selesai harus ≥ tanggal masuk.';
+    if (!receivedAt || !readyAt) return null;
+    return parseForCompare(readyAt) >= parseForCompare(receivedAt)
+      ? null
+      : 'Tanggal selesai harus ≥ tanggal masuk.';
   }, [receivedAt, readyAt]);
 
   // logs
@@ -13660,7 +14329,15 @@ export default function POSPage() {
       errors.customer_id = ['Pelanggan wajib dipilih.'];
     }
 
-    if (dateErr) {
+    if (!receivedAt) {
+      errors.received_at = ['Tanggal masuk wajib diisi.'];
+    }
+
+    if (!readyAt) {
+      errors.ready_at = ['Tanggal selesai wajib diisi.'];
+    }
+
+    if (receivedAt && readyAt && dateErr) {
       errors.ready_at = [dateErr];
     }
 
@@ -13695,11 +14372,15 @@ export default function POSPage() {
     try {
       const payload: OrderCreatePayload = {
         customer_id: customerId,
-        items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
+        items: items.map((it) => ({
+          service_id: it.service_id,
+          qty: it.qty,
+          note: it.note ?? null,
+        })),
         discount: discount || 0,
         notes: notes || null,
-        received_at: receivedAt || null,
-        ready_at: readyAt || null,
+        received_at: receivedAt,
+        ready_at: readyAt,
       };
       dlog('createOrder payload', payload);
       const res = await createOrder(payload);
@@ -13862,21 +14543,31 @@ export default function POSPage() {
                   {/* Dates */}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Tanggal Masuk</label>
+                      <label className="text-xs font-medium text-slate-700">
+                        Tanggal Masuk <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         id="received_at"
-                        type="datetime-local"
-                        value={toLocalInputValue(receivedAt)}
-                        onChange={(e) => setReceivedAt(fromLocalInputValue(e.target.value) || nowLocal())}
+                        type="date"
+                        value={toDateInputValue(receivedAt)}
+                        onChange={(e) => setReceivedAt(fromDateInputValue(e.target.value))}
+                        required
                       />
+                      {fieldErrors.received_at?.[0] && (
+                        <div className="text-[11px] text-red-600">{fieldErrors.received_at[0]}</div>
+                      )}
                     </div>
+
                     <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Tanggal Selesai (opsional)</label>
+                      <label className="text-xs font-medium text-slate-700">
+                        Tanggal Selesai <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         id="ready_at"
-                        type="datetime-local"
-                        value={toLocalInputValue(readyAt)}
-                        onChange={(e) => setReadyAt(fromLocalInputValue(e.target.value))}
+                        type="date"
+                        value={toDateInputValue(readyAt)}
+                        onChange={(e) => setReadyAt(fromDateInputValue(e.target.value))}
+                        required
                       />
                       {dateErr && <div className="text-[11px] text-red-600">{dateErr}</div>}
                       {fieldErrors.ready_at?.[0] && !dateErr && (
@@ -14863,7 +15554,7 @@ function renderStatusChip(s?: ReceivableStatus) {
 
 ### src\pages\reports\ReportsIndex.tsx
 
-- SHA: `f5435ebb8b63`  
+- SHA: `2c4a6a848554`  
 - Ukuran: 14 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -14876,7 +15567,7 @@ import { listBranches } from '../../api/branches';
 type Branch = { id: string; name: string };
 type BranchListItem = { id: string; name: string };
 
-const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services'];
+const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services', 'cash'];
 
 export default function ReportsIndex() {
     const [kind, setKind] = useState<ReportKind>('sales');

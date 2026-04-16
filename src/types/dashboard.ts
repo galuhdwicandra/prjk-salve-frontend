@@ -55,6 +55,12 @@ export interface DashboardSummary {
   dp_outstanding_count: number;
   dp_outstanding_amount: number;
 
+  cash_in_total: number;
+  cash_out_total: number;
+  cash_withdrawal_total: number;
+  cash_on_hand_now: number;
+  cash_difference_last_closed: number;
+
   omzet_daily: OmzetDailyPoint[];
   omzet_monthly: OmzetMonthlyPoint[];
 }

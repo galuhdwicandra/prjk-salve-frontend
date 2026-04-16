@@ -4,18 +4,19 @@ export interface Expense {
   branch_id: string;
   category: string;
   amount: number;
+  payment_source: 'NON_CASH' | 'CASH_BOX';
   note: string | null;
   proof_path: string | null;
   created_at: string | null;
   updated_at: string | null;
-  // Optional eager loaded relation
   branch?: { id: string; name: string } | null;
 }
 
 export interface ExpenseCreatePayload {
-  branch_id?: string; // required untuk Superadmin (divalidasi backend)
+  branch_id?: string;
   category: string;
   amount: number;
+  payment_source?: 'NON_CASH' | 'CASH_BOX';
   note?: string | null;
   proof?: File | null;
 }
@@ -23,8 +24,9 @@ export interface ExpenseCreatePayload {
 export interface ExpenseUpdatePayload {
   category: string;
   amount: number;
+  payment_source?: 'NON_CASH' | 'CASH_BOX';
   note?: string | null;
-  proof?: File | null; // jika diisi: mengganti bukti lama
+  proof?: File | null;
 }
 
 export interface ExpenseQuery {

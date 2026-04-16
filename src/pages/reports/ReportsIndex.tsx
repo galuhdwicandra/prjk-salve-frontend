@@ -6,7 +6,7 @@ import { listBranches } from '../../api/branches';
 type Branch = { id: string; name: string };
 type BranchListItem = { id: string; name: string };
 
-const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services'];
+const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services', 'cash'];
 
 export default function ReportsIndex() {
     const [kind, setKind] = useState<ReportKind>('sales');

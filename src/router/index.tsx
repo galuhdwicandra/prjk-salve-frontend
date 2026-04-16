@@ -29,6 +29,8 @@ const VoucherForm = lazy(() => import('../pages/vouchers/VoucherForm'));
 const ReceivablesIndex = lazy(() => import('../pages/receivables/ReceivablesIndex'));
 const ExpensesIndex = lazy(() => import('../pages/expenses/ExpensesIndex'));
 const ExpenseForm = lazy(() => import('../pages/expenses/ExpenseForm'));
+const CashSessionsIndex = lazy(() => import('../pages/cash/CashSessionsIndex'));
+const CashTodayPage = lazy(() => import('../pages/cash/CashTodayPage'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
@@ -309,6 +311,26 @@ export const router = createBrowserRouter([
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
             <LazyBoundary>
               <ReceivablesIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/cash-sessions',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
+            <LazyBoundary>
+              <CashSessionsIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/cash-today',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+            <LazyBoundary>
+              <CashTodayPage />
             </LazyBoundary>
           </Guarded>
         ),

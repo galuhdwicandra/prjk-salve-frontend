@@ -69,6 +69,7 @@ export async function createExpense(payload: ExpenseCreatePayload): Promise<Sing
         if (payload.branch_id) fd.append('branch_id', payload.branch_id);
         fd.append('category', payload.category);
         fd.append('amount', String(payload.amount ?? 0));
+        fd.append('payment_source', payload.payment_source ?? 'NON_CASH');
         if (typeof payload.note !== 'undefined') fd.append('note', payload.note ?? '');
         fd.append('proof', payload.proof);
         const { data } = await api.post<SingleResponse<Expense>>('/expenses', fd, {
@@ -81,10 +82,12 @@ export async function createExpense(payload: ExpenseCreatePayload): Promise<Sing
         branch_id?: string;
         category: string;
         amount: number;
+        payment_source: 'NON_CASH' | 'CASH_BOX';
         note?: string | null;
     } = {
         category: payload.category,
         amount: payload.amount,
+        payment_source: payload.payment_source ?? 'NON_CASH',
     };
     if (payload.branch_id) json.branch_id = payload.branch_id;
     if (typeof payload.note !== 'undefined') json.note = payload.note;
@@ -101,6 +104,7 @@ export async function updateExpense(
         const fd = new FormData();
         fd.append('category', payload.category);
         fd.append('amount', String(payload.amount ?? 0));
+        fd.append('payment_source', payload.payment_source ?? 'NON_CASH');
         if (typeof payload.note !== 'undefined') fd.append('note', payload.note ?? '');
         fd.append('proof', payload.proof);
         const { data } = await api.put<SingleResponse<Expense>>(`/expenses/${encodeURIComponent(id)}`, fd, {
@@ -112,10 +116,12 @@ export async function updateExpense(
     const json: {
         category: string;
         amount: number;
+        payment_source: 'NON_CASH' | 'CASH_BOX';
         note?: string | null;
     } = {
         category: payload.category,
         amount: payload.amount,
+        payment_source: payload.payment_source ?? 'NON_CASH',
     };
     if (typeof payload.note !== 'undefined') json.note = payload.note;
 
