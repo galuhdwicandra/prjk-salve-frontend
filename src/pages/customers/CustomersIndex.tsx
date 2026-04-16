@@ -63,6 +63,22 @@ function mapsUrl(address?: string | null) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
 }
 
+const TAG_STYLES: Record<string, string> = {
+    VIP: "border-amber-200 bg-amber-50 text-amber-700",
+    Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    Corporate: "border-blue-200 bg-blue-50 text-blue-700",
+    Member: "border-violet-200 bg-violet-50 text-violet-700",
+    Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
+    Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    Komplain: "border-orange-200 bg-orange-50 text-orange-700",
+    Blacklist: "border-red-200 bg-red-50 text-red-700",
+};
+
+function tagClass(tag?: string) {
+    if (!tag) return "border-slate-200 bg-slate-50 text-slate-700";
+    return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 export default function CustomersIndex() {
     // Snapshot auth store (sesuai pola Anda)
     function useAuthSnapshot() {
@@ -239,6 +255,7 @@ export default function CustomersIndex() {
                                     <Th>WhatsApp</Th>
                                     <Th>Alamat</Th>
                                     <Th className="pr-4 text-right">Aksi</Th>
+                                    <Th>Tags</Th>
                                 </tr>
                             </thead>
 
@@ -276,7 +293,7 @@ export default function CustomersIndex() {
                                                         className="
          tabular-nums font-medium text-emerald-600
          hover:underline hover:text-emerald-700
-       "
+            "
                                                         aria-label={`Hubungi ${c.name} via WhatsApp`}
                                                     >
                                                         {c.whatsapp}
@@ -295,9 +312,9 @@ export default function CustomersIndex() {
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="
-         line-clamp-2 max-w-[56ch] text-slate-700
-         hover:text-slate-900 hover:underline
-       "
+            line-clamp-2 max-w-[56ch] text-blue-600
+            hover:text-blue-700 hover:underline
+            "
                                                         title="Buka di Google Maps"
                                                         aria-label={`Buka alamat ${c.name} di Google Maps`}
                                                     >
@@ -320,6 +337,22 @@ export default function CustomersIndex() {
                                                 >
                                                     Detail
                                                 </Link>
+                                            </Td>
+                                            <Td>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {Array.isArray(c.tags) && c.tags.length > 0 ? (
+                                                        c.tags.map((tag) => (
+                                                            <span
+                                                                key={`${c.id}-${tag}`}
+                                                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${tagClass(tag)}`}
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-slate-400">-</span>
+                                                    )}
+                                                </div>
                                             </Td>
                                         </tr>
                                     ))

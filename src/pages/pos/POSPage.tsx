@@ -50,6 +50,32 @@ function getUserBranchCode(user: MeUser | null): string | null {
   return user.branch?.code ?? null;
 }
 
+const CUSTOMER_TAG_OPTIONS = [
+  "VIP",
+  "Langganan",
+  "Corporate",
+  "Member",
+  "Prioritas",
+  "Outlet",
+  "Komplain",
+  "Blacklist",
+] as const;
+
+const TAG_STYLES: Record<string, string> = {
+  VIP: "border-amber-200 bg-amber-50 text-amber-700",
+  Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Corporate: "border-blue-200 bg-blue-50 text-blue-700",
+  Member: "border-violet-200 bg-violet-50 text-violet-700",
+  Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
+  Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  Komplain: "border-orange-200 bg-orange-50 text-orange-700",
+  Blacklist: "border-red-200 bg-red-50 text-red-700",
+};
+
+function customerTagClass(tag: string): string {
+  return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 function focusFirstErrorField(errors: FieldErrors) {
   const firstKey = Object.keys(errors)[0] as PosFieldKey | undefined;
   if (!firstKey) return;
@@ -328,6 +354,7 @@ export default function POSPage() {
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerWa, setNewCustomerWa] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [newCustomerTags, setNewCustomerTags] = useState<string[]>([]);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [customerError, setCustomerError] = useState<string | null>(null);
 
@@ -805,7 +832,16 @@ export default function POSPage() {
                   className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3"
                   role="dialog"
                   aria-modal="true"
-                  onClick={() => { if (!savingCustomer) setOpenCustomerCreate(false); }}
+                  onClick={() => {
+                    if (!savingCustomer) {
+                      setOpenCustomerCreate(false);
+                      setCustomerError(null);
+                      setNewCustomerName('');
+                      setNewCustomerWa('');
+                      setNewCustomerAddress('');
+                      setNewCustomerTags([]);
+                    }
+                  }}
                 >
                   <div
                     className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-[0_28px_70px_-40px_rgba(0,0,0,.5)]"
@@ -816,7 +852,18 @@ export default function POSPage() {
                         <div className="text-base font-semibold">Tambah Customer</div>
                         <div className="text-xs text-slate-500">Tanpa keluar dari POS</div>
                       </div>
-                      <OutlineButton disabled={savingCustomer} onClick={() => setOpenCustomerCreate(false)} className="px-3 py-2">
+                      <OutlineButton
+                        disabled={savingCustomer}
+                        onClick={() => {
+                          setOpenCustomerCreate(false);
+                          setCustomerError(null);
+                          setNewCustomerName('');
+                          setNewCustomerWa('');
+                          setNewCustomerAddress('');
+                          setNewCustomerTags([]);
+                        }}
+                        className="px-3 py-2"
+                      >
                         Tutup
                       </OutlineButton>
                     </div>
@@ -864,10 +911,80 @@ export default function POSPage() {
                             disabled={savingCustomer}
                           />
                         </div>
+                        <div className="grid gap-1">
+                          <label className="text-xs font-medium text-slate-700">Tags / Label</label>
+
+                          <select
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                            value=""
+                            disabled={savingCustomer}
+                            onChange={(e) => {
+                              const selected = e.target.value;
+                              if (!selected) return;
+
+                              setNewCustomerTags((prev) => {
+                                if (prev.includes(selected)) return prev;
+                                return [...prev, selected].slice(0, 10);
+                              });
+
+                              e.currentTarget.value = "";
+                            }}
+                          >
+                            <option value="">Pilih tag customer</option>
+                            {CUSTOMER_TAG_OPTIONS.map((tag) => (
+                              <option
+                                key={tag}
+                                value={tag}
+                                disabled={newCustomerTags.includes(tag)}
+                              >
+                                {tag}
+                              </option>
+                            ))}
+                          </select>
+
+                          <span className="text-[11px] text-slate-500">
+                            Pilih dari daftar agar label customer konsisten.
+                          </span>
+
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {newCustomerTags.length > 0 ? (
+                              newCustomerTags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium ${customerTagClass(tag)}`}
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    className="text-current/80 hover:text-current"
+                                    onClick={() =>
+                                      setNewCustomerTags((prev) => prev.filter((t) => t !== tag))
+                                    }
+                                    disabled={savingCustomer}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-slate-400">Belum ada tag dipilih.</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="mt-4 flex justify-end gap-2">
-                        <OutlineButton disabled={savingCustomer} onClick={() => setOpenCustomerCreate(false)}>
+                        <OutlineButton
+                          disabled={savingCustomer}
+                          onClick={() => {
+                            setOpenCustomerCreate(false);
+                            setCustomerError(null);
+                            setNewCustomerName('');
+                            setNewCustomerWa('');
+                            setNewCustomerAddress('');
+                            setNewCustomerTags([]);
+                          }}
+                        >
                           Batal
                         </OutlineButton>
                         <PrimaryButton
@@ -891,6 +1008,7 @@ export default function POSPage() {
                                 whatsapp: normalizeWa(newCustomerWa),
                                 address: newCustomerAddress.trim() ? newCustomerAddress.trim() : null,
                                 notes: null,
+                                tags: newCustomerTags,
                               });
 
                               const created = res.data;
@@ -903,6 +1021,7 @@ export default function POSPage() {
                               setNewCustomerName('');
                               setNewCustomerWa('');
                               setNewCustomerAddress('');
+                              setNewCustomerTags([]);
 
                               setOpenCustomerCreate(false);
                             } catch (err: unknown) {

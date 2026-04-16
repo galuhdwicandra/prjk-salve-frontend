@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-15 14:36:34_  
+_Dihasilkan otomatis: 2026-04-16 13:50:13_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -2523,57 +2523,64 @@ export interface InvoiceCounterQuery {
 
 ### src\types\customers.ts
 
-- SHA: `5a60ed132dfe`  
+- SHA: `0cfc76b8c7c8`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
 // src/types/customers.ts
 export interface Customer {
-  id: string;
-  branch_id: string;
-  name: string;
-  whatsapp: string;
-  address: string | null;
-  notes: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+    id: string;
+    branch_id: string;
+    name: string;
+    whatsapp: string;
+    address: string | null;
+    notes: string | null;
+    tags?: string[] | null;
+    created_at: string | null;
+    updated_at: string | null;
+    branch?: {
+        id: string;
+        name: string;
+        address?: string | null;
+    } | null;
 }
 
 export interface CustomerUpsertPayload {
-  branch_id?: string; // Akan dipaksa branch user untuk Admin Cabang/Kasir oleh backend
-  name: string;
-  whatsapp: string; // normalisasi tanpa spasi di backend
-  address?: string | null;
-  notes?: string | null;
+    branch_id?: string;
+    name: string;
+    whatsapp: string;
+    address?: string | null;
+    notes?: string | null;
+    tags?: string[] | null;
 }
 
 export interface CustomerQuery {
-  q?: string;
-  page?: number;
-  per_page?: number;
-  branch_id?: string; // hanya efektif untuk Superadmin
+    q?: string;
+    page?: number;
+    per_page?: number;
+    branch_id?: string; // hanya efektif untuk Superadmin
 }
 
 export interface PaginationMeta {
-  current_page: number;
-  per_page: number;
-  total: number;
-  last_page: number;
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
 }
 
 export interface Paginated<T> {
-  data: T[];
-  meta: PaginationMeta;
-  message: string;
-  errors: Record<string, string[] | string> | null;
+    data: T[];
+    meta: PaginationMeta;
+    message: string;
+    errors: Record<string, string[] | string> | null;
 }
 
 export interface SingleResponse<T> {
-  data: T | null;
-  meta: Record<string, unknown> | null;
-  message: string;
-  errors: Record<string, string[] | string> | null;
+    data: T | null;
+    meta: Record<string, unknown> | null;
+    message: string;
+    errors: Record<string, string[] | string> | null;
 }
 
 ```
@@ -7387,8 +7394,8 @@ function RowSkeleton() {
 
 ### src\pages\customers\CustomerDetail.tsx
 
-- SHA: `926df983624f`  
-- Ukuran: 19 KB
+- SHA: `d7b8bfe58cb9`  
+- Ukuran: 22 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7440,6 +7447,32 @@ function initials(name?: string) {
   return (a + b).toUpperCase();
 }
 
+const CUSTOMER_TAG_OPTIONS = [
+  "VIP",
+  "Langganan",
+  "Corporate",
+  "Member",
+  "Prioritas",
+  "Outlet",
+  "Komplain",
+  "Blacklist",
+] as const;
+
+const TAG_STYLES: Record<string, string> = {
+  VIP: "border-amber-200 bg-amber-50 text-amber-700",
+  Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Corporate: "border-blue-200 bg-blue-50 text-blue-700",
+  Member: "border-violet-200 bg-violet-50 text-violet-700",
+  Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
+  Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  Komplain: "border-orange-200 bg-orange-50 text-orange-700",
+  Blacklist: "border-red-200 bg-red-50 text-red-700",
+};
+
+function tagClass(tag: string): string {
+  return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 export default function CustomerDetail() {
   const params = useParams();
   const navigate = useNavigate();
@@ -7456,6 +7489,7 @@ export default function CustomerDetail() {
     whatsapp: "",
     address: "",
     notes: "",
+    tags: [],
   });
   const [entity, setEntity] = useState<Customer | null>(null);
 
@@ -7467,16 +7501,16 @@ export default function CustomerDetail() {
         setError(null);
         try {
           const res = await getCustomer(params.id!);
-          if (!cancelled) {
+          if (res.data) {
             setEntity(res.data);
-            if (res.data) {
-              setForm({
-                name: res.data.name,
-                whatsapp: res.data.whatsapp,
-                address: res.data.address ?? "",
-                notes: res.data.notes ?? "",
-              });
-            }
+            setForm({
+              name: res.data.name,
+              whatsapp: res.data.whatsapp,
+              address: res.data.address ?? "",
+              notes: res.data.notes ?? "",
+              tags: Array.isArray(res.data.tags) ? res.data.tags : [],
+            });
+
           }
         } catch {
           if (!cancelled) setError("Gagal memuat detail pelanggan.");
@@ -7524,6 +7558,7 @@ export default function CustomerDetail() {
           whatsapp: normalizeWa(form.whatsapp),
           address: form.address,
           notes: form.notes,
+          tags: form.tags,
         };
         const cleanedBase = clean(basePayload);
 
@@ -7544,6 +7579,7 @@ export default function CustomerDetail() {
           whatsapp: String(cleanedBase.whatsapp ?? ""),
           address: (cleanedBase.address as string | null | undefined) ?? null,
           notes: (cleanedBase.notes as string | null | undefined) ?? null,
+          tags: (cleanedBase.tags as string[] | undefined) ?? [],
           ...(finalBranchId ? { branch_id: finalBranchId } : {}),
         };
         res = await createCustomer(payloadCreate);
@@ -7558,6 +7594,7 @@ export default function CustomerDetail() {
           whatsapp: normalizeWa(form.whatsapp),
           address: form.address,
           notes: form.notes,
+          tags: form.tags,
           ...(hasRole("Superadmin") && form.branch_id && String(form.branch_id).trim() !== ""
             ? { branch_id: String(form.branch_id).trim() }
             : {}),
@@ -7567,6 +7604,7 @@ export default function CustomerDetail() {
           ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
           ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
           ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
+          ...(cleanedUpdate.tags !== undefined ? { tags: cleanedUpdate.tags as string[] } : {}),
           ...(hasRole("Superadmin") && cleanedUpdate.branch_id !== undefined ? { branch_id: String(cleanedUpdate.branch_id) } : {}),
         };
         res = await updateCustomer(params.id, payloadUpdate);
@@ -7698,31 +7736,9 @@ export default function CustomerDetail() {
 
           {/* Cabang */}
           <div className="mt-5">
-            {hasRole("Superadmin") ? (
-              <label className="grid gap-1">
-                <span className="text-sm font-medium text-slate-700">Branch ID (Superadmin)</span>
-                <input
-                  placeholder="CTH: 019aa7... (opsional)"
-                  className="
-                    w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
-                    text-slate-900 placeholder:text-slate-400
-                    focus:border-slate-900 focus:outline-none
-                  "
-                  value={form.branch_id ?? ""}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
-                    }))
-                  }
-                />
-                <span className="text-xs text-slate-500">Kosongkan untuk tidak mengubah cabang.</span>
-              </label>
-            ) : (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-                Cabang: <span className="font-semibold text-slate-900">{user?.branch_id ?? "-"}</span>
-              </div>
-            )}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+              Cabang: <span className="font-semibold text-slate-900">{entity?.branch?.name ?? user?.branch?.name ?? "-"}</span>
+            </div>
           </div>
 
           {/* Fields */}
@@ -7759,6 +7775,77 @@ export default function CustomerDetail() {
                 autoComplete="tel"
               />
               <span className="text-xs text-slate-500">Hanya angka. Akan dinormalisasi saat simpan.</span>
+            </label>
+
+            {/* Tags */}
+            <label className="grid gap-1 md:col-span-2">
+              <span className="text-sm font-medium text-slate-700">Tags / Label</span>
+
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                value=""
+                disabled={!canEdit}
+                onChange={(e) => {
+                  const selected = e.target.value;
+                  if (!selected) return;
+
+                  setForm((prev) => {
+                    const current = Array.isArray(prev.tags) ? prev.tags : [];
+                    if (current.includes(selected)) return prev;
+
+                    return {
+                      ...prev,
+                      tags: [...current, selected].slice(0, 10),
+                    };
+                  });
+
+                  e.currentTarget.value = "";
+                }}
+              >
+                <option value="">Pilih tag customer</option>
+                {CUSTOMER_TAG_OPTIONS.map((tag) => (
+                  <option
+                    key={tag}
+                    value={tag}
+                    disabled={(form.tags ?? []).includes(tag)}
+                  >
+                    {tag}
+                  </option>
+                ))}
+              </select>
+
+              <span className="text-xs text-slate-500">
+                Pilih dari daftar agar label customer konsisten.
+              </span>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(form.tags ?? []).length > 0 ? (
+                  (form.tags ?? []).map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${tagClass(tag)}`}
+                    >
+                      {tag}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="text-current/80 hover:text-current"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              tags: (prev.tags ?? []).filter((t) => t !== tag),
+                            }))
+                          }
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">Belum ada tag dipilih.</span>
+                )}
+              </div>
             </label>
 
             <label className="grid gap-1 md:col-span-2">
@@ -7843,7 +7930,7 @@ export default function CustomerDetail() {
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <div className="text-xs text-slate-500">Cabang</div>
               <div className="mt-0.5 font-semibold text-slate-900">
-                {hasRole("Superadmin") ? form.branch_id ?? "-" : user?.branch_id ?? "-"}
+                {entity?.branch?.name ?? "-"}
               </div>
             </div>
 
@@ -7869,8 +7956,8 @@ export default function CustomerDetail() {
 
 ### src\pages\customers\CustomersIndex.tsx
 
-- SHA: `c3d8ae9be3e5`  
-- Ukuran: 20 KB
+- SHA: `a4836f6f81e4`  
+- Ukuran: 22 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7937,6 +8024,22 @@ function mapsUrl(address?: string | null) {
     if (!a) return null;
     // Google Maps search query (paling stabil untuk alamat teks bebas)
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
+}
+
+const TAG_STYLES: Record<string, string> = {
+    VIP: "border-amber-200 bg-amber-50 text-amber-700",
+    Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    Corporate: "border-blue-200 bg-blue-50 text-blue-700",
+    Member: "border-violet-200 bg-violet-50 text-violet-700",
+    Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
+    Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    Komplain: "border-orange-200 bg-orange-50 text-orange-700",
+    Blacklist: "border-red-200 bg-red-50 text-red-700",
+};
+
+function tagClass(tag?: string) {
+    if (!tag) return "border-slate-200 bg-slate-50 text-slate-700";
+    return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 export default function CustomersIndex() {
@@ -8115,6 +8218,7 @@ export default function CustomersIndex() {
                                     <Th>WhatsApp</Th>
                                     <Th>Alamat</Th>
                                     <Th className="pr-4 text-right">Aksi</Th>
+                                    <Th>Tags</Th>
                                 </tr>
                             </thead>
 
@@ -8152,7 +8256,7 @@ export default function CustomersIndex() {
                                                         className="
          tabular-nums font-medium text-emerald-600
          hover:underline hover:text-emerald-700
-       "
+            "
                                                         aria-label={`Hubungi ${c.name} via WhatsApp`}
                                                     >
                                                         {c.whatsapp}
@@ -8171,9 +8275,9 @@ export default function CustomersIndex() {
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="
-         line-clamp-2 max-w-[56ch] text-slate-700
-         hover:text-slate-900 hover:underline
-       "
+            line-clamp-2 max-w-[56ch] text-blue-600
+            hover:text-blue-700 hover:underline
+            "
                                                         title="Buka di Google Maps"
                                                         aria-label={`Buka alamat ${c.name} di Google Maps`}
                                                     >
@@ -8196,6 +8300,22 @@ export default function CustomersIndex() {
                                                 >
                                                     Detail
                                                 </Link>
+                                            </Td>
+                                            <Td>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {Array.isArray(c.tags) && c.tags.length > 0 ? (
+                                                        c.tags.map((tag) => (
+                                                            <span
+                                                                key={`${c.id}-${tag}`}
+                                                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${tagClass(tag)}`}
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-slate-400">-</span>
+                                                    )}
+                                                </div>
                                             </Td>
                                         </tr>
                                     ))
@@ -8300,8 +8420,8 @@ function RowSkeleton() {
 
 ### src\pages\dashboard\DashboardHome.tsx
 
-- SHA: `63a4548b3248`  
-- Ukuran: 29 KB
+- SHA: `263890948d0f`  
+- Ukuran: 32 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -8563,6 +8683,60 @@ export default function DashboardHome() {
           </div>
         </div>
       </section>
+
+      {/* Reminder Piutang */}
+      {(Number(data?.receivables_open_count ?? 0) > 0 || Number(data?.dp_outstanding_count ?? 0) > 0) && (
+        <section className="space-y-2">
+          <div className="flex items-end justify-between">
+            <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">
+              Reminder Piutang
+            </h2>
+            <span className="text-xs text-[color:var(--color-text-muted)]">
+              Order yang masih memiliki sisa pembayaran
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/20 p-4 shadow-elev-1">
+              <div className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                Piutang Belum Lunas
+              </div>
+              <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
+                {loading ? (
+                  <span className="inline-block h-6 w-36 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                ) : (
+                  `${data?.receivables_open_count ?? 0} order`
+                )}
+              </div>
+              <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+                Total sisa pembayaran:{" "}
+                <span className="font-medium text-[color:var(--color-text-default)]">
+                  {toIDR(Number(data?.receivables_open_amount ?? 0))}
+                </span>
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-500/10 dark:border-rose-500/20 p-4 shadow-elev-1">
+              <div className="text-[11px] uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                Piutang Jatuh Tempo
+              </div>
+              <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
+                {loading ? (
+                  <span className="inline-block h-6 w-36 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                ) : (
+                  `${data?.dp_outstanding_count ?? 0} order`
+                )}
+              </div>
+              <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+                Total overdue:{" "}
+                <span className="font-medium text-[color:var(--color-text-default)]">
+                  {toIDR(Number(data?.dp_outstanding_amount ?? 0))}
+                </span>
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Top Layanan */}
       <section className="space-y-2">

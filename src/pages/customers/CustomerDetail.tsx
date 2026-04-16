@@ -46,6 +46,32 @@ function initials(name?: string) {
   return (a + b).toUpperCase();
 }
 
+const CUSTOMER_TAG_OPTIONS = [
+  "VIP",
+  "Langganan",
+  "Corporate",
+  "Member",
+  "Prioritas",
+  "Outlet",
+  "Komplain",
+  "Blacklist",
+] as const;
+
+const TAG_STYLES: Record<string, string> = {
+  VIP: "border-amber-200 bg-amber-50 text-amber-700",
+  Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Corporate: "border-blue-200 bg-blue-50 text-blue-700",
+  Member: "border-violet-200 bg-violet-50 text-violet-700",
+  Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
+  Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  Komplain: "border-orange-200 bg-orange-50 text-orange-700",
+  Blacklist: "border-red-200 bg-red-50 text-red-700",
+};
+
+function tagClass(tag: string): string {
+  return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 export default function CustomerDetail() {
   const params = useParams();
   const navigate = useNavigate();
@@ -62,6 +88,7 @@ export default function CustomerDetail() {
     whatsapp: "",
     address: "",
     notes: "",
+    tags: [],
   });
   const [entity, setEntity] = useState<Customer | null>(null);
 
@@ -73,16 +100,16 @@ export default function CustomerDetail() {
         setError(null);
         try {
           const res = await getCustomer(params.id!);
-          if (!cancelled) {
+          if (res.data) {
             setEntity(res.data);
-            if (res.data) {
-              setForm({
-                name: res.data.name,
-                whatsapp: res.data.whatsapp,
-                address: res.data.address ?? "",
-                notes: res.data.notes ?? "",
-              });
-            }
+            setForm({
+              name: res.data.name,
+              whatsapp: res.data.whatsapp,
+              address: res.data.address ?? "",
+              notes: res.data.notes ?? "",
+              tags: Array.isArray(res.data.tags) ? res.data.tags : [],
+            });
+
           }
         } catch {
           if (!cancelled) setError("Gagal memuat detail pelanggan.");
@@ -130,6 +157,7 @@ export default function CustomerDetail() {
           whatsapp: normalizeWa(form.whatsapp),
           address: form.address,
           notes: form.notes,
+          tags: form.tags,
         };
         const cleanedBase = clean(basePayload);
 
@@ -150,6 +178,7 @@ export default function CustomerDetail() {
           whatsapp: String(cleanedBase.whatsapp ?? ""),
           address: (cleanedBase.address as string | null | undefined) ?? null,
           notes: (cleanedBase.notes as string | null | undefined) ?? null,
+          tags: (cleanedBase.tags as string[] | undefined) ?? [],
           ...(finalBranchId ? { branch_id: finalBranchId } : {}),
         };
         res = await createCustomer(payloadCreate);
@@ -164,6 +193,7 @@ export default function CustomerDetail() {
           whatsapp: normalizeWa(form.whatsapp),
           address: form.address,
           notes: form.notes,
+          tags: form.tags,
           ...(hasRole("Superadmin") && form.branch_id && String(form.branch_id).trim() !== ""
             ? { branch_id: String(form.branch_id).trim() }
             : {}),
@@ -173,6 +203,7 @@ export default function CustomerDetail() {
           ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
           ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
           ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
+          ...(cleanedUpdate.tags !== undefined ? { tags: cleanedUpdate.tags as string[] } : {}),
           ...(hasRole("Superadmin") && cleanedUpdate.branch_id !== undefined ? { branch_id: String(cleanedUpdate.branch_id) } : {}),
         };
         res = await updateCustomer(params.id, payloadUpdate);
@@ -304,31 +335,9 @@ export default function CustomerDetail() {
 
           {/* Cabang */}
           <div className="mt-5">
-            {hasRole("Superadmin") ? (
-              <label className="grid gap-1">
-                <span className="text-sm font-medium text-slate-700">Branch ID (Superadmin)</span>
-                <input
-                  placeholder="CTH: 019aa7... (opsional)"
-                  className="
-                    w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
-                    text-slate-900 placeholder:text-slate-400
-                    focus:border-slate-900 focus:outline-none
-                  "
-                  value={form.branch_id ?? ""}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      branch_id: e.target.value.trim() ? e.target.value.trim() : undefined,
-                    }))
-                  }
-                />
-                <span className="text-xs text-slate-500">Kosongkan untuk tidak mengubah cabang.</span>
-              </label>
-            ) : (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-                Cabang: <span className="font-semibold text-slate-900">{user?.branch_id ?? "-"}</span>
-              </div>
-            )}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+              Cabang: <span className="font-semibold text-slate-900">{entity?.branch?.name ?? user?.branch?.name ?? "-"}</span>
+            </div>
           </div>
 
           {/* Fields */}
@@ -365,6 +374,77 @@ export default function CustomerDetail() {
                 autoComplete="tel"
               />
               <span className="text-xs text-slate-500">Hanya angka. Akan dinormalisasi saat simpan.</span>
+            </label>
+
+            {/* Tags */}
+            <label className="grid gap-1 md:col-span-2">
+              <span className="text-sm font-medium text-slate-700">Tags / Label</span>
+
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                value=""
+                disabled={!canEdit}
+                onChange={(e) => {
+                  const selected = e.target.value;
+                  if (!selected) return;
+
+                  setForm((prev) => {
+                    const current = Array.isArray(prev.tags) ? prev.tags : [];
+                    if (current.includes(selected)) return prev;
+
+                    return {
+                      ...prev,
+                      tags: [...current, selected].slice(0, 10),
+                    };
+                  });
+
+                  e.currentTarget.value = "";
+                }}
+              >
+                <option value="">Pilih tag customer</option>
+                {CUSTOMER_TAG_OPTIONS.map((tag) => (
+                  <option
+                    key={tag}
+                    value={tag}
+                    disabled={(form.tags ?? []).includes(tag)}
+                  >
+                    {tag}
+                  </option>
+                ))}
+              </select>
+
+              <span className="text-xs text-slate-500">
+                Pilih dari daftar agar label customer konsisten.
+              </span>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(form.tags ?? []).length > 0 ? (
+                  (form.tags ?? []).map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${tagClass(tag)}`}
+                    >
+                      {tag}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="text-current/80 hover:text-current"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              tags: (prev.tags ?? []).filter((t) => t !== tag),
+                            }))
+                          }
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">Belum ada tag dipilih.</span>
+                )}
+              </div>
             </label>
 
             <label className="grid gap-1 md:col-span-2">
@@ -449,7 +529,7 @@ export default function CustomerDetail() {
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <div className="text-xs text-slate-500">Cabang</div>
               <div className="mt-0.5 font-semibold text-slate-900">
-                {hasRole("Superadmin") ? form.branch_id ?? "-" : user?.branch_id ?? "-"}
+                {entity?.branch?.name ?? "-"}
               </div>
             </div>
 

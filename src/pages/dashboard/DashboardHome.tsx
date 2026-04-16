@@ -257,6 +257,60 @@ export default function DashboardHome() {
         </div>
       </section>
 
+      {/* Reminder Piutang */}
+      {(Number(data?.receivables_open_count ?? 0) > 0 || Number(data?.dp_outstanding_count ?? 0) > 0) && (
+        <section className="space-y-2">
+          <div className="flex items-end justify-between">
+            <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">
+              Reminder Piutang
+            </h2>
+            <span className="text-xs text-[color:var(--color-text-muted)]">
+              Order yang masih memiliki sisa pembayaran
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/20 p-4 shadow-elev-1">
+              <div className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                Piutang Belum Lunas
+              </div>
+              <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
+                {loading ? (
+                  <span className="inline-block h-6 w-36 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                ) : (
+                  `${data?.receivables_open_count ?? 0} order`
+                )}
+              </div>
+              <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+                Total sisa pembayaran:{" "}
+                <span className="font-medium text-[color:var(--color-text-default)]">
+                  {toIDR(Number(data?.receivables_open_amount ?? 0))}
+                </span>
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-500/10 dark:border-rose-500/20 p-4 shadow-elev-1">
+              <div className="text-[11px] uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                Piutang Jatuh Tempo
+              </div>
+              <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
+                {loading ? (
+                  <span className="inline-block h-6 w-36 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
+                ) : (
+                  `${data?.dp_outstanding_count ?? 0} order`
+                )}
+              </div>
+              <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+                Total overdue:{" "}
+                <span className="font-medium text-[color:var(--color-text-default)]">
+                  {toIDR(Number(data?.dp_outstanding_amount ?? 0))}
+                </span>
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Top Layanan */}
       <section className="space-y-2">
         <div className="flex items-end justify-between">
