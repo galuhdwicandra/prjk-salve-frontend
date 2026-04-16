@@ -50,17 +50,14 @@ type CreateDeliveryResponseLocal = {
   } | Delivery | null;
 };
 
-// Helpers konversi datetime-local <-> ISO string
-function toLocalInputValue(v?: string | null): string {
+function toDateInputValue(v?: string | null): string {
   if (!v) return '';
-  const s = String(v).trim();
-  if (s.includes('T')) return s.replace('Z', '').slice(0, 16);
-  return s.replace(' ', 'T').slice(0, 16);
+  return String(v).slice(0, 10);
 }
-function fromLocalInputValue(v: string): string | null {
-  if (!v) return null;
+
+function fromDateInputValue(v: string): string | null {
   const s = v.trim();
-  return s.replace('T', ' ') + ':00';
+  return s ? s : null;
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
@@ -684,33 +681,45 @@ export default function OrderDetail(): React.ReactElement {
                       </div>
 
                       <div>
-                        <div className="text-xs font-semibold text-slate-600">Tanggal Masuk</div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          Tanggal Masuk <span className="text-red-600">*</span>
+                        </div>
                         <input
-                          type="datetime-local"
+                          id="received_at"
+                          type="date"
                           className="
-                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                          focus:border-slate-900 focus:outline-none
-                        "
-                          value={toLocalInputValue(draft.received_at ?? null)}
-                          onChange={(e) => setDraft(d => ({ ...d, received_at: fromLocalInputValue(e.target.value) }))}
+      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+      focus:border-slate-900 focus:outline-none
+    "
+                          value={toDateInputValue(draft.received_at ?? null)}
+                          onChange={(e) => setDraft(d => ({ ...d, received_at: fromDateInputValue(e.target.value) }))}
                           disabled={!canEdit}
+                          required
                         />
-                        {fieldErr['received_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>}
+                        {fieldErr['received_at'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>
+                        )}
                       </div>
 
                       <div>
-                        <div className="text-xs font-semibold text-slate-600">Tanggal Selesai</div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          Tanggal Selesai <span className="text-red-600">*</span>
+                        </div>
                         <input
-                          type="datetime-local"
+                          id="ready_at"
+                          type="date"
                           className="
-                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                          focus:border-slate-900 focus:outline-none
-                        "
-                          value={toLocalInputValue(draft.ready_at ?? null)}
-                          onChange={(e) => setDraft(d => ({ ...d, ready_at: fromLocalInputValue(e.target.value) }))}
+      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+      focus:border-slate-900 focus:outline-none
+    "
+                          value={toDateInputValue(draft.ready_at ?? null)}
+                          onChange={(e) => setDraft(d => ({ ...d, ready_at: fromDateInputValue(e.target.value) }))}
                           disabled={!canEdit}
+                          required
                         />
-                        {fieldErr['ready_at'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>}
+                        {fieldErr['ready_at'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>
+                        )}
                       </div>
                     </div>
                   </section>

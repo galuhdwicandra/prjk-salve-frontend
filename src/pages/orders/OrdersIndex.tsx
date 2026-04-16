@@ -87,6 +87,11 @@ const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = ['PENDING', 'DP', 'CASH', 'QRIS'
 type SortBy = 'created_at' | 'received_at' | 'ready_at';
 type SortDir = 'asc' | 'desc';
 
+function formatDateOnly(v?: string | null): string {
+  if (!v) return '-';
+  return String(v).slice(0, 10);
+}
+
 export default function OrdersIndex(): React.ReactElement {
   const [rows, setRows] = useState<Order[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -617,6 +622,8 @@ export default function OrdersIndex(): React.ReactElement {
                   <Th>Nomor</Th>
                   <Th>Customer</Th>
                   <Th>Catatan</Th>
+                  <Th>Tanggal Masuk</Th>
+                  <Th>Tanggal Selesai</Th>
                   <Th>Status Order</Th>
                   <Th>Status Bayar</Th>
                   <Th>Metode Bayar</Th>
@@ -655,6 +662,14 @@ export default function OrdersIndex(): React.ReactElement {
                       <div className="text-slate-600 text-xs line-clamp-2 whitespace-pre-line">
                         {o.notes && o.notes.trim() !== '' ? o.notes : '-'}
                       </div>
+                    </Td>
+
+                    <Td className="text-slate-700">
+                      {formatDateOnly(o.received_at)}
+                    </Td>
+
+                    <Td className="text-slate-700">
+                      {formatDateOnly(o.ready_at)}
                     </Td>
 
                     <Td>

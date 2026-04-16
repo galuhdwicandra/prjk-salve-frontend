@@ -380,18 +380,19 @@ export default function POSPage() {
     const d = new Date();
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
   };
-  const [receivedAt, setReceivedAt] = useState<string>(() => nowLocal());
-  const [readyAt, setReadyAt] = useState<string | null>(null);
+  const [receivedAt, setReceivedAt] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
+  const [readyAt, setReadyAt] = useState<string>('');
 
-  function toLocalInputValue(v?: string | null): string {
+  function toDateInputValue(v?: string | null): string {
     if (!v) return '';
-    const s = String(v).trim();
-    if (s.includes('T')) return s.replace('Z', '').slice(0, 16);
-    return s.replace(' ', 'T').slice(0, 16);
+    return String(v).slice(0, 10);
   }
-  function fromLocalInputValue(v: string): string | null {
-    if (!v) return null;
-    return v.trim().replace('T', ' ') + ':00';
+
+  function fromDateInputValue(v: string): string {
+    return v.trim();
   }
 
   const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
@@ -424,12 +425,14 @@ export default function POSPage() {
 
   const parseForCompare = (s?: string | null) => {
     if (!s) return NaN;
-    const t = s.includes('T') ? s : s.replace(' ', 'T');
-    return Date.parse(t);
+    return Date.parse(`${s}T00:00:00`);
   };
+
   const dateErr = useMemo(() => {
-    if (!readyAt) return null;
-    return parseForCompare(readyAt) >= parseForCompare(receivedAt) ? null : 'Tanggal selesai harus ≥ tanggal masuk.';
+    if (!receivedAt || !readyAt) return null;
+    return parseForCompare(readyAt) >= parseForCompare(receivedAt)
+      ? null
+      : 'Tanggal selesai harus ≥ tanggal masuk.';
   }, [receivedAt, readyAt]);
 
   // logs
@@ -476,7 +479,15 @@ export default function POSPage() {
       errors.customer_id = ['Pelanggan wajib dipilih.'];
     }
 
-    if (dateErr) {
+    if (!receivedAt) {
+      errors.received_at = ['Tanggal masuk wajib diisi.'];
+    }
+
+    if (!readyAt) {
+      errors.ready_at = ['Tanggal selesai wajib diisi.'];
+    }
+
+    if (receivedAt && readyAt && dateErr) {
       errors.ready_at = [dateErr];
     }
 
@@ -511,11 +522,15 @@ export default function POSPage() {
     try {
       const payload: OrderCreatePayload = {
         customer_id: customerId,
-        items: items.map((it) => ({ service_id: it.service_id, qty: it.qty, note: it.note ?? null })),
+        items: items.map((it) => ({
+          service_id: it.service_id,
+          qty: it.qty,
+          note: it.note ?? null,
+        })),
         discount: discount || 0,
         notes: notes || null,
-        received_at: receivedAt || null,
-        ready_at: readyAt || null,
+        received_at: receivedAt,
+        ready_at: readyAt,
       };
       dlog('createOrder payload', payload);
       const res = await createOrder(payload);
@@ -678,21 +693,31 @@ export default function POSPage() {
                   {/* Dates */}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Tanggal Masuk</label>
+                      <label className="text-xs font-medium text-slate-700">
+                        Tanggal Masuk <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         id="received_at"
-                        type="datetime-local"
-                        value={toLocalInputValue(receivedAt)}
-                        onChange={(e) => setReceivedAt(fromLocalInputValue(e.target.value) || nowLocal())}
+                        type="date"
+                        value={toDateInputValue(receivedAt)}
+                        onChange={(e) => setReceivedAt(fromDateInputValue(e.target.value))}
+                        required
                       />
+                      {fieldErrors.received_at?.[0] && (
+                        <div className="text-[11px] text-red-600">{fieldErrors.received_at[0]}</div>
+                      )}
                     </div>
+
                     <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Tanggal Selesai (opsional)</label>
+                      <label className="text-xs font-medium text-slate-700">
+                        Tanggal Selesai <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         id="ready_at"
-                        type="datetime-local"
-                        value={toLocalInputValue(readyAt)}
-                        onChange={(e) => setReadyAt(fromLocalInputValue(e.target.value))}
+                        type="date"
+                        value={toDateInputValue(readyAt)}
+                        onChange={(e) => setReadyAt(fromDateInputValue(e.target.value))}
+                        required
                       />
                       {dateErr && <div className="text-[11px] text-red-600">{dateErr}</div>}
                       {fieldErrors.ready_at?.[0] && !dateErr && (
