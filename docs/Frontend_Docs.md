@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-17 10:46:27_  
+_Dihasilkan otomatis: 2026-04-17 11:16:43_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -2873,7 +2873,7 @@ export interface DashboardSummaryMeta {
 
 ### src\types\deliveries.ts
 
-- SHA: `b2b468d2a0d9`  
+- SHA: `a06a2a40bad9`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2882,84 +2882,99 @@ export interface DashboardSummaryMeta {
 export type DeliveryType = 'pickup' | 'delivery' | 'return';
 
 export type DeliveryStatus =
-  | 'CREATED'
-  | 'ASSIGNED'
-  | 'ON_THE_WAY'
-  | 'PICKED'
-  | 'HANDOVER'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'CANCELLED';
+    | 'CREATED'
+    | 'ASSIGNED'
+    | 'ON_THE_WAY'
+    | 'PICKED'
+    | 'HANDOVER'
+    | 'COMPLETED'
+    | 'FAILED'
+    | 'CANCELLED';
 
 export interface Delivery {
-  id: string;
-  order_id: string;
-  type: string;
-  zone_id: string | null;
-  fee: number;
-  assigned_to: string | number | null;
-  auto_assigned: boolean;
-  status: DeliveryStatus;
-  handover_photo?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+    id: string;
+    order_id: string;
+    type: string;
+    zone_id: string | null;
+    fee: number;
+    assigned_to: string | number | null;
+    auto_assigned: boolean;
+    status: DeliveryStatus;
+    handover_photo?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+
+    order_invoice_no?: string | null;
+    order_number?: string | null;
+
+    courier?: {
+        id: string | number;
+        name: string;
+    } | null;
+
+    customer?: {
+        id: string;
+        name: string;
+        whatsapp?: string | null;
+        address?: string | null;
+    } | null;
 }
 
 export interface DeliveryEvent {
-  id: string;
-  delivery_id: string;
-  status: DeliveryStatus;
-  note: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+    id: string;
+    delivery_id: string;
+    status: DeliveryStatus;
+    note: string | null;
+    created_at: string | null;
+    updated_at: string | null;
 }
 
 export interface DeliveryCreatePayload {
-  order_id: string;
-  type: DeliveryType | string;
-  zone_id?: string | null;
-  fee?: number;
+    order_id: string;
+    type: DeliveryType | string;
+    zone_id?: string | null;
+    fee?: number;
 }
 
 export interface DeliveryAssignPayload {
-  user_id: string | number;
+    user_id: string | number;
 }
 
 export interface DeliveryStatusPayload {
-  status: DeliveryStatus;
-  note?: string | null;
-  /** Optional; hanya diperlukan saat HANDOVER */
-  photo?: File | null;
+    status: DeliveryStatus;
+    note?: string | null;
+    /** Optional; hanya diperlukan saat HANDOVER */
+    photo?: File | null;
 }
 
 export interface DeliveryQuery {
-  q?: string;
-  status?: DeliveryStatus;
-  courier_id?: string | number;
-  page?: number;
-  per_page?: number;
-  branch_id?: string;
+    q?: string;
+    status?: DeliveryStatus;
+    courier_id?: string | number;
+    page?: number;
+    per_page?: number;
+    branch_id?: string;
 }
 
 export interface PaginationMeta {
-  current_page: number;
-  per_page: number;
-  total: number;
-  last_page: number;
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
 }
 
 export interface Paginated<T> {
-  data: T[];
-  meta: PaginationMeta;
-  message: string;
-  errors: Record<string, string[] | string> | null;
+    data: T[];
+    meta: PaginationMeta;
+    message: string;
+    errors: Record<string, string[] | string> | null;
 }
 
 export interface SingleResponse<T> {
-  data: T | null;
-  meta: Record<string, unknown> | null;
-  message: string;
-  errors: Record<string, string[] | string> | null;
+    data: T | null;
+    meta: Record<string, unknown> | null;
+    message: string;
+    errors: Record<string, string[] | string> | null;
 }
 
 ```
@@ -10906,8 +10921,8 @@ function statusChipClass(s: DeliveryStatus) {
 
 ### src\pages\deliveries\DeliveryIndex.tsx
 
-- SHA: `a02d5c48bbb4`  
-- Ukuran: 13 KB
+- SHA: `f05c3e9a027d`  
+- Ukuran: 18 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -10934,6 +10949,16 @@ const STATUSES: DeliveryStatus[] = [
 
 const FLOW: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'ON_THE_WAY', 'PICKED', 'HANDOVER', 'COMPLETED'];
 const TERMINALS = new Set<DeliveryStatus>(['COMPLETED', 'FAILED', 'CANCELLED']);
+
+const canGoPrev = (status: DeliveryStatus) => {
+  const i = FLOW.indexOf(status);
+  return i > 0 && !TERMINALS.has(status);
+};
+
+const canGoNext = (status: DeliveryStatus) => {
+  const i = FLOW.indexOf(status);
+  return i >= 0 && i < FLOW.length - 1 && !TERMINALS.has(status);
+};
 
 /* eslint-disable no-console */
 const TAG = '[DeliveryIndex]';
@@ -11050,12 +11075,81 @@ export default function DeliveryIndex() {
     }
   }, [canUpdate, load]);
 
+  const retreat = useCallback(async (d: Delivery) => {
+    dbg.group('retreat');
+    dbg.log('attempt', { delivery_id: d.id, from: d.status, canUpdate });
+
+    try {
+      if (!canUpdate) {
+        dbg.warn('blocked: no permission to update status');
+        return;
+      }
+
+      // status terminal tidak boleh dimundurkan dari tabel list
+      if (TERMINALS.has(d.status)) {
+        dbg.warn('no-op: terminal status');
+        return;
+      }
+
+      const i = FLOW.indexOf(d.status);
+      if (i <= 0) {
+        dbg.warn('no-op: already at first flow status');
+        return;
+      }
+
+      const prev = FLOW[i - 1];
+      dbg.log('computed prev', { prev, index: i });
+
+      if (prev !== d.status) {
+        await updateDeliveryStatus(d.id, { status: prev });
+        dbg.log('status reverted → reload');
+        await load();
+      } else {
+        dbg.warn('no-op: same status');
+      }
+    } catch (e) {
+      dbg.err('retreat error:', e);
+    } finally {
+      dbg.groupEnd();
+    }
+  }, [canUpdate, load]);
+
   // helper
   type DeliveryWithOrderRef = Delivery & { order_invoice_no?: string | null; order_number?: string | null; };
   const getOrderLabel = (d: Delivery): string => {
     const dx = d as DeliveryWithOrderRef;
     const cached = orderMap[d.order_id];
     return cached?.invoice_no ?? cached?.number ?? dx.order_invoice_no ?? dx.order_number ?? d.order_id;
+  };
+
+  const normalizeWhatsApp = (phone?: string | null): string => {
+    const raw = String(phone ?? '').trim();
+    if (!raw) return '';
+
+    const digits = raw.replace(/[^\d]/g, '');
+    if (!digits) return '';
+
+    if (digits.startsWith('0')) {
+      return `62${digits.slice(1)}`;
+    }
+
+    if (digits.startsWith('62')) {
+      return digits;
+    }
+
+    return digits;
+  };
+
+  const getWhatsappUrl = (phone?: string | null): string | null => {
+    const normalized = normalizeWhatsApp(phone);
+    if (!normalized) return null;
+    return `https://wa.me/${normalized}`;
+  };
+
+  const getMapsUrl = (address?: string | null): string | null => {
+    const raw = String(address ?? '').trim();
+    if (!raw) return null;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(raw)}`;
   };
 
   return (
@@ -11128,6 +11222,9 @@ export default function DeliveryIndex() {
                 <tr className="divide-x divide-[color:var(--color-border)]">
                   <Th>ID</Th>
                   <Th>Order</Th>
+                  <Th>Pelanggan</Th>
+                  <Th>Alamat</Th>
+                  <Th>WhatsApp</Th>
                   <Th>Tipe</Th>
                   <Th className="text-right">Fee</Th>
                   <Th>Kurir</Th>
@@ -11149,15 +11246,59 @@ export default function DeliveryIndex() {
                   rows.map((r) => (
                     <tr key={r.id} className="hover:bg-black/5 transition-colors">
                       <Td><span className="font-mono">{r.id}</span></Td>
+
                       <Td>
                         <Link className="underline" to={`/orders/${r.order_id}`}>
                           {getOrderLabel(r)}
                         </Link>
                       </Td>
+
+                      <Td>
+                        {r.customer?.name ? (
+                          <span className="font-medium">{r.customer.name}</span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </Td>
+
+                      <Td className="max-w-[260px]">
+                        {r.customer?.address ? (
+                          <a
+                            href={getMapsUrl(r.customer.address) ?? '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 underline underline-offset-2 hover:text-blue-700 break-words"
+                            title="Buka alamat di Google Maps"
+                          >
+                            {r.customer.address}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </Td>
+
+                      <Td>
+                        {r.customer?.whatsapp ? (
+                          <a
+                            href={getWhatsappUrl(r.customer.whatsapp) ?? '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 underline underline-offset-2 hover:text-green-700"
+                            title="Chat WhatsApp pelanggan"
+                          >
+                            {r.customer.whatsapp}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </Td>
+
                       <Td>{r.type}</Td>
+
                       <Td className="text-right">
                         {Number(r.fee).toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                       </Td>
+
                       <Td>
                         <AssignCourierSelect
                           value={r.assigned_to ?? null}
@@ -11165,20 +11306,33 @@ export default function DeliveryIndex() {
                           disabled={!canAssign}
                         />
                       </Td>
+
                       <Td>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={chipClass(r.status)}>{r.status}</span>
+
+                          <button
+                            type="button"
+                            className="btn-outline text-xs px-2 py-1"
+                            onClick={() => void retreat(r)}
+                            disabled={!canUpdate || !canGoPrev(r.status)}
+                            title="Mundurkan status"
+                          >
+                            Prev
+                          </button>
+
                           <button
                             type="button"
                             className="btn-outline text-xs px-2 py-1"
                             onClick={() => void advance(r)}
-                            disabled={!canUpdate || TERMINALS.has(r.status)}
+                            disabled={!canUpdate || !canGoNext(r.status)}
                             title="Majukan status"
                           >
                             Next
                           </button>
                         </div>
                       </Td>
+
                       <Td>{r.created_at}</Td>
                     </tr>
                   ))
@@ -11208,6 +11362,9 @@ function RowSkeleton() {
     <tr>
       <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-52 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-32 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3 text-right"><div className="inline-block h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3"><div className="h-8 w-36 rounded bg-black/10 animate-pulse" /></td>
