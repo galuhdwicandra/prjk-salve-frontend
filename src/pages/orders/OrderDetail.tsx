@@ -1,5 +1,5 @@
 // src/pages/orders/OrderDetail.tsx
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getOrder,
   updateOrderStatus,
@@ -58,6 +58,28 @@ function toDateInputValue(v?: string | null): string {
 function fromDateInputValue(v: string): string | null {
   const s = v.trim();
   return s ? s : null;
+}
+
+function parseConsumerGoodsNotes(notes?: string | null): string[] {
+  if (!notes || !notes.trim()) return [''];
+
+  const rows = notes
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.replace(/^\d+\.\s*/, '').trim());
+
+  return rows.length > 0 ? rows : [''];
+}
+
+function buildConsumerGoodsNotes(rows: string[]): string | null {
+  const cleaned = rows
+    .map((row) => row.trim())
+    .filter((row) => row.length > 0);
+
+  if (cleaned.length === 0) return null;
+
+  return cleaned.map((row, index) => `${index + 1}. ${row}`).join('\n');
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
@@ -142,6 +164,7 @@ export default function OrderDetail(): React.ReactElement {
   const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
 
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
+  const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   // Delivery UI
   const [deliveryOpen, setDeliveryOpen] = useState(false);
@@ -207,6 +230,7 @@ export default function OrderDetail(): React.ReactElement {
 
   useEffect(() => {
     if (!row) return;
+
     setDraft({
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
@@ -221,6 +245,8 @@ export default function OrderDetail(): React.ReactElement {
         note: it.note ?? null,
       })),
     });
+
+    setNoteRows(parseConsumerGoodsNotes(row.notes));
   }, [row]);
 
   const changeQty = useCallback((serviceId: string, qty: number) => {
@@ -253,6 +279,25 @@ export default function OrderDetail(): React.ReactElement {
       };
     });
   }, []);
+
+  const onChangeNoteRow = useCallback((index: number, value: string) => {
+    setNoteRows((prev) => prev.map((row, i) => (i === index ? value : row)));
+  }, []);
+
+  const onAddNoteRow = useCallback(() => {
+    setNoteRows((prev) => [...prev, '']);
+  }, []);
+
+  const onRemoveNoteRow = useCallback((index: number) => {
+    setNoteRows((prev) => {
+      if (prev.length === 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  const consumerGoodsPreview = useMemo(() => {
+    return buildConsumerGoodsNotes(noteRows);
+  }, [noteRows]);
 
   const onTransit = useCallback(async (next: OrderBackendStatus) => {
     if (!id) return;
@@ -539,7 +584,11 @@ export default function OrderDetail(): React.ReactElement {
                     <button
                       type="button"
                       className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                      onClick={() => { setIsEditing(false); setFieldErr({}); }}
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFieldErr({});
+                        setNoteRows(parseConsumerGoodsNotes(row?.notes ?? null));
+                      }}
                       title="Batalkan perubahan"
                     >
                       Batal
@@ -554,7 +603,7 @@ export default function OrderDetail(): React.ReactElement {
                         try {
                           const payload: OrderUpdatePayload = {
                             customer_id: draft.customer_id ?? null,
-                            notes: (draft.notes ?? '') || null,
+                            notes: buildConsumerGoodsNotes(noteRows),
                             items: draft.items.map(it => ({
                               service_id: it.service_id,
                               qty: it.qty,
@@ -633,9 +682,12 @@ export default function OrderDetail(): React.ReactElement {
               </div>
             </div>
 
-            {/* Catatan order */}
+            {/* Catatan barang konsumen */}
             <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-              <div className="text-sm font-semibold text-slate-900">Catatan Pesanan</div>
+              <div className="text-sm font-semibold text-slate-900">Catatan Barang Konsumen</div>
+              <div className="mt-1 text-xs text-slate-500">
+                Daftar barang atau atribut milik konsumen yang dicatat saat order dibuat.
+              </div>
               <div className="mt-2 text-sm leading-6 text-slate-600 whitespace-pre-line">
                 {row.notes && row.notes.trim() !== '' ? row.notes : '-'}
               </div>
@@ -650,7 +702,9 @@ export default function OrderDetail(): React.ReactElement {
                   <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
                     <div className="mb-3 flex items-center justify-between">
                       <div className="text-sm font-semibold text-slate-900">Edit Order</div>
-                      <div className="text-xs text-slate-500">Perubahan akan disimpan setelah klik “Simpan”.</div>
+                      <div className="text-xs text-slate-500">
+                        Perubahan data order, termasuk catatan barang konsumen, akan disimpan setelah klik “Simpan”.
+                      </div>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
@@ -665,19 +719,71 @@ export default function OrderDetail(): React.ReactElement {
                         {fieldErr['customer_id'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>}
                       </div>
 
-                      <div>
-                        <div className="text-xs font-semibold text-slate-600">Catatan</div>
-                        <textarea
-                          className="
-                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                          placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
-                        "
-                          placeholder="Catatan order (opsional)"
-                          value={draft.notes ?? ''}
-                          onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
-                          disabled={!canEdit}
-                        />
-                        {fieldErr['notes'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>}
+                      <div className="md:col-span-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Catatan Barang Konsumen
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={onAddNoteRow}
+                            disabled={!canEdit}
+                            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            + Tambah Catatan
+                          </button>
+                        </div>
+
+                        <div className="mt-2 space-y-2">
+                          {noteRows.map((noteRow, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
+                                {index + 1}
+                              </div>
+
+                              <input
+                                type="text"
+                                value={noteRow}
+                                onChange={(e) => onChangeNoteRow(index, e.target.value)}
+                                placeholder={`Isi catatan barang #${index + 1}`}
+                                disabled={!canEdit}
+                                className="
+            h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
+            placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+            disabled:cursor-not-allowed disabled:bg-slate-50
+          "
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() => onRemoveNoteRow(index)}
+                                disabled={!canEdit || (noteRows.length === 1 && !noteRows[0].trim())}
+                                className="inline-flex h-10 shrink-0 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                title="Hapus catatan"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-2 text-[11px] text-slate-500">
+                          Setiap catatan akan otomatis diberi nomor saat order disimpan, sama seperti di modul POS.
+                        </div>
+
+                        {fieldErr['notes'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>
+                        )}
+
+                        <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Preview tersimpan
+                          </div>
+                          <div className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                            {consumerGoodsPreview ?? '-'}
+                          </div>
+                        </div>
                       </div>
 
                       <div>
@@ -688,9 +794,9 @@ export default function OrderDetail(): React.ReactElement {
                           id="received_at"
                           type="date"
                           className="
-      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-      focus:border-slate-900 focus:outline-none
-    "
+                            mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                            focus:border-slate-900 focus:outline-none
+                          "
                           value={toDateInputValue(draft.received_at ?? null)}
                           onChange={(e) => setDraft(d => ({ ...d, received_at: fromDateInputValue(e.target.value) }))}
                           disabled={!canEdit}

@@ -1,5 +1,5 @@
 // src/pages/pos/POSPage.tsx
-import React, { useEffect, useMemo, useState, useRef, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import ProductSearch from '../../components/pos/ProductSearch';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
 import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
@@ -291,7 +291,7 @@ export default function POSPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<string>('');
   const [discount, setDiscount] = useState<number>(0);
-  const [notes, setNotes] = useState<string>('');
+  const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -442,7 +442,7 @@ export default function POSPage() {
   }, []);
   useEffect(() => { dlog('items changed', items); }, [items]);
   useEffect(() => { dlog('discount changed', discount); }, [discount]);
-  useEffect(() => { dlog('notes changed', notes); }, [notes]);
+  useEffect(() => { dlog('noteRows changed', noteRows); }, [noteRows]);
   useEffect(() => { dlog('totals', { subtotal, grand }); }, [subtotal, grand]);
 
   // cart ops
@@ -463,6 +463,31 @@ export default function POSPage() {
   const onChangeQty = (id: string, qty: number) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, qty } : p)));
   const onChangeNote = (id: string, note: string) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, note } : p)));
   const onRemove = (id: string) => setItems((prev) => prev.filter((p) => p.service_id !== id));
+
+  const onChangeNoteRow = (index: number, value: string) => {
+    setNoteRows((prev) => prev.map((row, i) => (i === index ? value : row)));
+  };
+
+  const onAddNoteRow = () => {
+    setNoteRows((prev) => [...prev, '']);
+  };
+
+  const onRemoveNoteRow = (index: number) => {
+    setNoteRows((prev) => {
+      if (prev.length === 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  function buildConsumerGoodsNotes(rows: string[]): string | null {
+    const cleaned = rows
+      .map((row) => row.trim())
+      .filter((row) => row.length > 0);
+
+    if (cleaned.length === 0) return null;
+
+    return cleaned.map((row, index) => `${index + 1}. ${row}`).join('\n');
+  }
 
   function validatePosForm(): FieldErrors {
     const errors: FieldErrors = {};
@@ -528,7 +553,7 @@ export default function POSPage() {
           note: it.note ?? null,
         })),
         discount: discount || 0,
-        notes: notes || null,
+        notes: buildConsumerGoodsNotes(noteRows),
         received_at: receivedAt,
         ready_at: readyAt,
       };
@@ -748,7 +773,7 @@ export default function POSPage() {
                     )}
                   </div>
 
-                  {/* Discount + notes */}
+                  {/* Discount */}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-1">
                       <label className="text-xs font-medium text-slate-700">Diskon (Rp)</label>
@@ -760,24 +785,59 @@ export default function POSPage() {
                         onChange={(e) => setDiscount(Number(e.target.value) || 0)}
                       />
                     </div>
-                    <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Catatan (opsional)</label>
-                      <Input
-                        placeholder="Mis. warna, kondisi, permintaan khusus…"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
                   </div>
 
-                  <div className="grid gap-1">
-                    <label className="text-xs font-medium text-slate-700">Catatan Tambahan (lebih panjang)</label>
-                    <Textarea
-                      className="min-h-[92px]"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Tulis catatan detail jika diperlukan…"
-                    />
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-medium text-slate-700">
+                        Catatan Barang Konsumen
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={onAddNoteRow}
+                        className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        + Tambah Catatan
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {noteRows.map((row, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
+                            {index + 1}
+                          </div>
+
+                          <Input
+                            value={row}
+                            onChange={(e) => onChangeNoteRow(index, e.target.value)}
+                            placeholder={`Isi catatan barang #${index + 1}`}
+                            className="flex-1"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => onRemoveNoteRow(index)}
+                            className="inline-flex h-10 shrink-0 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100"
+                            disabled={noteRows.length === 1 && !noteRows[0].trim()}
+                            title="Hapus catatan"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-[11px] text-slate-500">
+                      Setiap catatan akan otomatis diberi nomor saat transaksi disimpan.
+                    </div>
+
+                    {fieldErrors.notes?.[0] && (
+                      <div className="text-xs text-red-600">
+                        {fieldErrors.notes[0]}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>

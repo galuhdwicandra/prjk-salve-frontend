@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-16 18:34:41_  
+_Dihasilkan otomatis: 2026-04-17 10:46:27_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -169,7 +169,7 @@ export async function deleteBranch(id: string) {
 
 ### src\api\cashSessions.ts
 
-- SHA: `4b1effff5c80`  
+- SHA: `bd7b3b6c8ca9`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -182,6 +182,7 @@ import type {
   Envelope,
   PaginationMeta,
   OpenCashSessionPayload,
+  UpdateCashSessionPayload,
   CloseCashSessionPayload,
   WithdrawalPayload,
 } from '../types/cash';
@@ -198,6 +199,14 @@ export async function getCashSession(id: string) {
 
 export async function openCashSession(payload: OpenCashSessionPayload) {
   const { data } = await api.post<Envelope<CashSession, null>>('/cash-sessions/open', payload);
+  return data;
+}
+
+export async function updateCashSession(id: string, payload: UpdateCashSessionPayload) {
+  const { data } = await api.put<Envelope<CashSession, { system_closing: number }>>(
+    `/cash-sessions/${encodeURIComponent(id)}`,
+    payload
+  );
   return data;
 }
 
@@ -2619,7 +2628,7 @@ export interface InvoiceCounterQuery {
 
 ### src\types\cash.ts
 
-- SHA: `59229da9edcb`  
+- SHA: `88c6b311256a`  
 - Ukuran: 2 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2693,6 +2702,11 @@ export interface Envelope<T, M = unknown> {
 export interface OpenCashSessionPayload {
   branch_id?: string;
   business_date: string;
+  opening_cash: number;
+  notes?: string | null;
+}
+
+export interface UpdateCashSessionPayload {
   opening_cash: number;
   notes?: string | null;
 }
@@ -7591,19 +7605,70 @@ function RowSkeleton() {
 
 ### src\pages\cash\CashSessionsIndex.tsx
 
-- SHA: `06ea356693e0`  
-- Ukuran: 8 KB
+- SHA: `ee10cc55c03f`  
+- Ukuran: 33 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
-import { useCallback, useEffect, useState } from 'react';
-import { listCashSessions, openCashSession, closeCashSession, createCashWithdrawal, getCashSession } from '../../api/cashSessions';
-import type { CashSession } from '../../types/cash';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  listCashSessions,
+  openCashSession,
+  closeCashSession,
+  createCashWithdrawal,
+  getCashSession,
+} from '../../api/cashSessions';
+import { getErrorMessage } from '../../api/client';
+import type { CashSession, CashMutation } from '../../types/cash';
 import { listBranches } from '../../api/branches';
 import { useAuth } from '../../store/useAuth';
 
-function toIDR(n: number) {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
+function toIDR(n: number | string | null | undefined) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(Number(n || 0));
+}
+
+function toLocalDate(value?: string | null) {
+  if (!value) return '-';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function toLocalDateTime(value?: string | null) {
+  if (!value) return '-';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function getStatusTone(status?: string | null) {
+  if (status === 'OPEN') {
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  }
+  if (status === 'CLOSED') {
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  }
+  return 'bg-amber-50 text-amber-700 border-amber-200';
+}
+
+function getMutationTone(mutation: CashMutation) {
+  if (mutation.direction === 'IN') {
+    return 'text-emerald-700';
+  }
+  return 'text-rose-700';
 }
 
 export default function CashSessionsIndex() {
@@ -7617,11 +7682,22 @@ export default function CashSessionsIndex() {
 
   const [openDate, setOpenDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [openingCash, setOpeningCash] = useState<number>(0);
+  const [openNotes, setOpenNotes] = useState('');
 
   const [selected, setSelected] = useState<CashSession | null>(null);
+  const [selectedSystemClosing, setSelectedSystemClosing] = useState<number>(0);
   const [closingCash, setClosingCash] = useState<number>(0);
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [withdrawNote, setWithdrawNote] = useState('');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [submittingOpen, setSubmittingOpen] = useState(false);
+  const [submittingClose, setSubmittingClose] = useState(false);
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
+
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -7631,6 +7707,8 @@ export default function CashSessionsIndex() {
         per_page: 50,
       });
       setRows(res.data ?? []);
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal memuat daftar sesi kas.'));
     } finally {
       setLoading(false);
     }
@@ -7642,6 +7720,7 @@ export default function CashSessionsIndex() {
 
   useEffect(() => {
     if (!isSuperadmin) return;
+
     listBranches({ per_page: 100 })
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : [];
@@ -7650,157 +7729,685 @@ export default function CashSessionsIndex() {
       .catch(() => {});
   }, [isSuperadmin]);
 
+  const summary = useMemo(() => {
+    const totalSessions = rows.length;
+    const openSessions = rows.filter((row) => row.status === 'OPEN').length;
+    const closedSessions = rows.filter((row) => row.status === 'CLOSED').length;
+    const totalOpeningCash = rows.reduce((acc, row) => acc + Number(row.opening_cash ?? 0), 0);
+
+    return {
+      totalSessions,
+      openSessions,
+      closedSessions,
+      totalOpeningCash,
+    };
+  }, [rows]);
+
   const onOpen = async () => {
-    await openCashSession({
-      branch_id: isSuperadmin ? (branchId || undefined) : undefined,
-      business_date: openDate,
-      opening_cash: Number(openingCash),
-    });
-    await load();
+    setErrorMsg('');
+    setSuccessMsg('');
+    setSubmittingOpen(true);
+
+    try {
+      await openCashSession({
+        branch_id: isSuperadmin ? (branchId || undefined) : undefined,
+        business_date: openDate,
+        opening_cash: Number(openingCash),
+        notes: openNotes || null,
+      });
+
+      setOpeningCash(0);
+      setOpenNotes('');
+      setSuccessMsg('Sesi kas berhasil dibuka.');
+      await load();
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal membuka sesi kas.'));
+    } finally {
+      setSubmittingOpen(false);
+    }
   };
 
   const onSelect = async (id: string) => {
-    const res = await getCashSession(id);
-    setSelected(res.data ?? null);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setDetailLoading(true);
+
+    try {
+      const res = await getCashSession(id);
+      const next = res.data ?? null;
+
+      setSelected(next);
+      setSelectedSystemClosing(Number(res.meta?.system_closing ?? 0));
+      setClosingCash(Number(next?.closing_cash_counted ?? 0));
+      setWithdrawAmount(0);
+      setWithdrawNote('');
+      setIsModalOpen(true);
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal mengambil detail sesi kas.'));
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const onClose = async () => {
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelected(null);
+    setSelectedSystemClosing(0);
+    setClosingCash(0);
+    setWithdrawAmount(0);
+    setWithdrawNote('');
+  };
+
+  const onCloseSession = async () => {
     if (!selected) return;
-    await closeCashSession(selected.id, {
-      closing_cash_counted: Number(closingCash),
-    });
-    await onSelect(selected.id);
-    await load();
+
+    setErrorMsg('');
+    setSuccessMsg('');
+    setSubmittingClose(true);
+
+    try {
+      await closeCashSession(selected.id, {
+        closing_cash_counted: Number(closingCash),
+        notes: selected.notes || null,
+      });
+
+      setSuccessMsg('Sesi kas berhasil ditutup.');
+      await load();
+      closeModal();
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal menutup sesi kas.'));
+    } finally {
+      setSubmittingClose(false);
+    }
   };
 
   const onWithdraw = async () => {
     if (!selected) return;
-    await createCashWithdrawal(selected.id, {
-      amount: Number(withdrawAmount),
-      note: withdrawNote || null,
-    });
-    setWithdrawAmount(0);
-    setWithdrawNote('');
-    await onSelect(selected.id);
-    await load();
+
+    setErrorMsg('');
+    setSuccessMsg('');
+    setSubmittingWithdraw(true);
+
+    try {
+      await createCashWithdrawal(selected.id, {
+        amount: Number(withdrawAmount),
+        note: withdrawNote || null,
+      });
+
+      setWithdrawAmount(0);
+      setWithdrawNote('');
+      setSuccessMsg('Withdrawal berhasil disimpan.');
+
+      await onSelect(selected.id);
+      await load();
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal menyimpan withdrawal.'));
+    } finally {
+      setSubmittingWithdraw(false);
+    }
   };
+
+  const differenceAmount =
+    Number(selected?.closing_cash_counted ?? closingCash ?? 0) - Number(selectedSystemClosing ?? 0);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Cash Box</h1>
-        <p className="text-sm text-slate-500">Buka/tutup sesi kas harian dan lihat ledger kas fisik.</p>
-      </div>
-
-      <section className="rounded-xl border p-4 space-y-3">
-        <h2 className="font-semibold">Buka Sesi Kas</h2>
-
-        {isSuperadmin && (
-          <select className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-            <option value="">-- Pilih Cabang --</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        )}
-
-        <div className="grid md:grid-cols-3 gap-3">
-          <input className="input" type="date" value={openDate} onChange={(e) => setOpenDate(e.target.value)} />
-          <input className="input" type="number" value={openingCash} onChange={(e) => setOpeningCash(Number(e.target.value))} placeholder="Modal awal" />
-          <button className="btn" onClick={onOpen}>Buka Sesi</button>
-        </div>
-      </section>
-
-      <section className="rounded-xl border p-4">
-        <h2 className="font-semibold mb-3">Daftar Sesi</h2>
-
-        {loading ? (
-          <div>Memuat…</div>
-        ) : (
-          <div className="overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="text-left p-2">Tanggal</th>
-                  <th className="text-left p-2">Cabang</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-right p-2">Modal Awal</th>
-                  <th className="text-right p-2">Selisih</th>
-                  <th className="text-right p-2">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-t">
-                    <td className="p-2">{r.business_date}</td>
-                    <td className="p-2">{r.branch?.name ?? r.branch_id}</td>
-                    <td className="p-2">{r.status}</td>
-                    <td className="p-2 text-right">{toIDR(Number(r.opening_cash))}</td>
-                    <td className="p-2 text-right">{toIDR(Number(r.difference_amount ?? 0))}</td>
-                    <td className="p-2 text-right">
-                      <button className="btn-outline" onClick={() => onSelect(r.id)}>Detail</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {selected && (
-        <section className="rounded-xl border p-4 space-y-4">
+      <section className="relative overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              'radial-gradient(720px 260px at 0% 0%, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.00) 60%), radial-gradient(520px 220px at 100% 20%, rgba(6,182,212,0.08) 0%, rgba(6,182,212,0.00) 55%)',
+          }}
+        />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="font-semibold">Detail Sesi</h2>
-            <p className="text-sm text-slate-500">
-              {selected.business_date} · {selected.branch?.name ?? selected.branch_id} · {selected.status}
+            <div className="inline-flex items-center rounded-full border border-[color:var(--color-border)] bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-text-muted)]">
+              Cash Management
+            </div>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--color-text-default)]">
+              Cash Box
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-[color:var(--color-text-muted)]">
+              Kelola pembukaan sesi kas, penarikan dana, penutupan kas, dan pantau mutasi kas fisik per cabang.
             </p>
           </div>
 
-          {selected.status === 'OPEN' && (
-            <>
-              <div className="grid md:grid-cols-2 gap-3">
-                <input className="input" type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(Number(e.target.value))} placeholder="Nominal penarikan" />
-                <input className="input" value={withdrawNote} onChange={(e) => setWithdrawNote(e.target.value)} placeholder="Catatan penarikan" />
-              </div>
-              <button className="btn-outline" onClick={onWithdraw}>Simpan Withdrawal</button>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SummaryCard label="Total Sesi" value={String(summary.totalSessions)} />
+            <SummaryCard label="Masih Buka" value={String(summary.openSessions)} />
+            <SummaryCard label="Sudah Tutup" value={String(summary.closedSessions)} />
+            <SummaryCard label="Total Kas Awal" value={toIDR(summary.totalOpeningCash)} />
+          </div>
+        </div>
+      </section>
 
-              <div className="grid md:grid-cols-2 gap-3">
-                <input className="input" type="number" value={closingCash} onChange={(e) => setClosingCash(Number(e.target.value))} placeholder="Saldo fisik saat tutup" />
-                <button className="btn" onClick={onClose}>Tutup Sesi</button>
-              </div>
-            </>
-          )}
+      {errorMsg ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      ) : null}
 
-          <div className="overflow-auto">
+      {successMsg ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {successMsg}
+        </div>
+      ) : null}
+
+      <section className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+        <div className="mb-4 flex flex-col gap-1">
+          <h2 className="text-lg font-semibold text-[color:var(--color-text-default)]">Buka Sesi Kas</h2>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Buat sesi kas baru untuk tanggal operasional yang dipilih.
+          </p>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
+          <div className="grid gap-4 md:grid-cols-2">
+            {isSuperadmin ? (
+              <label className="space-y-2">
+                <span className="text-xs font-medium text-[color:var(--color-text-muted)]">Cabang</span>
+                <select
+                  className="input"
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                >
+                  <option value="">-- Pilih Cabang --</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            <label className="space-y-2">
+              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">Tanggal Bisnis</span>
+              <input
+                className="input"
+                type="date"
+                value={openDate}
+                onChange={(e) => setOpenDate(e.target.value)}
+              />
+            </label>
+
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">Kas Awal</span>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                value={openingCash}
+                onChange={(e) => setOpeningCash(Number(e.target.value))}
+                placeholder="Masukkan modal awal kas"
+              />
+              <div className="text-xs text-[color:var(--color-text-muted)]">
+                Nilai saat ini: <span className="font-semibold">{toIDR(openingCash)}</span>
+              </div>
+            </label>
+          </div>
+
+          <div className="space-y-4">
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">Catatan</span>
+              <textarea
+                className="input min-h-32"
+                value={openNotes}
+                onChange={(e) => setOpenNotes(e.target.value)}
+                placeholder="Catatan sesi kas (opsional)"
+              />
+            </label>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[color:var(--color-border)] bg-white/60 px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--color-text-default)]">Siap membuka sesi?</div>
+                <div className="text-xs text-[color:var(--color-text-muted)]">
+                  Pastikan tanggal bisnis dan kas awal sudah benar.
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={onOpen}
+                disabled={submittingOpen}
+              >
+                {submittingOpen ? 'Menyimpan...' : 'Buka Sesi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-[color:var(--color-text-default)]">Daftar Sesi</h2>
+            <p className="text-sm text-[color:var(--color-text-muted)]">
+              Riwayat sesi kas yang dapat dibuka untuk melihat detail mutasi dan penutupan.
+            </p>
+          </div>
+          <div className="inline-flex items-center rounded-full border border-[color:var(--color-border)] bg-white/70 px-3 py-1 text-xs text-[color:var(--color-text-muted)]">
+            {loading ? 'Memuat data...' : `${rows.length} sesi`}
+          </div>
+        </div>
+
+        {!loading && rows.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white/40 px-4 py-10 text-center text-sm text-[color:var(--color-text-muted)]">
+            Belum ada sesi kas.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-[color:var(--color-border)]">
             <table className="min-w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="text-left p-2">Waktu</th>
-                  <th className="text-left p-2">Tipe</th>
-                  <th className="text-left p-2">Arah</th>
-                  <th className="text-right p-2">Nominal</th>
-                  <th className="text-left p-2">Ref</th>
-                  <th className="text-left p-2">Catatan</th>
+              <thead className="bg-black/[0.03]">
+                <tr className="text-[color:var(--color-text-muted)]">
+                  <Th>Tanggal</Th>
+                  <Th>Cabang</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right">Kas Awal</Th>
+                  <Th className="text-right">Kas Sistem</Th>
+                  <Th className="text-right">Kas Fisik</Th>
+                  <Th className="text-right">Selisih</Th>
+                  <Th className="text-right">Aksi</Th>
                 </tr>
               </thead>
               <tbody>
-                {(selected.mutations ?? []).map((m) => (
-                  <tr key={m.id} className="border-t">
-                    <td className="p-2">{m.effective_at ?? '-'}</td>
-                    <td className="p-2">{m.type}</td>
-                    <td className="p-2">{m.direction}</td>
-                    <td className="p-2 text-right">{toIDR(Number(m.amount))}</td>
-                    <td className="p-2">{m.reference_no ?? '-'}</td>
-                    <td className="p-2">{m.note ?? '-'}</td>
-                  </tr>
-                ))}
+                {loading
+                  ? Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={i} />)
+                  : rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-t border-[color:var(--color-border)] bg-white/40 transition-colors hover:bg-black/[0.025]"
+                      >
+                        <Td>
+                          <div className="font-medium text-[color:var(--color-text-default)]">
+                            {toLocalDate(row.business_date)}
+                          </div>
+                          <div className="text-xs text-[color:var(--color-text-muted)]">
+                            Dibuka: {toLocalDateTime(row.opened_at)}
+                          </div>
+                        </Td>
+                        <Td>
+                          <div className="font-medium text-[color:var(--color-text-default)]">
+                            {row.branch?.name ?? '-'}
+                          </div>
+                          <div className="text-xs text-[color:var(--color-text-muted)]">
+                            Oleh: {row.opener?.name ?? '-'}
+                          </div>
+                        </Td>
+                        <Td>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(row.status)}`}
+                          >
+                            {row.status}
+                          </span>
+                        </Td>
+                        <Td className="text-right font-medium">{toIDR(row.opening_cash)}</Td>
+                        <Td className="text-right">{toIDR(row.closing_cash_system)}</Td>
+                        <Td className="text-right">{toIDR(row.closing_cash_counted)}</Td>
+                        <Td className="text-right">
+                          <span
+                            className={
+                              Number(row.difference_amount ?? 0) < 0
+                                ? 'font-semibold text-rose-700'
+                                : 'font-semibold text-emerald-700'
+                            }
+                          >
+                            {toIDR(row.difference_amount)}
+                          </span>
+                        </Td>
+                        <Td className="text-right">
+                          <button
+                            type="button"
+                            className="btn-outline text-xs"
+                            onClick={() => void onSelect(row.id)}
+                          >
+                            Detail
+                          </button>
+                        </Td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
           </div>
-        </section>
-      )}
+        )}
+      </section>
+
+      {isModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[28px] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[0_30px_80px_-30px_rgba(0,0,0,.65)]">
+            <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-5 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-[color:var(--color-text-default)]">
+                  Detail Sesi Kas
+                </h3>
+                <p className="text-sm text-[color:var(--color-text-muted)]">
+                  Lihat ringkasan ledger, lakukan withdrawal, dan tutup sesi jika diperlukan.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-white/70 text-[color:var(--color-text-default)] hover:bg-white"
+                onClick={closeModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            {detailLoading ? (
+              <div className="p-6 text-sm text-[color:var(--color-text-muted)]">Memuat detail sesi...</div>
+            ) : selected ? (
+              <div className="grid max-h-[calc(92vh-81px)] gap-0 overflow-y-auto lg:grid-cols-[360px_1fr]">
+                <aside className="border-b border-[color:var(--color-border)] bg-black/[0.02] p-5 lg:border-b-0 lg:border-r">
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-[color:var(--color-text-default)]">
+                          Ringkasan Sesi
+                        </div>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(selected.status)}`}
+                        >
+                          {selected.status}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3 text-sm">
+                        <InfoRow label="Tanggal Bisnis" value={toLocalDate(selected.business_date)} />
+                        <InfoRow label="Cabang" value={selected.branch?.name ?? '-'} />
+                        <InfoRow label="Dibuka Oleh" value={selected.opener?.name ?? '-'} />
+                        <InfoRow label="Ditutup Oleh" value={selected.closer?.name ?? '-'} />
+                        <InfoRow label="Kas Awal" value={toIDR(selected.opening_cash)} strong />
+                        <InfoRow label="Kas Sistem" value={toIDR(selectedSystemClosing)} strong />
+                        <InfoRow
+                          label="Kas Fisik"
+                          value={toIDR(selected.closing_cash_counted)}
+                          strong
+                        />
+                        <InfoRow
+                          label="Selisih"
+                          value={toIDR(differenceAmount)}
+                          strong
+                          valueClassName={
+                            differenceAmount < 0 ? 'text-rose-700 font-semibold' : 'text-emerald-700 font-semibold'
+                          }
+                        />
+                      </div>
+
+                      {selected.notes ? (
+                        <div className="mt-4 rounded-xl border border-[color:var(--color-border)] bg-black/[0.02] p-3 text-sm text-[color:var(--color-text-muted)]">
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide">Catatan</div>
+                          <div>{selected.notes}</div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {selected.status === 'OPEN' ? (
+                      <>
+                        <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-4">
+                          <div className="mb-3">
+                            <div className="text-sm font-semibold text-[color:var(--color-text-default)]">
+                              Withdrawal
+                            </div>
+                            <div className="text-xs text-[color:var(--color-text-muted)]">
+                              Catat pengeluaran kas dari sesi yang sedang berjalan.
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <label className="block space-y-2">
+                              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                                Nominal
+                              </span>
+                              <input
+                                className="input"
+                                type="number"
+                                min={0}
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                              />
+                            </label>
+
+                            <label className="block space-y-2">
+                              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                                Catatan Withdrawal
+                              </span>
+                              <textarea
+                                className="input min-h-24"
+                                value={withdrawNote}
+                                onChange={(e) => setWithdrawNote(e.target.value)}
+                                placeholder="Contoh: setor ke owner, operasional mendesak, dll."
+                              />
+                            </label>
+
+                            <button
+                              type="button"
+                              className="btn-outline w-full justify-center"
+                              onClick={onWithdraw}
+                              disabled={submittingWithdraw}
+                            >
+                              {submittingWithdraw ? 'Menyimpan...' : 'Simpan Withdrawal'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-4">
+                          <div className="mb-3">
+                            <div className="text-sm font-semibold text-[color:var(--color-text-default)]">
+                              Tutup Sesi
+                            </div>
+                            <div className="text-xs text-[color:var(--color-text-muted)]">
+                              Isi nominal kas fisik yang benar-benar dihitung.
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <label className="block space-y-2">
+                              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                                Kas Fisik Dihitung
+                              </span>
+                              <input
+                                className="input"
+                                type="number"
+                                min={0}
+                                value={closingCash}
+                                onChange={(e) => setClosingCash(Number(e.target.value))}
+                              />
+                            </label>
+
+                            <div className="rounded-xl border border-[color:var(--color-border)] bg-black/[0.02] p-3 text-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-[color:var(--color-text-muted)]">Estimasi selisih</span>
+                                <span
+                                  className={
+                                    closingCash - selectedSystemClosing < 0
+                                      ? 'font-semibold text-rose-700'
+                                      : 'font-semibold text-emerald-700'
+                                  }
+                                >
+                                  {toIDR(closingCash - selectedSystemClosing)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="btn-primary w-full justify-center"
+                              onClick={onCloseSession}
+                              disabled={submittingClose}
+                            >
+                              {submittingClose ? 'Menutup sesi...' : 'Tutup Sesi'}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-4 text-sm text-[color:var(--color-text-muted)]">
+                        Sesi ini sudah ditutup, sehingga withdrawal dan penutupan ulang tidak tersedia.
+                      </div>
+                    )}
+                  </div>
+                </aside>
+
+                <section className="p-5">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-semibold text-[color:var(--color-text-default)]">
+                        Ledger Mutasi Kas
+                      </h4>
+                      <p className="text-sm text-[color:var(--color-text-muted)]">
+                        Urutan mutasi mengikuti waktu efektif dan waktu pembuatan terbaru.
+                      </p>
+                    </div>
+                    <div className="inline-flex items-center rounded-full border border-[color:var(--color-border)] bg-white/70 px-3 py-1 text-xs text-[color:var(--color-text-muted)]">
+                      {selected.mutations?.length ?? 0} mutasi
+                    </div>
+                  </div>
+
+                  {!selected.mutations || selected.mutations.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white/40 px-4 py-10 text-center text-sm text-[color:var(--color-text-muted)]">
+                      Belum ada mutasi pada sesi ini.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl border border-[color:var(--color-border)]">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-black/[0.03]">
+                          <tr className="text-[color:var(--color-text-muted)]">
+                            <Th>Waktu</Th>
+                            <Th>Tipe</Th>
+                            <Th>Arah</Th>
+                            <Th className="text-right">Nominal</Th>
+                            <Th>Referensi</Th>
+                            <Th>Catatan</Th>
+                            <Th>Dibuat Oleh</Th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selected.mutations.map((m) => (
+                            <tr
+                              key={m.id}
+                              className="border-t border-[color:var(--color-border)] bg-white/40"
+                            >
+                              <Td>
+                                <div className="font-medium text-[color:var(--color-text-default)]">
+                                  {toLocalDateTime(m.effective_at)}
+                                </div>
+                              </Td>
+                              <Td>
+                                <span className="inline-flex rounded-full border border-[color:var(--color-border)] bg-white px-2.5 py-1 text-xs font-medium">
+                                  {m.type}
+                                </span>
+                              </Td>
+                              <Td>
+                                <span
+                                  className={`font-semibold ${m.direction === 'IN' ? 'text-emerald-700' : 'text-rose-700'}`}
+                                >
+                                  {m.direction}
+                                </span>
+                              </Td>
+                              <Td className={`text-right font-semibold ${getMutationTone(m)}`}>
+                                {toIDR(m.amount)}
+                              </Td>
+                              <Td className="font-mono text-xs">{m.reference_no || '-'}</Td>
+                              <Td className="text-[color:var(--color-text-muted)]">{m.note || '-'}</Td>
+                              <Td>{m.creator?.name ?? '-'}</Td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              </div>
+            ) : (
+              <div className="p-6 text-sm text-[color:var(--color-text-muted)]">
+                Data sesi kas tidak ditemukan.
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 px-4 py-3 shadow-[0_10px_24px_-24px_rgba(0,0,0,.45)]">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--color-text-muted)]">
+        {label}
+      </div>
+      <div className="mt-1 text-base font-semibold text-[color:var(--color-text-default)]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  strong = false,
+  valueClassName = '',
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-[color:var(--color-text-muted)]">{label}</span>
+      <span
+        className={[
+          'text-right text-[color:var(--color-text-default)]',
+          strong ? 'font-semibold' : '',
+          valueClassName,
+        ].join(' ')}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Th({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+
+function Td({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <td className={`px-4 py-3 align-top ${className}`}>{children}</td>;
+}
+
+function RowSkeleton() {
+  return (
+    <tr className="border-t border-[color:var(--color-border)]">
+      <td className="px-4 py-4"><div className="h-4 w-28 animate-pulse rounded bg-black/10" /></td>
+      <td className="px-4 py-4"><div className="h-4 w-24 animate-pulse rounded bg-black/10" /></td>
+      <td className="px-4 py-4"><div className="h-6 w-16 animate-pulse rounded-full bg-black/10" /></td>
+      <td className="px-4 py-4 text-right"><div className="ml-auto h-4 w-24 animate-pulse rounded bg-black/10" /></td>
+      <td className="px-4 py-4 text-right"><div className="ml-auto h-4 w-24 animate-pulse rounded bg-black/10" /></td>
+      <td className="px-4 py-4 text-right"><div className="ml-auto h-4 w-24 animate-pulse rounded bg-black/10" /></td>
+      <td className="px-4 py-4 text-right"><div className="ml-auto h-4 w-20 animate-pulse rounded bg-black/10" /></td>
+      <td className="px-4 py-4 text-right"><div className="ml-auto h-8 w-20 animate-pulse rounded-xl bg-black/10" /></td>
+    </tr>
   );
 }
 ```
@@ -7808,23 +8415,60 @@ export default function CashSessionsIndex() {
 
 ### src\pages\cash\CashTodayPage.tsx
 
-- SHA: `908e6d7795df`  
-- Ukuran: 8 KB
+- SHA: `fdd964f75d05`  
+- Ukuran: 15 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getCashToday, type CashTodayMeta } from '../../api/cashSessions';
 import { useAuth } from '../../store/useAuth';
 import { getErrorMessage } from '../../api/client';
 import type { CashSession } from '../../types/cash';
 
-function toIDR(n: number) {
+function toIDR(n: number | string | null | undefined) {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(Number(n || 0));
+}
+
+function toLocalDate(value?: string | null) {
+  if (!value) return '-';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function toLocalDateTime(value?: string | null) {
+  if (!value) return '-';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function getStatusTone(status?: string | null) {
+  if (status === 'OPEN') {
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  }
+  if (status === 'CLOSED') {
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  }
+  return 'bg-amber-50 text-amber-700 border-amber-200';
+}
+
+function getDirectionTone(direction?: string | null) {
+  return direction === 'IN' ? 'text-emerald-700' : 'text-rose-700';
 }
 
 type TodayResponse = {
@@ -7835,14 +8479,20 @@ type TodayResponse = {
 export default function CashTodayPage() {
   const me = useAuth.user;
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [state, setState] = useState<TodayResponse>({
     session: null,
     meta: null,
   });
 
-  async function load() {
-    setLoading(true);
+  async function load(withRefreshState = false) {
+    if (withRefreshState) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     setError('');
 
     try {
@@ -7855,6 +8505,7 @@ export default function CashTodayPage() {
       setError(getErrorMessage(err, 'Gagal memuat kas hari ini.'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -7865,110 +8516,189 @@ export default function CashTodayPage() {
   const session = state.session;
   const meta = state.meta;
 
+  const summary = useMemo(() => {
+    return {
+      systemClosing: Number(meta?.system_closing ?? 0),
+      cashIn: Number(meta?.cash_in_total ?? 0),
+      cashOut: Number(meta?.cash_out_total ?? 0),
+      withdrawal: Number(meta?.withdrawal_total ?? 0),
+      difference: Number(session?.difference_amount ?? 0),
+      openingCash: Number(session?.opening_cash ?? 0),
+    };
+  }, [meta, session]);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Kas Hari Ini</h1>
-        <p className="text-sm text-[color:var(--color-text-muted)]">
-          Ringkasan kas harian cabang aktif. Halaman ini hanya untuk melihat data, tanpa aksi buka/tutup kas.
-        </p>
-      </div>
+      <section className="relative overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              'radial-gradient(720px 260px at 0% 0%, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.00) 60%), radial-gradient(520px 220px at 100% 20%, rgba(6,182,212,0.08) 0%, rgba(6,182,212,0.00) 55%)',
+          }}
+        />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="inline-flex items-center rounded-full border border-[color:var(--color-border)] bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-text-muted)]">
+              Daily Cash Overview
+            </div>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--color-text-default)]">
+              Kas Hari Ini
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-[color:var(--color-text-muted)]">
+              Ringkasan kas harian cabang aktif. Halaman ini hanya menampilkan data sesi kas dan mutasi secara baca saja.
+            </p>
+          </div>
 
-      {loading && (
-        <div className="rounded-2xl border border-[color:var(--color-border)] p-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center rounded-full border border-[color:var(--color-border)] bg-white/70 px-3 py-1 text-xs text-[color:var(--color-text-muted)]">
+              User: <span className="ml-1 font-semibold text-[color:var(--color-text-default)]">{me?.name ?? '-'}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void load(true)}
+              disabled={refreshing}
+              className="btn-outline"
+            >
+              {refreshing ? 'Refresh...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {loading ? (
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 text-sm text-[color:var(--color-text-muted)]">
           Memuat data kas hari ini...
         </div>
-      )}
+      ) : null}
 
-      {!loading && error && (
+      {!loading && error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
-      )}
+      ) : null}
 
-      {!loading && !error && (
+      {!loading && !error ? (
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card
+            <StatCard
               title="Status Sesi"
               value={meta?.has_open_session ? 'Masih Buka' : 'Tidak Ada / Sudah Tutup'}
-              subtitle={meta?.business_date || '-'}
+              subtitle={meta?.business_date ? toLocalDate(meta.business_date) : '-'}
+              tone={meta?.has_open_session ? 'success' : 'neutral'}
             />
-            <Card
+            <StatCard
               title="Saldo Sistem"
-              value={toIDR(meta?.system_closing ?? 0)}
+              value={toIDR(summary.systemClosing)}
               subtitle="Perhitungan sistem"
             />
-            <Card
-              title="Total Kas Masuk"
-              value={toIDR(meta?.cash_in_total ?? 0)}
+            <StatCard
+              title="Kas Masuk"
+              value={toIDR(summary.cashIn)}
               subtitle="Akumulasi mutasi masuk"
+              tone="success"
             />
-            <Card
-              title="Total Kas Keluar"
-              value={toIDR(meta?.cash_out_total ?? 0)}
+            <StatCard
+              title="Kas Keluar"
+              value={toIDR(summary.cashOut)}
               subtitle="Akumulasi mutasi keluar"
+              tone="danger"
             />
           </section>
 
-          <section className="rounded-2xl border border-[color:var(--color-border)] p-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MiniStatCard
+              label="Kas Awal"
+              value={toIDR(summary.openingCash)}
+            />
+            <MiniStatCard
+              label="Total Withdrawal"
+              value={toIDR(summary.withdrawal)}
+            />
+            <MiniStatCard
+              label="Selisih Sesi"
+              value={toIDR(summary.difference)}
+              valueClassName={summary.difference < 0 ? 'text-rose-700' : 'text-emerald-700'}
+            />
+            <MiniStatCard
+              label="Status Viewer"
+              value="Read Only"
+            />
+          </section>
+
+          <section className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Informasi Sesi</h2>
+                <h2 className="text-lg font-semibold text-[color:var(--color-text-default)]">
+                  Informasi Sesi
+                </h2>
                 <p className="text-sm text-[color:var(--color-text-muted)]">
-                  Ditampilkan berdasarkan cabang user yang login.
+                  Ditampilkan berdasarkan cabang user yang login dan hanya untuk pemantauan operasional.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="rounded-xl border border-[color:var(--color-border)] px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-              >
-                Refresh
-              </button>
+              {session?.status ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(session.status)}`}
+                >
+                  {session.status}
+                </span>
+              ) : null}
             </div>
 
             {!session ? (
-              <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-4 text-sm text-[color:var(--color-text-muted)]">
+              <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white/40 px-4 py-10 text-center text-sm text-[color:var(--color-text-muted)]">
                 Belum ada sesi kas untuk hari ini di cabang Anda.
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                <Info label="Cabang" value={session.branch?.name ?? String(session.branch_id)} />
-                <Info label="Tanggal Bisnis" value={session.business_date ?? '-'} />
-                <Info label="Status" value={session.status ?? '-'} />
-                <Info label="Kas Awal" value={toIDR(session.opening_cash ?? 0)} />
-                <Info label="Dibuka Oleh" value={session.opener?.name ?? '-'} />
-                <Info label="Waktu Buka" value={session.opened_at ?? '-'} />
-                <Info label="Closed By" value={session.closer?.name ?? '-'} />
-                <Info label="Waktu Tutup" value={session.closed_at ?? '-'} />
-                <Info label="Hitung Fisik Saat Tutup" value={toIDR(session.closing_cash_counted ?? 0)} />
-                <Info label="Selisih" value={toIDR(session.difference_amount ?? 0)} />
-                <Info label="Total Withdrawal" value={toIDR(meta?.withdrawal_total ?? 0)} />
-                <Info label="Catatan" value={session.notes || '-'} />
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <InfoCard label="Cabang" value={session.branch?.name ?? String(session.branch_id ?? '-')} />
+                <InfoCard label="Tanggal Bisnis" value={toLocalDate(session.business_date)} />
+                <InfoCard label="Kas Awal" value={toIDR(session.opening_cash)} />
+                <InfoCard label="Dibuka Oleh" value={session.opener?.name ?? '-'} />
+                <InfoCard label="Waktu Buka" value={toLocalDateTime(session.opened_at)} />
+                <InfoCard label="Ditutup Oleh" value={session.closer?.name ?? '-'} />
+                <InfoCard label="Waktu Tutup" value={toLocalDateTime(session.closed_at)} />
+                <InfoCard label="Kas Fisik Saat Tutup" value={toIDR(session.closing_cash_counted)} />
+                <InfoCard
+                  label="Selisih"
+                  value={toIDR(session.difference_amount)}
+                  valueClassName={
+                    Number(session.difference_amount ?? 0) < 0
+                      ? 'text-rose-700 font-semibold'
+                      : 'text-emerald-700 font-semibold'
+                  }
+                />
+                <InfoCard label="Saldo Sistem Hari Ini" value={toIDR(meta?.system_closing ?? 0)} />
+                <InfoCard label="Total Withdrawal" value={toIDR(meta?.withdrawal_total ?? 0)} />
+                <InfoCard label="Catatan" value={session.notes || '-'} />
               </div>
             )}
           </section>
 
-          <section className="rounded-2xl border border-[color:var(--color-border)] p-4">
+          <section className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)]">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold">Mutasi Kas</h2>
+              <h2 className="text-lg font-semibold text-[color:var(--color-text-default)]">
+                Mutasi Kas
+              </h2>
               <p className="text-sm text-[color:var(--color-text-muted)]">
-                Hanya tampilan baca. Kasir tidak dapat menambah withdrawal atau menutup sesi dari halaman ini.
+                Hanya tampilan baca. Halaman ini tidak menyediakan aksi withdrawal, buka sesi, atau tutup sesi.
               </p>
             </div>
 
             {!session?.mutations?.length ? (
-              <div className="text-sm text-[color:var(--color-text-muted)]">Belum ada mutasi.</div>
+              <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white/40 px-4 py-10 text-center text-sm text-[color:var(--color-text-muted)]">
+                Belum ada mutasi kas.
+              </div>
             ) : (
-              <div className="overflow-auto rounded-xl border border-[color:var(--color-border)]">
+              <div className="overflow-x-auto rounded-2xl border border-[color:var(--color-border)]">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-black/5 dark:bg-white/5">
-                    <tr>
+                  <thead className="bg-black/[0.03]">
+                    <tr className="text-[color:var(--color-text-muted)]">
                       <Th>Tipe</Th>
                       <Th>Arah</Th>
-                      <Th>Jumlah</Th>
+                      <Th className="text-right">Jumlah</Th>
                       <Th>Referensi</Th>
                       <Th>Catatan</Th>
                       <Th>Dibuat Oleh</Th>
@@ -7977,14 +8707,27 @@ export default function CashTodayPage() {
                   </thead>
                   <tbody>
                     {session.mutations.map((row) => (
-                      <tr key={row.id} className="border-t border-[color:var(--color-border)]">
-                        <Td>{row.type}</Td>
-                        <Td>{row.direction}</Td>
-                        <Td>{toIDR(row.amount)}</Td>
-                        <Td>{row.reference_no || '-'}</Td>
-                        <Td>{row.note || '-'}</Td>
+                      <tr
+                        key={row.id}
+                        className="border-t border-[color:var(--color-border)] bg-white/40 transition-colors hover:bg-black/[0.025]"
+                      >
+                        <Td>
+                          <span className="inline-flex rounded-full border border-[color:var(--color-border)] bg-white px-2.5 py-1 text-xs font-medium">
+                            {row.type}
+                          </span>
+                        </Td>
+                        <Td>
+                          <span className={`font-semibold ${getDirectionTone(row.direction)}`}>
+                            {row.direction}
+                          </span>
+                        </Td>
+                        <Td className={`text-right font-semibold ${getDirectionTone(row.direction)}`}>
+                          {toIDR(row.amount)}
+                        </Td>
+                        <Td className="font-mono text-xs">{row.reference_no || '-'}</Td>
+                        <Td className="text-[color:var(--color-text-muted)]">{row.note || '-'}</Td>
                         <Td>{row.creator?.name || '-'}</Td>
-                        <Td>{row.effective_at || '-'}</Td>
+                        <Td>{toLocalDateTime(row.effective_at)}</Td>
                       </tr>
                     ))}
                   </tbody>
@@ -7995,19 +8738,33 @@ export default function CashTodayPage() {
 
           <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             User login: <strong>{me?.name ?? '-'}</strong>. Halaman ini bersifat read-only untuk operasional kasir.
-            Pembukaan sesi, withdrawal, dan penutupan final tetap dilakukan Admin Cabang atau Pemilik.
+            Pembukaan sesi, withdrawal, dan penutupan final tetap dilakukan melalui modul Cash Box oleh pihak yang berwenang.
           </section>
         </>
-      )}
+      ) : null}
     </div>
   );
 }
 
-function Card(props: { title: string; value: string; subtitle?: string }) {
+function StatCard(props: {
+  title: string;
+  value: string;
+  subtitle?: string;
+  tone?: 'default' | 'success' | 'danger' | 'neutral';
+}) {
+  const toneClass =
+    props.tone === 'success'
+      ? 'border-emerald-200 bg-emerald-50/70'
+      : props.tone === 'danger'
+        ? 'border-rose-200 bg-rose-50/70'
+        : props.tone === 'neutral'
+          ? 'border-slate-200 bg-slate-50/70'
+          : 'border-[color:var(--color-border)] bg-white/70';
+
   return (
-    <div className="rounded-2xl border border-[color:var(--color-border)] p-4">
+    <div className={`rounded-2xl border p-4 shadow-[0_10px_24px_-24px_rgba(0,0,0,.45)] ${toneClass}`}>
       <div className="text-sm text-[color:var(--color-text-muted)]">{props.title}</div>
-      <div className="mt-2 text-xl font-semibold">{props.value}</div>
+      <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">{props.value}</div>
       {props.subtitle ? (
         <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">{props.subtitle}</div>
       ) : null}
@@ -8015,21 +8772,62 @@ function Card(props: { title: string; value: string; subtitle?: string }) {
   );
 }
 
-function Info(props: { label: string; value: string }) {
+function MiniStatCard(props: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
-    <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-      <div className="text-xs text-[color:var(--color-text-muted)]">{props.label}</div>
-      <div className="mt-1 text-sm font-medium break-words">{props.value}</div>
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/80 px-4 py-3 shadow-[0_10px_24px_-24px_rgba(0,0,0,.45)]">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--color-text-muted)]">
+        {props.label}
+      </div>
+      <div className={`mt-1 text-base font-semibold text-[color:var(--color-text-default)] ${props.valueClassName ?? ''}`}>
+        {props.value}
+      </div>
     </div>
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">{children}</th>;
+function InfoCard(props: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/60 p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-[color:var(--color-text-muted)]">
+        {props.label}
+      </div>
+      <div className={`mt-2 text-sm text-[color:var(--color-text-default)] ${props.valueClassName ?? ''}`}>
+        {props.value}
+      </div>
+    </div>
+  );
 }
 
-function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-3 py-2 align-top">{children}</td>;
+function Th({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${className}`}>
+      {children}
+    </th>
+  );
+}
+
+function Td({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <td className={`px-4 py-3 align-top ${className}`}>{children}</td>;
 }
 ```
 </details>
@@ -11358,13 +12156,13 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `ab50ed78bd1c`  
-- Ukuran: 48 KB
+- SHA: `40a3eba70bf9`  
+- Ukuran: 52 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/orders/OrderDetail.tsx
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getOrder,
   updateOrderStatus,
@@ -11423,6 +12221,28 @@ function toDateInputValue(v?: string | null): string {
 function fromDateInputValue(v: string): string | null {
   const s = v.trim();
   return s ? s : null;
+}
+
+function parseConsumerGoodsNotes(notes?: string | null): string[] {
+  if (!notes || !notes.trim()) return [''];
+
+  const rows = notes
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.replace(/^\d+\.\s*/, '').trim());
+
+  return rows.length > 0 ? rows : [''];
+}
+
+function buildConsumerGoodsNotes(rows: string[]): string | null {
+  const cleaned = rows
+    .map((row) => row.trim())
+    .filter((row) => row.length > 0);
+
+  if (cleaned.length === 0) return null;
+
+  return cleaned.map((row, index) => `${index + 1}. ${row}`).join('\n');
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
@@ -11507,6 +12327,7 @@ export default function OrderDetail(): React.ReactElement {
   const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
 
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
+  const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   // Delivery UI
   const [deliveryOpen, setDeliveryOpen] = useState(false);
@@ -11572,6 +12393,7 @@ export default function OrderDetail(): React.ReactElement {
 
   useEffect(() => {
     if (!row) return;
+
     setDraft({
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
@@ -11586,6 +12408,8 @@ export default function OrderDetail(): React.ReactElement {
         note: it.note ?? null,
       })),
     });
+
+    setNoteRows(parseConsumerGoodsNotes(row.notes));
   }, [row]);
 
   const changeQty = useCallback((serviceId: string, qty: number) => {
@@ -11618,6 +12442,25 @@ export default function OrderDetail(): React.ReactElement {
       };
     });
   }, []);
+
+  const onChangeNoteRow = useCallback((index: number, value: string) => {
+    setNoteRows((prev) => prev.map((row, i) => (i === index ? value : row)));
+  }, []);
+
+  const onAddNoteRow = useCallback(() => {
+    setNoteRows((prev) => [...prev, '']);
+  }, []);
+
+  const onRemoveNoteRow = useCallback((index: number) => {
+    setNoteRows((prev) => {
+      if (prev.length === 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  const consumerGoodsPreview = useMemo(() => {
+    return buildConsumerGoodsNotes(noteRows);
+  }, [noteRows]);
 
   const onTransit = useCallback(async (next: OrderBackendStatus) => {
     if (!id) return;
@@ -11904,7 +12747,11 @@ export default function OrderDetail(): React.ReactElement {
                     <button
                       type="button"
                       className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                      onClick={() => { setIsEditing(false); setFieldErr({}); }}
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFieldErr({});
+                        setNoteRows(parseConsumerGoodsNotes(row?.notes ?? null));
+                      }}
                       title="Batalkan perubahan"
                     >
                       Batal
@@ -11919,7 +12766,7 @@ export default function OrderDetail(): React.ReactElement {
                         try {
                           const payload: OrderUpdatePayload = {
                             customer_id: draft.customer_id ?? null,
-                            notes: (draft.notes ?? '') || null,
+                            notes: buildConsumerGoodsNotes(noteRows),
                             items: draft.items.map(it => ({
                               service_id: it.service_id,
                               qty: it.qty,
@@ -11998,9 +12845,12 @@ export default function OrderDetail(): React.ReactElement {
               </div>
             </div>
 
-            {/* Catatan order */}
+            {/* Catatan barang konsumen */}
             <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-              <div className="text-sm font-semibold text-slate-900">Catatan Pesanan</div>
+              <div className="text-sm font-semibold text-slate-900">Catatan Barang Konsumen</div>
+              <div className="mt-1 text-xs text-slate-500">
+                Daftar barang atau atribut milik konsumen yang dicatat saat order dibuat.
+              </div>
               <div className="mt-2 text-sm leading-6 text-slate-600 whitespace-pre-line">
                 {row.notes && row.notes.trim() !== '' ? row.notes : '-'}
               </div>
@@ -12015,7 +12865,9 @@ export default function OrderDetail(): React.ReactElement {
                   <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
                     <div className="mb-3 flex items-center justify-between">
                       <div className="text-sm font-semibold text-slate-900">Edit Order</div>
-                      <div className="text-xs text-slate-500">Perubahan akan disimpan setelah klik “Simpan”.</div>
+                      <div className="text-xs text-slate-500">
+                        Perubahan data order, termasuk catatan barang konsumen, akan disimpan setelah klik “Simpan”.
+                      </div>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
@@ -12030,19 +12882,71 @@ export default function OrderDetail(): React.ReactElement {
                         {fieldErr['customer_id'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>}
                       </div>
 
-                      <div>
-                        <div className="text-xs font-semibold text-slate-600">Catatan</div>
-                        <textarea
-                          className="
-                          mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                          placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
-                        "
-                          placeholder="Catatan order (opsional)"
-                          value={draft.notes ?? ''}
-                          onChange={(e) => setDraft(d => ({ ...d, notes: e.target.value }))}
-                          disabled={!canEdit}
-                        />
-                        {fieldErr['notes'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>}
+                      <div className="md:col-span-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Catatan Barang Konsumen
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={onAddNoteRow}
+                            disabled={!canEdit}
+                            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            + Tambah Catatan
+                          </button>
+                        </div>
+
+                        <div className="mt-2 space-y-2">
+                          {noteRows.map((noteRow, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
+                                {index + 1}
+                              </div>
+
+                              <input
+                                type="text"
+                                value={noteRow}
+                                onChange={(e) => onChangeNoteRow(index, e.target.value)}
+                                placeholder={`Isi catatan barang #${index + 1}`}
+                                disabled={!canEdit}
+                                className="
+            h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
+            placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+            disabled:cursor-not-allowed disabled:bg-slate-50
+          "
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() => onRemoveNoteRow(index)}
+                                disabled={!canEdit || (noteRows.length === 1 && !noteRows[0].trim())}
+                                className="inline-flex h-10 shrink-0 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                title="Hapus catatan"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-2 text-[11px] text-slate-500">
+                          Setiap catatan akan otomatis diberi nomor saat order disimpan, sama seperti di modul POS.
+                        </div>
+
+                        {fieldErr['notes'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>
+                        )}
+
+                        <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Preview tersimpan
+                          </div>
+                          <div className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                            {consumerGoodsPreview ?? '-'}
+                          </div>
+                        </div>
                       </div>
 
                       <div>
@@ -12053,9 +12957,9 @@ export default function OrderDetail(): React.ReactElement {
                           id="received_at"
                           type="date"
                           className="
-      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-      focus:border-slate-900 focus:outline-none
-    "
+                            mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                            focus:border-slate-900 focus:outline-none
+                          "
                           value={toDateInputValue(draft.received_at ?? null)}
                           onChange={(e) => setDraft(d => ({ ...d, received_at: fromDateInputValue(e.target.value) }))}
                           disabled={!canEdit}
@@ -13843,13 +14747,13 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `83ebd5f6b45c`  
-- Ukuran: 55 KB
+- SHA: `53bc6afe8eb7`  
+- Ukuran: 57 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/pos/POSPage.tsx
-import React, { useEffect, useMemo, useState, useRef, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import ProductSearch from '../../components/pos/ProductSearch';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
 import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
@@ -14141,7 +15045,7 @@ export default function POSPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<string>('');
   const [discount, setDiscount] = useState<number>(0);
-  const [notes, setNotes] = useState<string>('');
+  const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14292,7 +15196,7 @@ export default function POSPage() {
   }, []);
   useEffect(() => { dlog('items changed', items); }, [items]);
   useEffect(() => { dlog('discount changed', discount); }, [discount]);
-  useEffect(() => { dlog('notes changed', notes); }, [notes]);
+  useEffect(() => { dlog('noteRows changed', noteRows); }, [noteRows]);
   useEffect(() => { dlog('totals', { subtotal, grand }); }, [subtotal, grand]);
 
   // cart ops
@@ -14313,6 +15217,31 @@ export default function POSPage() {
   const onChangeQty = (id: string, qty: number) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, qty } : p)));
   const onChangeNote = (id: string, note: string) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, note } : p)));
   const onRemove = (id: string) => setItems((prev) => prev.filter((p) => p.service_id !== id));
+
+  const onChangeNoteRow = (index: number, value: string) => {
+    setNoteRows((prev) => prev.map((row, i) => (i === index ? value : row)));
+  };
+
+  const onAddNoteRow = () => {
+    setNoteRows((prev) => [...prev, '']);
+  };
+
+  const onRemoveNoteRow = (index: number) => {
+    setNoteRows((prev) => {
+      if (prev.length === 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  function buildConsumerGoodsNotes(rows: string[]): string | null {
+    const cleaned = rows
+      .map((row) => row.trim())
+      .filter((row) => row.length > 0);
+
+    if (cleaned.length === 0) return null;
+
+    return cleaned.map((row, index) => `${index + 1}. ${row}`).join('\n');
+  }
 
   function validatePosForm(): FieldErrors {
     const errors: FieldErrors = {};
@@ -14378,7 +15307,7 @@ export default function POSPage() {
           note: it.note ?? null,
         })),
         discount: discount || 0,
-        notes: notes || null,
+        notes: buildConsumerGoodsNotes(noteRows),
         received_at: receivedAt,
         ready_at: readyAt,
       };
@@ -14598,7 +15527,7 @@ export default function POSPage() {
                     )}
                   </div>
 
-                  {/* Discount + notes */}
+                  {/* Discount */}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-1">
                       <label className="text-xs font-medium text-slate-700">Diskon (Rp)</label>
@@ -14610,24 +15539,59 @@ export default function POSPage() {
                         onChange={(e) => setDiscount(Number(e.target.value) || 0)}
                       />
                     </div>
-                    <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Catatan (opsional)</label>
-                      <Input
-                        placeholder="Mis. warna, kondisi, permintaan khusus…"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
                   </div>
 
-                  <div className="grid gap-1">
-                    <label className="text-xs font-medium text-slate-700">Catatan Tambahan (lebih panjang)</label>
-                    <Textarea
-                      className="min-h-[92px]"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Tulis catatan detail jika diperlukan…"
-                    />
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-medium text-slate-700">
+                        Catatan Barang Konsumen
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={onAddNoteRow}
+                        className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        + Tambah Catatan
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {noteRows.map((row, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
+                            {index + 1}
+                          </div>
+
+                          <Input
+                            value={row}
+                            onChange={(e) => onChangeNoteRow(index, e.target.value)}
+                            placeholder={`Isi catatan barang #${index + 1}`}
+                            className="flex-1"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => onRemoveNoteRow(index)}
+                            className="inline-flex h-10 shrink-0 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100"
+                            disabled={noteRows.length === 1 && !noteRows[0].trim()}
+                            title="Hapus catatan"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-[11px] text-slate-500">
+                      Setiap catatan akan otomatis diberi nomor saat transaksi disimpan.
+                    </div>
+
+                    {fieldErrors.notes?.[0] && (
+                      <div className="text-xs text-red-600">
+                        {fieldErrors.notes[0]}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
