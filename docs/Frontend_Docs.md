@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-18 18:11:22_  
+_Dihasilkan otomatis: 2026-04-18 19:55:35_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -4819,7 +4819,7 @@ function PreviewGrid({
 
 ### src\components\orders\OrderPhotosGallery.tsx
 
-- SHA: `a7fd333afbd1`  
+- SHA: `3f280a7ad868`  
 - Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4831,11 +4831,15 @@ import type { OrderPhoto } from "../../types/orders";
 const fileUrl = (p?: string | null) => {
   if (!p) return "";
   if (/^https?:\/\//i.test(p)) return p;
-  const filesBase = (import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
-  const originFallback = apiBase.replace(/\/api\/v1$/i, "");
-  const base = filesBase || originFallback || "";
-  return `${base}/${String(p).replace(/^\/+/, "")}`;
+
+  const cleanPath = String(p).replace(/^\/+/, "");
+  const filesBase = String(import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
+  const originFallback = apiBase.replace(/\/api(?:\/v\d+)?(?:\/api\/v\d+)?$/i, "");
+  const base = filesBase || originFallback;
+
+  return base ? `${base}/${cleanPath}` : `/${cleanPath}`;
 };
 
 export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] }) {
@@ -12871,8 +12875,8 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `40a3eba70bf9`  
-- Ukuran: 52 KB
+- SHA: `0410c1b2592a`  
+- Ukuran: 53 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -12896,6 +12900,7 @@ import OrderPhotosGallery from '../../components/orders/OrderPhotosGallery';
 import OrderPhotosUpload from '../../components/orders/OrderPhotosUpload';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
+import { toIDR } from '../../utils/money';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
 import { useHasRole } from '../../store/useAuth';
@@ -12936,6 +12941,12 @@ function toDateInputValue(v?: string | null): string {
 function fromDateInputValue(v: string): string | null {
   const s = v.trim();
   return s ? s : null;
+}
+
+function qtyDisplay(v: unknown): string {
+  const n = Number(v ?? 0);
+  if (Number.isNaN(n)) return '0';
+  return String(Math.trunc(n));
 }
 
 function parseConsumerGoodsNotes(notes?: string | null): string[] {
@@ -13002,8 +13013,7 @@ type Draft = {
 };
 
 function money(v: unknown): string {
-  const n = Number(v ?? 0);
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+  return toIDR(Number(v ?? 0));
 }
 
 function statusBadgeClass(status: OrderBackendStatus): string {
@@ -13733,7 +13743,7 @@ export default function OrderDetail(): React.ReactElement {
                           {(row.items ?? []).map((it) => (
                             <tr key={it.id} className="hover:bg-slate-50/60 transition-colors">
                               <Td className="font-medium text-slate-900">{it.service?.name ?? it.service_id}</Td>
-                              <Td className="text-slate-700">{it.qty}</Td>
+                              <Td className="text-slate-700">{qtyDisplay(it.qty)}</Td>
                               <Td className="text-slate-700">{money(it.price)}</Td>
                               <Td className="text-right font-medium text-slate-900">{money(it.total)}</Td>
                             </tr>
@@ -13817,11 +13827,13 @@ export default function OrderDetail(): React.ReactElement {
                                   <input
                                     type="number"
                                     min={1}
+                                    step={1}
+                                    inputMode="numeric"
                                     className="
-                                    w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                                    focus:border-slate-900 focus:outline-none
-                                  "
-                                    value={it.qty}
+                                      w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                                      focus:border-slate-900 focus:outline-none
+                                    "
+                                    value={qtyDisplay(it.qty)}
                                     onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
                                     disabled={!canEdit}
                                   />

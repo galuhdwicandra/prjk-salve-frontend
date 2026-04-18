@@ -18,6 +18,7 @@ import OrderPhotosGallery from '../../components/orders/OrderPhotosGallery';
 import OrderPhotosUpload from '../../components/orders/OrderPhotosUpload';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
+import { toIDR } from '../../utils/money';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildReceiptMessage } from '../../utils/receipt-wa';
 import { useHasRole } from '../../store/useAuth';
@@ -58,6 +59,12 @@ function toDateInputValue(v?: string | null): string {
 function fromDateInputValue(v: string): string | null {
   const s = v.trim();
   return s ? s : null;
+}
+
+function qtyDisplay(v: unknown): string {
+  const n = Number(v ?? 0);
+  if (Number.isNaN(n)) return '0';
+  return String(Math.trunc(n));
 }
 
 function parseConsumerGoodsNotes(notes?: string | null): string[] {
@@ -124,8 +131,7 @@ type Draft = {
 };
 
 function money(v: unknown): string {
-  const n = Number(v ?? 0);
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+  return toIDR(Number(v ?? 0));
 }
 
 function statusBadgeClass(status: OrderBackendStatus): string {
@@ -855,7 +861,7 @@ export default function OrderDetail(): React.ReactElement {
                           {(row.items ?? []).map((it) => (
                             <tr key={it.id} className="hover:bg-slate-50/60 transition-colors">
                               <Td className="font-medium text-slate-900">{it.service?.name ?? it.service_id}</Td>
-                              <Td className="text-slate-700">{it.qty}</Td>
+                              <Td className="text-slate-700">{qtyDisplay(it.qty)}</Td>
                               <Td className="text-slate-700">{money(it.price)}</Td>
                               <Td className="text-right font-medium text-slate-900">{money(it.total)}</Td>
                             </tr>
@@ -939,11 +945,13 @@ export default function OrderDetail(): React.ReactElement {
                                   <input
                                     type="number"
                                     min={1}
+                                    step={1}
+                                    inputMode="numeric"
                                     className="
-                                    w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                                    focus:border-slate-900 focus:outline-none
-                                  "
-                                    value={it.qty}
+                                      w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                                      focus:border-slate-900 focus:outline-none
+                                    "
+                                    value={qtyDisplay(it.qty)}
                                     onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
                                     disabled={!canEdit}
                                   />
