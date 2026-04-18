@@ -2,7 +2,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { createCustomer, getCustomer, updateCustomer } from "../../api/customers";
+import {
+  getLoyaltySummary,
+  getLoyaltyHistory,
+  adjustLoyaltyManual,
+} from "../../api/loyalty";
+import { getErrorMessage } from "../../api/client";
 import type { Customer, CustomerUpsertPayload, SingleResponse } from "../../types/customers";
+import type {
+  LoyaltySummary,
+  LoyaltyHistoryItem,
+  LoyaltyManualAdjustType,
+} from "../../types/loyalty";
 import { useAuth } from "../../store/useAuth";
 
 function IconArrowLeft(props: React.SVGProps<SVGSVGElement>) {
@@ -91,7 +102,20 @@ export default function CustomerDetail() {
     tags: [],
   });
   const [entity, setEntity] = useState<Customer | null>(null);
+  const canManageLoyaltyManual =
+    hasRole("Superadmin") || hasRole("Admin Cabang");
 
+  const [loyalty, setLoyalty] = useState<LoyaltySummary | null>(null);
+  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyHistoryItem[]>([]);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [loyaltyHistoryLoading, setLoyaltyHistoryLoading] = useState(false);
+
+  const [manualType, setManualType] = useState<LoyaltyManualAdjustType>("add");
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualNote, setManualNote] = useState("");
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualSuccess, setManualSuccess] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     if (!isNew && params.id) {
@@ -109,7 +133,7 @@ export default function CustomerDetail() {
               notes: res.data.notes ?? "",
               tags: Array.isArray(res.data.tags) ? res.data.tags : [],
             });
-
+            await loadLoyalty(res.data);
           }
         } catch {
           if (!cancelled) setError("Gagal memuat detail pelanggan.");
@@ -141,6 +165,34 @@ export default function CustomerDetail() {
       }
     });
     return out;
+  }
+
+  async function loadLoyalty(customerData?: Customer | null) {
+    const currentCustomer = customerData ?? entity;
+    if (!currentCustomer?.id) {
+      setLoyalty(null);
+      setLoyaltyHistory([]);
+      return;
+    }
+
+    setLoyaltyLoading(true);
+    setLoyaltyHistoryLoading(true);
+
+    try {
+      const [summaryRes, historyRes] = await Promise.all([
+        getLoyaltySummary(currentCustomer.id, currentCustomer.branch_id),
+        getLoyaltyHistory(currentCustomer.id, currentCustomer.branch_id, 1),
+      ]);
+
+      setLoyalty(summaryRes.data ?? null);
+      setLoyaltyHistory(historyRes.data ?? []);
+    } catch {
+      setLoyalty(null);
+      setLoyaltyHistory([]);
+    } finally {
+      setLoyaltyLoading(false);
+      setLoyaltyHistoryLoading(false);
+    }
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -221,6 +273,41 @@ export default function CustomerDetail() {
       setError(msg ?? "Gagal menyimpan data pelanggan.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onSubmitManualLoyalty(e: React.FormEvent) {
+    e.preventDefault();
+    if (!entity?.id || !canManageLoyaltyManual) return;
+
+    setManualError(null);
+    setManualSuccess(null);
+
+    const parsedAmount = Number(manualAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 1) {
+      setManualError("Jumlah stamp minimal 1.");
+      return;
+    }
+
+    try {
+      setManualSaving(true);
+
+      await adjustLoyaltyManual(entity.id, {
+        type: manualType,
+        amount: Math.floor(parsedAmount),
+        note: manualNote.trim() || null,
+        branch_id: entity.branch_id,
+      });
+
+      setManualSuccess("Stamp loyalty berhasil diperbarui.");
+      setManualAmount("");
+      setManualNote("");
+
+      await loadLoyalty(entity);
+    } catch (err) {
+      setManualError(getErrorMessage(err, "Gagal memperbarui stamp loyalty."));
+    } finally {
+      setManualSaving(false);
     }
   }
 
@@ -508,43 +595,196 @@ export default function CustomerDetail() {
           </div>
         </form>
 
-        {/* Side card (ringkasan) */}
-        <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-              {initials(form.name)}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-slate-900">{form.name?.trim() || "Customer"}</div>
-              <div className="truncate text-xs text-slate-500">{isNew ? "Draft (belum tersimpan)" : `ID: ${String(entity?.id ?? "-")}`}</div>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-3 text-sm">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <div className="text-xs text-slate-500">WhatsApp</div>
-              <div className="mt-0.5 font-semibold tabular-nums text-slate-900">{form.whatsapp || "-"}</div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <div className="text-xs text-slate-500">Cabang</div>
-              <div className="mt-0.5 font-semibold text-slate-900">
-                {entity?.branch?.name ?? "-"}
+        {/* Side cards */}
+        <div className="space-y-4">
+          <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                {initials(form.name)}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-900">{form.name?.trim() || "Customer"}</div>
+                <div className="truncate text-xs text-slate-500">{isNew ? "Draft (belum tersimpan)" : `ID: ${String(entity?.id ?? "-")}`}</div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <div className="text-xs text-slate-500">Alamat</div>
-              <div className="mt-0.5 text-slate-700">{form.address?.trim() ? form.address : "-"}</div>
-            </div>
-          </div>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div className="text-xs text-slate-500">WhatsApp</div>
+                <div className="mt-0.5 font-semibold tabular-nums text-slate-900">{form.whatsapp || "-"}</div>
+              </div>
 
-          {!canEdit && (
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Anda tidak memiliki izin untuk mengubah data customer.
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div className="text-xs text-slate-500">Cabang</div>
+                <div className="mt-0.5 font-semibold text-slate-900">
+                  {entity?.branch?.name ?? "-"}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div className="text-xs text-slate-500">Alamat</div>
+                <div className="mt-0.5 text-slate-700">{form.address?.trim() ? form.address : "-"}</div>
+              </div>
             </div>
+
+            {!canEdit && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Anda tidak memiliki izin untuk mengubah data customer.
+              </div>
+            )}
+          </aside>
+
+          {!isNew && entity && (
+            <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Stamp Loyalty</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Ringkasan stamp loyalty dan riwayat adjustment customer.
+                  </div>
+                </div>
+                <div className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                  {loyaltyLoading ? "Loading..." : `Stamp ${loyalty?.stamps ?? 0}/10`}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-10 gap-1" aria-label="Loyalty stamps">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-2.5 rounded-full ${loyalty && i < loyalty.stamps ? "bg-slate-900" : "bg-slate-200"}`}
+                    title={`Stamp ${i + 1}`}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Stamp saat ini</span>
+                  <span className="font-semibold text-slate-900">{loyalty?.stamps ?? 0}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-slate-500">Next</span>
+                  <span className="font-semibold text-slate-900">{loyalty?.next ?? 1}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-slate-500">Cycle</span>
+                  <span className="font-semibold text-slate-900">{loyalty?.cycle ?? 10}</span>
+                </div>
+              </div>
+
+              {canManageLoyaltyManual && (
+                <form onSubmit={onSubmitManualLoyalty} className="mt-4 space-y-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Adjustment Manual
+                  </div>
+
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium text-slate-700">Tipe</span>
+                    <select
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                      value={manualType}
+                      onChange={(e) => setManualType(e.target.value as LoyaltyManualAdjustType)}
+                    >
+                      <option value="add">Tambah Stamp</option>
+                      <option value="subtract">Kurangi Stamp</option>
+                      <option value="set">Set Stamp</option>
+                    </select>
+                  </label>
+
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium text-slate-700">Jumlah</span>
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="Masukkan jumlah stamp"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                      value={manualAmount}
+                      onChange={(e) => setManualAmount(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium text-slate-700">Catatan</span>
+                    <textarea
+                      className="min-h-[88px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                      placeholder="Alasan adjustment manual"
+                      value={manualNote}
+                      onChange={(e) => setManualNote(e.target.value)}
+                    />
+                  </label>
+
+                  {manualError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      {manualError}
+                    </div>
+                  )}
+
+                  {manualSuccess && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                      {manualSuccess}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={manualSaving}
+                    className="
+                      inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5
+                      text-sm font-semibold text-white shadow-sm
+                      hover:bg-slate-800 active:bg-slate-950
+                      disabled:cursor-not-allowed disabled:opacity-70
+                    "
+                  >
+                    {manualSaving ? "Menyimpan..." : "Simpan Adjustment"}
+                  </button>
+                </form>
+              )}
+
+              <div className="mt-4">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Riwayat Loyalty
+                </div>
+
+                <div className="space-y-2">
+                  {loyaltyHistoryLoading ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                      Memuat riwayat loyalty...
+                    </div>
+                  ) : loyaltyHistory.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                      Belum ada riwayat loyalty.
+                    </div>
+                  ) : (
+                    loyaltyHistory.slice(0, 5).map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs font-semibold text-slate-900">{item.action}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {item.created_at ? String(item.created_at).replace("T", " ").slice(0, 19) : "-"}
+                          </div>
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-600">
+                          Before <span className="font-semibold text-slate-900">{item.before}</span>
+                          {" → "}
+                          After <span className="font-semibold text-slate-900">{item.after}</span>
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-500">
+                          {item.note?.trim() ? item.note : "Tanpa catatan"}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </aside>
           )}
-        </aside>
+        </div>
       </div>
     </div>
   );
