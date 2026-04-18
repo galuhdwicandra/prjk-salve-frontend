@@ -59,6 +59,14 @@ function getMutationTone(mutation: CashMutation) {
   return 'text-rose-700';
 }
 
+function parseMoneyInput(value: string): number {
+  const normalized = value.trim();
+  if (normalized === '') return 0;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function CashSessionsIndex() {
   const me = useAuth.user;
   const isSuperadmin = (me?.roles ?? []).includes('Superadmin');
@@ -69,13 +77,13 @@ export default function CashSessionsIndex() {
   const [loading, setLoading] = useState(false);
 
   const [openDate, setOpenDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [openingCash, setOpeningCash] = useState<number>(0);
+  const [openingCash, setOpeningCash] = useState<string>('');
   const [openNotes, setOpenNotes] = useState('');
 
   const [selected, setSelected] = useState<CashSession | null>(null);
   const [selectedSystemClosing, setSelectedSystemClosing] = useState<number>(0);
-  const [closingCash, setClosingCash] = useState<number>(0);
-  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [closingCash, setClosingCash] = useState<string>('');
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,7 +122,7 @@ export default function CashSessionsIndex() {
         const list = Array.isArray(res.data) ? res.data : [];
         setBranches(list.map((b: { id: string; name: string }) => ({ id: b.id, name: b.name })));
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [isSuperadmin]);
 
   const summary = useMemo(() => {
@@ -131,6 +139,10 @@ export default function CashSessionsIndex() {
     };
   }, [rows]);
 
+  const openingCashValue = useMemo(() => parseMoneyInput(openingCash), [openingCash]);
+  const closingCashValue = useMemo(() => parseMoneyInput(closingCash), [closingCash]);
+  const withdrawAmountValue = useMemo(() => parseMoneyInput(withdrawAmount), [withdrawAmount]);
+
   const onOpen = async () => {
     setErrorMsg('');
     setSuccessMsg('');
@@ -140,11 +152,11 @@ export default function CashSessionsIndex() {
       await openCashSession({
         branch_id: isSuperadmin ? (branchId || undefined) : undefined,
         business_date: openDate,
-        opening_cash: Number(openingCash),
+        opening_cash: openingCashValue,
         notes: openNotes || null,
       });
 
-      setOpeningCash(0);
+      setOpeningCash('');
       setOpenNotes('');
       setSuccessMsg('Sesi kas berhasil dibuka.');
       await load();
@@ -166,8 +178,10 @@ export default function CashSessionsIndex() {
 
       setSelected(next);
       setSelectedSystemClosing(Number(res.meta?.system_closing ?? 0));
-      setClosingCash(Number(next?.closing_cash_counted ?? 0));
-      setWithdrawAmount(0);
+      setClosingCash(
+        next?.closing_cash_counted != null ? String(Number(next.closing_cash_counted)) : ''
+      );
+      setWithdrawAmount('');
       setWithdrawNote('');
       setIsModalOpen(true);
     } catch (err) {
@@ -181,8 +195,8 @@ export default function CashSessionsIndex() {
     setIsModalOpen(false);
     setSelected(null);
     setSelectedSystemClosing(0);
-    setClosingCash(0);
-    setWithdrawAmount(0);
+    setClosingCash('');
+    setWithdrawAmount('');
     setWithdrawNote('');
   };
 
@@ -195,7 +209,7 @@ export default function CashSessionsIndex() {
 
     try {
       await closeCashSession(selected.id, {
-        closing_cash_counted: Number(closingCash),
+        closing_cash_counted: closingCashValue,
         notes: selected.notes || null,
       });
 
@@ -218,11 +232,11 @@ export default function CashSessionsIndex() {
 
     try {
       await createCashWithdrawal(selected.id, {
-        amount: Number(withdrawAmount),
+        amount: withdrawAmountValue,
         note: withdrawNote || null,
       });
 
-      setWithdrawAmount(0);
+      setWithdrawAmount('');
       setWithdrawNote('');
       setSuccessMsg('Withdrawal berhasil disimpan.');
 
@@ -236,7 +250,9 @@ export default function CashSessionsIndex() {
   };
 
   const differenceAmount =
-    Number(selected?.closing_cash_counted ?? closingCash ?? 0) - Number(selectedSystemClosing ?? 0);
+    (closingCash.trim() !== ''
+      ? closingCashValue
+      : Number(selected?.closing_cash_counted ?? 0)) - Number(selectedSystemClosing ?? 0);
 
   return (
     <div className="space-y-6">
@@ -328,8 +344,8 @@ export default function CashSessionsIndex() {
                 type="number"
                 min={0}
                 value={openingCash}
-                onChange={(e) => setOpeningCash(Number(e.target.value))}
-                placeholder="Masukkan modal awal kas"
+                onChange={(e) => setOpeningCash(e.target.value)}
+                placeholder="0"
               />
               <div className="text-xs text-[color:var(--color-text-muted)]">
                 Nilai saat ini: <span className="font-semibold">{toIDR(openingCash)}</span>
@@ -404,58 +420,58 @@ export default function CashSessionsIndex() {
                 {loading
                   ? Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={i} />)
                   : rows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="border-t border-[color:var(--color-border)] bg-white/40 transition-colors hover:bg-black/[0.025]"
-                      >
-                        <Td>
-                          <div className="font-medium text-[color:var(--color-text-default)]">
-                            {toLocalDate(row.business_date)}
-                          </div>
-                          <div className="text-xs text-[color:var(--color-text-muted)]">
-                            Dibuka: {toLocalDateTime(row.opened_at)}
-                          </div>
-                        </Td>
-                        <Td>
-                          <div className="font-medium text-[color:var(--color-text-default)]">
-                            {row.branch?.name ?? '-'}
-                          </div>
-                          <div className="text-xs text-[color:var(--color-text-muted)]">
-                            Oleh: {row.opener?.name ?? '-'}
-                          </div>
-                        </Td>
-                        <Td>
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(row.status)}`}
-                          >
-                            {row.status}
-                          </span>
-                        </Td>
-                        <Td className="text-right font-medium">{toIDR(row.opening_cash)}</Td>
-                        <Td className="text-right">{toIDR(row.closing_cash_system)}</Td>
-                        <Td className="text-right">{toIDR(row.closing_cash_counted)}</Td>
-                        <Td className="text-right">
-                          <span
-                            className={
-                              Number(row.difference_amount ?? 0) < 0
-                                ? 'font-semibold text-rose-700'
-                                : 'font-semibold text-emerald-700'
-                            }
-                          >
-                            {toIDR(row.difference_amount)}
-                          </span>
-                        </Td>
-                        <Td className="text-right">
-                          <button
-                            type="button"
-                            className="btn-outline text-xs"
-                            onClick={() => void onSelect(row.id)}
-                          >
-                            Detail
-                          </button>
-                        </Td>
-                      </tr>
-                    ))}
+                    <tr
+                      key={row.id}
+                      className="border-t border-[color:var(--color-border)] bg-white/40 transition-colors hover:bg-black/[0.025]"
+                    >
+                      <Td>
+                        <div className="font-medium text-[color:var(--color-text-default)]">
+                          {toLocalDate(row.business_date)}
+                        </div>
+                        <div className="text-xs text-[color:var(--color-text-muted)]">
+                          Dibuka: {toLocalDateTime(row.opened_at)}
+                        </div>
+                      </Td>
+                      <Td>
+                        <div className="font-medium text-[color:var(--color-text-default)]">
+                          {row.branch?.name ?? '-'}
+                        </div>
+                        <div className="text-xs text-[color:var(--color-text-muted)]">
+                          Oleh: {row.opener?.name ?? '-'}
+                        </div>
+                      </Td>
+                      <Td>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(row.status)}`}
+                        >
+                          {row.status}
+                        </span>
+                      </Td>
+                      <Td className="text-right font-medium">{toIDR(row.opening_cash)}</Td>
+                      <Td className="text-right">{toIDR(row.closing_cash_system)}</Td>
+                      <Td className="text-right">{toIDR(row.closing_cash_counted)}</Td>
+                      <Td className="text-right">
+                        <span
+                          className={
+                            Number(row.difference_amount ?? 0) < 0
+                              ? 'font-semibold text-rose-700'
+                              : 'font-semibold text-emerald-700'
+                          }
+                        >
+                          {toIDR(row.difference_amount)}
+                        </span>
+                      </Td>
+                      <Td className="text-right">
+                        <button
+                          type="button"
+                          className="btn-outline text-xs"
+                          onClick={() => void onSelect(row.id)}
+                        >
+                          Detail
+                        </button>
+                      </Td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -553,7 +569,8 @@ export default function CashSessionsIndex() {
                                 type="number"
                                 min={0}
                                 value={withdrawAmount}
-                                onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                placeholder="0"
                               />
                             </label>
 
@@ -600,21 +617,21 @@ export default function CashSessionsIndex() {
                                 type="number"
                                 min={0}
                                 value={closingCash}
-                                onChange={(e) => setClosingCash(Number(e.target.value))}
+                                onChange={(e) => setClosingCash(e.target.value)}
+                                placeholder="0"
                               />
                             </label>
 
                             <div className="rounded-xl border border-[color:var(--color-border)] bg-black/[0.02] p-3 text-sm">
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-[color:var(--color-text-muted)]">Estimasi selisih</span>
                                 <span
                                   className={
-                                    closingCash - selectedSystemClosing < 0
+                                    differenceAmount < 0
                                       ? 'font-semibold text-rose-700'
                                       : 'font-semibold text-emerald-700'
                                   }
                                 >
-                                  {toIDR(closingCash - selectedSystemClosing)}
+                                  {toIDR(differenceAmount)}
                                 </span>
                               </div>
                             </div>

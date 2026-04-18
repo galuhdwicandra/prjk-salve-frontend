@@ -1,7 +1,7 @@
 // src/pages/customers/ServiceForm.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Service, ServiceUpsertPayload, ServiceCategory } from '../../types/services';
+import type { Service, ServiceCategory } from '../../types/services';
 import { createService, getService, updateService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
 import PricePerBranchInput from './PricePerBranchInput';
@@ -10,6 +10,13 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
 const UNIT_PRESETS = ['ITEM', 'PASANG', 'KG'] as const;
+type ServiceFormState = {
+  category_id: string;
+  name: string;
+  unit: string;
+  price_default: string;
+  is_active: boolean;
+};
 
 export default function ServiceForm() {
   const { id } = useParams<{ id: string }>();
@@ -17,11 +24,11 @@ export default function ServiceForm() {
   const editing = Boolean(id);
 
   const [cats, setCats] = useState<ServiceCategory[]>([]);
-  const [form, setForm] = useState<ServiceUpsertPayload>({
+  const [form, setForm] = useState<ServiceFormState>({
     category_id: '',
     name: '',
     unit: 'ITEM',
-    price_default: 0,
+    price_default: '',
     is_active: true,
   });
   const [service, setService] = useState<Service | null>(null);
@@ -80,7 +87,7 @@ export default function ServiceForm() {
             category_id: s.category_id,
             name: s.name,
             unit: s.unit,
-            price_default: Number(s.price_default),
+            price_default: s.price_default != null ? String(Number(s.price_default)) : '',
             is_active: s.is_active,
           });
         }
@@ -118,8 +125,10 @@ export default function ServiceForm() {
       clientErrors.unit = ['Unit wajib diisi'];
     }
 
-    if (Number(form.price_default) <= 0) {
-      clientErrors.price_default = ['Harga default harus lebih dari 0'];
+    if (form.price_default.trim() === '') {
+      clientErrors.price_default = ['Harga default wajib diisi'];
+    } else if (Number.isNaN(Number(form.price_default)) || Number(form.price_default) < 0) {
+      clientErrors.price_default = ['Harga default harus 0 atau lebih'];
     }
 
     if (Object.keys(clientErrors).length > 0) {
@@ -131,8 +140,16 @@ export default function ServiceForm() {
     }
 
     try {
-      if (editing) await updateService(id!, form);
-      else await createService(form);
+      const payload = {
+        category_id: form.category_id,
+        name: form.name.trim(),
+        unit: form.unit.trim().toUpperCase(),
+        price_default: Number(form.price_default),
+        is_active: form.is_active,
+      };
+
+      if (editing) await updateService(id!, payload);
+      else await createService(payload);
 
       showSuccess(editing ? 'Layanan berhasil diperbarui.' : 'Layanan berhasil disimpan.');
 
@@ -380,12 +397,12 @@ export default function ServiceForm() {
                 step="100"
                 className={inputClass(Boolean(fieldErrors.price_default), 'pl-10')}
                 value={form.price_default}
-                onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, price_default: e.target.value })}
                 disabled={loading}
                 aria-required="true"
                 aria-invalid={Boolean(fieldErrors.price_default)}
                 aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
-                placeholder="Contoh: 25000"
+                placeholder="0"
                 inputMode="numeric"
               />
             </div>

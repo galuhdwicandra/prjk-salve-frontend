@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-17 11:16:43_  
+_Dihasilkan otomatis: 2026-04-18 10:25:44_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -4093,63 +4093,85 @@ export default function AssignCourierSelect({ value, onChange, disabled = false 
 
 ### src\components\delivery\DeliveryStatusStepper.tsx
 
-- SHA: `5923e4d70f86`  
-- Ukuran: 2 KB
+- SHA: `93d47d557d2f`  
+- Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/components/delivery/DeliveryStatusStepper.tsx
 import type { DeliveryStatus } from '../../types/deliveries';
 
-const FLOW: DeliveryStatus[] = ['CREATED', 'ASSIGNED', 'ON_THE_WAY', 'PICKED', 'HANDOVER', 'COMPLETED'];
+const FLOW: DeliveryStatus[] = [
+    'CREATED',
+    'ASSIGNED',
+    'ON_THE_WAY',
+    'PICKED',
+    'HANDOVER',
+    'COMPLETED',
+];
+
+const TERMINAL: DeliveryStatus[] = ['FAILED', 'CANCELLED'];
 
 export default function DeliveryStatusStepper({ status }: { status: DeliveryStatus }) {
-    // Logika asli dipertahankan
-    const activeIdx = Math.max(0, FLOW.indexOf(status));
+    const flowIndex = FLOW.indexOf(status);
+    const isTerminal = TERMINAL.includes(status);
+
+    // Jika status ada di FLOW → pakai index aslinya
+    // Jika status terminal FAILED/CANCELLED → tampilkan semua step flow sebagai selesai
+    const activeIdx = flowIndex >= 0 ? flowIndex : FLOW.length - 1;
 
     return (
-        <ol
-            className="flex items-center flex-wrap gap-2 text-xs"
-            aria-label="Status pengiriman"
-            role="list"
-        >
-            {FLOW.map((s, i) => {
-                const isDone = i < activeIdx;
-                const isActive = i === activeIdx;
-                const pillBase =
-                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition duration-150 ease-out';
-                const pillClass = isActive
-                    ? // Langkah aktif: solid brand, teks on-brand, ring ringan + micro-scale
-                    `${pillBase} bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)] shadow-elev-1 scale-[1.02]`
-                    : isDone
-                        ? // Sudah lewat: subtle brand (mirip chip--subtle pada table Customers)
-                        `${pillBase} text-[var(--color-brand-primary)] bg-[#E6EDFF]`
-                        : // Belum: outline halus
-                        `${pillBase} border border-[color:var(--color-border)] text-gray-700 bg-white/80`;
+        <div className="space-y-2">
+            <ol
+                className="flex items-center flex-wrap gap-2 text-xs"
+                aria-label="Status pengiriman"
+                role="list"
+            >
+                {FLOW.map((s, i) => {
+                    const isDone = i < activeIdx || (isTerminal && i <= FLOW.length - 1);
+                    const isActive = !isTerminal && i === activeIdx;
 
-                return (
-                    <li key={s} className="flex items-center gap-2" aria-current={isActive ? 'step' : undefined}>
-                        <span className={pillClass}>
-                            {/* Bullet/ikon sederhana: ✔ untuk selesai, • untuk lain */}
-                            <span aria-hidden="true">{isDone ? '✔' : '•'}</span>
-                            <span className="tracking-wide">{s}</span>
-                        </span>
+                    const pillBase =
+                        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition duration-150 ease-out';
 
-                        {/* Connector antar step */}
-                        {i < FLOW.length - 1 && (
-                            <span
-                                className={`h-px w-6 md:w-8 ${i < activeIdx ? 'bg-[var(--color-brand-primary)]' : 'bg-[color:var(--color-border)]'
+                    const pillClass = isActive
+                        ? `${pillBase} bg-[var(--color-brand-primary)] text-[color:var(--color-brand-on)] shadow-elev-1 scale-[1.02]`
+                        : isDone
+                            ? `${pillBase} text-[var(--color-brand-primary)] bg-[#E6EDFF]`
+                            : `${pillBase} border border-[color:var(--color-border)] text-gray-700 bg-white/80`;
+
+                    return (
+                        <li
+                            key={s}
+                            className="flex items-center gap-2"
+                            aria-current={isActive ? 'step' : undefined}
+                        >
+                            <span className={pillClass}>
+                                <span aria-hidden="true">{isDone ? '✔' : '•'}</span>
+                                <span className="tracking-wide">{s}</span>
+                            </span>
+
+                            {i < FLOW.length - 1 && (
+                                <span
+                                    className={`h-px w-6 md:w-8 ${
+                                        isDone ? 'bg-[var(--color-brand-primary)]' : 'bg-[color:var(--color-border)]'
                                     }`}
-                                aria-hidden="true"
-                            />
-                        )}
-                    </li>
-                );
-            })}
-        </ol>
+                                    aria-hidden="true"
+                                />
+                            )}
+                        </li>
+                    );
+                })}
+            </ol>
+
+            {isTerminal && (
+                <div>
+                    <span className="chip chip--danger">{status}</span>
+                </div>
+            )}
+        </div>
     );
 }
-
 ```
 </details>
 
@@ -7620,7 +7642,7 @@ function RowSkeleton() {
 
 ### src\pages\cash\CashSessionsIndex.tsx
 
-- SHA: `ee10cc55c03f`  
+- SHA: `153d11fb17d7`  
 - Ukuran: 33 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7686,6 +7708,14 @@ function getMutationTone(mutation: CashMutation) {
   return 'text-rose-700';
 }
 
+function parseMoneyInput(value: string): number {
+  const normalized = value.trim();
+  if (normalized === '') return 0;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function CashSessionsIndex() {
   const me = useAuth.user;
   const isSuperadmin = (me?.roles ?? []).includes('Superadmin');
@@ -7696,13 +7726,13 @@ export default function CashSessionsIndex() {
   const [loading, setLoading] = useState(false);
 
   const [openDate, setOpenDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [openingCash, setOpeningCash] = useState<number>(0);
+  const [openingCash, setOpeningCash] = useState<string>('');
   const [openNotes, setOpenNotes] = useState('');
 
   const [selected, setSelected] = useState<CashSession | null>(null);
   const [selectedSystemClosing, setSelectedSystemClosing] = useState<number>(0);
-  const [closingCash, setClosingCash] = useState<number>(0);
-  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [closingCash, setClosingCash] = useState<string>('');
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -7741,7 +7771,7 @@ export default function CashSessionsIndex() {
         const list = Array.isArray(res.data) ? res.data : [];
         setBranches(list.map((b: { id: string; name: string }) => ({ id: b.id, name: b.name })));
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [isSuperadmin]);
 
   const summary = useMemo(() => {
@@ -7758,6 +7788,10 @@ export default function CashSessionsIndex() {
     };
   }, [rows]);
 
+  const openingCashValue = useMemo(() => parseMoneyInput(openingCash), [openingCash]);
+  const closingCashValue = useMemo(() => parseMoneyInput(closingCash), [closingCash]);
+  const withdrawAmountValue = useMemo(() => parseMoneyInput(withdrawAmount), [withdrawAmount]);
+
   const onOpen = async () => {
     setErrorMsg('');
     setSuccessMsg('');
@@ -7767,11 +7801,11 @@ export default function CashSessionsIndex() {
       await openCashSession({
         branch_id: isSuperadmin ? (branchId || undefined) : undefined,
         business_date: openDate,
-        opening_cash: Number(openingCash),
+        opening_cash: openingCashValue,
         notes: openNotes || null,
       });
 
-      setOpeningCash(0);
+      setOpeningCash('');
       setOpenNotes('');
       setSuccessMsg('Sesi kas berhasil dibuka.');
       await load();
@@ -7793,8 +7827,10 @@ export default function CashSessionsIndex() {
 
       setSelected(next);
       setSelectedSystemClosing(Number(res.meta?.system_closing ?? 0));
-      setClosingCash(Number(next?.closing_cash_counted ?? 0));
-      setWithdrawAmount(0);
+      setClosingCash(
+        next?.closing_cash_counted != null ? String(Number(next.closing_cash_counted)) : ''
+      );
+      setWithdrawAmount('');
       setWithdrawNote('');
       setIsModalOpen(true);
     } catch (err) {
@@ -7808,8 +7844,8 @@ export default function CashSessionsIndex() {
     setIsModalOpen(false);
     setSelected(null);
     setSelectedSystemClosing(0);
-    setClosingCash(0);
-    setWithdrawAmount(0);
+    setClosingCash('');
+    setWithdrawAmount('');
     setWithdrawNote('');
   };
 
@@ -7822,7 +7858,7 @@ export default function CashSessionsIndex() {
 
     try {
       await closeCashSession(selected.id, {
-        closing_cash_counted: Number(closingCash),
+        closing_cash_counted: closingCashValue,
         notes: selected.notes || null,
       });
 
@@ -7845,11 +7881,11 @@ export default function CashSessionsIndex() {
 
     try {
       await createCashWithdrawal(selected.id, {
-        amount: Number(withdrawAmount),
+        amount: withdrawAmountValue,
         note: withdrawNote || null,
       });
 
-      setWithdrawAmount(0);
+      setWithdrawAmount('');
       setWithdrawNote('');
       setSuccessMsg('Withdrawal berhasil disimpan.');
 
@@ -7863,7 +7899,9 @@ export default function CashSessionsIndex() {
   };
 
   const differenceAmount =
-    Number(selected?.closing_cash_counted ?? closingCash ?? 0) - Number(selectedSystemClosing ?? 0);
+    (closingCash.trim() !== ''
+      ? closingCashValue
+      : Number(selected?.closing_cash_counted ?? 0)) - Number(selectedSystemClosing ?? 0);
 
   return (
     <div className="space-y-6">
@@ -7955,8 +7993,8 @@ export default function CashSessionsIndex() {
                 type="number"
                 min={0}
                 value={openingCash}
-                onChange={(e) => setOpeningCash(Number(e.target.value))}
-                placeholder="Masukkan modal awal kas"
+                onChange={(e) => setOpeningCash(e.target.value)}
+                placeholder="0"
               />
               <div className="text-xs text-[color:var(--color-text-muted)]">
                 Nilai saat ini: <span className="font-semibold">{toIDR(openingCash)}</span>
@@ -8031,58 +8069,58 @@ export default function CashSessionsIndex() {
                 {loading
                   ? Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={i} />)
                   : rows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="border-t border-[color:var(--color-border)] bg-white/40 transition-colors hover:bg-black/[0.025]"
-                      >
-                        <Td>
-                          <div className="font-medium text-[color:var(--color-text-default)]">
-                            {toLocalDate(row.business_date)}
-                          </div>
-                          <div className="text-xs text-[color:var(--color-text-muted)]">
-                            Dibuka: {toLocalDateTime(row.opened_at)}
-                          </div>
-                        </Td>
-                        <Td>
-                          <div className="font-medium text-[color:var(--color-text-default)]">
-                            {row.branch?.name ?? '-'}
-                          </div>
-                          <div className="text-xs text-[color:var(--color-text-muted)]">
-                            Oleh: {row.opener?.name ?? '-'}
-                          </div>
-                        </Td>
-                        <Td>
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(row.status)}`}
-                          >
-                            {row.status}
-                          </span>
-                        </Td>
-                        <Td className="text-right font-medium">{toIDR(row.opening_cash)}</Td>
-                        <Td className="text-right">{toIDR(row.closing_cash_system)}</Td>
-                        <Td className="text-right">{toIDR(row.closing_cash_counted)}</Td>
-                        <Td className="text-right">
-                          <span
-                            className={
-                              Number(row.difference_amount ?? 0) < 0
-                                ? 'font-semibold text-rose-700'
-                                : 'font-semibold text-emerald-700'
-                            }
-                          >
-                            {toIDR(row.difference_amount)}
-                          </span>
-                        </Td>
-                        <Td className="text-right">
-                          <button
-                            type="button"
-                            className="btn-outline text-xs"
-                            onClick={() => void onSelect(row.id)}
-                          >
-                            Detail
-                          </button>
-                        </Td>
-                      </tr>
-                    ))}
+                    <tr
+                      key={row.id}
+                      className="border-t border-[color:var(--color-border)] bg-white/40 transition-colors hover:bg-black/[0.025]"
+                    >
+                      <Td>
+                        <div className="font-medium text-[color:var(--color-text-default)]">
+                          {toLocalDate(row.business_date)}
+                        </div>
+                        <div className="text-xs text-[color:var(--color-text-muted)]">
+                          Dibuka: {toLocalDateTime(row.opened_at)}
+                        </div>
+                      </Td>
+                      <Td>
+                        <div className="font-medium text-[color:var(--color-text-default)]">
+                          {row.branch?.name ?? '-'}
+                        </div>
+                        <div className="text-xs text-[color:var(--color-text-muted)]">
+                          Oleh: {row.opener?.name ?? '-'}
+                        </div>
+                      </Td>
+                      <Td>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusTone(row.status)}`}
+                        >
+                          {row.status}
+                        </span>
+                      </Td>
+                      <Td className="text-right font-medium">{toIDR(row.opening_cash)}</Td>
+                      <Td className="text-right">{toIDR(row.closing_cash_system)}</Td>
+                      <Td className="text-right">{toIDR(row.closing_cash_counted)}</Td>
+                      <Td className="text-right">
+                        <span
+                          className={
+                            Number(row.difference_amount ?? 0) < 0
+                              ? 'font-semibold text-rose-700'
+                              : 'font-semibold text-emerald-700'
+                          }
+                        >
+                          {toIDR(row.difference_amount)}
+                        </span>
+                      </Td>
+                      <Td className="text-right">
+                        <button
+                          type="button"
+                          className="btn-outline text-xs"
+                          onClick={() => void onSelect(row.id)}
+                        >
+                          Detail
+                        </button>
+                      </Td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -8180,7 +8218,8 @@ export default function CashSessionsIndex() {
                                 type="number"
                                 min={0}
                                 value={withdrawAmount}
-                                onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                placeholder="0"
                               />
                             </label>
 
@@ -8227,21 +8266,21 @@ export default function CashSessionsIndex() {
                                 type="number"
                                 min={0}
                                 value={closingCash}
-                                onChange={(e) => setClosingCash(Number(e.target.value))}
+                                onChange={(e) => setClosingCash(e.target.value)}
+                                placeholder="0"
                               />
                             </label>
 
                             <div className="rounded-xl border border-[color:var(--color-border)] bg-black/[0.02] p-3 text-sm">
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-[color:var(--color-text-muted)]">Estimasi selisih</span>
                                 <span
                                   className={
-                                    closingCash - selectedSystemClosing < 0
+                                    differenceAmount < 0
                                       ? 'font-semibold text-rose-700'
                                       : 'font-semibold text-emerald-700'
                                   }
                                 >
-                                  {toIDR(closingCash - selectedSystemClosing)}
+                                  {toIDR(differenceAmount)}
                                 </span>
                               </div>
                             </div>
@@ -14904,8 +14943,8 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `53bc6afe8eb7`  
-- Ukuran: 57 KB
+- SHA: `ef67f9bcb3ef`  
+- Ukuran: 58 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -15201,7 +15240,7 @@ export default function POSPage() {
   // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<string>('');
-  const [discount, setDiscount] = useState<number>(0);
+  const [discount, setDiscount] = useState<string>('');
   const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   const [loading, setLoading] = useState(false);
@@ -15226,7 +15265,7 @@ export default function POSPage() {
   type PayMode = 'PENDING' | 'DP' | 'FULL';
   const [mode, setMode] = useState<PayMode>('PENDING');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
-  const [dpAmount, setDpAmount] = useState<number>(0);
+  const [dpAmount, setDpAmount] = useState<string>('');
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
   // voucher
@@ -15308,15 +15347,29 @@ export default function POSPage() {
 
   const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
 
+  function parseMoneyInput(value: string): number {
+    const normalized = value.trim();
+    if (normalized === '') return 0;
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
   // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
-  const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
+
+  const discountValue = useMemo(() => parseMoneyInput(discount), [discount]);
+  const dpAmountValue = useMemo(() => parseMoneyInput(dpAmount), [dpAmount]);
+
+  const total = useMemo(() => Math.max(0, subtotal - discountValue), [subtotal, discountValue]);
+
   const payableNow = useMemo(() => {
     if (mode === 'PENDING') return 0;
-    if (mode === 'DP') return Math.max(0, Math.min(dpAmount, total));
+    if (mode === 'DP') return Math.max(0, Math.min(dpAmountValue, total));
     return total;
-  }, [mode, dpAmount, total]);
-  const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
+  }, [mode, dpAmountValue, total]);
+
+  const grand = useMemo(() => Math.max(0, subtotal - discountValue), [subtotal, discountValue]);
 
   const loyaltyPreview = useMemo(() => {
     if (!loy || subtotal <= 0) return { reward: 'NONE' as 'NONE' | 'DISC25' | 'FREE100', discount: 0, next: 1, stamps: 0 };
@@ -15328,8 +15381,8 @@ export default function POSPage() {
   }, [loy, subtotal]);
 
   const predictedGrand = useMemo(
-    () => Math.max(0, subtotal - (discount || 0) - (loyaltyPreview.discount || 0)),
-    [subtotal, discount, loyaltyPreview.discount]
+    () => Math.max(0, subtotal - discountValue - (loyaltyPreview.discount || 0)),
+    [subtotal, discountValue, loyaltyPreview.discount]
   );
 
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
@@ -15427,8 +15480,12 @@ export default function POSPage() {
       errors.ready_at = [dateErr];
     }
 
-    if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) {
-      errors.dp_amount = ['Nominal DP tidak valid.'];
+    if (mode === 'DP') {
+      if (dpAmount.trim() === '') {
+        errors.dp_amount = ['Nominal DP wajib diisi.'];
+      } else if (payableNow <= 0 || payableNow > total) {
+        errors.dp_amount = ['Nominal DP tidak valid.'];
+      }
     }
 
     if (mode === 'FULL' && payableNow <= 0) {
@@ -15463,7 +15520,7 @@ export default function POSPage() {
           qty: it.qty,
           note: it.note ?? null,
         })),
-        discount: discount || 0,
+        discount: discountValue,
         notes: buildConsumerGoodsNotes(noteRows),
         received_at: receivedAt,
         ready_at: readyAt,
@@ -15693,7 +15750,8 @@ export default function POSPage() {
                         type="number"
                         min={0}
                         value={discount}
-                        onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                        onChange={(e) => setDiscount(e.target.value)}
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -16051,7 +16109,7 @@ export default function POSPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-slate-500">Diskon</div>
-                    <div className="text-sm font-semibold">{toIDR(discount || 0)}</div>
+                    <div className="text-sm font-semibold">{toIDR(discountValue)}</div>
                   </div>
                   <div className="h-px bg-slate-200" />
                   <div className="flex items-center justify-between">
@@ -16157,8 +16215,8 @@ export default function POSPage() {
                         min={0}
                         max={total}
                         value={dpAmount}
-                        onChange={(e) => setDpAmount(Number(e.target.value) || 0)}
-                        placeholder="Masukkan nominal DP"
+                        onChange={(e) => setDpAmount(e.target.value)}
+                        placeholder="0"
                       />
                       <div className="mt-1 text-xs text-slate-600">
                         Dibayar sekarang: <span className="font-semibold text-slate-900">{toIDR(payableNow)}</span>
@@ -16263,7 +16321,7 @@ export default function POSPage() {
                       type="button"
                       onClick={() => {
                         setMode(m);
-                        if (m !== 'DP') setDpAmount(0);
+                        if (m !== 'DP') setDpAmount('');
                         if (m === 'FULL') setMethod('CASH');
                         setModePickerOpen(false);
                       }}
@@ -18027,15 +18085,15 @@ function Td({ children, className = "" }: { children: React.ReactNode; className
 
 ### src\pages\services\ServiceForm.tsx
 
-- SHA: `2e3f911a1c66`  
-- Ukuran: 20 KB
+- SHA: `bb83e77f5c4b`  
+- Ukuran: 21 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/customers/ServiceForm.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Service, ServiceUpsertPayload, ServiceCategory } from '../../types/services';
+import type { Service, ServiceCategory } from '../../types/services';
 import { createService, getService, updateService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
 import PricePerBranchInput from './PricePerBranchInput';
@@ -18044,6 +18102,13 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
 const UNIT_PRESETS = ['ITEM', 'PASANG', 'KG'] as const;
+type ServiceFormState = {
+  category_id: string;
+  name: string;
+  unit: string;
+  price_default: string;
+  is_active: boolean;
+};
 
 export default function ServiceForm() {
   const { id } = useParams<{ id: string }>();
@@ -18051,11 +18116,11 @@ export default function ServiceForm() {
   const editing = Boolean(id);
 
   const [cats, setCats] = useState<ServiceCategory[]>([]);
-  const [form, setForm] = useState<ServiceUpsertPayload>({
+  const [form, setForm] = useState<ServiceFormState>({
     category_id: '',
     name: '',
     unit: 'ITEM',
-    price_default: 0,
+    price_default: '',
     is_active: true,
   });
   const [service, setService] = useState<Service | null>(null);
@@ -18114,7 +18179,7 @@ export default function ServiceForm() {
             category_id: s.category_id,
             name: s.name,
             unit: s.unit,
-            price_default: Number(s.price_default),
+            price_default: s.price_default != null ? String(Number(s.price_default)) : '',
             is_active: s.is_active,
           });
         }
@@ -18152,8 +18217,10 @@ export default function ServiceForm() {
       clientErrors.unit = ['Unit wajib diisi'];
     }
 
-    if (Number(form.price_default) <= 0) {
-      clientErrors.price_default = ['Harga default harus lebih dari 0'];
+    if (form.price_default.trim() === '') {
+      clientErrors.price_default = ['Harga default wajib diisi'];
+    } else if (Number.isNaN(Number(form.price_default)) || Number(form.price_default) < 0) {
+      clientErrors.price_default = ['Harga default harus 0 atau lebih'];
     }
 
     if (Object.keys(clientErrors).length > 0) {
@@ -18165,8 +18232,16 @@ export default function ServiceForm() {
     }
 
     try {
-      if (editing) await updateService(id!, form);
-      else await createService(form);
+      const payload = {
+        category_id: form.category_id,
+        name: form.name.trim(),
+        unit: form.unit.trim().toUpperCase(),
+        price_default: Number(form.price_default),
+        is_active: form.is_active,
+      };
+
+      if (editing) await updateService(id!, payload);
+      else await createService(payload);
 
       showSuccess(editing ? 'Layanan berhasil diperbarui.' : 'Layanan berhasil disimpan.');
 
@@ -18414,12 +18489,12 @@ export default function ServiceForm() {
                 step="100"
                 className={inputClass(Boolean(fieldErrors.price_default), 'pl-10')}
                 value={form.price_default}
-                onChange={(e) => setForm({ ...form, price_default: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, price_default: e.target.value })}
                 disabled={loading}
                 aria-required="true"
                 aria-invalid={Boolean(fieldErrors.price_default)}
                 aria-describedby={fieldErrors.price_default ? 'err-price_default' : 'hint-price_default'}
-                placeholder="Contoh: 25000"
+                placeholder="0"
                 inputMode="numeric"
               />
             </div>

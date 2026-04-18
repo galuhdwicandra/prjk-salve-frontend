@@ -257,11 +257,21 @@ export default function InvoiceSettings() {
               max={999999}
               step={1}
               className="input font-mono"
-              value={form.seq ?? 0}
+              value={form.seq === 0 ? '' : String(form.seq)}
+              placeholder="0"
               onChange={(e) => {
-                const n = Number(e.target.value);
-                const v = Number.isFinite(n) ? Math.max(0, Math.min(999999, Math.floor(n))) : 0;
-                setForm({ ...form, seq: v });
+                const raw = e.target.value;
+
+                if (raw === '') {
+                  setForm((prev) => ({ ...prev, seq: 0 }));
+                  return;
+                }
+
+                const n = Number(raw);
+                if (!Number.isFinite(n)) return;
+
+                const v = Math.max(0, Math.min(999999, Math.floor(n)));
+                setForm((prev) => ({ ...prev, seq: v }));
               }}
             />
           </div>

@@ -290,7 +290,7 @@ export default function POSPage() {
   // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<string>('');
-  const [discount, setDiscount] = useState<number>(0);
+  const [discount, setDiscount] = useState<string>('');
   const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   const [loading, setLoading] = useState(false);
@@ -315,7 +315,7 @@ export default function POSPage() {
   type PayMode = 'PENDING' | 'DP' | 'FULL';
   const [mode, setMode] = useState<PayMode>('PENDING');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
-  const [dpAmount, setDpAmount] = useState<number>(0);
+  const [dpAmount, setDpAmount] = useState<string>('');
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
   // voucher
@@ -397,15 +397,29 @@ export default function POSPage() {
 
   const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
 
+  function parseMoneyInput(value: string): number {
+    const normalized = value.trim();
+    if (normalized === '') return 0;
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
   // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
-  const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
+
+  const discountValue = useMemo(() => parseMoneyInput(discount), [discount]);
+  const dpAmountValue = useMemo(() => parseMoneyInput(dpAmount), [dpAmount]);
+
+  const total = useMemo(() => Math.max(0, subtotal - discountValue), [subtotal, discountValue]);
+
   const payableNow = useMemo(() => {
     if (mode === 'PENDING') return 0;
-    if (mode === 'DP') return Math.max(0, Math.min(dpAmount, total));
+    if (mode === 'DP') return Math.max(0, Math.min(dpAmountValue, total));
     return total;
-  }, [mode, dpAmount, total]);
-  const grand = useMemo(() => Math.max(0, subtotal - (discount || 0)), [subtotal, discount]);
+  }, [mode, dpAmountValue, total]);
+
+  const grand = useMemo(() => Math.max(0, subtotal - discountValue), [subtotal, discountValue]);
 
   const loyaltyPreview = useMemo(() => {
     if (!loy || subtotal <= 0) return { reward: 'NONE' as 'NONE' | 'DISC25' | 'FREE100', discount: 0, next: 1, stamps: 0 };
@@ -417,8 +431,8 @@ export default function POSPage() {
   }, [loy, subtotal]);
 
   const predictedGrand = useMemo(
-    () => Math.max(0, subtotal - (discount || 0) - (loyaltyPreview.discount || 0)),
-    [subtotal, discount, loyaltyPreview.discount]
+    () => Math.max(0, subtotal - discountValue - (loyaltyPreview.discount || 0)),
+    [subtotal, discountValue, loyaltyPreview.discount]
   );
 
   const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
@@ -516,8 +530,12 @@ export default function POSPage() {
       errors.ready_at = [dateErr];
     }
 
-    if (mode === 'DP' && (payableNow <= 0 || payableNow > total)) {
-      errors.dp_amount = ['Nominal DP tidak valid.'];
+    if (mode === 'DP') {
+      if (dpAmount.trim() === '') {
+        errors.dp_amount = ['Nominal DP wajib diisi.'];
+      } else if (payableNow <= 0 || payableNow > total) {
+        errors.dp_amount = ['Nominal DP tidak valid.'];
+      }
     }
 
     if (mode === 'FULL' && payableNow <= 0) {
@@ -552,7 +570,7 @@ export default function POSPage() {
           qty: it.qty,
           note: it.note ?? null,
         })),
-        discount: discount || 0,
+        discount: discountValue,
         notes: buildConsumerGoodsNotes(noteRows),
         received_at: receivedAt,
         ready_at: readyAt,
@@ -782,7 +800,8 @@ export default function POSPage() {
                         type="number"
                         min={0}
                         value={discount}
-                        onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                        onChange={(e) => setDiscount(e.target.value)}
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -1140,7 +1159,7 @@ export default function POSPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-slate-500">Diskon</div>
-                    <div className="text-sm font-semibold">{toIDR(discount || 0)}</div>
+                    <div className="text-sm font-semibold">{toIDR(discountValue)}</div>
                   </div>
                   <div className="h-px bg-slate-200" />
                   <div className="flex items-center justify-between">
@@ -1246,8 +1265,8 @@ export default function POSPage() {
                         min={0}
                         max={total}
                         value={dpAmount}
-                        onChange={(e) => setDpAmount(Number(e.target.value) || 0)}
-                        placeholder="Masukkan nominal DP"
+                        onChange={(e) => setDpAmount(e.target.value)}
+                        placeholder="0"
                       />
                       <div className="mt-1 text-xs text-slate-600">
                         Dibayar sekarang: <span className="font-semibold text-slate-900">{toIDR(payableNow)}</span>
@@ -1352,7 +1371,7 @@ export default function POSPage() {
                       type="button"
                       onClick={() => {
                         setMode(m);
-                        if (m !== 'DP') setDpAmount(0);
+                        if (m !== 'DP') setDpAmount('');
                         if (m === 'FULL') setMethod('CASH');
                         setModePickerOpen(false);
                       }}
