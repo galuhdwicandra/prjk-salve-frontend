@@ -1,7 +1,9 @@
 // src/pages/customers/CustomersIndex.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Customer, CustomerQuery, Paginated } from "../../types/customers";
-import { listCustomers } from "../../api/customers";
+import { deleteCustomer, listCustomers } from "../../api/customers";
+import { getErrorMessage } from "../../api/client";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import { useAuth, useHasRole } from "../../store/useAuth";
 import { Link } from "react-router-dom";
 
@@ -96,6 +98,7 @@ export default function CustomersIndex() {
     const auth = useAuthSnapshot();
     const user = auth.user;
     const canManage = useHasRole(["Superadmin", "Admin Cabang", "Kasir"]);
+    const canDelete = useHasRole(["Superadmin", "Admin Cabang"]);
     const isSuperadmin = useHasRole("Superadmin");
 
     const [query, setQuery] = useState<CustomerQuery>({ page: 1, per_page: 10 });
@@ -103,6 +106,9 @@ export default function CustomersIndex() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState("");
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const branchIdForScope = useMemo(() => {
         if (isSuperadmin) return query.branch_id ?? undefined;
@@ -112,8 +118,18 @@ export default function CustomersIndex() {
         return undefined;
     }, [isSuperadmin, query.branch_id, user?.branch_id]);
 
+    async function fetchCustomers() {
+        const data = await listCustomers({
+            ...query,
+            q: search || undefined,
+            branch_id: branchIdForScope,
+        });
+        setRows(data);
+    }
+
     useEffect(() => {
         let cancelled = false;
+
         (async () => {
             setLoading(true);
             setError(null);
@@ -124,16 +140,54 @@ export default function CustomersIndex() {
                     branch_id: branchIdForScope,
                 });
                 if (!cancelled) setRows(data);
-            } catch {
-                if (!cancelled) setError("Gagal memuat data pelanggan.");
+            } catch (err) {
+                if (!cancelled) setError(getErrorMessage(err, "Gagal memuat data pelanggan."));
             } finally {
                 if (!cancelled) setLoading(false);
             }
         })();
+
         return () => {
             cancelled = true;
         };
     }, [query, search, branchIdForScope]);
+
+    async function handleConfirmDelete() {
+        if (!deleteTarget?.id) return;
+
+        setDeleting(true);
+        setError(null);
+
+        try {
+            await deleteCustomer(String(deleteTarget.id));
+
+            setDeleteOpen(false);
+            setDeleteTarget(null);
+
+            const currentDataCount = rows?.data.length ?? 0;
+            const currentPageValue = Number(query.page ?? 1);
+
+            // Jika item terakhir di halaman ini dihapus dan bukan halaman pertama,
+            // mundurkan halaman agar tidak kosong.
+            if (currentDataCount === 1 && currentPageValue > 1) {
+                setQuery((prev) => ({
+                    ...prev,
+                    page: currentPageValue - 1,
+                }));
+            } else {
+                setLoading(true);
+                try {
+                    await fetchCustomers();
+                } finally {
+                    setLoading(false);
+                }
+            }
+        } catch (err) {
+            setError(getErrorMessage(err, "Gagal menghapus customer."));
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     const currentPage = rows?.meta.current_page ?? 1;
     const lastPage = rows?.meta.last_page ?? 1;
@@ -326,17 +380,37 @@ export default function CustomersIndex() {
                                             </Td>
 
                                             <Td className="pr-4 text-right">
-                                                <Link
-                                                    to={`/customers/${String(c.id)}`}
-                                                    className="
-                            inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2
-                            text-xs font-semibold text-slate-900
-                            hover:bg-slate-50 active:bg-slate-100
-                          "
-                                                    aria-label={`Lihat detail pelanggan ${c.name}`}
-                                                >
-                                                    Detail
-                                                </Link>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link
+                                                        to={`/customers/${String(c.id)}`}
+                                                        className="
+                inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2
+                text-xs font-semibold text-slate-900
+                hover:bg-slate-50 active:bg-slate-100
+            "
+                                                        aria-label={`Lihat detail pelanggan ${c.name}`}
+                                                    >
+                                                        Detail
+                                                    </Link>
+
+                                                    {canDelete && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setDeleteTarget(c);
+                                                                setDeleteOpen(true);
+                                                            }}
+                                                            className="
+                    inline-flex items-center justify-center rounded-lg bg-rose-600 px-3 py-2
+                    text-xs font-semibold text-white
+                    hover:bg-rose-700 active:bg-rose-800
+                "
+                                                            aria-label={`Hapus pelanggan ${c.name}`}
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </Td>
                                             <Td>
                                                 <div className="flex flex-wrap gap-1.5">
@@ -412,6 +486,26 @@ export default function CustomersIndex() {
                     </div>
                 </div>
             </section>
+
+            <ConfirmDialog
+                open={deleteOpen}
+                title="Hapus customer?"
+                message={
+                    deleteTarget
+                        ? `Customer "${deleteTarget.name}" akan dihapus permanen beserta data terkait. Aksi ini tidak bisa dibatalkan.`
+                        : "Customer akan dihapus permanen beserta data terkait. Aksi ini tidak bisa dibatalkan."
+                }
+                confirmText={deleting ? "Menghapus..." : "Ya, hapus"}
+                cancelText="Batal"
+                confirmVariant="danger"
+                loading={deleting}
+                onClose={() => {
+                    if (deleting) return;
+                    setDeleteOpen(false);
+                    setDeleteTarget(null);
+                }}
+                onConfirm={handleConfirmDelete}
+            />
         </div>
     );
 }
