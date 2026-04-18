@@ -5,11 +5,15 @@ import type { OrderPhoto } from "../../types/orders";
 const fileUrl = (p?: string | null) => {
   if (!p) return "";
   if (/^https?:\/\//i.test(p)) return p;
-  const filesBase = (import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
-  const originFallback = apiBase.replace(/\/api\/v1$/i, "");
-  const base = filesBase || originFallback || "";
-  return `${base}/${String(p).replace(/^\/+/, "")}`;
+
+  const cleanPath = String(p).replace(/^\/+/, "");
+  const filesBase = String(import.meta.env.VITE_FILES_BASE_URL || "").replace(/\/+$/, "");
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
+  const originFallback = apiBase.replace(/\/api(?:\/v\d+)?(?:\/api\/v\d+)?$/i, "");
+  const base = filesBase || originFallback;
+
+  return base ? `${base}/${cleanPath}` : `/${cleanPath}`;
 };
 
 export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] }) {
