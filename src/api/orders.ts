@@ -30,6 +30,13 @@ export async function updateOrder(id: string, payload: OrderUpdatePayload) {
   return data;
 }
 
+export async function deleteOrder(id: string) {
+  const { data } = await api.delete<SingleResponse<null>>(
+    `/orders/${encodeURIComponent(id)}`
+  );
+  return data;
+}
+
 export async function updateOrderStatus(id: string, status: OrderBackendStatus) {
   const { data } = await api.post<
     SingleResponse<{ id: string; status: OrderBackendStatus }>

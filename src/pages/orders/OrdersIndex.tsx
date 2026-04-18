@@ -1,8 +1,11 @@
 // src/pages/orders/OrdersIndex.tsx
 import { useCallback, useEffect, useState } from 'react';
-import { listOrders, openOrderReceipt } from '../../api/orders';
+import { deleteOrder, listOrders, openOrderReceipt } from '../../api/orders';
+import { getErrorMessage } from '../../api/client';
 import type { Order, OrderBackendStatus, PaginationMeta, PaymentMethod, PaymentStatus } from '../../types/orders';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../store/useAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const dlog = (...args: unknown[]) => {
   if (import.meta.env?.DEV) console.log('[OrdersIndex]', ...args);
@@ -111,6 +114,9 @@ export default function OrdersIndex(): React.ReactElement {
   const perPage = 10;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const me = useAuth.user;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
   const refresh = useCallback(async (p = 1) => {
     dlog('refresh start', {
@@ -232,6 +238,68 @@ export default function OrdersIndex(): React.ReactElement {
     } catch (e) {
       dlog('open receipt error', e);
       setError('Gagal membuka struk. Izinkan pop-up untuk situs ini, lalu coba lagi.');
+    }
+  };
+
+  const canDeleteOrder = (o: Order): boolean => {
+    if (!me) return false;
+
+    const isSuperadmin = me.roles.includes('Superadmin');
+    const isAdminCabang = me.roles.includes('Admin Cabang');
+
+    if (!isSuperadmin && !isAdminCabang) return false;
+
+    if (isAdminCabang && String(me.branch_id ?? '') !== String(o.branch_id ?? '')) {
+      return false;
+    }
+
+    const blockedStatus: OrderBackendStatus[] = ['DELIVERING', 'PICKED_UP', 'CANCELED'];
+    if (blockedStatus.includes(o.status)) return false;
+
+    const hasPayment =
+      Number(o.paid_amount ?? 0) > 0 ||
+      o.payment_status === 'PAID' ||
+      o.payment_status === 'SETTLED' ||
+      o.payment_status === 'DP';
+
+    if (hasPayment) return false;
+
+    return true;
+  };
+
+  const openDeleteDialog = (o: Order) => {
+    if (!canDeleteOrder(o)) return;
+    setDeleteTarget(o);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deletingId) return;
+    setDeleteTarget(null);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingId(String(deleteTarget.id));
+    setError(null);
+
+    try {
+      await deleteOrder(String(deleteTarget.id));
+
+      const nextRows = rows.filter((row) => String(row.id) !== String(deleteTarget.id));
+      setRows(nextRows);
+      setDeleteTarget(null);
+
+      if (nextRows.length === 0 && page > 1) {
+        await refresh(page - 1);
+      } else {
+        await refresh(page);
+      }
+    } catch (e) {
+      dlog('delete order error', e);
+      setError(getErrorMessage(e, 'Gagal menghapus order.'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -707,11 +775,11 @@ export default function OrdersIndex(): React.ReactElement {
                         <Link
                           to={`/orders/${o.id}`}
                           className="
-                            inline-flex items-center justify-center
-                            rounded-md border border-slate-200 bg-white px-3 py-1.5
-                            text-xs font-semibold text-slate-900
-                            hover:bg-slate-50
-                          "
+        inline-flex items-center justify-center
+        rounded-md border border-slate-200 bg-white px-3 py-1.5
+        text-xs font-semibold text-slate-900
+        hover:bg-slate-50
+      "
                         >
                           Detail
                         </Link>
@@ -719,16 +787,34 @@ export default function OrdersIndex(): React.ReactElement {
                         <button
                           type="button"
                           className="
-                            inline-flex items-center justify-center
-                            rounded-md bg-slate-900 px-3 py-1.5
-                            text-xs font-semibold text-white
-                            hover:bg-slate-800 active:bg-slate-950
-                          "
+        inline-flex items-center justify-center
+        rounded-md bg-slate-900 px-3 py-1.5
+        text-xs font-semibold text-white
+        hover:bg-slate-800 active:bg-slate-950
+      "
                           onClick={() => void onOpenReceipt(o.id)}
                           title="Lihat/Cetak struk"
                         >
                           Receipt
                         </button>
+
+                        {canDeleteOrder(o) && (
+                          <button
+                            type="button"
+                            className="
+                              inline-flex items-center justify-center
+                              rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5
+                              text-xs font-semibold text-rose-700
+                              hover:bg-rose-100 active:bg-rose-200
+                              disabled:opacity-50 disabled:pointer-events-none
+                            "
+                            onClick={() => openDeleteDialog(o)}
+                            disabled={deletingId === String(o.id)}
+                            title="Hapus order"
+                          >
+                            Hapus
+                          </button>
+                        )}
                       </div>
                     </Td>
                   </tr>
@@ -774,6 +860,22 @@ export default function OrdersIndex(): React.ReactElement {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Hapus order?"
+        message={
+          deleteTarget
+            ? `Order ${shortOrderNo(deleteTarget.number, deleteTarget.invoice_no)} akan dihapus permanen.`
+            : undefined
+        }
+        confirmText="Ya, hapus order"
+        cancelText="Batal"
+        confirmVariant="danger"
+        loading={!!deletingId}
+        onConfirm={() => { void confirmDeleteOrder(); }}
+        onClose={closeDeleteDialog}
+      />
     </div>
   );
 }

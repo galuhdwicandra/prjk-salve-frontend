@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-18 10:25:44_  
+_Dihasilkan otomatis: 2026-04-18 13:23:32_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -885,7 +885,7 @@ export async function uploadOrderPhotos(
 
 ### src\api\orders.ts
 
-- SHA: `7f3a1b9ceaf4`  
+- SHA: `05fa44116547`  
 - Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -919,6 +919,13 @@ export async function updateOrder(id: string, payload: OrderUpdatePayload) {
   const { data } = await api.put<SingleResponse<Order>>(`/orders/${encodeURIComponent(id)}`, payload, {
     headers: { 'Content-Type': 'application/json' },
   });
+  return data;
+}
+
+export async function deleteOrder(id: string) {
+  const { data } = await api.delete<SingleResponse<null>>(
+    `/orders/${encodeURIComponent(id)}`
+  );
   return data;
 }
 
@@ -3627,21 +3634,139 @@ export interface PaginationMeta {
 
 ### src\components\ConfirmDialog.tsx
 
-- SHA: `2bbd7e43a208`  
-- Ukuran: 271 B
+- SHA: `b00c084ccdea`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
+import { useEffect } from 'react';
+
 export interface Props {
-    open: boolean;
-    title: string;
-    message?: string;
-    onConfirm(): void;
-    onClose(): void;
+  open: boolean;
+  title: string;
+  message?: string;
+  confirmText?: string;
+  cancelText?: string;
+  confirmVariant?: 'danger' | 'primary';
+  loading?: boolean;
+  onConfirm(): void;
+  onClose(): void;
 }
-export default function ConfirmDialog(props: Props) {
-    void props; // mark as used agar lolos no-unused-vars
-    return null;
+
+export default function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmText = 'Konfirmasi',
+  cancelText = 'Batal',
+  confirmVariant = 'primary',
+  loading = false,
+  onConfirm,
+  onClose,
+}: Props) {
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loading) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, loading, onClose]);
+
+  if (!open) return null;
+
+  const confirmClass =
+    confirmVariant === 'danger'
+      ? `
+        inline-flex items-center justify-center rounded-xl
+        bg-rose-600 px-4 py-2 text-sm font-semibold text-white
+        hover:bg-rose-700 active:bg-rose-800
+        disabled:opacity-60 disabled:pointer-events-none
+      `
+      : `
+        inline-flex items-center justify-center rounded-xl
+        bg-slate-900 px-4 py-2 text-sm font-semibold text-white
+        hover:bg-slate-800 active:bg-slate-950
+        disabled:opacity-60 disabled:pointer-events-none
+      `;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 backdrop-blur-[1px] sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby={message ? 'confirm-dialog-message' : undefined}
+      onClick={() => {
+        if (!loading) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_28px_70px_-40px_rgba(0,0,0,.45)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-slate-100 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <path d="M3 6h18" />
+                <path d="M8 6V4.8c0-.7.56-1.3 1.25-1.3h5.5c.69 0 1.25.6 1.25 1.3V6" />
+                <path d="M18 6l-.7 11.1c-.08 1.18-1.05 2.1-2.23 2.1H8.93c-1.18 0-2.15-.92-2.23-2.1L6 6" />
+                <path d="M10 10.2v5.6" />
+                <path d="M14 10.2v5.6" />
+              </svg>
+            </div>
+
+            <div className="min-w-0">
+              <h2 id="confirm-dialog-title" className="text-base font-semibold text-slate-900">
+                {title}
+              </h2>
+              {message ? (
+                <p id="confirm-dialog-message" className="mt-1 text-sm leading-6 text-slate-500">
+                  {message}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="
+              inline-flex items-center justify-center rounded-xl
+              border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700
+              hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none
+            "
+          >
+            {cancelText}
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className={confirmClass}
+          >
+            {loading ? 'Memproses...' : confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 ```
 </details>
@@ -7313,7 +7438,7 @@ function RowSkeleton() {
 
 ### src\pages\branches\InvoiceSettings.tsx
 
-- SHA: `2975c8b55d9d`  
+- SHA: `99783d8be006`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7577,11 +7702,21 @@ export default function InvoiceSettings() {
               max={999999}
               step={1}
               className="input font-mono"
-              value={form.seq ?? 0}
+              value={form.seq === 0 ? '' : String(form.seq)}
+              placeholder="0"
               onChange={(e) => {
-                const n = Number(e.target.value);
-                const v = Number.isFinite(n) ? Math.max(0, Math.min(999999, Math.floor(n))) : 0;
-                setForm({ ...form, seq: v });
+                const raw = e.target.value;
+
+                if (raw === '') {
+                  setForm((prev) => ({ ...prev, seq: 0 }));
+                  return;
+                }
+
+                const n = Number(raw);
+                if (!Number.isFinite(n)) return;
+
+                const v = Math.max(0, Math.min(999999, Math.floor(n)));
+                setForm((prev) => ({ ...prev, seq: v }));
               }}
             />
           </div>
@@ -14100,16 +14235,19 @@ export default function OrderReceipt(): React.ReactElement {
 
 ### src\pages\orders\OrdersIndex.tsx
 
-- SHA: `1d81cec244dc`  
-- Ukuran: 29 KB
+- SHA: `071bb5724176`  
+- Ukuran: 32 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/orders/OrdersIndex.tsx
 import { useCallback, useEffect, useState } from 'react';
-import { listOrders, openOrderReceipt } from '../../api/orders';
+import { deleteOrder, listOrders, openOrderReceipt } from '../../api/orders';
+import { getErrorMessage } from '../../api/client';
 import type { Order, OrderBackendStatus, PaginationMeta, PaymentMethod, PaymentStatus } from '../../types/orders';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../store/useAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const dlog = (...args: unknown[]) => {
   if (import.meta.env?.DEV) console.log('[OrdersIndex]', ...args);
@@ -14218,6 +14356,9 @@ export default function OrdersIndex(): React.ReactElement {
   const perPage = 10;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const me = useAuth.user;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
   const refresh = useCallback(async (p = 1) => {
     dlog('refresh start', {
@@ -14339,6 +14480,68 @@ export default function OrdersIndex(): React.ReactElement {
     } catch (e) {
       dlog('open receipt error', e);
       setError('Gagal membuka struk. Izinkan pop-up untuk situs ini, lalu coba lagi.');
+    }
+  };
+
+  const canDeleteOrder = (o: Order): boolean => {
+    if (!me) return false;
+
+    const isSuperadmin = me.roles.includes('Superadmin');
+    const isAdminCabang = me.roles.includes('Admin Cabang');
+
+    if (!isSuperadmin && !isAdminCabang) return false;
+
+    if (isAdminCabang && String(me.branch_id ?? '') !== String(o.branch_id ?? '')) {
+      return false;
+    }
+
+    const blockedStatus: OrderBackendStatus[] = ['DELIVERING', 'PICKED_UP', 'CANCELED'];
+    if (blockedStatus.includes(o.status)) return false;
+
+    const hasPayment =
+      Number(o.paid_amount ?? 0) > 0 ||
+      o.payment_status === 'PAID' ||
+      o.payment_status === 'SETTLED' ||
+      o.payment_status === 'DP';
+
+    if (hasPayment) return false;
+
+    return true;
+  };
+
+  const openDeleteDialog = (o: Order) => {
+    if (!canDeleteOrder(o)) return;
+    setDeleteTarget(o);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deletingId) return;
+    setDeleteTarget(null);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingId(String(deleteTarget.id));
+    setError(null);
+
+    try {
+      await deleteOrder(String(deleteTarget.id));
+
+      const nextRows = rows.filter((row) => String(row.id) !== String(deleteTarget.id));
+      setRows(nextRows);
+      setDeleteTarget(null);
+
+      if (nextRows.length === 0 && page > 1) {
+        await refresh(page - 1);
+      } else {
+        await refresh(page);
+      }
+    } catch (e) {
+      dlog('delete order error', e);
+      setError(getErrorMessage(e, 'Gagal menghapus order.'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -14814,11 +15017,11 @@ export default function OrdersIndex(): React.ReactElement {
                         <Link
                           to={`/orders/${o.id}`}
                           className="
-                            inline-flex items-center justify-center
-                            rounded-md border border-slate-200 bg-white px-3 py-1.5
-                            text-xs font-semibold text-slate-900
-                            hover:bg-slate-50
-                          "
+        inline-flex items-center justify-center
+        rounded-md border border-slate-200 bg-white px-3 py-1.5
+        text-xs font-semibold text-slate-900
+        hover:bg-slate-50
+      "
                         >
                           Detail
                         </Link>
@@ -14826,16 +15029,34 @@ export default function OrdersIndex(): React.ReactElement {
                         <button
                           type="button"
                           className="
-                            inline-flex items-center justify-center
-                            rounded-md bg-slate-900 px-3 py-1.5
-                            text-xs font-semibold text-white
-                            hover:bg-slate-800 active:bg-slate-950
-                          "
+        inline-flex items-center justify-center
+        rounded-md bg-slate-900 px-3 py-1.5
+        text-xs font-semibold text-white
+        hover:bg-slate-800 active:bg-slate-950
+      "
                           onClick={() => void onOpenReceipt(o.id)}
                           title="Lihat/Cetak struk"
                         >
                           Receipt
                         </button>
+
+                        {canDeleteOrder(o) && (
+                          <button
+                            type="button"
+                            className="
+                              inline-flex items-center justify-center
+                              rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5
+                              text-xs font-semibold text-rose-700
+                              hover:bg-rose-100 active:bg-rose-200
+                              disabled:opacity-50 disabled:pointer-events-none
+                            "
+                            onClick={() => openDeleteDialog(o)}
+                            disabled={deletingId === String(o.id)}
+                            title="Hapus order"
+                          >
+                            Hapus
+                          </button>
+                        )}
                       </div>
                     </Td>
                   </tr>
@@ -14881,6 +15102,22 @@ export default function OrdersIndex(): React.ReactElement {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Hapus order?"
+        message={
+          deleteTarget
+            ? `Order ${shortOrderNo(deleteTarget.number, deleteTarget.invoice_no)} akan dihapus permanen.`
+            : undefined
+        }
+        confirmText="Ya, hapus order"
+        cancelText="Batal"
+        confirmVariant="danger"
+        loading={!!deletingId}
+        onConfirm={() => { void confirmDeleteOrder(); }}
+        onClose={closeDeleteDialog}
+      />
     </div>
   );
 }
