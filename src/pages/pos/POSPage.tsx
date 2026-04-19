@@ -27,17 +27,6 @@ import type { Branch } from '../../types/branches';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-type PosFieldKey =
-  | 'branch_id'
-  | 'customer_id'
-  | 'items'
-  | 'discount'
-  | 'received_at'
-  | 'ready_at'
-  | 'voucher_code'
-  | 'payment'
-  | 'dp_amount';
-
 function getUserBranchId(user: MeUser | null): string {
   if (!user) return '';
   if (user.branch_id != null) return String(user.branch_id);
@@ -77,34 +66,42 @@ function customerTagClass(tag: string): string {
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
-  const firstKey = Object.keys(errors)[0] as PosFieldKey | undefined;
+  const firstKey = Object.keys(errors)[0];
   if (!firstKey) return;
 
-  const idMap: Record<PosFieldKey, string> = {
-    branch_id: 'branch_id',
+  const idMap: Record<string, string> = {
     customer_id: 'customer_id',
-    items: 'product-search',
-    discount: 'discount',
     received_at: 'received_at',
     ready_at: 'ready_at',
-    voucher_code: 'voucher_code',
-    payment: 'payment_mode',
     dp_amount: 'dp_amount',
+    payment: 'payment_method',
+    order_photo_before: 'order-photo-before-button',
+    items: 'product-search-anchor',
+    voucher_code: 'voucher_code',
+    notes: 'consumer_goods_notes_0',
   };
 
-  const targetId = idMap[firstKey];
-  const el = document.getElementById(targetId) as
-    | HTMLInputElement
-    | HTMLTextAreaElement
-    | HTMLButtonElement
-    | HTMLDivElement
-    | null;
+  const targetId = idMap[firstKey] ?? firstKey;
+  const el = document.getElementById(targetId);
 
   if (!el) return;
 
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
   window.setTimeout(() => {
-    if ('focus' in el) el.focus();
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+      el.focus();
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.select?.();
+      }
+      return;
+    }
+
+    const focusable = el.querySelector(
+      'input, button, select, textarea, [tabindex]:not([tabindex="-1"])'
+    ) as HTMLElement | null;
+
+    focusable?.focus();
   }, 150);
 }
 
@@ -180,15 +177,18 @@ function PrimaryButton({
   onClick,
   className = '',
   type = 'button',
+  id,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
   onClick?: () => void;
   className?: string;
   type?: 'button' | 'submit';
+  id?: string;
 }) {
   return (
     <button
+      id={id}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -210,15 +210,18 @@ function OutlineButton({
   onClick,
   className = '',
   type = 'button',
+  id,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
   onClick?: () => void;
   className?: string;
   type?: 'button' | 'submit';
+  id?: string;
 }) {
   return (
     <button
+      id={id}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -526,6 +529,16 @@ export default function POSPage() {
       errors.ready_at = ['Tanggal selesai wajib diisi.'];
     }
 
+    if (beforeFiles.length === 0) {
+      errors.order_photo_before = ['Foto before wajib diisi.'];
+    }
+
+    const consumerGoodsNotes = buildConsumerGoodsNotes(noteRows);
+
+    if (!consumerGoodsNotes) {
+      errors.notes = ['Catatan barang konsumen wajib diisi minimal 1 item.'];
+    }
+
     if (receivedAt && readyAt && dateErr) {
       errors.ready_at = [dateErr];
     }
@@ -829,6 +842,7 @@ export default function POSPage() {
                           </div>
 
                           <Input
+                            id={`consumer_goods_notes_${index}`}
                             value={row}
                             onChange={(e) => onChangeNoteRow(index, e.target.value)}
                             placeholder={`Isi catatan barang #${index + 1}`}
@@ -910,23 +924,25 @@ export default function POSPage() {
               {/* 3) FOTO PESANAN (dipindah ke bawah Cari Layanan) */}
               <Card
                 title="Foto Pesanan"
-                subtitle="Opsional. Drop file di desktop, atau buka kamera di mobile."
+                subtitle="Wajib. Upload minimal 1 foto before sebelum transaksi disimpan."
               >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <UploadBox
-                    title="Before"
-                    isMobile={isMobile}
-                    inputRef={beforeRef}
-                    files={beforeFiles}
-                    onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
-                  />
-                  {/* <UploadBox
-                  title="After"
-                  isMobile={isMobile}
-                  inputRef={afterRef}
-                  files={afterFiles}
-                  onFiles={(f) => setAfterFiles((prev) => [...prev, ...f])}
-                /> */}
+                <div id="order-photo-before-anchor" tabIndex={-1} className="outline-none">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <UploadBox
+                      title="Before"
+                      isMobile={isMobile}
+                      inputRef={beforeRef}
+                      files={beforeFiles}
+                      onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
+                    />
+                    {/* kalau nanti ingin After diaktifkan lagi, letakkan di sini */}
+                  </div>
+
+                  {fieldErrors.order_photo_before?.[0] && (
+                    <div className="mt-2 text-xs text-red-600">
+                      {fieldErrors.order_photo_before[0]}
+                    </div>
+                  )}
                 </div>
               </Card>
 
@@ -1447,13 +1463,21 @@ function UploadBox({
         }}
       >
         {isMobile ? (
-          <PrimaryButton onClick={() => inputRef.current?.click()} className="w-full">
+          <PrimaryButton
+            id={title === 'Before' ? 'order-photo-before-button' : undefined}
+            onClick={() => inputRef.current?.click()}
+            className="w-full"
+          >
             Buka Kamera
           </PrimaryButton>
         ) : (
           <div className="space-y-2">
             <div className="text-xs text-slate-600">Drop file ke sini atau pilih file.</div>
-            <OutlineButton onClick={() => inputRef.current?.click()} className="w-full">
+            <OutlineButton
+              id={title === 'Before' ? 'order-photo-before-button' : undefined}
+              onClick={() => inputRef.current?.click()}
+              className="w-full"
+            >
               Pilih File
             </OutlineButton>
           </div>

@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-19 21:40:17_  
+_Dihasilkan otomatis: 2026-04-19 22:19:05_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -14238,7 +14238,7 @@ function RowLine({ label, value, strong }: { label: string; value: string; stron
 
 ### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `ae96f944a82f`  
+- SHA: `ec0f8b615dae`  
 - Ukuran: 21 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -14399,33 +14399,34 @@ export default function OrderReceipt(): React.ReactElement {
 
   // ====== WhatsApp helpers ======
   const getResolvedTemplate = async () => {
-    if (!order) return null;
+    if (!order) {
+      throw new Error('Data order belum tersedia.');
+    }
 
     const isUnpaid = Number(order.due_amount ?? 0) > 0;
     const key = isUnpaid ? 'receipt_pending' : 'receipt_paid';
 
-    try {
-      const res = await resolveWhatsappTemplate(key, order.branch_id);
+    const res = await resolveWhatsappTemplate(key, order.branch_id);
 
-      console.log('[WA TEMPLATE][resolve]', {
-        key,
-        branch_id: order.branch_id,
-        response: res,
-      });
+    console.log('[WA TEMPLATE][resolve]', {
+      key,
+      branch_id: order.branch_id,
+      response: res,
+    });
 
-      if (!res.data) {
-        throw new Error(`Template resolve kosong untuk key=${key}, branch_id=${String(order.branch_id)}`);
-      }
-
-      return res.data;
-    } catch (err) {
-      console.error('[WA TEMPLATE][resolve][error]', err);
-      return null;
+    if (!res.data?.content?.trim()) {
+      throw new Error(
+        `Template WhatsApp tidak ditemukan / tidak aktif untuk key=${key} dan branch_id=${String(order.branch_id)}`
+      );
     }
+
+    return res.data;
   };
 
   const buildWAMessage = async () => {
-    if (!order) return '';
+    if (!order) {
+      throw new Error('Data order belum tersedia.');
+    }
 
     const templateRow = await getResolvedTemplate();
     const message = buildReceiptMessage(order, shareUrl || '', templateRow);
@@ -14456,23 +14457,11 @@ export default function OrderReceipt(): React.ReactElement {
         message,
       });
 
-      window.alert(
-        JSON.stringify(
-          {
-            order_id: order.id,
-            order_branch_id: order.branch_id,
-            template_id: templateRow?.id ?? null,
-            template_branch_id: templateRow?.branch_id ?? null,
-            template_name: templateRow?.name ?? null,
-            template_content: templateRow?.content ?? null,
-            final_message: message,
-          },
-          null,
-          2
-        )
-      );
-
       window.open(buildWhatsAppLink(waPhone, message), '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[WA TEMPLATE][send][error]', err);
+      const msg = err instanceof Error ? err.message : 'Template WhatsApp gagal diproses.';
+      window.alert(msg);
     } finally {
       setWaBusy(false);
     }
@@ -14485,8 +14474,11 @@ export default function OrderReceipt(): React.ReactElement {
       setWaBusy(true);
       const message = await buildWAMessage();
       await navigator.clipboard?.writeText(message);
-    } catch {
-      /* abaikan */
+      window.alert('Teks WhatsApp berhasil disalin.');
+    } catch (err) {
+      console.error('[WA TEMPLATE][copy][error]', err);
+      const msg = err instanceof Error ? err.message : 'Template WhatsApp gagal diproses.';
+      window.alert(msg);
     } finally {
       setWaBusy(false);
     }
@@ -20061,8 +20053,8 @@ function IconBox() {
 
 ### src\pages\settings\WhatsappTemplatesPage.tsx
 
-- SHA: `fc5988ab8b7f`  
-- Ukuran: 11 KB
+- SHA: `0e9659060920`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -20111,7 +20103,7 @@ type TemplateCardProps = {
   onChangeScope: (value: string | null) => void;
 };
 
-const DEFAULT_PENDING = `Halo {{customer_name}},
+const DEFAULT_PENDING = `Halo Ka {{customer_name}},
 Berikut tagihan laundry Anda.
 Kwitansi: {{share_url}}
 No: {{invoice_no}}
@@ -20277,24 +20269,57 @@ export default function WhatsappTemplatesPage() {
     setError(null);
 
     try {
+      const scopeBranchId = isSuperadmin ? selectedScope : branchIdFromAuth;
+
       const payload = {
-        branch_id: isSuperadmin ? selectedScope : branchIdFromAuth,
+        branch_id: scopeBranchId,
         key: form.key,
         name: form.name,
         content: form.content,
         is_active: form.is_active,
       };
 
+      console.log('[WA TEMPLATE][SAVE][before]', {
+        form,
+        selectedScope,
+        branchIdFromAuth,
+        scopeBranchId,
+        payload,
+      });
+
+      let saved;
+
       if (form.id) {
-        await updateWhatsappTemplate(form.id, payload);
+        saved = await updateWhatsappTemplate(form.id, payload);
       } else {
-        await createWhatsappTemplate(payload);
+        saved = await createWhatsappTemplate(payload);
       }
 
+      console.log('[WA TEMPLATE][SAVE][after]', saved);
+
+      const resolved = await resolveWhatsappTemplate(form.key, scopeBranchId);
+
+      console.log('[WA TEMPLATE][SAVE][resolved-after-save]', {
+        key: form.key,
+        scopeBranchId,
+        resolved,
+      });
+
       await loadData();
-      window.alert(`Template ${form.key} berhasil disimpan.`);
+      window.alert(
+        JSON.stringify(
+          {
+            saved_data: saved?.data ?? null,
+            resolved_data: resolved?.data ?? null,
+            resolved_meta: resolved?.meta ?? null,
+          },
+          null,
+          2
+        )
+      );
     } catch (err: unknown) {
-      setError(getErrorMessage(err, `Gagal menyimpan template ${form.key}.`));
+      console.error('[WA TEMPLATE][SAVE][error]', err);
+      setError(getErrorMessage(err, 'Gagal menyimpan template WhatsApp.'));
     } finally {
       setSaving(false);
     }
