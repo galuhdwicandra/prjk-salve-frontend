@@ -5,6 +5,7 @@ import {
   closeCashSession,
   createCashWithdrawal,
   getCashSession,
+  updateCashSession,
 } from '../../api/cashSessions';
 import { getErrorMessage } from '../../api/client';
 import type { CashSession, CashMutation } from '../../types/cash';
@@ -86,6 +87,11 @@ export default function CashSessionsIndex() {
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
+  const [isEditingOpening, setIsEditingOpening] = useState(false);
+  const [editOpeningCash, setEditOpeningCash] = useState<string>('');
+  const [editOpeningNotes, setEditOpeningNotes] = useState('');
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [submittingOpen, setSubmittingOpen] = useState(false);
@@ -142,6 +148,10 @@ export default function CashSessionsIndex() {
   const openingCashValue = useMemo(() => parseMoneyInput(openingCash), [openingCash]);
   const closingCashValue = useMemo(() => parseMoneyInput(closingCash), [closingCash]);
   const withdrawAmountValue = useMemo(() => parseMoneyInput(withdrawAmount), [withdrawAmount]);
+  const editOpeningCashValue = useMemo(
+    () => parseMoneyInput(editOpeningCash),
+    [editOpeningCash]
+  );
 
   const onOpen = async () => {
     setErrorMsg('');
@@ -183,6 +193,11 @@ export default function CashSessionsIndex() {
       );
       setWithdrawAmount('');
       setWithdrawNote('');
+      setIsEditingOpening(false);
+      setEditOpeningCash(
+        next?.opening_cash != null ? String(Number(next.opening_cash)) : ''
+      );
+      setEditOpeningNotes(next?.notes ?? '');
       setIsModalOpen(true);
     } catch (err) {
       setErrorMsg(getErrorMessage(err, 'Gagal mengambil detail sesi kas.'));
@@ -198,6 +213,9 @@ export default function CashSessionsIndex() {
     setClosingCash('');
     setWithdrawAmount('');
     setWithdrawNote('');
+    setIsEditingOpening(false);
+    setEditOpeningCash('');
+    setEditOpeningNotes('');
   };
 
   const onCloseSession = async () => {
@@ -246,6 +264,32 @@ export default function CashSessionsIndex() {
       setErrorMsg(getErrorMessage(err, 'Gagal menyimpan withdrawal.'));
     } finally {
       setSubmittingWithdraw(false);
+    }
+  };
+
+  const onUpdateOpening = async () => {
+    if (!selected) return;
+    if (selected.status !== 'OPEN') return;
+
+    setErrorMsg('');
+    setSuccessMsg('');
+    setSubmittingEdit(true);
+
+    try {
+      await updateCashSession(selected.id, {
+        opening_cash: editOpeningCashValue,
+        notes: editOpeningNotes || null,
+      });
+
+      setSuccessMsg('Opening cash berhasil diperbarui.');
+      setIsEditingOpening(false);
+
+      await onSelect(selected.id);
+      await load();
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal mengubah opening cash.'));
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -543,6 +587,85 @@ export default function CashSessionsIndex() {
                         <div className="mt-4 rounded-xl border border-[color:var(--color-border)] bg-black/[0.02] p-3 text-sm text-[color:var(--color-text-muted)]">
                           <div className="mb-1 text-xs font-semibold uppercase tracking-wide">Catatan</div>
                           <div>{selected.notes}</div>
+                        </div>
+                      ) : null}
+
+                      {selected.status === 'OPEN' ? (
+                        <div className="pt-3">
+                          <button
+                            type="button"
+                            className="btn-outline text-xs"
+                            onClick={() => {
+                              setIsEditingOpening((prev) => !prev);
+                              setEditOpeningCash(String(Number(selected.opening_cash ?? 0)));
+                              setEditOpeningNotes(selected.notes ?? '');
+                            }}
+                          >
+                            {isEditingOpening ? 'Batal Edit' : 'Edit Opening'}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {selected.status === 'OPEN' && isEditingOpening ? (
+                        <div className="mt-4 space-y-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                          <div>
+                            <div className="text-sm font-semibold text-amber-800">
+                              Edit Opening Cash
+                            </div>
+                            <p className="mt-1 text-xs text-amber-700">
+                              Gunakan hanya jika ada kesalahan input saat pembukaan sesi kas.
+                            </p>
+                          </div>
+
+                          <label className="block space-y-2">
+                            <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                              Opening Cash
+                            </span>
+                            <input
+                              className="input"
+                              type="number"
+                              min={0}
+                              value={editOpeningCash}
+                              onChange={(e) => setEditOpeningCash(e.target.value)}
+                              placeholder="0"
+                            />
+                          </label>
+
+                          <label className="block space-y-2">
+                            <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                              Catatan
+                            </span>
+                            <textarea
+                              className="input min-h-[96px]"
+                              value={editOpeningNotes}
+                              onChange={(e) => setEditOpeningNotes(e.target.value)}
+                              placeholder="Catatan perubahan opening cash"
+                            />
+                          </label>
+
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="btn-outline"
+                              onClick={() => {
+                                setIsEditingOpening(false);
+                                setEditOpeningCash(String(Number(selected.opening_cash ?? 0)));
+                                setEditOpeningNotes(selected.notes ?? '');
+                              }}
+                              disabled={submittingEdit}
+                            >
+                              Batal
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              onClick={onUpdateOpening}
+                              disabled={submittingEdit}
+                            >
+                              {submittingEdit ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </button>
+                          </div>
                         </div>
                       ) : null}
                     </div>

@@ -38,6 +38,8 @@ type TemplateCardProps = {
   branches: BranchOption[];
   isSuperadmin: boolean;
   helpPlaceholders: string[];
+  selectedScope: string | null;
+  onChangeScope: (value: string | null) => void;
 };
 
 const DEFAULT_PENDING = `Halo {{customer_name}},
@@ -76,6 +78,9 @@ export default function WhatsappTemplatesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [selectedScope, setSelectedScope] = useState<string | null>(
+    isSuperadmin ? null : branchIdFromAuth
+  );
 
   const [pending, setPending] = useState<FormState>({
     branch_id: isSuperadmin ? null : branchIdFromAuth,
@@ -112,8 +117,19 @@ export default function WhatsappTemplatesPage() {
       const res = await listWhatsappTemplates({ per_page: 100 });
       const items = res.data ?? [];
 
-      const rowPending = items.find((item) => item.key === 'receipt_pending');
-      const rowPaid = items.find((item) => item.key === 'receipt_paid');
+      const scopeBranchId = isSuperadmin ? selectedScope : branchIdFromAuth;
+
+      const rowPending = items.find(
+        (item) =>
+          item.key === 'receipt_pending' &&
+          String(item.branch_id ?? '') === String(scopeBranchId ?? '')
+      );
+
+      const rowPaid = items.find(
+        (item) =>
+          item.key === 'receipt_paid' &&
+          String(item.branch_id ?? '') === String(scopeBranchId ?? '')
+      );
 
       if (rowPending) {
         setPending({
@@ -126,7 +142,7 @@ export default function WhatsappTemplatesPage() {
         });
       } else {
         setPending({
-          branch_id: isSuperadmin ? null : branchIdFromAuth,
+          branch_id: scopeBranchId,
           key: 'receipt_pending',
           name: 'Receipt Pending',
           content: DEFAULT_PENDING,
@@ -145,7 +161,7 @@ export default function WhatsappTemplatesPage() {
         });
       } else {
         setPaid({
-          branch_id: isSuperadmin ? null : branchIdFromAuth,
+          branch_id: scopeBranchId,
           key: 'receipt_paid',
           name: 'Receipt Paid',
           content: DEFAULT_PAID,
@@ -157,7 +173,7 @@ export default function WhatsappTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [branchIdFromAuth, isSuperadmin]);
+  }, [branchIdFromAuth, isSuperadmin, selectedScope]);
 
   useEffect(() => {
     void loadData();
@@ -169,7 +185,7 @@ export default function WhatsappTemplatesPage() {
 
     try {
       const payload = {
-        branch_id: form.branch_id,
+        branch_id: isSuperadmin ? selectedScope : branchIdFromAuth,
         key: form.key,
         name: form.name,
         content: form.content,
@@ -236,6 +252,8 @@ export default function WhatsappTemplatesPage() {
             branches={branches}
             isSuperadmin={isSuperadmin}
             helpPlaceholders={helpPlaceholders}
+            selectedScope={selectedScope}
+            onChangeScope={setSelectedScope}
           />
 
           <TemplateCard
@@ -249,6 +267,8 @@ export default function WhatsappTemplatesPage() {
             branches={branches}
             isSuperadmin={isSuperadmin}
             helpPlaceholders={helpPlaceholders}
+            selectedScope={selectedScope}
+            onChangeScope={setSelectedScope}
           />
         </>
       )}
@@ -265,6 +285,8 @@ function TemplateCard({
   branches,
   isSuperadmin,
   helpPlaceholders,
+  selectedScope,
+  onChangeScope,
 }: TemplateCardProps) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]">
@@ -280,10 +302,10 @@ function TemplateCard({
             </label>
             <select
               className="input w-full"
-              value={form.branch_id ?? ''}
+              value={selectedScope ?? ''}
               onChange={(e) => {
                 const value = e.target.value || null;
-                setForm((prev) => ({ ...prev, branch_id: value }));
+                onChangeScope(value);
               }}
             >
               <option value="">Global</option>
