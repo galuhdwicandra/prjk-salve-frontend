@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-19 20:11:38_  
+_Dihasilkan otomatis: 2026-04-19 21:40:17_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -7831,8 +7831,8 @@ function RowSkeleton() {
 
 ### src\pages\cash\CashSessionsIndex.tsx
 
-- SHA: `153d11fb17d7`  
-- Ukuran: 33 KB
+- SHA: `fe0a3a9bb4ce`  
+- Ukuran: 38 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -7843,6 +7843,7 @@ import {
   closeCashSession,
   createCashWithdrawal,
   getCashSession,
+  updateCashSession,
 } from '../../api/cashSessions';
 import { getErrorMessage } from '../../api/client';
 import type { CashSession, CashMutation } from '../../types/cash';
@@ -7924,6 +7925,11 @@ export default function CashSessionsIndex() {
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
+  const [isEditingOpening, setIsEditingOpening] = useState(false);
+  const [editOpeningCash, setEditOpeningCash] = useState<string>('');
+  const [editOpeningNotes, setEditOpeningNotes] = useState('');
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [submittingOpen, setSubmittingOpen] = useState(false);
@@ -7980,6 +7986,10 @@ export default function CashSessionsIndex() {
   const openingCashValue = useMemo(() => parseMoneyInput(openingCash), [openingCash]);
   const closingCashValue = useMemo(() => parseMoneyInput(closingCash), [closingCash]);
   const withdrawAmountValue = useMemo(() => parseMoneyInput(withdrawAmount), [withdrawAmount]);
+  const editOpeningCashValue = useMemo(
+    () => parseMoneyInput(editOpeningCash),
+    [editOpeningCash]
+  );
 
   const onOpen = async () => {
     setErrorMsg('');
@@ -8021,6 +8031,11 @@ export default function CashSessionsIndex() {
       );
       setWithdrawAmount('');
       setWithdrawNote('');
+      setIsEditingOpening(false);
+      setEditOpeningCash(
+        next?.opening_cash != null ? String(Number(next.opening_cash)) : ''
+      );
+      setEditOpeningNotes(next?.notes ?? '');
       setIsModalOpen(true);
     } catch (err) {
       setErrorMsg(getErrorMessage(err, 'Gagal mengambil detail sesi kas.'));
@@ -8036,6 +8051,9 @@ export default function CashSessionsIndex() {
     setClosingCash('');
     setWithdrawAmount('');
     setWithdrawNote('');
+    setIsEditingOpening(false);
+    setEditOpeningCash('');
+    setEditOpeningNotes('');
   };
 
   const onCloseSession = async () => {
@@ -8084,6 +8102,32 @@ export default function CashSessionsIndex() {
       setErrorMsg(getErrorMessage(err, 'Gagal menyimpan withdrawal.'));
     } finally {
       setSubmittingWithdraw(false);
+    }
+  };
+
+  const onUpdateOpening = async () => {
+    if (!selected) return;
+    if (selected.status !== 'OPEN') return;
+
+    setErrorMsg('');
+    setSuccessMsg('');
+    setSubmittingEdit(true);
+
+    try {
+      await updateCashSession(selected.id, {
+        opening_cash: editOpeningCashValue,
+        notes: editOpeningNotes || null,
+      });
+
+      setSuccessMsg('Opening cash berhasil diperbarui.');
+      setIsEditingOpening(false);
+
+      await onSelect(selected.id);
+      await load();
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal mengubah opening cash.'));
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -8381,6 +8425,85 @@ export default function CashSessionsIndex() {
                         <div className="mt-4 rounded-xl border border-[color:var(--color-border)] bg-black/[0.02] p-3 text-sm text-[color:var(--color-text-muted)]">
                           <div className="mb-1 text-xs font-semibold uppercase tracking-wide">Catatan</div>
                           <div>{selected.notes}</div>
+                        </div>
+                      ) : null}
+
+                      {selected.status === 'OPEN' ? (
+                        <div className="pt-3">
+                          <button
+                            type="button"
+                            className="btn-outline text-xs"
+                            onClick={() => {
+                              setIsEditingOpening((prev) => !prev);
+                              setEditOpeningCash(String(Number(selected.opening_cash ?? 0)));
+                              setEditOpeningNotes(selected.notes ?? '');
+                            }}
+                          >
+                            {isEditingOpening ? 'Batal Edit' : 'Edit Opening'}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {selected.status === 'OPEN' && isEditingOpening ? (
+                        <div className="mt-4 space-y-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                          <div>
+                            <div className="text-sm font-semibold text-amber-800">
+                              Edit Opening Cash
+                            </div>
+                            <p className="mt-1 text-xs text-amber-700">
+                              Gunakan hanya jika ada kesalahan input saat pembukaan sesi kas.
+                            </p>
+                          </div>
+
+                          <label className="block space-y-2">
+                            <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                              Opening Cash
+                            </span>
+                            <input
+                              className="input"
+                              type="number"
+                              min={0}
+                              value={editOpeningCash}
+                              onChange={(e) => setEditOpeningCash(e.target.value)}
+                              placeholder="0"
+                            />
+                          </label>
+
+                          <label className="block space-y-2">
+                            <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                              Catatan
+                            </span>
+                            <textarea
+                              className="input min-h-[96px]"
+                              value={editOpeningNotes}
+                              onChange={(e) => setEditOpeningNotes(e.target.value)}
+                              placeholder="Catatan perubahan opening cash"
+                            />
+                          </label>
+
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="btn-outline"
+                              onClick={() => {
+                                setIsEditingOpening(false);
+                                setEditOpeningCash(String(Number(selected.opening_cash ?? 0)));
+                                setEditOpeningNotes(selected.notes ?? '');
+                              }}
+                              disabled={submittingEdit}
+                            >
+                              Batal
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              onClick={onUpdateOpening}
+                              disabled={submittingEdit}
+                            >
+                              {submittingEdit ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </button>
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -14115,8 +14238,8 @@ function RowLine({ label, value, strong }: { label: string; value: string; stron
 
 ### src\pages\orders\OrderReceipt.tsx
 
-- SHA: `18ea6e9eb23a`  
-- Ukuran: 20 KB
+- SHA: `ae96f944a82f`  
+- Ukuran: 21 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -14283,8 +14406,20 @@ export default function OrderReceipt(): React.ReactElement {
 
     try {
       const res = await resolveWhatsappTemplate(key, order.branch_id);
-      return res.data ?? null;
-    } catch {
+
+      console.log('[WA TEMPLATE][resolve]', {
+        key,
+        branch_id: order.branch_id,
+        response: res,
+      });
+
+      if (!res.data) {
+        throw new Error(`Template resolve kosong untuk key=${key}, branch_id=${String(order.branch_id)}`);
+      }
+
+      return res.data;
+    } catch (err) {
+      console.error('[WA TEMPLATE][resolve][error]', err);
       return null;
     }
   };
@@ -14293,7 +14428,16 @@ export default function OrderReceipt(): React.ReactElement {
     if (!order) return '';
 
     const templateRow = await getResolvedTemplate();
-    return buildReceiptMessage(order, shareUrl || '', templateRow);
+    const message = buildReceiptMessage(order, shareUrl || '', templateRow);
+
+    console.log('[WA TEMPLATE][message]', {
+      order_id: order.id,
+      branch_id: order.branch_id,
+      templateRow,
+      message,
+    });
+
+    return message;
   };
 
   const onSendWA = async () => {
@@ -14301,7 +14445,33 @@ export default function OrderReceipt(): React.ReactElement {
 
     try {
       setWaBusy(true);
-      const message = await buildWAMessage();
+
+      const templateRow = await getResolvedTemplate();
+      const message = buildReceiptMessage(order, shareUrl || '', templateRow);
+
+      console.log('[WA TEMPLATE][final-send]', {
+        order_id: order.id,
+        order_branch_id: order.branch_id,
+        templateRow,
+        message,
+      });
+
+      window.alert(
+        JSON.stringify(
+          {
+            order_id: order.id,
+            order_branch_id: order.branch_id,
+            template_id: templateRow?.id ?? null,
+            template_branch_id: templateRow?.branch_id ?? null,
+            template_name: templateRow?.name ?? null,
+            template_content: templateRow?.content ?? null,
+            final_message: message,
+          },
+          null,
+          2
+        )
+      );
+
       window.open(buildWhatsAppLink(waPhone, message), '_blank', 'noopener,noreferrer');
     } finally {
       setWaBusy(false);
@@ -19891,8 +20061,8 @@ function IconBox() {
 
 ### src\pages\settings\WhatsappTemplatesPage.tsx
 
-- SHA: `2da7322c89ed`  
-- Ukuran: 10 KB
+- SHA: `fc5988ab8b7f`  
+- Ukuran: 11 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -19901,6 +20071,7 @@ import {
   listWhatsappTemplates,
   createWhatsappTemplate,
   updateWhatsappTemplate,
+  resolveWhatsappTemplate,
 } from '../../api/whatsappTemplates';
 import { listBranches } from '../../api/branches';
 import { useAuth } from '../../store/useAuth';
@@ -20029,6 +20200,14 @@ export default function WhatsappTemplatesPage() {
           String(item.branch_id ?? '') === String(scopeBranchId ?? '')
       );
 
+      const resolvedPending = !rowPending
+        ? await resolveWhatsappTemplate('receipt_pending', scopeBranchId)
+        : null;
+
+      const resolvedPaid = !rowPaid
+        ? await resolveWhatsappTemplate('receipt_paid', scopeBranchId)
+        : null;
+
       if (rowPending) {
         setPending({
           id: rowPending.id,
@@ -20037,6 +20216,14 @@ export default function WhatsappTemplatesPage() {
           name: rowPending.name,
           content: rowPending.content,
           is_active: rowPending.is_active,
+        });
+      } else if (resolvedPending?.data) {
+        setPending({
+          branch_id: scopeBranchId,
+          key: 'receipt_pending',
+          name: resolvedPending.data.name,
+          content: resolvedPending.data.content,
+          is_active: resolvedPending.data.is_active,
         });
       } else {
         setPending({
@@ -20056,6 +20243,14 @@ export default function WhatsappTemplatesPage() {
           name: rowPaid.name,
           content: rowPaid.content,
           is_active: rowPaid.is_active,
+        });
+      } else if (resolvedPaid?.data) {
+        setPaid({
+          branch_id: scopeBranchId,
+          key: 'receipt_paid',
+          name: resolvedPaid.data.name,
+          content: resolvedPaid.data.content,
+          is_active: resolvedPaid.data.is_active,
         });
       } else {
         setPaid({

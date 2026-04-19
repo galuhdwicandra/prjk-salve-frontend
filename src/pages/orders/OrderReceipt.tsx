@@ -154,24 +154,46 @@ export default function OrderReceipt(): React.ReactElement {
 
   // ====== WhatsApp helpers ======
   const getResolvedTemplate = async () => {
-    if (!order) return null;
+    if (!order) {
+      throw new Error('Data order belum tersedia.');
+    }
 
     const isUnpaid = Number(order.due_amount ?? 0) > 0;
     const key = isUnpaid ? 'receipt_pending' : 'receipt_paid';
 
-    try {
-      const res = await resolveWhatsappTemplate(key, order.branch_id);
-      return res.data ?? null;
-    } catch {
-      return null;
+    const res = await resolveWhatsappTemplate(key, order.branch_id);
+
+    console.log('[WA TEMPLATE][resolve]', {
+      key,
+      branch_id: order.branch_id,
+      response: res,
+    });
+
+    if (!res.data?.content?.trim()) {
+      throw new Error(
+        `Template WhatsApp tidak ditemukan / tidak aktif untuk key=${key} dan branch_id=${String(order.branch_id)}`
+      );
     }
+
+    return res.data;
   };
 
   const buildWAMessage = async () => {
-    if (!order) return '';
+    if (!order) {
+      throw new Error('Data order belum tersedia.');
+    }
 
     const templateRow = await getResolvedTemplate();
-    return buildReceiptMessage(order, shareUrl || '', templateRow);
+    const message = buildReceiptMessage(order, shareUrl || '', templateRow);
+
+    console.log('[WA TEMPLATE][message]', {
+      order_id: order.id,
+      branch_id: order.branch_id,
+      templateRow,
+      message,
+    });
+
+    return message;
   };
 
   const onSendWA = async () => {
@@ -179,8 +201,22 @@ export default function OrderReceipt(): React.ReactElement {
 
     try {
       setWaBusy(true);
-      const message = await buildWAMessage();
+
+      const templateRow = await getResolvedTemplate();
+      const message = buildReceiptMessage(order, shareUrl || '', templateRow);
+
+      console.log('[WA TEMPLATE][final-send]', {
+        order_id: order.id,
+        order_branch_id: order.branch_id,
+        templateRow,
+        message,
+      });
+
       window.open(buildWhatsAppLink(waPhone, message), '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[WA TEMPLATE][send][error]', err);
+      const msg = err instanceof Error ? err.message : 'Template WhatsApp gagal diproses.';
+      window.alert(msg);
     } finally {
       setWaBusy(false);
     }
@@ -193,8 +229,11 @@ export default function OrderReceipt(): React.ReactElement {
       setWaBusy(true);
       const message = await buildWAMessage();
       await navigator.clipboard?.writeText(message);
-    } catch {
-      /* abaikan */
+      window.alert('Teks WhatsApp berhasil disalin.');
+    } catch (err) {
+      console.error('[WA TEMPLATE][copy][error]', err);
+      const msg = err instanceof Error ? err.message : 'Template WhatsApp gagal diproses.';
+      window.alert(msg);
     } finally {
       setWaBusy(false);
     }

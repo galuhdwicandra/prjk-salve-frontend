@@ -3,6 +3,7 @@ import {
   listWhatsappTemplates,
   createWhatsappTemplate,
   updateWhatsappTemplate,
+  resolveWhatsappTemplate,
 } from '../../api/whatsappTemplates';
 import { listBranches } from '../../api/branches';
 import { useAuth } from '../../store/useAuth';
@@ -42,7 +43,7 @@ type TemplateCardProps = {
   onChangeScope: (value: string | null) => void;
 };
 
-const DEFAULT_PENDING = `Halo {{customer_name}},
+const DEFAULT_PENDING = `Halo Ka {{customer_name}},
 Berikut tagihan laundry Anda.
 Kwitansi: {{share_url}}
 No: {{invoice_no}}
@@ -131,6 +132,14 @@ export default function WhatsappTemplatesPage() {
           String(item.branch_id ?? '') === String(scopeBranchId ?? '')
       );
 
+      const resolvedPending = !rowPending
+        ? await resolveWhatsappTemplate('receipt_pending', scopeBranchId)
+        : null;
+
+      const resolvedPaid = !rowPaid
+        ? await resolveWhatsappTemplate('receipt_paid', scopeBranchId)
+        : null;
+
       if (rowPending) {
         setPending({
           id: rowPending.id,
@@ -139,6 +148,14 @@ export default function WhatsappTemplatesPage() {
           name: rowPending.name,
           content: rowPending.content,
           is_active: rowPending.is_active,
+        });
+      } else if (resolvedPending?.data) {
+        setPending({
+          branch_id: scopeBranchId,
+          key: 'receipt_pending',
+          name: resolvedPending.data.name,
+          content: resolvedPending.data.content,
+          is_active: resolvedPending.data.is_active,
         });
       } else {
         setPending({
@@ -158,6 +175,14 @@ export default function WhatsappTemplatesPage() {
           name: rowPaid.name,
           content: rowPaid.content,
           is_active: rowPaid.is_active,
+        });
+      } else if (resolvedPaid?.data) {
+        setPaid({
+          branch_id: scopeBranchId,
+          key: 'receipt_paid',
+          name: resolvedPaid.data.name,
+          content: resolvedPaid.data.content,
+          is_active: resolvedPaid.data.is_active,
         });
       } else {
         setPaid({
@@ -184,24 +209,57 @@ export default function WhatsappTemplatesPage() {
     setError(null);
 
     try {
+      const scopeBranchId = isSuperadmin ? selectedScope : branchIdFromAuth;
+
       const payload = {
-        branch_id: isSuperadmin ? selectedScope : branchIdFromAuth,
+        branch_id: scopeBranchId,
         key: form.key,
         name: form.name,
         content: form.content,
         is_active: form.is_active,
       };
 
+      console.log('[WA TEMPLATE][SAVE][before]', {
+        form,
+        selectedScope,
+        branchIdFromAuth,
+        scopeBranchId,
+        payload,
+      });
+
+      let saved;
+
       if (form.id) {
-        await updateWhatsappTemplate(form.id, payload);
+        saved = await updateWhatsappTemplate(form.id, payload);
       } else {
-        await createWhatsappTemplate(payload);
+        saved = await createWhatsappTemplate(payload);
       }
 
+      console.log('[WA TEMPLATE][SAVE][after]', saved);
+
+      const resolved = await resolveWhatsappTemplate(form.key, scopeBranchId);
+
+      console.log('[WA TEMPLATE][SAVE][resolved-after-save]', {
+        key: form.key,
+        scopeBranchId,
+        resolved,
+      });
+
       await loadData();
-      window.alert(`Template ${form.key} berhasil disimpan.`);
+      window.alert(
+        JSON.stringify(
+          {
+            saved_data: saved?.data ?? null,
+            resolved_data: resolved?.data ?? null,
+            resolved_meta: resolved?.meta ?? null,
+          },
+          null,
+          2
+        )
+      );
     } catch (err: unknown) {
-      setError(getErrorMessage(err, `Gagal menyimpan template ${form.key}.`));
+      console.error('[WA TEMPLATE][SAVE][error]', err);
+      setError(getErrorMessage(err, 'Gagal menyimpan template WhatsApp.'));
     } finally {
       setSaving(false);
     }
