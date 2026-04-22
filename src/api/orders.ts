@@ -93,7 +93,7 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
   }
 }
 
-type ShareLinkPayload = { share_url: string; expires_in_minutes: number };
+type ShareLinkPayload = { share_url: string; expires_in_minutes: number | null };
 export async function createOrderShareLink(id: string): Promise<string> {
   const { data } = await api.post<SingleResponse<ShareLinkPayload>>(
     `/orders/${encodeURIComponent(id)}/share-link`
