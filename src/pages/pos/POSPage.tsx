@@ -560,8 +560,14 @@ export default function POSPage() {
 
   // submit (LOGIC UNCHANGED)
   async function onSubmit() {
+    if (loading) {
+      dlog('onSubmit blocked: loading');
+      return;
+    }
+
     dlog('onSubmit start');
 
+    setLoading(true);
     setFieldErrors({});
     setError(null);
 
@@ -571,10 +577,9 @@ export default function POSPage() {
       setError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       showError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       focusFirstErrorField(clientErrors);
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
     try {
       const payload: OrderCreatePayload = {
         customer_id: customerId,

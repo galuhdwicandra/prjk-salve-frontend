@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-23 16:12:38_  
+_Dihasilkan otomatis: 2026-04-23 16:51:49_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -15773,7 +15773,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `eb4d421bd33a`  
+- SHA: `c7d93fb4bf1c`  
 - Ukuran: 59 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -16340,8 +16340,14 @@ export default function POSPage() {
 
   // submit (LOGIC UNCHANGED)
   async function onSubmit() {
+    if (loading) {
+      dlog('onSubmit blocked: loading');
+      return;
+    }
+
     dlog('onSubmit start');
 
+    setLoading(true);
     setFieldErrors({});
     setError(null);
 
@@ -16351,10 +16357,9 @@ export default function POSPage() {
       setError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       showError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       focusFirstErrorField(clientErrors);
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
     try {
       const payload: OrderCreatePayload = {
         customer_id: customerId,
