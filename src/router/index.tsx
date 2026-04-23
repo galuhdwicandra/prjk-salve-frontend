@@ -43,7 +43,6 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       {
-        // route publik untuk share link backend: /r/receipt/{id}
         path: '/r/receipt/:id',
         element: (
           <LazyBoundary>
@@ -244,15 +243,6 @@ export const router = createBrowserRouter([
               <OrderReceipt />
             </LazyBoundary>
           </Guarded>
-        ),
-      },
-      {
-        // ini untuk link publik dari backend: /r/receipt/{order} (signed)
-        path: '/r/receipt/:id',
-        element: (
-          <LazyBoundary>
-            <OrderReceipt />
-          </LazyBoundary>
         ),
       },
       {

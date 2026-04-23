@@ -1,6 +1,6 @@
 // src/pages/orders/OrderReceipt.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
 import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import { buildWhatsAppLink } from '../../utils/wa';
@@ -57,6 +57,8 @@ function IconWA(props: React.SVGProps<SVGSVGElement>) {
 
 export default function OrderReceipt(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const isPublicMode = location.pathname.startsWith('/r/receipt/');
   const [html, setHtml] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,8 +74,14 @@ export default function OrderReceipt(): React.ReactElement {
     (async () => {
       try {
         if (!id) return;
+
         const h = await getOrderReceiptHtml(id);
         setHtml(h);
+
+        if (isPublicMode) {
+          setShareUrl(window.location.href);
+          return;
+        }
 
         try {
           const orderRes = await getOrder(id);
@@ -83,19 +91,23 @@ export default function OrderReceipt(): React.ReactElement {
             const wa = ord.customer?.whatsapp ?? '';
             if (wa) setWaPhone(wa);
           }
-        } catch { /* lanjutkan */ }
+        } catch {
+          /* lanjutkan */
+        }
 
         try {
           const link = await createOrderShareLink(id);
           setShareUrl(link);
-        } catch { /* abaikan, tetap bisa cetak manual */ }
+        } catch {
+          /* abaikan, tetap bisa cetak manual */
+        }
       } catch (e: unknown) {
         setError((e as Error).message || 'Gagal memuat struk');
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, isPublicMode]);
 
   // ====== Derived UI state ======
   const isReceivableOpen = useMemo(() => Number(order?.due_amount ?? 0) > 0, [order?.due_amount]);
@@ -335,179 +347,181 @@ export default function OrderReceipt(): React.ReactElement {
       </header>
 
       {/* Top actions */}
-      <section className="print:hidden rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
-          {/* Actions */}
-          <div className="lg:col-span-4">
-            <div className="text-xs font-medium text-slate-600 mb-2">Aksi</div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                onClick={onPrint}
-                aria-label="Cetak struk"
-              >
-                <IconPrinter className="text-white" />
-                Print
-              </button>
+      {!isPublicMode && (
+        <section className="print:hidden rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
+            {/* Actions */}
+            <div className="lg:col-span-4">
+              <div className="text-xs font-medium text-slate-600 mb-2">Aksi</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
+                  onClick={onPrint}
+                  aria-label="Cetak struk"
+                >
+                  <IconPrinter className="text-white" />
+                  Print
+                </button>
 
-              <button
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                onClick={onOpenNewTab}
-                aria-label="Buka tab baru"
-              >
-                <IconExternal className="text-slate-700" />
-                Open tab
-              </button>
-            </div>
-          </div>
-
-          {/* Paper */}
-          <div className="lg:col-span-3">
-            <div className="text-xs font-medium text-slate-600 mb-2">Ukuran kertas</div>
-            <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <button
-                className={`flex-1 px-3 py-2 text-sm font-semibold ${paper === '58' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
-                onClick={() => setPaper('58')}
-                aria-pressed={paper === '58'}
-              >
-                58mm
-              </button>
-              <button
-                className={`flex-1 border-l border-slate-200 px-3 py-2 text-sm font-semibold ${paper === '80' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
-                onClick={() => setPaper('80')}
-                aria-pressed={paper === '80'}
-              >
-                80mm
-              </button>
-              <button
-                className={`flex-1 border-l border-slate-200 px-3 py-2 text-sm font-semibold ${paper === 'A4' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
-                onClick={() => setPaper('A4')}
-                aria-pressed={paper === 'A4'}
-              >
-                A4
-              </button>
-            </div>
-            <div className="mt-1 text-[11px] text-slate-500">Aktif: {paperLabel}</div>
-          </div>
-
-          {/* Zoom */}
-          <div className="lg:col-span-3">
-            <div className="text-xs font-medium text-slate-600 mb-2">Zoom</div>
-            <div className="flex items-center gap-2">
-              <button
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
-                onClick={() => setZoom((z) => clamp(Number((z - 0.1).toFixed(2)), 0.8, 2))}
-                aria-label="Zoom out"
-              >
-                −
-              </button>
-
-              <input
-                type="range"
-                min={0.8}
-                max={2}
-                step={0.05}
-                value={zoom}
-                onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-full"
-                aria-label="Zoom pratinjau"
-              />
-
-              <button
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
-                onClick={() => setZoom((z) => clamp(Number((z + 0.1).toFixed(2)), 0.8, 2))}
-                aria-label="Zoom in"
-              >
-                +
-              </button>
-
-              <div className="w-14 text-right text-xs font-semibold text-slate-900">
-                {Math.round(zoom * 100)}%
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                  onClick={onOpenNewTab}
+                  aria-label="Buka tab baru"
+                >
+                  <IconExternal className="text-slate-700" />
+                  Open tab
+                </button>
               </div>
+            </div>
 
-              <button
-                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                onClick={() => setZoom(1)}
-                aria-label="Reset zoom"
-              >
-                Reset
-              </button>
+            {/* Paper */}
+            <div className="lg:col-span-3">
+              <div className="text-xs font-medium text-slate-600 mb-2">Ukuran kertas</div>
+              <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <button
+                  className={`flex-1 px-3 py-2 text-sm font-semibold ${paper === '58' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
+                  onClick={() => setPaper('58')}
+                  aria-pressed={paper === '58'}
+                >
+                  58mm
+                </button>
+                <button
+                  className={`flex-1 border-l border-slate-200 px-3 py-2 text-sm font-semibold ${paper === '80' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
+                  onClick={() => setPaper('80')}
+                  aria-pressed={paper === '80'}
+                >
+                  80mm
+                </button>
+                <button
+                  className={`flex-1 border-l border-slate-200 px-3 py-2 text-sm font-semibold ${paper === 'A4' ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}`}
+                  onClick={() => setPaper('A4')}
+                  aria-pressed={paper === 'A4'}
+                >
+                  A4
+                </button>
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">Aktif: {paperLabel}</div>
+            </div>
+
+            {/* Zoom */}
+            <div className="lg:col-span-3">
+              <div className="text-xs font-medium text-slate-600 mb-2">Zoom</div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                  onClick={() => setZoom((z) => clamp(Number((z - 0.1).toFixed(2)), 0.8, 2))}
+                  aria-label="Zoom out"
+                >
+                  −
+                </button>
+
+                <input
+                  type="range"
+                  min={0.8}
+                  max={2}
+                  step={0.05}
+                  value={zoom}
+                  onChange={(e) => setZoom(parseFloat(e.target.value))}
+                  className="w-full"
+                  aria-label="Zoom pratinjau"
+                />
+
+                <button
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                  onClick={() => setZoom((z) => clamp(Number((z + 0.1).toFixed(2)), 0.8, 2))}
+                  aria-label="Zoom in"
+                >
+                  +
+                </button>
+
+                <div className="w-14 text-right text-xs font-semibold text-slate-900">
+                  {Math.round(zoom * 100)}%
+                </div>
+
+                <button
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                  onClick={() => setZoom(1)}
+                  aria-label="Reset zoom"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* Share + WA */}
+            <div className="lg:col-span-2">
+              <div className="text-xs font-medium text-slate-600 mb-2">Bagikan</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
+                  onClick={onCopyShareLink}
+                  disabled={!shareUrl}
+                  aria-label="Salin link kwitansi"
+                  title={shareUrl ? shareUrl : 'Link belum tersedia'}
+                >
+                  <IconLink className="text-slate-700" />
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Share + WA */}
-          <div className="lg:col-span-2">
-            <div className="text-xs font-medium text-slate-600 mb-2">Bagikan</div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onCopyShareLink}
-                disabled={!shareUrl}
-                aria-label="Salin link kwitansi"
-                title={shareUrl ? shareUrl : 'Link belum tersedia'}
-              >
-                <IconLink className="text-slate-700" />
-                Copy
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* WhatsApp row */}
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
-          <div className="md:col-span-6">
-            <label className="block text-xs font-medium text-slate-600">
-              Nomor WhatsApp
-            </label>
-            <input
-              type="tel"
-              placeholder="No. WA (62…/08…)"
-              value={waPhone}
-              onChange={(e) => setWaPhone(e.target.value)}
-              className="
+          {/* WhatsApp row */}
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+            <div className="md:col-span-6">
+              <label className="block text-xs font-medium text-slate-600">
+                Nomor WhatsApp
+              </label>
+              <input
+                type="tel"
+                placeholder="No. WA (62…/08…)"
+                value={waPhone}
+                onChange={(e) => setWaPhone(e.target.value)}
+                className="
                 mt-1 w-full rounded-lg border border-slate-200 bg-white
                 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400
                 focus:border-slate-900 focus:outline-none
               "
-              aria-label="Nomor WhatsApp"
-            />
-          </div>
+                aria-label="Nomor WhatsApp"
+              />
+            </div>
 
-          <div className="md:col-span-6 flex flex-wrap gap-2 md:justify-end">
-            <button
-              className="
+            <div className="md:col-span-6 flex flex-wrap gap-2 md:justify-end">
+              <button
+                className="
                 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2
                 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950
                 disabled:opacity-50 disabled:pointer-events-none
               "
-              onClick={onSendWA}
-              disabled={!waPhone || !shareUrl || !order || waBusy}
-              aria-label="Kirim WhatsApp"
-            >
-              <IconWA className="text-white" />
-              Kirim WA
-            </button>
+                onClick={onSendWA}
+                disabled={!waPhone || !shareUrl || !order || waBusy}
+                aria-label="Kirim WhatsApp"
+              >
+                <IconWA className="text-white" />
+                Kirim WA
+              </button>
 
-            <button
-              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
-              onClick={onCopyWAText}
-              disabled={!order || waBusy}
-              aria-label="Salin teks WhatsApp"
-              title="Menyalin teks pesan WhatsApp"
-            >
-              Salin
-            </button>
-          </div>
+              <button
+                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
+                onClick={onCopyWAText}
+                disabled={!order || waBusy}
+                aria-label="Salin teks WhatsApp"
+                title="Menyalin teks pesan WhatsApp"
+              >
+                Salin
+              </button>
+            </div>
 
-          <div className="md:col-span-12 text-xs text-slate-500">
-            {shareUrl ? (
-              <span>Link kwitansi siap dibagikan.</span>
-            ) : (
-              <span>Link kwitansi belum tersedia (tetap bisa print & open tab).</span>
-            )}
+            <div className="md:col-span-12 text-xs text-slate-500">
+              {shareUrl ? (
+                <span>Link kwitansi siap dibagikan.</span>
+              ) : (
+                <span>Link kwitansi belum tersedia (tetap bisa print & open tab).</span>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Preview canvas */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)] print:shadow-none print:border-0">
