@@ -6,7 +6,15 @@ import { listBranches } from '../../api/branches';
 type Branch = { id: string; name: string };
 type BranchListItem = { id: string; name: string };
 
-const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services', 'cash'];
+const KINDS: ReportKind[] = [
+    'sales',
+    'orders',
+    'ready-reminders',
+    'receivables',
+    'expenses',
+    'services',
+    'cash',
+];
 
 export default function ReportsIndex() {
     const [kind, setKind] = useState<ReportKind>('sales');
@@ -35,7 +43,7 @@ export default function ReportsIndex() {
                 const list: BranchListItem[] = Array.isArray(res.data) ? (res.data as BranchListItem[]) : [];
                 setBranches(list.map((b) => ({ id: b.id, name: b.name })));
             })
-            .catch(() => {});
+            .catch(() => { });
     }, []);
 
     const params = useMemo(
@@ -44,7 +52,7 @@ export default function ReportsIndex() {
             to,
             branch_id: branchId || undefined,
             method: kind === 'sales' && method ? method : undefined,
-            status: (kind === 'orders' || kind === 'receivables') && status ? status : undefined,
+            status: (kind === 'orders' || kind === 'ready-reminders' || kind === 'receivables') && status ? status : undefined,
             per_page: 20,
             page,
         }),

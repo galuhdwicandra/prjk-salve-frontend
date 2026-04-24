@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-24 21:48:17_  
+_Dihasilkan otomatis: 2026-04-24 22:25:19_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -1100,7 +1100,7 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 
 ### src\api\reports.ts
 
-- SHA: `3f6ba05b77f9`  
+- SHA: `3c1128329c30`  
 - Ukuran: 1 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1109,7 +1109,14 @@ export async function settleReceivable(id: string, payload: ReceivableSettlePayl
 import { api } from './client';
 import type { ApiEnvelope } from './client';
 
-export type ReportKind = 'sales' | 'orders' | 'receivables' | 'expenses' | 'services' | 'cash';
+export type ReportKind =
+    | 'sales'
+    | 'orders'
+    | 'ready-reminders'
+    | 'receivables'
+    | 'expenses'
+    | 'services'
+    | 'cash';
 
 export interface ReportQuery {
     from: string; // 'YYYY-MM-DD'
@@ -17545,7 +17552,7 @@ function renderStatusChip(s?: ReceivableStatus) {
 
 ### src\pages\reports\ReportsIndex.tsx
 
-- SHA: `2c4a6a848554`  
+- SHA: `024dae6473bd`  
 - Ukuran: 14 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -17558,7 +17565,15 @@ import { listBranches } from '../../api/branches';
 type Branch = { id: string; name: string };
 type BranchListItem = { id: string; name: string };
 
-const KINDS: ReportKind[] = ['sales', 'orders', 'receivables', 'expenses', 'services', 'cash'];
+const KINDS: ReportKind[] = [
+    'sales',
+    'orders',
+    'ready-reminders',
+    'receivables',
+    'expenses',
+    'services',
+    'cash',
+];
 
 export default function ReportsIndex() {
     const [kind, setKind] = useState<ReportKind>('sales');
@@ -17587,7 +17602,7 @@ export default function ReportsIndex() {
                 const list: BranchListItem[] = Array.isArray(res.data) ? (res.data as BranchListItem[]) : [];
                 setBranches(list.map((b) => ({ id: b.id, name: b.name })));
             })
-            .catch(() => {});
+            .catch(() => { });
     }, []);
 
     const params = useMemo(
@@ -17596,7 +17611,7 @@ export default function ReportsIndex() {
             to,
             branch_id: branchId || undefined,
             method: kind === 'sales' && method ? method : undefined,
-            status: (kind === 'orders' || kind === 'receivables') && status ? status : undefined,
+            status: (kind === 'orders' || kind === 'ready-reminders' || kind === 'receivables') && status ? status : undefined,
             per_page: 20,
             page,
         }),
