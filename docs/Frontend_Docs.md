@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-24 13:48:26_  
+_Dihasilkan otomatis: 2026-04-24 20:54:22_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -13035,7 +13035,7 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `0410c1b2592a`  
+- SHA: `6232499d781a`  
 - Ukuran: 53 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -13095,12 +13095,22 @@ type CreateDeliveryResponseLocal = {
 
 function toDateInputValue(v?: string | null): string {
   if (!v) return '';
-  return String(v).slice(0, 10);
+
+  const s = String(v).trim();
+
+  const match = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+
+  return '';
 }
 
-function fromDateInputValue(v: string): string | null {
-  const s = v.trim();
-  return s ? s : null;
+function fromDateInputValue(v: string): string {
+  const s = String(v).trim();
+
+  const match = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+
+  return '';
 }
 
 function qtyDisplay(v: unknown): string {
@@ -13657,8 +13667,8 @@ export default function OrderDetail(): React.ReactElement {
                               qty: it.qty,
                               note: (it.note ?? '') || null,
                             })),
-                            received_at: draft.received_at ?? null,
-                            ready_at: draft.ready_at ?? null,
+                            received_at: draft.received_at ? toDateInputValue(draft.received_at) : null,
+                            ready_at: draft.ready_at ? toDateInputValue(draft.ready_at) : null,
                           };
                           await updateOrder(id, payload);
                           await refresh();

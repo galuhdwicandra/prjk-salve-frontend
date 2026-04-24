@@ -53,12 +53,22 @@ type CreateDeliveryResponseLocal = {
 
 function toDateInputValue(v?: string | null): string {
   if (!v) return '';
-  return String(v).slice(0, 10);
+
+  const s = String(v).trim();
+
+  const match = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+
+  return '';
 }
 
-function fromDateInputValue(v: string): string | null {
-  const s = v.trim();
-  return s ? s : null;
+function fromDateInputValue(v: string): string {
+  const s = String(v).trim();
+
+  const match = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+
+  return '';
 }
 
 function qtyDisplay(v: unknown): string {
@@ -615,8 +625,8 @@ export default function OrderDetail(): React.ReactElement {
                               qty: it.qty,
                               note: (it.note ?? '') || null,
                             })),
-                            received_at: draft.received_at ?? null,
-                            ready_at: draft.ready_at ?? null,
+                            received_at: draft.received_at ? toDateInputValue(draft.received_at) : null,
+                            ready_at: draft.ready_at ? toDateInputValue(draft.ready_at) : null,
                           };
                           await updateOrder(id, payload);
                           await refresh();
