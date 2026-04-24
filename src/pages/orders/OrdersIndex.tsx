@@ -102,12 +102,8 @@ export default function OrdersIndex(): React.ReactElement {
     const [status, setStatus] = useState<OrderBackendStatus | ''>('');
     const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | ''>('');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
-    const [from, setFrom] = useState('');
-    const [to, setTo] = useState('');
-    const [receivedFrom, setReceivedFrom] = useState('');
-    const [receivedTo, setReceivedTo] = useState('');
-    const [readyFrom, setReadyFrom] = useState('');
-    const [readyTo, setReadyTo] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
     const [sortBy, setSortBy] = useState<SortBy>('created_at');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [page, setPage] = useState(1);
@@ -124,12 +120,8 @@ export default function OrdersIndex(): React.ReactElement {
             status: status || undefined,
             payment_status: paymentStatus || undefined,
             payment_method: paymentMethod || undefined,
-            from: from || undefined,
-            to: to || undefined,
-            received_from: receivedFrom || undefined,
-            received_to: receivedTo || undefined,
-            ready_from: readyFrom || undefined,
-            ready_to: readyTo || undefined,
+            date_from: dateFrom || undefined,
+            date_to: dateTo || undefined,
             sort_by: sortBy,
             sort_dir: sortDir,
             page: p,
@@ -145,12 +137,8 @@ export default function OrdersIndex(): React.ReactElement {
                 status: status || undefined,
                 payment_status: paymentStatus || undefined,
                 payment_method: paymentMethod || undefined,
-                from: from || undefined,
-                to: to || undefined,
-                received_from: receivedFrom || undefined,
-                received_to: receivedTo || undefined,
-                ready_from: readyFrom || undefined,
-                ready_to: readyTo || undefined,
+                date_from: dateFrom || undefined,
+                date_to: dateTo || undefined,
                 sort_by: sortBy,
                 sort_dir: sortDir,
                 page: p,
@@ -173,12 +161,8 @@ export default function OrdersIndex(): React.ReactElement {
         status,
         paymentStatus,
         paymentMethod,
-        from,
-        to,
-        receivedFrom,
-        receivedTo,
-        readyFrom,
-        readyTo,
+        dateFrom,
+        dateTo,
         sortBy,
         sortDir,
         perPage,
@@ -192,7 +176,7 @@ export default function OrdersIndex(): React.ReactElement {
     useEffect(() => { dlog('loading/error', { loading, error }); }, [loading, error]);
     useEffect(() => { dlog('paymentStatus changed', paymentStatus); }, [paymentStatus]);
     useEffect(() => { dlog('paymentMethod changed', paymentMethod); }, [paymentMethod]);
-    useEffect(() => { dlog('date filters changed', { from, to, receivedFrom, receivedTo, readyFrom, readyTo }); }, [from, to, receivedFrom, receivedTo, readyFrom, readyTo]);
+    useEffect(() => { dlog('date filters changed', { dateFrom, dateTo }); }, [dateFrom, dateTo]);
     useEffect(() => { dlog('sorting changed', { sortBy, sortDir }); }, [sortBy, sortDir]);
 
     useEffect(() => { void refresh(1); }, [refresh]);
@@ -208,12 +192,8 @@ export default function OrdersIndex(): React.ReactElement {
         setStatus('');
         setPaymentStatus('');
         setPaymentMethod('');
-        setFrom('');
-        setTo('');
-        setReceivedFrom('');
-        setReceivedTo('');
-        setReadyFrom('');
-        setReadyTo('');
+        setDateFrom('');
+        setDateTo('');
         setSortBy('created_at');
         setSortDir('desc');
         setError(null);
@@ -484,9 +464,9 @@ export default function OrdersIndex(): React.ReactElement {
                             }}
                             aria-label="Urutkan berdasarkan"
                         >
-                            <option value="created_at">Tanggal Order</option>
-                            <option value="received_at">Tanggal Diterima</option>
-                            <option value="ready_at">Tanggal Jadi</option>
+                            <option value="created_at">Tanggal Input</option>
+                            <option value="received_at">Tanggal Masuk</option>
+                            <option value="ready_at">Tanggal Selesai</option>
                         </select>
                     </div>
 
@@ -515,121 +495,41 @@ export default function OrdersIndex(): React.ReactElement {
 
                     <div className="md:col-span-2">
                         <label className="block text-xs font-medium text-slate-600">
-                            Order Dari
+                            Tanggal Masuk
                         </label>
                         <input
                             type="date"
                             className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                            value={from}
+                                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                px-3 py-2 text-sm text-slate-900
+                                focus:border-slate-900 focus:outline-none
+                            "
+                            value={dateFrom}
                             onChange={(e) => {
-                                dlog('from date', e.target.value);
-                                setFrom(e.target.value);
+                                dlog('dateFrom date', e.target.value);
+                                setDateFrom(e.target.value);
                             }}
-                            aria-label="Filter tanggal order dari"
+                            aria-label="Filter tanggal masuk"
                         />
                     </div>
 
                     <div className="md:col-span-2">
                         <label className="block text-xs font-medium text-slate-600">
-                            Order Sampai
+                            Tanggal Selesai
                         </label>
                         <input
                             type="date"
                             className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                            value={to}
+                                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                px-3 py-2 text-sm text-slate-900
+                                focus:border-slate-900 focus:outline-none
+                            "
+                            value={dateTo}
                             onChange={(e) => {
-                                dlog('to date', e.target.value);
-                                setTo(e.target.value);
+                                dlog('dateTo date', e.target.value);
+                                setDateTo(e.target.value);
                             }}
-                            aria-label="Filter tanggal order sampai"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                            Diterima Dari
-                        </label>
-                        <input
-                            type="date"
-                            className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                            value={receivedFrom}
-                            onChange={(e) => {
-                                dlog('receivedFrom date', e.target.value);
-                                setReceivedFrom(e.target.value);
-                            }}
-                            aria-label="Filter tanggal diterima dari"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                            Diterima Sampai
-                        </label>
-                        <input
-                            type="date"
-                            className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                            value={receivedTo}
-                            onChange={(e) => {
-                                dlog('receivedTo date', e.target.value);
-                                setReceivedTo(e.target.value);
-                            }}
-                            aria-label="Filter tanggal diterima sampai"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                            Jadi Dari
-                        </label>
-                        <input
-                            type="date"
-                            className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                            value={readyFrom}
-                            onChange={(e) => {
-                                dlog('readyFrom date', e.target.value);
-                                setReadyFrom(e.target.value);
-                            }}
-                            aria-label="Filter tanggal jadi dari"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                            Jadi Sampai
-                        </label>
-                        <input
-                            type="date"
-                            className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                            value={readyTo}
-                            onChange={(e) => {
-                                dlog('readyTo date', e.target.value);
-                                setReadyTo(e.target.value);
-                            }}
-                            aria-label="Filter tanggal jadi sampai"
+                            aria-label="Filter tanggal selesai"
                         />
                     </div>
 
@@ -637,10 +537,10 @@ export default function OrdersIndex(): React.ReactElement {
                         <button
                             type="button"
                             className="
-        inline-flex items-center justify-center
-        rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700
-        hover:bg-slate-50
-      "
+                                inline-flex items-center justify-center
+                                rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700
+                                hover:bg-slate-50
+                            "
                             onClick={onReset}
                         >
                             Reset

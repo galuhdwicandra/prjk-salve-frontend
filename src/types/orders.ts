@@ -107,12 +107,8 @@ export interface OrderQuery {
     status?: OrderBackendStatus;
     payment_status?: PaymentStatus;
     payment_method?: PaymentMethod;
-    from?: string;
-    to?: string;
-    received_from?: string;
-    received_to?: string;
-    ready_from?: string;
-    ready_to?: string;
+    date_from?: string;
+    date_to?: string;
     sort_by?: 'created_at' | 'received_at' | 'ready_at';
     sort_dir?: 'asc' | 'desc';
     page?: number;
