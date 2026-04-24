@@ -3,6 +3,7 @@ import {
   listCashSessions,
   openCashSession,
   closeCashSession,
+  reopenCashSession,
   createCashWithdrawal,
   getCashSession,
   updateCashSession,
@@ -96,6 +97,7 @@ export default function CashSessionsIndex() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [submittingOpen, setSubmittingOpen] = useState(false);
   const [submittingClose, setSubmittingClose] = useState(false);
+  const [submittingReopen, setSubmittingReopen] = useState(false);
   const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -238,6 +240,30 @@ export default function CashSessionsIndex() {
       setErrorMsg(getErrorMessage(err, 'Gagal menutup sesi kas.'));
     } finally {
       setSubmittingClose(false);
+    }
+  };
+
+  const onReopenSession = async () => {
+    if (!selected) return;
+
+    setErrorMsg('');
+    setSuccessMsg('');
+    setSubmittingReopen(true);
+
+    try {
+      const res = await reopenCashSession(selected.id);
+      const next = res.data ?? null;
+
+      setSelected(next);
+      setSelectedSystemClosing(Number(res.meta?.system_closing ?? 0));
+      setClosingCash('');
+      setSuccessMsg('Sesi kas berhasil dibuka ulang.');
+
+      await load();
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, 'Gagal membuka ulang sesi kas.'));
+    } finally {
+      setSubmittingReopen(false);
     }
   };
 
@@ -771,8 +797,22 @@ export default function CashSessionsIndex() {
                         </div>
                       </>
                     ) : (
-                      <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-4 text-sm text-[color:var(--color-text-muted)]">
-                        Sesi ini sudah ditutup, sehingga withdrawal dan penutupan ulang tidak tersedia.
+                      <div className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-4">
+                        <div className="text-sm font-semibold text-[color:var(--color-text-default)]">
+                          Sesi Sudah Ditutup
+                        </div>
+                        <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                          Jika sesi tidak sengaja ditutup, buka ulang sesi ini agar withdrawal dan penutupan kas bisa dilakukan kembali.
+                        </p>
+
+                        <button
+                          type="button"
+                          className="btn-primary mt-4 w-full justify-center"
+                          onClick={onReopenSession}
+                          disabled={submittingReopen}
+                        >
+                          {submittingReopen ? 'Membuka ulang...' : 'Buka Ulang Sesi'}
+                        </button>
                       </div>
                     )}
                   </div>

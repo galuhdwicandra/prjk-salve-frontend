@@ -39,6 +39,13 @@ export async function closeCashSession(id: string, payload: CloseCashSessionPayl
   return data;
 }
 
+export async function reopenCashSession(id: string) {
+  const { data } = await api.post<Envelope<CashSession, { system_closing: number }>>(
+    `/cash-sessions/${encodeURIComponent(id)}/reopen`
+  );
+  return data;
+}
+
 export async function createCashWithdrawal(id: string, payload: WithdrawalPayload) {
   const { data } = await api.post<Envelope<CashMutation, null>>(`/cash-sessions/${encodeURIComponent(id)}/withdrawals`, payload);
   return data;
