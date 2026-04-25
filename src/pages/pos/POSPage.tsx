@@ -297,6 +297,7 @@ export default function POSPage() {
   const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const { toast, showSuccess, showError, hideToast } = useToast();
@@ -560,10 +561,12 @@ export default function POSPage() {
 
   // submit (LOGIC UNCHANGED)
   async function onSubmit() {
-    if (loading) {
-      dlog('onSubmit blocked: loading');
+    if (submitLockRef.current || loading) {
+      dlog('onSubmit blocked: already submitting');
       return;
     }
+
+    submitLockRef.current = true;
 
     dlog('onSubmit start');
 
@@ -577,6 +580,7 @@ export default function POSPage() {
       setError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       showError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       focusFirstErrorField(clientErrors);
+      submitLockRef.current = false;
       setLoading(false);
       return;
     }
@@ -662,6 +666,7 @@ export default function POSPage() {
         focusFirstErrorField(serverErrors);
       }
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   }

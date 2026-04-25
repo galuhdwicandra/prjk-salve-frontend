@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-24 22:25:19_  
+_Dihasilkan otomatis: 2026-04-25 12:09:06_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -6520,7 +6520,7 @@ export default function ReceiptPreview({
 
 ### src\components\receivables\SettleReceivableDialog.tsx
 
-- SHA: `c1867e7f8ee7`  
+- SHA: `b475312270aa`  
 - Ukuran: 8 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -6615,7 +6615,7 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
       const next = payload.receivable;
 
       if (next.status === "SETTLED") {
-        const orderId = payload.order_id ?? extractOrderId(payload.order as any);
+        const orderId = payload.order_id ?? extractOrderId(payload.order);
         if (orderId && !withWA) {
           await openOrderReceipt(orderId, true);
         }
@@ -6747,14 +6747,14 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
             Batal
           </button>
 
-          <button
+          {/* <button
             onClick={() => onSubmit(false)}
             disabled={disabled}
             className="btn-primary disabled:opacity-50"
             type="button"
           >
             {loading ? "Memproses..." : "Lunasi"}
-          </button>
+          </button> */}
 
           {canWhatsApp && (
             <button
@@ -15733,7 +15733,7 @@ function StatusBadge({ status }: { status: OrderBackendStatus }) {
 
 ### src\pages\pos\POSPage.tsx
 
-- SHA: `c7d93fb4bf1c`  
+- SHA: `65c7dadf7ddf`  
 - Ukuran: 59 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -16037,6 +16037,7 @@ export default function POSPage() {
   const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const { toast, showSuccess, showError, hideToast } = useToast();
@@ -16300,10 +16301,12 @@ export default function POSPage() {
 
   // submit (LOGIC UNCHANGED)
   async function onSubmit() {
-    if (loading) {
-      dlog('onSubmit blocked: loading');
+    if (submitLockRef.current || loading) {
+      dlog('onSubmit blocked: already submitting');
       return;
     }
+
+    submitLockRef.current = true;
 
     dlog('onSubmit start');
 
@@ -16317,6 +16320,7 @@ export default function POSPage() {
       setError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       showError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
       focusFirstErrorField(clientErrors);
+      submitLockRef.current = false;
       setLoading(false);
       return;
     }
@@ -16402,6 +16406,7 @@ export default function POSPage() {
         focusFirstErrorField(serverErrors);
       }
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   }

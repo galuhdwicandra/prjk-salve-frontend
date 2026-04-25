@@ -88,7 +88,7 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
       const next = payload.receivable;
 
       if (next.status === "SETTLED") {
-        const orderId = payload.order_id ?? extractOrderId(payload.order as any);
+        const orderId = payload.order_id ?? extractOrderId(payload.order);
         if (orderId && !withWA) {
           await openOrderReceipt(orderId, true);
         }
@@ -220,14 +220,14 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
             Batal
           </button>
 
-          <button
+          {/* <button
             onClick={() => onSubmit(false)}
             disabled={disabled}
             className="btn-primary disabled:opacity-50"
             type="button"
           >
             {loading ? "Memproses..." : "Lunasi"}
-          </button>
+          </button> */}
 
           {canWhatsApp && (
             <button
