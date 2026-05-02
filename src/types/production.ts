@@ -67,6 +67,7 @@ export interface ProductionBoardQuery {
     q?: string;
     status?: ProductionBoardFilterStatus;
     branch_id?: string;
+    assigned_to?: string;
     page?: number;
     per_page?: number;
 }
@@ -155,6 +156,7 @@ export interface ProductionReportQuery {
     date_from?: string;
     date_to?: string;
     branch_id?: string;
+    user_id?: string;
 }
 
 export interface ApiEnvelope<T, M = unknown> {

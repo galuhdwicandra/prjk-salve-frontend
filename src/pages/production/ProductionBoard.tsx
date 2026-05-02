@@ -10,6 +10,11 @@ import {
     startProductionTask,
 } from '../../api/production';
 import { normalizeApiError } from '../../api/client';
+import { listBranches } from '../../api/branches';
+import { listUsers } from '../../api/users';
+import { useAuth } from '../../store/useAuth';
+import type { Branch } from '../../types/branches';
+import type { User } from '../../types/users';
 import type {
     ProductionBoardColumns,
     ProductionBoardFilterStatus,
@@ -98,6 +103,10 @@ export default function ProductionBoard() {
     const [columns, setColumns] = useState<ProductionBoardColumns>(() => emptyColumns());
     const [q, setQ] = useState('');
     const [status, setStatus] = useState<'' | ProductionBoardFilterStatus>('');
+    const [branchId, setBranchId] = useState('');
+    const [assignedTo, setAssignedTo] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [staffOptions, setStaffOptions] = useState<User[]>([]);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const [meta, setMeta] = useState({
@@ -122,9 +131,39 @@ export default function ProductionBoard() {
         () => Object.values(columns).reduce((total, rows) => total + rows.length, 0),
         [columns]
     );
+    const isSuperadmin = useAuth.hasRole('Superadmin');
 
     const canGoPrev = meta.current_page > 1;
     const canGoNext = meta.current_page < meta.last_page;
+
+    const loadFilterOptions = useCallback(async () => {
+        if (!isSuperadmin) return;
+
+        try {
+            const [branchResponse, userResponse] = await Promise.all([
+                listBranches({ per_page: 100 }),
+                listUsers({
+                    role: 'Petugas Cuci',
+                    branch_id: branchId || undefined,
+                    per_page: 100,
+                }),
+            ]);
+
+            setBranches(branchResponse.data ?? []);
+            setStaffOptions(userResponse.data ?? []);
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        }
+    }, [isSuperadmin, branchId]);
+
+    useEffect(() => {
+        void loadFilterOptions();
+    }, [loadFilterOptions]);
+
+    useEffect(() => {
+        setAssignedTo('');
+    }, [branchId]);
 
     const loadBoard = useCallback(async () => {
         setLoading(true);
@@ -134,6 +173,8 @@ export default function ProductionBoard() {
             const response = await getProductionBoard({
                 q: q.trim() || undefined,
                 status: status || undefined,
+                branch_id: isSuperadmin && branchId ? branchId : undefined,
+                assigned_to: isSuperadmin && assignedTo ? assignedTo : undefined,
                 page,
                 per_page: perPage,
             });
@@ -151,7 +192,7 @@ export default function ProductionBoard() {
         } finally {
             setLoading(false);
         }
-    }, [q, status, page, perPage]);
+    }, [q, status, branchId, assignedTo, page, perPage, isSuperadmin]);
 
     const loadCorrectionRequests = useCallback(async () => {
         try {
@@ -174,7 +215,7 @@ export default function ProductionBoard() {
 
     useEffect(() => {
         setPage(1);
-    }, [q, status, perPage]);
+    }, [q, status, branchId, assignedTo, perPage]);
 
     useEffect(() => {
         const timer = window.setInterval(() => {
@@ -402,6 +443,36 @@ export default function ProductionBoard() {
                         <option value="IRONING">Finishing</option>
                         <option value="READY">Selesai</option>
                     </select>
+
+                    {isSuperadmin ? (
+                        <select
+                            value={branchId}
+                            onChange={(event) => setBranchId(event.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-56"
+                        >
+                            <option value="">Semua Cabang</option>
+                            {branches.map((branch) => (
+                                <option key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </option>
+                            ))}
+                        </select>
+                    ) : null}
+
+                    {isSuperadmin ? (
+                        <select
+                            value={assignedTo}
+                            onChange={(event) => setAssignedTo(event.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-56"
+                        >
+                            <option value="">Semua Petugas</option>
+                            {staffOptions.map((staff) => (
+                                <option key={staff.id} value={staff.id}>
+                                    {staff.name}
+                                </option>
+                            ))}
+                        </select>
+                    ) : null}
 
                     <select
                         value={perPage}

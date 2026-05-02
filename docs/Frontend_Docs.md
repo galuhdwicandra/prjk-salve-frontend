@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-02 16:46:41_  
+_Dihasilkan otomatis: 2026-05-02 18:06:38_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -1034,8 +1034,8 @@ export async function createOrderShareLink(id: string): Promise<string> {
 
 ### src\api\production.ts
 
-- SHA: `43ddc49b67db`  
-- Ukuran: 2 KB
+- SHA: `b2f3de3bb8d7`  
+- Ukuran: 3 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -1044,6 +1044,11 @@ import type {
   ProductionActionPayload,
   ProductionBoardQuery,
   ProductionBoardResponse,
+  ProductionCorrectionRequestListResponse,
+  ProductionCorrectionRequestPayload,
+  ProductionCorrectionRequestQuery,
+  ProductionCorrectionRequestResponse,
+  ProductionCorrectionReviewPayload,
   ProductionMovePayload,
   ProductionReportQuery,
   ProductionReportResponse,
@@ -1078,6 +1083,56 @@ export async function moveProductionTask(orderId: string, payload: ProductionMov
 export async function finishProductionTask(orderId: string, payload: ProductionActionPayload = {}) {
   const { data } = await api.post<ProductionTaskResponse>(
     `/production-board/${encodeURIComponent(orderId)}/finish`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function listProductionCorrectionRequests(
+  params: ProductionCorrectionRequestQuery = {}
+) {
+  const { data } = await api.get<ProductionCorrectionRequestListResponse>(
+    '/production-board/correction-requests',
+    { params }
+  );
+
+  return data;
+}
+
+export async function createProductionCorrectionRequest(
+  orderId: string,
+  payload: ProductionCorrectionRequestPayload
+) {
+  const { data } = await api.post<ProductionCorrectionRequestResponse | ProductionTaskResponse>(
+    `/production-board/${encodeURIComponent(orderId)}/correction-requests`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function approveProductionCorrectionRequest(
+  id: string,
+  payload: ProductionCorrectionReviewPayload = {}
+) {
+  const { data } = await api.post<ProductionCorrectionRequestResponse>(
+    `/production-board/correction-requests/${encodeURIComponent(id)}/approve`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function rejectProductionCorrectionRequest(
+  id: string,
+  payload: ProductionCorrectionReviewPayload = {}
+) {
+  const { data } = await api.post<ProductionCorrectionRequestResponse>(
+    `/production-board/correction-requests/${encodeURIComponent(id)}/reject`,
     payload,
     { headers: { 'Content-Type': 'application/json' } }
   );
@@ -3403,154 +3458,210 @@ export type Payment = {
 
 ### src\types\production.ts
 
-- SHA: `87627813f1f6`  
-- Ukuran: 3 KB
+- SHA: `a5e8fcdbd691`  
+- Ukuran: 5 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
 import type { PaginationMeta } from './branches';
 
 export type ProductionStatus =
-  | 'QUEUE'
-  | 'WASHING'
-  | 'DRYING'
-  | 'IRONING'
-  | 'READY'
-  | 'PICKED_UP'
-  | 'CANCELED';
+    | 'QUEUE'
+    | 'WASHING'
+    | 'DRYING'
+    | 'IRONING'
+    | 'READY'
+    | 'PICKED_UP'
+    | 'CANCELED';
 
 export type ProductionBoardStatus =
-  | 'QUEUE'
-  | 'WASHING'
-  | 'DRYING'
-  | 'IRONING'
-  | 'READY';
+    | 'QUEUE'
+    | 'WASHING'
+    | 'DRYING'
+    | 'IRONING'
+    | 'READY';
 
 export interface ProductionMiniCustomer {
-  id: string;
-  name: string;
-  whatsapp?: string | null;
+    id: string;
+    name: string;
+    whatsapp?: string | null;
 }
 
 export interface ProductionMiniOrder {
-  id: string;
-  branch_id: string;
-  number: string;
-  invoice_no?: string | null;
-  status: ProductionStatus;
-  received_at?: string | null;
-  ready_at?: string | null;
-  customer?: ProductionMiniCustomer | null;
+    id: string;
+    branch_id: string;
+    number: string;
+    invoice_no?: string | null;
+    status: ProductionStatus;
+    received_at?: string | null;
+    ready_at?: string | null;
+    customer?: ProductionMiniCustomer | null;
 }
 
 export interface ProductionAssignee {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 }
 
 export interface ProductionTask {
-  id: string;
-  order_id: string;
-  branch_id: string;
-  assigned_to: string | null;
-  current_status: ProductionStatus;
-  qty: number;
-  started_date?: string | null;
-  finished_date?: string | null;
-  note?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  assignee?: ProductionAssignee | null;
-  order?: ProductionMiniOrder | null;
+    id: string;
+    order_id: string;
+    branch_id: string;
+    assigned_to: string | null;
+    current_status: ProductionStatus;
+    qty: number;
+    started_date?: string | null;
+    finished_date?: string | null;
+    note?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+    assignee?: ProductionAssignee | null;
+    order?: ProductionMiniOrder | null;
 }
 
 export type ProductionBoardColumns = Record<ProductionBoardStatus, ProductionTask[]>;
 
 export interface ProductionBoardData {
-  columns: ProductionBoardColumns;
-  items: ProductionTask[];
+    columns: ProductionBoardColumns;
+    items: ProductionTask[];
 }
 
 export type ProductionBoardFilterStatus = ProductionBoardStatus | 'OVERDUE';
 
 export interface ProductionBoardQuery {
-  q?: string;
-  status?: ProductionBoardFilterStatus;
-  branch_id?: string;
-  page?: number;
-  per_page?: number;
+    q?: string;
+    status?: ProductionBoardFilterStatus;
+    branch_id?: string;
+    assigned_to?: string;
+    page?: number;
+    per_page?: number;
 }
 
 export interface ProductionMovePayload {
-  to_status: ProductionStatus;
-  note?: string | null;
+    to_status: ProductionStatus;
+    note?: string | null;
 }
 
 export interface ProductionActionPayload {
-  note?: string | null;
+    note?: string | null;
+}
+
+export type ProductionCorrectionType = 'REWASH' | 'ROLLBACK';
+export type ProductionCorrectionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface ProductionCorrectionRequestPayload {
+    type: ProductionCorrectionType;
+    reason: string;
+    direct?: boolean;
+}
+
+export interface ProductionCorrectionReviewPayload {
+    review_note?: string | null;
+}
+
+export interface ProductionCorrectionRequest {
+    id: string;
+    production_task_id: string;
+    order_id: string;
+    branch_id: string;
+    requested_by: string | number;
+    reviewed_by?: string | number | null;
+    type: ProductionCorrectionType;
+    from_status: ProductionStatus;
+    to_status: ProductionStatus;
+    reason: string;
+    status: ProductionCorrectionStatus;
+    review_note?: string | null;
+    requested_date?: string | null;
+    reviewed_date?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+    order?: ProductionMiniOrder | null;
+    task?: ProductionTask | null;
+    requester?: ProductionAssignee | null;
+    reviewer?: ProductionAssignee | null;
+}
+
+export interface ProductionCorrectionRequestQuery {
+    status?: ProductionCorrectionStatus;
+    type?: ProductionCorrectionType;
+    branch_id?: string;
+    page?: number;
+    per_page?: number;
 }
 
 export interface ProductionReportDetail {
-  order_id: string;
-  invoice_no?: string | null;
-  number?: string | null;
-  customer_name?: string | null;
-  qty: number;
-  current_status?: ProductionStatus | null;
-  received_at?: string | null;
-  ready_at?: string | null;
-  started_date?: string | null;
-  finished_date?: string | null;
-  is_overdue: boolean;
-  overdue_days: number;
-  overdue_text?: string | null;
+    order_id: string;
+    invoice_no?: string | null;
+    number?: string | null;
+    customer_name?: string | null;
+    qty: number;
+    current_status?: ProductionStatus | null;
+    received_at?: string | null;
+    ready_at?: string | null;
+    started_date?: string | null;
+    finished_date?: string | null;
+    is_overdue: boolean;
+    overdue_days: number;
+    overdue_text?: string | null;
 }
 
 export interface ProductionStaffReportRow {
-  user_id: string;
-  staff_name: string;
-  total_invoice: number;
-  total_qty: number;
-  finished: number;
-  unfinished: number;
-  overdue: number;
-  details: ProductionReportDetail[];
+    user_id: string;
+    staff_name: string;
+    total_invoice: number;
+    total_qty: number;
+    finished: number;
+    unfinished: number;
+    overdue: number;
+    details: ProductionReportDetail[];
 }
 
 export interface ProductionReportQuery {
-  date_from?: string;
-  date_to?: string;
-  branch_id?: string;
+    date_from?: string;
+    date_to?: string;
+    branch_id?: string;
+    user_id?: string;
 }
 
 export interface ApiEnvelope<T, M = unknown> {
-  data: T;
-  meta: M;
-  message: string | null;
-  errors: Record<string, string[]> | null;
+    data: T;
+    meta: M;
+    message: string | null;
+    errors: Record<string, string[]> | null;
 }
 
 export type ProductionBoardResponse = ApiEnvelope<
-  ProductionBoardData,
-  {
-    branch_id?: string | null;
-    statuses: ProductionBoardStatus[];
-    current_page: number;
-    per_page: number;
-    total: number;
-    last_page: number;
-  }
+    ProductionBoardData,
+    {
+        branch_id?: string | null;
+        statuses: ProductionBoardStatus[];
+        current_page: number;
+        per_page: number;
+        total: number;
+        last_page: number;
+    }
 >;
 
 export type ProductionTaskResponse = ApiEnvelope<ProductionTask, Record<string, unknown>>;
 
+export type ProductionCorrectionRequestResponse = ApiEnvelope<
+    ProductionCorrectionRequest,
+    Record<string, unknown>
+>;
+
+export type ProductionCorrectionRequestListResponse = ApiEnvelope<
+    ProductionCorrectionRequest[],
+    PaginationMeta
+>;
+
 export type ProductionReportResponse = ApiEnvelope<
-  ProductionStaffReportRow[],
-  {
-    from: string;
-    to: string;
-    branch_id?: string | null;
-  }
+    ProductionStaffReportRow[],
+    {
+        from: string;
+        to: string;
+        branch_id?: string | null;
+    }
 >;
 
 export type { PaginationMeta };
@@ -17516,27 +17627,39 @@ function UploadBox({
 
 ### src\pages\production\ProductionBoard.tsx
 
-- SHA: `55719aaa6cde`  
-- Ukuran: 17 KB
+- SHA: `ed48e8947f71`  
+- Ukuran: 33 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    approveProductionCorrectionRequest,
+    createProductionCorrectionRequest,
     finishProductionTask,
     getProductionBoard,
+    listProductionCorrectionRequests,
     moveProductionTask,
+    rejectProductionCorrectionRequest,
     startProductionTask,
 } from '../../api/production';
 import { normalizeApiError } from '../../api/client';
+import { listBranches } from '../../api/branches';
+import { listUsers } from '../../api/users';
+import { useAuth } from '../../store/useAuth';
+import type { Branch } from '../../types/branches';
+import type { User } from '../../types/users';
 import type {
     ProductionBoardColumns,
     ProductionBoardFilterStatus,
     ProductionBoardStatus,
+    ProductionCorrectionRequest,
+    ProductionCorrectionType,
     ProductionStatus,
     ProductionTask,
 } from '../../types/production';
 import { Link } from 'react-router-dom';
+import { useHasRole } from '../../store/useAuth';
 
 const BOARD_COLUMNS: Array<{
     status: ProductionBoardStatus;
@@ -17556,6 +17679,17 @@ const NEXT_STATUS: Partial<Record<ProductionStatus, ProductionStatus>> = {
     DRYING: 'IRONING',
     IRONING: 'READY',
 };
+
+const PREVIOUS_STATUS: Partial<Record<ProductionStatus, ProductionStatus>> = {
+    WASHING: 'QUEUE',
+    DRYING: 'WASHING',
+    IRONING: 'DRYING',
+    READY: 'IRONING',
+};
+
+function correctionLabel(type: ProductionCorrectionType): string {
+    return type === 'REWASH' ? 'Cuci Ulang' : 'Kembali Tahap';
+}
 
 function emptyColumns(): ProductionBoardColumns {
     return {
@@ -17603,6 +17737,10 @@ export default function ProductionBoard() {
     const [columns, setColumns] = useState<ProductionBoardColumns>(() => emptyColumns());
     const [q, setQ] = useState('');
     const [status, setStatus] = useState<'' | ProductionBoardFilterStatus>('');
+    const [branchId, setBranchId] = useState('');
+    const [assignedTo, setAssignedTo] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [staffOptions, setStaffOptions] = useState<User[]>([]);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const [meta, setMeta] = useState({
@@ -17614,14 +17752,52 @@ export default function ProductionBoard() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const isManager = useHasRole(['Superadmin', 'Admin Cabang']);
+    const [correctionRequests, setCorrectionRequests] = useState<ProductionCorrectionRequest[]>([]);
+    const [correctionLoading, setCorrectionLoading] = useState<string | null>(null);
+    const [correctionModal, setCorrectionModal] = useState<{
+        task: ProductionTask;
+        type: ProductionCorrectionType;
+        direct: boolean;
+    } | null>(null);
 
     const totalTasks = useMemo(
         () => Object.values(columns).reduce((total, rows) => total + rows.length, 0),
         [columns]
     );
+    const isSuperadmin = useAuth.hasRole('Superadmin');
 
     const canGoPrev = meta.current_page > 1;
     const canGoNext = meta.current_page < meta.last_page;
+
+    const loadFilterOptions = useCallback(async () => {
+        if (!isSuperadmin) return;
+
+        try {
+            const [branchResponse, userResponse] = await Promise.all([
+                listBranches({ per_page: 100 }),
+                listUsers({
+                    role: 'Petugas Cuci',
+                    branch_id: branchId || undefined,
+                    per_page: 100,
+                }),
+            ]);
+
+            setBranches(branchResponse.data ?? []);
+            setStaffOptions(userResponse.data ?? []);
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        }
+    }, [isSuperadmin, branchId]);
+
+    useEffect(() => {
+        void loadFilterOptions();
+    }, [loadFilterOptions]);
+
+    useEffect(() => {
+        setAssignedTo('');
+    }, [branchId]);
 
     const loadBoard = useCallback(async () => {
         setLoading(true);
@@ -17631,6 +17807,8 @@ export default function ProductionBoard() {
             const response = await getProductionBoard({
                 q: q.trim() || undefined,
                 status: status || undefined,
+                branch_id: isSuperadmin && branchId ? branchId : undefined,
+                assigned_to: isSuperadmin && assignedTo ? assignedTo : undefined,
                 page,
                 per_page: perPage,
             });
@@ -17648,23 +17826,39 @@ export default function ProductionBoard() {
         } finally {
             setLoading(false);
         }
-    }, [q, status, page, perPage]);
+    }, [q, status, branchId, assignedTo, page, perPage, isSuperadmin]);
+
+    const loadCorrectionRequests = useCallback(async () => {
+        try {
+            const response = await listProductionCorrectionRequests({
+                status: 'PENDING',
+                per_page: 50,
+            });
+
+            setCorrectionRequests(response.data ?? []);
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        }
+    }, []);
 
     useEffect(() => {
         void loadBoard();
-    }, [loadBoard]);
+        void loadCorrectionRequests();
+    }, [loadBoard, loadCorrectionRequests]);
 
     useEffect(() => {
         setPage(1);
-    }, [q, status, perPage]);
+    }, [q, status, branchId, assignedTo, perPage]);
 
     useEffect(() => {
         const timer = window.setInterval(() => {
             void loadBoard();
+            void loadCorrectionRequests();
         }, 10000);
 
         return () => window.clearInterval(timer);
-    }, [loadBoard]);
+    }, [loadBoard, loadCorrectionRequests]);
 
     async function handleStart(task: ProductionTask) {
         if (!task.order_id) return;
@@ -17705,6 +17899,66 @@ export default function ProductionBoard() {
         }
     }
 
+    async function handleSubmitCorrection(reason: string) {
+        if (!correctionModal?.task.order_id) return;
+
+        const target = correctionModal.task;
+        setCorrectionLoading(target.id);
+        setError(null);
+
+        try {
+            await createProductionCorrectionRequest(target.order_id, {
+                type: correctionModal.type,
+                reason,
+                direct: correctionModal.direct,
+            });
+
+            setCorrectionModal(null);
+            await loadBoard();
+            await loadCorrectionRequests();
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setCorrectionLoading(null);
+        }
+    }
+
+    async function handleApproveCorrection(item: ProductionCorrectionRequest) {
+        setCorrectionLoading(item.id);
+        setError(null);
+
+        try {
+            await approveProductionCorrectionRequest(item.id);
+            await loadBoard();
+            await loadCorrectionRequests();
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setCorrectionLoading(null);
+        }
+    }
+
+    async function handleRejectCorrection(item: ProductionCorrectionRequest) {
+        const note = window.prompt('Catatan penolakan pengajuan:') ?? '';
+
+        setCorrectionLoading(item.id);
+        setError(null);
+
+        try {
+            await rejectProductionCorrectionRequest(item.id, {
+                review_note: note.trim() || null,
+            });
+            await loadCorrectionRequests();
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setCorrectionLoading(null);
+        }
+    }
+
     return (
         <div className="space-y-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -17732,6 +17986,75 @@ export default function ProductionBoard() {
                 </div>
             </div>
 
+            {isManager && correctionRequests.length > 0 ? (
+                <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                    <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="text-sm font-semibold text-amber-900">
+                                Pengajuan Koreksi Cucian
+                            </h2>
+                            <p className="text-xs text-amber-700">
+                                Ada {correctionRequests.length} pengajuan cuci ulang / kembali tahap yang menunggu approval.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3 lg:grid-cols-2">
+                        {correctionRequests.map((item) => (
+                            <div
+                                key={item.id}
+                                className="rounded-2xl border border-amber-200 bg-white p-3 text-xs shadow-sm"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <div className="font-semibold text-slate-950">
+                                            {item.order?.invoice_no ?? '-'}
+                                        </div>
+                                        <div className="mt-0.5 text-slate-500">
+                                            {item.order?.customer?.name ?? '-'} • {correctionLabel(item.type)}
+                                        </div>
+                                    </div>
+                                    <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-800">
+                                        PENDING
+                                    </span>
+                                </div>
+
+                                <div className="mt-2 text-slate-600">
+                                    {statusLabel(item.from_status)} → {statusLabel(item.to_status)}
+                                </div>
+
+                                <div className="mt-2 rounded-xl bg-slate-50 p-2 text-slate-700">
+                                    {item.reason}
+                                </div>
+
+                                <div className="mt-2 text-slate-500">
+                                    Diajukan oleh: {item.requester?.name ?? '-'}
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleApproveCorrection(item)}
+                                        disabled={correctionLoading === item.id}
+                                        className="inline-flex flex-1 items-center justify-center rounded-xl bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {correctionLoading === item.id ? 'Proses...' : 'Approve'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleRejectCorrection(item)}
+                                        disabled={correctionLoading === item.id}
+                                        className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            ) : null}
+
             <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
                     <input
@@ -17754,6 +18077,36 @@ export default function ProductionBoard() {
                         <option value="IRONING">Finishing</option>
                         <option value="READY">Selesai</option>
                     </select>
+
+                    {isSuperadmin ? (
+                        <select
+                            value={branchId}
+                            onChange={(event) => setBranchId(event.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-56"
+                        >
+                            <option value="">Semua Cabang</option>
+                            {branches.map((branch) => (
+                                <option key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </option>
+                            ))}
+                        </select>
+                    ) : null}
+
+                    {isSuperadmin ? (
+                        <select
+                            value={assignedTo}
+                            onChange={(event) => setAssignedTo(event.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-56"
+                        >
+                            <option value="">Semua Petugas</option>
+                            {staffOptions.map((staff) => (
+                                <option key={staff.id} value={staff.id}>
+                                    {staff.name}
+                                </option>
+                            ))}
+                        </select>
+                    ) : null}
 
                     <select
                         value={perPage}
@@ -17848,9 +18201,12 @@ export default function ProductionBoard() {
                                         <ProductionCard
                                             key={task.id}
                                             task={task}
-                                            loading={actionLoading === task.id}
+                                            loading={actionLoading === task.id || correctionLoading === task.id}
+                                            isManager={isManager}
+                                            hasPendingCorrection={correctionRequests.some((item) => item.order_id === task.order_id)}
                                             onStart={() => void handleStart(task)}
                                             onMove={(toStatus) => void handleMove(task, toStatus)}
+                                            onCorrection={(type, direct) => setCorrectionModal({ task, type, direct })}
                                         />
                                     ))}
                                 </div>
@@ -17859,6 +18215,17 @@ export default function ProductionBoard() {
                     );
                 })}
             </div>
+            <CorrectionReasonModal
+                open={!!correctionModal}
+                title={
+                    correctionModal
+                        ? `${correctionModal.direct ? '' : 'Ajukan '}${correctionLabel(correctionModal.type)}`
+                        : 'Koreksi Cucian'
+                }
+                loading={!!correctionModal && correctionLoading === correctionModal.task.id}
+                onSubmit={(reason) => void handleSubmitCorrection(reason)}
+                onClose={() => setCorrectionModal(null)}
+            />
         </div>
     );
 }
@@ -17866,10 +18233,13 @@ export default function ProductionBoard() {
 function ProductionCard(props: {
     task: ProductionTask;
     loading: boolean;
+    isManager: boolean;
+    hasPendingCorrection: boolean;
     onStart: () => void;
     onMove: (toStatus: ProductionStatus) => void;
+    onCorrection: (type: ProductionCorrectionType, direct: boolean) => void;
 }) {
-    const { task, loading, onStart, onMove } = props;
+    const { task, loading, isManager, hasPendingCorrection, onStart, onMove, onCorrection } = props;
     const order = task.order;
     const nextStatus = NEXT_STATUS[task.current_status];
 
@@ -17885,9 +18255,17 @@ function ProductionCard(props: {
                     </div>
                 </div>
 
-                <span className={statusBadgeClass(task.current_status)}>
-                    {statusLabel(task.current_status)}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={statusBadgeClass(task.current_status)}>
+                        {statusLabel(task.current_status)}
+                    </span>
+
+                    {hasPendingCorrection ? (
+                        <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                            Menunggu Approval
+                        </span>
+                    ) : null}
+                </div>
             </div>
 
             <div className="mt-4 space-y-2 text-xs">
@@ -17921,6 +18299,31 @@ function ProductionCard(props: {
                         {loading ? 'Proses...' : nextStatus === 'READY' ? 'Tandai Selesai' : `Pindah ke ${statusLabel(nextStatus)}`}
                     </button>
                 ) : null}
+                {task.current_status !== 'QUEUE' && task.current_status !== 'PICKED_UP' && task.current_status !== 'CANCELED' ? (
+                    <>
+                        {task.current_status !== 'WASHING' ? (
+                            <button
+                                type="button"
+                                onClick={() => onCorrection('REWASH', isManager)}
+                                disabled={loading || hasPendingCorrection}
+                                className="inline-flex flex-1 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isManager ? 'Cuci Ulang' : 'Ajukan Cuci Ulang'}
+                            </button>
+                        ) : null}
+
+                        {PREVIOUS_STATUS[task.current_status] ? (
+                            <button
+                                type="button"
+                                onClick={() => onCorrection('ROLLBACK', isManager)}
+                                disabled={loading || hasPendingCorrection}
+                                className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isManager ? 'Kembali Tahap' : 'Ajukan Kembali Tahap'}
+                            </button>
+                        ) : null}
+                    </>
+                ) : null}
             </div>
         </article>
     );
@@ -17934,23 +18337,105 @@ function InfoRow(props: { label: string; value: string }) {
         </div>
     );
 }
+
+function CorrectionReasonModal(props: {
+    open: boolean;
+    title: string;
+    loading: boolean;
+    onSubmit: (reason: string) => void;
+    onClose: () => void;
+}) {
+    const [reason, setReason] = useState('');
+
+    useEffect(() => {
+        if (props.open) {
+            setReason('');
+        }
+    }, [props.open]);
+
+    if (!props.open) return null;
+
+    const canSubmit = reason.trim().length >= 3;
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 backdrop-blur-[1px] sm:items-center"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => {
+                if (!props.loading) props.onClose();
+            }}
+        >
+            <div
+                className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div>
+                    <h2 className="text-base font-semibold text-slate-950">
+                        {props.title}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Isi catatan alasan agar histori koreksi cucian jelas.
+                    </p>
+                </div>
+
+                <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={4}
+                    placeholder="Contoh: Noda masih terlihat, perlu dicuci ulang."
+                    className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                />
+
+                <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        onClick={props.onClose}
+                        disabled={props.loading}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => props.onSubmit(reason.trim())}
+                        disabled={!canSubmit || props.loading}
+                        className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {props.loading ? 'Menyimpan...' : 'Simpan'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 ```
 </details>
 
 ### src\pages\production\ProductionReport.tsx
 
-- SHA: `9aa71c5682b3`  
-- Ukuran: 12 KB
+- SHA: `721f7458c7f3`  
+- Ukuran: 15 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getProductionStaffDailyReport } from '../../api/production';
 import { normalizeApiError } from '../../api/client';
+import { listBranches } from '../../api/branches';
+import { listUsers } from '../../api/users';
+import { useAuth } from '../../store/useAuth';
 import type { ProductionStaffReportRow } from '../../types/production';
+import type { Branch } from '../../types/branches';
+import type { User } from '../../types/users';
 
 function today(): string {
-    return new Date().toISOString().slice(0, 10);
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
 function formatDate(value?: string | null): string {
@@ -17960,9 +18445,14 @@ function formatDate(value?: string | null): string {
 export default function ProductionReport() {
     const [dateFrom, setDateFrom] = useState(today());
     const [dateTo, setDateTo] = useState(today());
+    const [branchId, setBranchId] = useState('');
+    const [userId, setUserId] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [staffOptions, setStaffOptions] = useState<User[]>([]);
     const [rows, setRows] = useState<ProductionStaffReportRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const isSuperadmin = useAuth.hasRole('Superadmin');
 
     const totals = useMemo(() => {
         return rows.reduce(
@@ -17978,6 +18468,35 @@ export default function ProductionReport() {
         );
     }, [rows]);
 
+    const loadFilterOptions = useCallback(async () => {
+        if (!isSuperadmin) return;
+
+        try {
+            const [branchResponse, userResponse] = await Promise.all([
+                listBranches({ per_page: 100 }),
+                listUsers({
+                    role: 'Petugas Cuci',
+                    branch_id: branchId || undefined,
+                    per_page: 100,
+                }),
+            ]);
+
+            setBranches(branchResponse.data ?? []);
+            setStaffOptions(userResponse.data ?? []);
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        }
+    }, [isSuperadmin, branchId]);
+
+    useEffect(() => {
+        void loadFilterOptions();
+    }, [loadFilterOptions]);
+
+    useEffect(() => {
+        setUserId('');
+    }, [branchId]);
+
     const loadReport = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -17986,6 +18505,8 @@ export default function ProductionReport() {
             const response = await getProductionStaffDailyReport({
                 date_from: dateFrom,
                 date_to: dateTo,
+                branch_id: isSuperadmin && branchId ? branchId : undefined,
+                user_id: isSuperadmin && userId ? userId : undefined,
             });
 
             setRows(response.data ?? []);
@@ -17995,7 +18516,7 @@ export default function ProductionReport() {
         } finally {
             setLoading(false);
         }
-    }, [dateFrom, dateTo]);
+    }, [dateFrom, dateTo, branchId, userId, isSuperadmin]);
 
     useEffect(() => {
         void loadReport();
@@ -18014,7 +18535,7 @@ export default function ProductionReport() {
                 </div>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_auto]">
+            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
                 <label className="block">
                     <span className="text-xs font-medium text-slate-500">Dari Tanggal</span>
                     <input
@@ -18034,6 +18555,42 @@ export default function ProductionReport() {
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
                     />
                 </label>
+
+                {isSuperadmin ? (
+                    <label className="block">
+                        <span className="text-xs font-medium text-slate-500">Cabang</span>
+                        <select
+                            value={branchId}
+                            onChange={(event) => setBranchId(event.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+                        >
+                            <option value="">Semua Cabang</option>
+                            {branches.map((branch) => (
+                                <option key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                ) : null}
+
+                {isSuperadmin ? (
+                    <label className="block">
+                        <span className="text-xs font-medium text-slate-500">Petugas</span>
+                        <select
+                            value={userId}
+                            onChange={(event) => setUserId(event.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+                        >
+                            <option value="">Semua Petugas</option>
+                            {staffOptions.map((staff) => (
+                                <option key={staff.id} value={staff.id}>
+                                    {staff.name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                ) : null}
 
                 <div className="flex items-end">
                     <button

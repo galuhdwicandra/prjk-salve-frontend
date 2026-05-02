@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getProductionStaffDailyReport } from '../../api/production';
 import { normalizeApiError } from '../../api/client';
+import { listBranches } from '../../api/branches';
+import { listUsers } from '../../api/users';
+import { useAuth } from '../../store/useAuth';
 import type { ProductionStaffReportRow } from '../../types/production';
+import type { Branch } from '../../types/branches';
+import type { User } from '../../types/users';
 
 function today(): string {
-    return new Date().toISOString().slice(0, 10);
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
 function formatDate(value?: string | null): string {
@@ -14,9 +24,14 @@ function formatDate(value?: string | null): string {
 export default function ProductionReport() {
     const [dateFrom, setDateFrom] = useState(today());
     const [dateTo, setDateTo] = useState(today());
+    const [branchId, setBranchId] = useState('');
+    const [userId, setUserId] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [staffOptions, setStaffOptions] = useState<User[]>([]);
     const [rows, setRows] = useState<ProductionStaffReportRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const isSuperadmin = useAuth.hasRole('Superadmin');
 
     const totals = useMemo(() => {
         return rows.reduce(
@@ -32,6 +47,35 @@ export default function ProductionReport() {
         );
     }, [rows]);
 
+    const loadFilterOptions = useCallback(async () => {
+        if (!isSuperadmin) return;
+
+        try {
+            const [branchResponse, userResponse] = await Promise.all([
+                listBranches({ per_page: 100 }),
+                listUsers({
+                    role: 'Petugas Cuci',
+                    branch_id: branchId || undefined,
+                    per_page: 100,
+                }),
+            ]);
+
+            setBranches(branchResponse.data ?? []);
+            setStaffOptions(userResponse.data ?? []);
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        }
+    }, [isSuperadmin, branchId]);
+
+    useEffect(() => {
+        void loadFilterOptions();
+    }, [loadFilterOptions]);
+
+    useEffect(() => {
+        setUserId('');
+    }, [branchId]);
+
     const loadReport = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -40,6 +84,8 @@ export default function ProductionReport() {
             const response = await getProductionStaffDailyReport({
                 date_from: dateFrom,
                 date_to: dateTo,
+                branch_id: isSuperadmin && branchId ? branchId : undefined,
+                user_id: isSuperadmin && userId ? userId : undefined,
             });
 
             setRows(response.data ?? []);
@@ -49,7 +95,7 @@ export default function ProductionReport() {
         } finally {
             setLoading(false);
         }
-    }, [dateFrom, dateTo]);
+    }, [dateFrom, dateTo, branchId, userId, isSuperadmin]);
 
     useEffect(() => {
         void loadReport();
@@ -68,7 +114,7 @@ export default function ProductionReport() {
                 </div>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_auto]">
+            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
                 <label className="block">
                     <span className="text-xs font-medium text-slate-500">Dari Tanggal</span>
                     <input
@@ -88,6 +134,42 @@ export default function ProductionReport() {
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
                     />
                 </label>
+
+                {isSuperadmin ? (
+                    <label className="block">
+                        <span className="text-xs font-medium text-slate-500">Cabang</span>
+                        <select
+                            value={branchId}
+                            onChange={(event) => setBranchId(event.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+                        >
+                            <option value="">Semua Cabang</option>
+                            {branches.map((branch) => (
+                                <option key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                ) : null}
+
+                {isSuperadmin ? (
+                    <label className="block">
+                        <span className="text-xs font-medium text-slate-500">Petugas</span>
+                        <select
+                            value={userId}
+                            onChange={(event) => setUserId(event.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+                        >
+                            <option value="">Semua Petugas</option>
+                            {staffOptions.map((staff) => (
+                                <option key={staff.id} value={staff.id}>
+                                    {staff.name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                ) : null}
 
                 <div className="flex items-end">
                     <button
