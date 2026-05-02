@@ -34,6 +34,8 @@ const CashTodayPage = lazy(() => import('../pages/cash/CashTodayPage'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
+const ProductionBoard = lazy(() => import('../pages/production/ProductionBoard'));
+const ProductionReport = lazy(() => import('../pages/production/ProductionReport'));
 const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 const WhatsappTemplatesPage = lazy(() => import('../pages/settings/WhatsappTemplatesPage'));
 
@@ -58,7 +60,7 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: (
-          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
             <LazyBoundary>
               <DashboardHome />
             </LazyBoundary>
@@ -71,6 +73,26 @@ export const router = createBrowserRouter([
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
             <LazyBoundary>
               <ReportsIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/production-board',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+            <LazyBoundary>
+              <ProductionBoard />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/production-board/reports',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+            <LazyBoundary>
+              <ProductionReport />
             </LazyBoundary>
           </Guarded>
         ),

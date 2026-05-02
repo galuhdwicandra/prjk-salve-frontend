@@ -44,9 +44,10 @@ export default function ProtectedLayout() {
 
   type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
   const MENU: MenuItem[] = [
-    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
+    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang"] as RoleName[] },
     { label: "POS", to: "/pos", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
     { label: "Pesanan", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Live Cucian", to: "/production-board", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
     { label: "Pelanggan", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
     { label: "Layanan", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
     { label: "Pengguna", to: "/users", roles: ["Superadmin", "Admin Cabang"] },

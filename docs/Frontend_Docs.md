@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-04-25 12:09:06_  
+_Dihasilkan otomatis: 2026-05-02 16:46:41_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -18,6 +18,7 @@ _Dihasilkan otomatis: 2026-04-25 12:09:06_
   - [src\api\loyalty.ts](#file-srcapiloyaltyts)
   - [src\api\orderPhotos.ts](#file-srcapiorderphotosts)
   - [src\api\orders.ts](#file-srcapiordersts)
+  - [src\api\production.ts](#file-srcapiproductionts)
   - [src\api\receivables.ts](#file-srcapireceivablests)
   - [src\api\reports.ts](#file-srcapireportsts)
   - [src\api\serviceCategories.ts](#file-srcapiservicecategoriests)
@@ -50,6 +51,7 @@ _Dihasilkan otomatis: 2026-04-25 12:09:06_
   - [src\types\loyalty.ts](#file-srctypesloyaltyts)
   - [src\types\orders.ts](#file-srctypesordersts)
   - [src\types\payments.ts](#file-srctypespaymentsts)
+  - [src\types\production.ts](#file-srctypesproductionts)
   - [src\types\receivables.ts](#file-srctypesreceivablests)
   - [src\types\services.ts](#file-srctypesservicests)
   - [src\types\users.ts](#file-srctypesusersts)
@@ -95,6 +97,8 @@ _Dihasilkan otomatis: 2026-04-25 12:09:06_
   - [src\pages\orders\OrderReceipt.tsx](#file-srcpagesordersorderreceipttsx)
   - [src\pages\orders\OrdersIndex.tsx](#file-srcpagesordersordersindextsx)
   - [src\pages\pos\POSPage.tsx](#file-srcpagespospospagetsx)
+  - [src\pages\production\ProductionBoard.tsx](#file-srcpagesproductionproductionboardtsx)
+  - [src\pages\production\ProductionReport.tsx](#file-srcpagesproductionproductionreporttsx)
   - [src\pages\receivables\ReceivablesIndex.tsx](#file-srcpagesreceivablesreceivablesindextsx)
   - [src\pages\reports\ReportsIndex.tsx](#file-srcpagesreportsreportsindextsx)
   - [src\pages\services\CategoryIndex.tsx](#file-srcpagesservicescategoryindextsx)
@@ -1028,6 +1032,70 @@ export async function createOrderShareLink(id: string): Promise<string> {
 ```
 </details>
 
+### src\api\production.ts
+
+- SHA: `43ddc49b67db`  
+- Ukuran: 2 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+import { api } from './client';
+import type {
+  ProductionActionPayload,
+  ProductionBoardQuery,
+  ProductionBoardResponse,
+  ProductionMovePayload,
+  ProductionReportQuery,
+  ProductionReportResponse,
+  ProductionTaskResponse,
+} from '../types/production';
+
+export async function getProductionBoard(params: ProductionBoardQuery = {}) {
+  const { data } = await api.get<ProductionBoardResponse>('/production-board', { params });
+  return data;
+}
+
+export async function startProductionTask(orderId: string, payload: ProductionActionPayload = {}) {
+  const { data } = await api.post<ProductionTaskResponse>(
+    `/production-board/${encodeURIComponent(orderId)}/start`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function moveProductionTask(orderId: string, payload: ProductionMovePayload) {
+  const { data } = await api.post<ProductionTaskResponse>(
+    `/production-board/${encodeURIComponent(orderId)}/move`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function finishProductionTask(orderId: string, payload: ProductionActionPayload = {}) {
+  const { data } = await api.post<ProductionTaskResponse>(
+    `/production-board/${encodeURIComponent(orderId)}/finish`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function getProductionStaffDailyReport(params: ProductionReportQuery = {}) {
+  const { data } = await api.get<ProductionReportResponse>(
+    '/production-board/reports/staff-daily',
+    { params }
+  );
+
+  return data;
+}
+```
+</details>
+
 ### src\api\receivables.ts
 
 - SHA: `f9f5cf061a71`  
@@ -1541,7 +1609,7 @@ export async function resolveWhatsappTemplate(
 
 ### src\store\useAuth.ts
 
-- SHA: `efb9fc1f4b1d`  
+- SHA: `eda11d34c313`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1564,8 +1632,10 @@ const state: AuthState = {
 const isDev = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV;
 
 export function homePathByRole(roles: RoleName[]): string {
-    // Kasir → POS ; Admin Cabang & Superadmin → Dashboard
+    if (roles.includes('Petugas Cuci')) return '/production-board';
+    if (roles.includes('Kurir')) return '/deliveries';
     if (roles.includes('Kasir')) return '/pos';
+
     return '/';
 }
 
@@ -1704,7 +1774,7 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `e3893a858339`  
+- SHA: `b95c5ffdbb91`  
 - Ukuran: 16 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1755,9 +1825,10 @@ export default function ProtectedLayout() {
 
   type MenuItem = { label: string; to: string; roles: RoleName[]; show?: boolean };
   const MENU: MenuItem[] = [
-    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang", "Kasir", "Petugas Cuci", "Kurir"] as RoleName[] },
+    { label: "Dashboard", to: "/", roles: ["Superadmin", "Admin Cabang"] as RoleName[] },
     { label: "POS", to: "/pos", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
     { label: "Pesanan", to: "/orders", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
+    { label: "Live Cucian", to: "/production-board", roles: ["Superadmin", "Admin Cabang", "Petugas Cuci"] },
     { label: "Pelanggan", to: "/customers", roles: ["Superadmin", "Admin Cabang", "Kasir"] },
     { label: "Layanan", to: "/services", roles: ["Superadmin", "Admin Cabang"] },
     { label: "Pengguna", to: "/users", roles: ["Superadmin", "Admin Cabang"] },
@@ -2154,8 +2225,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `8abc69b9b5ee`  
-- Ukuran: 12 KB
+- SHA: `2658be51c8aa`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -2195,6 +2266,8 @@ const CashTodayPage = lazy(() => import('../pages/cash/CashTodayPage'));
 const DashboardHome = lazy(() => import('../pages/dashboard/DashboardHome'));
 const ReportsIndex = lazy(() => import('../pages/reports/ReportsIndex'));
 const WashNotesIndex = lazy(() => import('../pages/wash-notes/WashNotesIndex'));
+const ProductionBoard = lazy(() => import('../pages/production/ProductionBoard'));
+const ProductionReport = lazy(() => import('../pages/production/ProductionReport'));
 const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 const WhatsappTemplatesPage = lazy(() => import('../pages/settings/WhatsappTemplatesPage'));
 
@@ -2219,7 +2292,7 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: (
-          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir']}>
+          <Guarded roles={['Superadmin', 'Admin Cabang']}>
             <LazyBoundary>
               <DashboardHome />
             </LazyBoundary>
@@ -2232,6 +2305,26 @@ export const router = createBrowserRouter([
           <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
             <LazyBoundary>
               <ReportsIndex />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/production-board',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+            <LazyBoundary>
+              <ProductionBoard />
+            </LazyBoundary>
+          </Guarded>
+        ),
+      },
+      {
+        path: '/production-board/reports',
+        element: (
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Petugas Cuci']}>
+            <LazyBoundary>
+              <ProductionReport />
             </LazyBoundary>
           </Guarded>
         ),
@@ -3305,6 +3398,162 @@ export type Payment = {
     created_at: string;
 };
 
+```
+</details>
+
+### src\types\production.ts
+
+- SHA: `87627813f1f6`  
+- Ukuran: 3 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+import type { PaginationMeta } from './branches';
+
+export type ProductionStatus =
+  | 'QUEUE'
+  | 'WASHING'
+  | 'DRYING'
+  | 'IRONING'
+  | 'READY'
+  | 'PICKED_UP'
+  | 'CANCELED';
+
+export type ProductionBoardStatus =
+  | 'QUEUE'
+  | 'WASHING'
+  | 'DRYING'
+  | 'IRONING'
+  | 'READY';
+
+export interface ProductionMiniCustomer {
+  id: string;
+  name: string;
+  whatsapp?: string | null;
+}
+
+export interface ProductionMiniOrder {
+  id: string;
+  branch_id: string;
+  number: string;
+  invoice_no?: string | null;
+  status: ProductionStatus;
+  received_at?: string | null;
+  ready_at?: string | null;
+  customer?: ProductionMiniCustomer | null;
+}
+
+export interface ProductionAssignee {
+  id: string;
+  name: string;
+}
+
+export interface ProductionTask {
+  id: string;
+  order_id: string;
+  branch_id: string;
+  assigned_to: string | null;
+  current_status: ProductionStatus;
+  qty: number;
+  started_date?: string | null;
+  finished_date?: string | null;
+  note?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  assignee?: ProductionAssignee | null;
+  order?: ProductionMiniOrder | null;
+}
+
+export type ProductionBoardColumns = Record<ProductionBoardStatus, ProductionTask[]>;
+
+export interface ProductionBoardData {
+  columns: ProductionBoardColumns;
+  items: ProductionTask[];
+}
+
+export type ProductionBoardFilterStatus = ProductionBoardStatus | 'OVERDUE';
+
+export interface ProductionBoardQuery {
+  q?: string;
+  status?: ProductionBoardFilterStatus;
+  branch_id?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface ProductionMovePayload {
+  to_status: ProductionStatus;
+  note?: string | null;
+}
+
+export interface ProductionActionPayload {
+  note?: string | null;
+}
+
+export interface ProductionReportDetail {
+  order_id: string;
+  invoice_no?: string | null;
+  number?: string | null;
+  customer_name?: string | null;
+  qty: number;
+  current_status?: ProductionStatus | null;
+  received_at?: string | null;
+  ready_at?: string | null;
+  started_date?: string | null;
+  finished_date?: string | null;
+  is_overdue: boolean;
+  overdue_days: number;
+  overdue_text?: string | null;
+}
+
+export interface ProductionStaffReportRow {
+  user_id: string;
+  staff_name: string;
+  total_invoice: number;
+  total_qty: number;
+  finished: number;
+  unfinished: number;
+  overdue: number;
+  details: ProductionReportDetail[];
+}
+
+export interface ProductionReportQuery {
+  date_from?: string;
+  date_to?: string;
+  branch_id?: string;
+}
+
+export interface ApiEnvelope<T, M = unknown> {
+  data: T;
+  meta: M;
+  message: string | null;
+  errors: Record<string, string[]> | null;
+}
+
+export type ProductionBoardResponse = ApiEnvelope<
+  ProductionBoardData,
+  {
+    branch_id?: string | null;
+    statuses: ProductionBoardStatus[];
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  }
+>;
+
+export type ProductionTaskResponse = ApiEnvelope<ProductionTask, Record<string, unknown>>;
+
+export type ProductionReportResponse = ApiEnvelope<
+  ProductionStaffReportRow[],
+  {
+    from: string;
+    to: string;
+    branch_id?: string | null;
+  }
+>;
+
+export type { PaginationMeta };
 ```
 </details>
 
@@ -17262,6 +17511,687 @@ function UploadBox({
 }
 
 
+```
+</details>
+
+### src\pages\production\ProductionBoard.tsx
+
+- SHA: `55719aaa6cde`  
+- Ukuran: 17 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+    finishProductionTask,
+    getProductionBoard,
+    moveProductionTask,
+    startProductionTask,
+} from '../../api/production';
+import { normalizeApiError } from '../../api/client';
+import type {
+    ProductionBoardColumns,
+    ProductionBoardFilterStatus,
+    ProductionBoardStatus,
+    ProductionStatus,
+    ProductionTask,
+} from '../../types/production';
+import { Link } from 'react-router-dom';
+
+const BOARD_COLUMNS: Array<{
+    status: ProductionBoardStatus;
+    title: string;
+    description: string;
+}> = [
+        { status: 'QUEUE', title: 'Antrian', description: 'Belum diambil petugas' },
+        { status: 'WASHING', title: 'Sedang Dicuci', description: 'Proses cuci berjalan' },
+        { status: 'DRYING', title: 'Pengeringan', description: 'Masuk tahap pengeringan' },
+        { status: 'IRONING', title: 'Finishing', description: 'Setrika / finishing' },
+        { status: 'READY', title: 'Selesai', description: 'Siap diambil pelanggan' },
+    ];
+
+const NEXT_STATUS: Partial<Record<ProductionStatus, ProductionStatus>> = {
+    QUEUE: 'WASHING',
+    WASHING: 'DRYING',
+    DRYING: 'IRONING',
+    IRONING: 'READY',
+};
+
+function emptyColumns(): ProductionBoardColumns {
+    return {
+        QUEUE: [],
+        WASHING: [],
+        DRYING: [],
+        IRONING: [],
+        READY: [],
+    };
+}
+
+function formatDate(value?: string | null): string {
+    if (!value) return '-';
+    return value;
+}
+
+function statusLabel(status: ProductionStatus): string {
+    const labels: Record<ProductionStatus, string> = {
+        QUEUE: 'Antrian',
+        WASHING: 'Sedang Dicuci',
+        DRYING: 'Pengeringan',
+        IRONING: 'Finishing',
+        READY: 'Selesai',
+        PICKED_UP: 'Diambil',
+        CANCELED: 'Dibatalkan',
+    };
+
+    return labels[status] ?? status;
+}
+
+function statusBadgeClass(status: ProductionStatus): string {
+    const base = 'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset';
+
+    if (status === 'READY') return `${base} bg-emerald-50 text-emerald-700 ring-emerald-200`;
+    if (status === 'WASHING' || status === 'DRYING' || status === 'IRONING') {
+        return `${base} bg-amber-50 text-amber-700 ring-amber-200`;
+    }
+    if (status === 'CANCELED') return `${base} bg-red-50 text-red-700 ring-red-200`;
+    if (status === 'PICKED_UP') return `${base} bg-slate-900 text-white ring-slate-900`;
+
+    return `${base} bg-slate-50 text-slate-700 ring-slate-200`;
+}
+
+export default function ProductionBoard() {
+    const [columns, setColumns] = useState<ProductionBoardColumns>(() => emptyColumns());
+    const [q, setQ] = useState('');
+    const [status, setStatus] = useState<'' | ProductionBoardFilterStatus>('');
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+    const [meta, setMeta] = useState({
+        current_page: 1,
+        per_page: 20,
+        total: 0,
+        last_page: 1,
+    });
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const totalTasks = useMemo(
+        () => Object.values(columns).reduce((total, rows) => total + rows.length, 0),
+        [columns]
+    );
+
+    const canGoPrev = meta.current_page > 1;
+    const canGoNext = meta.current_page < meta.last_page;
+
+    const loadBoard = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await getProductionBoard({
+                q: q.trim() || undefined,
+                status: status || undefined,
+                page,
+                per_page: perPage,
+            });
+
+            setColumns(response.data?.columns ?? emptyColumns());
+            setMeta({
+                current_page: response.meta?.current_page ?? 1,
+                per_page: response.meta?.per_page ?? perPage,
+                total: response.meta?.total ?? 0,
+                last_page: response.meta?.last_page ?? 1,
+            });
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [q, status, page, perPage]);
+
+    useEffect(() => {
+        void loadBoard();
+    }, [loadBoard]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [q, status, perPage]);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => {
+            void loadBoard();
+        }, 10000);
+
+        return () => window.clearInterval(timer);
+    }, [loadBoard]);
+
+    async function handleStart(task: ProductionTask) {
+        if (!task.order_id) return;
+
+        setActionLoading(task.id);
+        setError(null);
+
+        try {
+            await startProductionTask(task.order_id);
+            await loadBoard();
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setActionLoading(null);
+        }
+    }
+
+    async function handleMove(task: ProductionTask, toStatus: ProductionStatus) {
+        if (!task.order_id) return;
+
+        setActionLoading(task.id);
+        setError(null);
+
+        try {
+            if (toStatus === 'READY') {
+                await finishProductionTask(task.order_id);
+            } else {
+                await moveProductionTask(task.order_id, { to_status: toStatus });
+            }
+
+            await loadBoard();
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setActionLoading(null);
+        }
+    }
+
+    return (
+        <div className="space-y-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                        Live Cucian
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Pantau antrian cucian, petugas yang mengerjakan, dan status produksi per invoice.
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Link
+                        to="/production-board/reports"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                        Lihat Laporan Cucian
+                    </Link>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+                        <div className="text-slate-500">Total cucian aktif</div>
+                        <div className="mt-1 text-2xl font-semibold text-slate-950">{totalTasks}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                    <input
+                        value={q}
+                        onChange={(event) => setQ(event.target.value)}
+                        placeholder="Cari invoice, no order, atau customer..."
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:max-w-md"
+                    />
+
+                    <select
+                        value={status}
+                        onChange={(event) => setStatus(event.target.value as '' | ProductionBoardFilterStatus)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-48"
+                    >
+                        <option value="">Semua Status</option>
+                        <option value="OVERDUE">Terlambat</option>
+                        <option value="QUEUE">Antrian</option>
+                        <option value="WASHING">Sedang Dicuci</option>
+                        <option value="DRYING">Pengeringan</option>
+                        <option value="IRONING">Finishing</option>
+                        <option value="READY">Selesai</option>
+                    </select>
+
+                    <select
+                        value={perPage}
+                        onChange={(event) => setPerPage(Number(event.target.value))}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-36"
+                    >
+                        <option value={10}>10 / halaman</option>
+                        <option value={20}>20 / halaman</option>
+                        <option value={50}>50 / halaman</option>
+                        <option value={100}>100 / halaman</option>
+                    </select>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => void loadBoard()}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {loading ? 'Memuat...' : 'Refresh'}
+                </button>
+            </div>
+
+            {error ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            ) : null}
+
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-slate-600">
+                    Menampilkan <span className="font-semibold text-slate-900">{totalTasks}</span> data dari{' '}
+                    <span className="font-semibold text-slate-900">{meta.total}</span> total cucian aktif.
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                        type="button"
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                        disabled={!canGoPrev || loading}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Sebelumnya
+                    </button>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-semibold text-slate-700">
+                        Halaman {meta.current_page} dari {meta.last_page}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setPage((current) => Math.min(meta.last_page, current + 1))}
+                        disabled={!canGoNext || loading}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Berikutnya
+                    </button>
+                </div>
+            </div>
+
+            <div className="space-y-5">
+                {BOARD_COLUMNS.map((column) => {
+                    const tasks = columns[column.status] ?? [];
+
+                    return (
+                        <section
+                            key={column.status}
+                            className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm"
+                        >
+                            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h2 className="text-base font-semibold text-slate-950">
+                                        {column.title}
+                                    </h2>
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        {column.description}
+                                    </p>
+                                </div>
+
+                                <span className="inline-flex w-fit rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                                    {tasks.length} order
+                                </span>
+                            </div>
+
+                            {tasks.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+                                    Tidak ada data.
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                                    {tasks.map((task) => (
+                                        <ProductionCard
+                                            key={task.id}
+                                            task={task}
+                                            loading={actionLoading === task.id}
+                                            onStart={() => void handleStart(task)}
+                                            onMove={(toStatus) => void handleMove(task, toStatus)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function ProductionCard(props: {
+    task: ProductionTask;
+    loading: boolean;
+    onStart: () => void;
+    onMove: (toStatus: ProductionStatus) => void;
+}) {
+    const { task, loading, onStart, onMove } = props;
+    const order = task.order;
+    const nextStatus = NEXT_STATUS[task.current_status];
+
+    return (
+        <article className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-950">
+                        {order?.invoice_no ?? '-'}
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-slate-500">
+                        No Order: {order?.number ?? '-'}
+                    </div>
+                </div>
+
+                <span className={statusBadgeClass(task.current_status)}>
+                    {statusLabel(task.current_status)}
+                </span>
+            </div>
+
+            <div className="mt-4 space-y-2 text-xs">
+                <InfoRow label="Customer" value={order?.customer?.name ?? '-'} />
+                <InfoRow label="Total Qty" value={String(task.qty ?? 0)} />
+                <InfoRow label="Petugas Cuci" value={task.assignee?.name ?? 'Belum diambil'} />
+                <InfoRow label="Tanggal Masuk" value={formatDate(order?.received_at)} />
+                <InfoRow label="Target Selesai" value={formatDate(order?.ready_at)} />
+                <InfoRow label="Tanggal Selesai Aktual" value={formatDate(task.finished_date)} />
+            </div>
+
+            <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                {task.current_status === 'QUEUE' ? (
+                    <button
+                        type="button"
+                        onClick={onStart}
+                        disabled={loading}
+                        className="inline-flex flex-1 items-center justify-center rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {loading ? 'Proses...' : 'Ambil Cucian'}
+                    </button>
+                ) : null}
+
+                {task.current_status !== 'QUEUE' && nextStatus ? (
+                    <button
+                        type="button"
+                        onClick={() => onMove(nextStatus)}
+                        disabled={loading}
+                        className="inline-flex flex-1 items-center justify-center rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {loading ? 'Proses...' : nextStatus === 'READY' ? 'Tandai Selesai' : `Pindah ke ${statusLabel(nextStatus)}`}
+                    </button>
+                ) : null}
+            </div>
+        </article>
+    );
+}
+
+function InfoRow(props: { label: string; value: string }) {
+    return (
+        <div className="flex items-start justify-between gap-3">
+            <span className="shrink-0 text-slate-500">{props.label}</span>
+            <span className="text-right font-medium text-slate-800">{props.value}</span>
+        </div>
+    );
+}
+```
+</details>
+
+### src\pages\production\ProductionReport.tsx
+
+- SHA: `9aa71c5682b3`  
+- Ukuran: 12 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getProductionStaffDailyReport } from '../../api/production';
+import { normalizeApiError } from '../../api/client';
+import type { ProductionStaffReportRow } from '../../types/production';
+
+function today(): string {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function formatDate(value?: string | null): string {
+    return value || '-';
+}
+
+export default function ProductionReport() {
+    const [dateFrom, setDateFrom] = useState(today());
+    const [dateTo, setDateTo] = useState(today());
+    const [rows, setRows] = useState<ProductionStaffReportRow[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const totals = useMemo(() => {
+        return rows.reduce(
+            (acc, row) => {
+                acc.invoice += row.total_invoice;
+                acc.qty += row.total_qty;
+                acc.finished += row.finished;
+                acc.unfinished += row.unfinished;
+                acc.overdue += row.overdue;
+                return acc;
+            },
+            { invoice: 0, qty: 0, finished: 0, unfinished: 0, overdue: 0 }
+        );
+    }, [rows]);
+
+    const loadReport = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await getProductionStaffDailyReport({
+                date_from: dateFrom,
+                date_to: dateTo,
+            });
+
+            setRows(response.data ?? []);
+        } catch (err) {
+            const normalized = normalizeApiError(err);
+            setError(normalized.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [dateFrom, dateTo]);
+
+    useEffect(() => {
+        void loadReport();
+    }, [loadReport]);
+
+    return (
+        <div className="space-y-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                        Laporan Produksi Petugas
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Rekap invoice, qty, selesai, belum selesai, dan detail order yang dikerjakan petugas.
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_auto]">
+                <label className="block">
+                    <span className="text-xs font-medium text-slate-500">Dari Tanggal</span>
+                    <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(event) => setDateFrom(event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                    />
+                </label>
+
+                <label className="block">
+                    <span className="text-xs font-medium text-slate-500">Sampai Tanggal</span>
+                    <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(event) => setDateTo(event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                    />
+                </label>
+
+                <div className="flex items-end">
+                    <button
+                        type="button"
+                        onClick={() => void loadReport()}
+                        disabled={loading}
+                        className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {loading ? 'Memuat...' : 'Tampilkan'}
+                    </button>
+                </div>
+            </div>
+
+            {error ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-5">
+                <SummaryCard label="Total Invoice" value={String(totals.invoice)} />
+                <SummaryCard label="Total Qty" value={String(totals.qty)} />
+                <SummaryCard label="Selesai" value={String(totals.finished)} />
+                <SummaryCard label="Belum Selesai" value={String(totals.unfinished)} />
+                <SummaryCard label="Terlambat" value={String(totals.overdue)} tone="danger" />
+            </div>
+
+            <div className="space-y-4">
+                {rows.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+                        {loading ? 'Memuat laporan...' : 'Belum ada aktivitas produksi pada tanggal ini.'}
+                    </div>
+                ) : (
+                    rows.map((row) => (
+                        <section key={row.user_id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="border-b border-slate-100 p-4">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                        <h2 className="text-base font-semibold text-slate-950">{row.staff_name}</h2>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Total invoice {row.total_invoice}, total qty {row.total_qty}.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+                                        <MiniStat label="Invoice" value={row.total_invoice} />
+                                        <MiniStat label="Qty" value={row.total_qty} />
+                                        <MiniStat label="Selesai" value={row.finished} />
+                                        <MiniStat label="Belum" value={row.unfinished} />
+                                        <MiniStat label="Terlambat" value={row.overdue} tone="danger" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3">Invoice</th>
+                                            <th className="px-4 py-3">No Order</th>
+                                            <th className="px-4 py-3">Customer</th>
+                                            <th className="px-4 py-3">Qty</th>
+                                            <th className="px-4 py-3">Status</th>
+                                            <th className="px-4 py-3">Tanggal Masuk</th>
+                                            <th className="px-4 py-3">Target Selesai</th>
+                                            <th className="px-4 py-3">Tanggal Selesai Aktual</th>
+                                            <th className="px-4 py-3">Keterlambatan</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody className="divide-y divide-slate-100">
+                                        {row.details.map((detail) => (
+                                            <tr key={`${row.user_id}-${detail.order_id}`}>
+                                                <td className="px-4 py-3 font-medium text-slate-900">{detail.invoice_no ?? '-'}</td>
+                                                <td className="px-4 py-3 text-slate-700">{detail.number ?? '-'}</td>
+                                                <td className="px-4 py-3 text-slate-700">{detail.customer_name ?? '-'}</td>
+                                                <td className="px-4 py-3 text-slate-700">{detail.qty}</td>
+                                                <td className="px-4 py-3 text-slate-700">{detail.current_status ?? '-'}</td>
+                                                <td className="px-4 py-3 text-slate-700">{formatDate(detail.received_at)}</td>
+                                                <td className="px-4 py-3 text-slate-700">{formatDate(detail.ready_at)}</td>
+                                                <td className="px-4 py-3 text-slate-700">{formatDate(detail.finished_date)}</td>
+                                                <td className="px-4 py-3">
+                                                    <OverdueBadge
+                                                        isOverdue={detail.is_overdue}
+                                                        overdueText={detail.overdue_text}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}
+
+function SummaryCard(props: { label: string; value: string; tone?: 'default' | 'danger' }) {
+    const danger = props.tone === 'danger';
+
+    return (
+        <div
+            className={[
+                'rounded-2xl border bg-white p-4 shadow-sm',
+                danger ? 'border-red-200 bg-red-50' : 'border-slate-200',
+            ].join(' ')}
+        >
+            <p
+                className={[
+                    'text-xs font-medium uppercase tracking-wide',
+                    danger ? 'text-red-600' : 'text-slate-500',
+                ].join(' ')}
+            >
+                {props.label}
+            </p>
+            <p className={['mt-2 text-2xl font-semibold', danger ? 'text-red-700' : 'text-slate-950'].join(' ')}>
+                {props.value}
+            </p>
+        </div>
+    );
+}
+
+function MiniStat(props: { label: string; value: number; tone?: 'default' | 'danger' }) {
+    const danger = props.tone === 'danger';
+
+    return (
+        <div
+            className={[
+                'rounded-xl border px-3 py-2',
+                danger ? 'border-red-200 bg-red-50' : 'border-slate-200',
+            ].join(' ')}
+        >
+            <div className={danger ? 'text-red-600' : 'text-slate-500'}>{props.label}</div>
+            <div className={['font-semibold', danger ? 'text-red-700' : 'text-slate-950'].join(' ')}>
+                {props.value}
+            </div>
+        </div>
+    );
+}
+
+function OverdueBadge(props: { isOverdue: boolean; overdueText?: string | null }) {
+    if (!props.isOverdue) {
+        return (
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                Tepat waktu
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+            {props.overdueText ?? 'Terlambat'}
+        </span>
+    );
+}
 ```
 </details>
 

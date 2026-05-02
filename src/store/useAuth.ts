@@ -16,8 +16,10 @@ const state: AuthState = {
 const isDev = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV;
 
 export function homePathByRole(roles: RoleName[]): string {
-    // Kasir → POS ; Admin Cabang & Superadmin → Dashboard
+    if (roles.includes('Petugas Cuci')) return '/production-board';
+    if (roles.includes('Kurir')) return '/deliveries';
     if (roles.includes('Kasir')) return '/pos';
+
     return '/';
 }
 
