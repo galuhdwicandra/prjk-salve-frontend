@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-02 18:16:02_  
+_Dihasilkan otomatis: 2026-05-06 14:34:21_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -894,8 +894,8 @@ export async function adjustLoyaltyManual(customerId: string, payload: LoyaltyMa
 
 ### src\api\orderPhotos.ts
 
-- SHA: `6c8c10af24b3`  
-- Ukuran: 474 B
+- SHA: `3b753eb84ec8`  
+- Ukuran: 573 B
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
@@ -905,16 +905,20 @@ import { api } from "./client";
 export async function uploadOrderPhotos(
   orderId: string,
   before: File[] = [],
-  after: File[] = []
+  after: File[] = [],
+  replaceExisting = false
 ): Promise<void> {
   const fd = new FormData();
-  before.forEach(f => fd.append("photos[before][]", f));
-  after.forEach(f => fd.append("photos[after][]", f));
+
+  before.forEach((f) => fd.append("photos[before][]", f));
+  after.forEach((f) => fd.append("photos[after][]", f));
+
+  fd.append("replace_existing", replaceExisting ? "1" : "0");
+
   await api.post(`/orders/${encodeURIComponent(orderId)}/photos`, fd, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
-
 ```
 </details>
 
@@ -5378,8 +5382,8 @@ function Section({
 
 ### src\components\orders\OrderPhotosUpload.tsx
 
-- SHA: `9f5ed1a848f2`  
-- Ukuran: 11 KB
+- SHA: `d825c81f34a0`  
+- Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -5429,6 +5433,7 @@ function XIcon(props: React.SVGProps<SVGSVGElement>) {
 export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
   const [files, setFiles] = useState<Incoming>({ before: [], after: [] });
   const [busy, setBusy] = useState(false);
+  const [replaceExisting, setReplaceExisting] = useState(false);
   const beforeRef = useRef<HTMLInputElement>(null);
   const afterRef = useRef<HTMLInputElement>(null);
 
@@ -5460,8 +5465,9 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
   async function onUpload() {
     try {
       setBusy(true);
-      await uploadOrderPhotos(orderId, files.before, files.after);
+      await uploadOrderPhotos(orderId, files.before, files.after, replaceExisting);
       setFiles({ before: [], after: [] });
+      setReplaceExisting(false);
       onUploaded?.();
     } finally {
       setBusy(false);
@@ -5481,8 +5487,8 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
             <div>
               <h3 className="text-sm font-semibold text-slate-900">Order Photos</h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                Unggah foto <span className="font-semibold text-slate-900">Before</span> dan{" "}
-                <span className="font-semibold text-slate-900">After</span>.{" "}
+                Foto <span className="font-semibold text-slate-900">Before wajib</span>, sedangkan{" "}
+                <span className="font-semibold text-slate-900">After opsional</span>.{" "}
                 {isMobile ? "Kamera tersedia di perangkat Anda." : "Dukung drag-drop & pilih file."}
               </p>
             </div>
@@ -5497,7 +5503,7 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <UploadPanel
           title="Before"
-          subtitle="PNG/JPG, ≤ 5MB"
+          subtitle="Wajib, PNG/JPG, ≤ 5MB"
           kind="before"
           busy={busy}
           isMobile={isMobile}
@@ -5509,7 +5515,7 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
 
         <UploadPanel
           title="After"
-          subtitle="PNG/JPG, ≤ 5MB"
+          subtitle="Opsional, PNG/JPG, ≤ 5MB"
           kind="after"
           busy={busy}
           isMobile={isMobile}
@@ -5540,6 +5546,20 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
         onChange={(e) => onChange("after", e.target.files)}
       />
 
+      <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <input
+          type="checkbox"
+          checked={replaceExisting}
+          disabled={busy}
+          onChange={(e) => setReplaceExisting(e.target.checked)}
+          className="mt-0.5 rounded border-amber-300"
+        />
+        <span>
+          Ganti foto lama untuk kategori yang diupload. Gunakan jika foto lama rusak,
+          tidak tampil, atau tidak terdeteksi.
+        </span>
+      </label>
+
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-slate-500 sm:hidden">
           Total: <span className="font-semibold text-slate-900">{totalCount}</span> file
@@ -5555,7 +5575,7 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
               disabled:cursor-not-allowed disabled:opacity-60
             "
             onClick={onUpload}
-            disabled={busy || totalCount === 0}
+            disabled={busy || files.before.length === 0}
             aria-live="polite"
           >
             {busy ? "Mengunggah..." : "Upload"}
@@ -5569,7 +5589,10 @@ export default function OrderPhotosUpload({ orderId, onUploaded }: Props) {
               hover:bg-slate-50
               disabled:cursor-not-allowed disabled:opacity-60
             "
-            onClick={() => setFiles({ before: [], after: [] })}
+            onClick={() => {
+              setFiles({ before: [], after: [] });
+              setReplaceExisting(false);
+            }}
             disabled={busy || totalCount === 0}
           >
             Reset
@@ -13398,7 +13421,7 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `6232499d781a`  
+- SHA: `4121e8c8f27c`  
 - Ukuran: 53 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -13583,6 +13606,9 @@ export default function OrderDetail(): React.ReactElement {
 
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
   const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canUploadPhotos = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canUploadPhotosForThisOrder =
+    canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
 
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
   const [noteRows, setNoteRows] = useState<string[]>(['']);
@@ -14423,7 +14449,7 @@ export default function OrderDetail(): React.ReactElement {
                     />
                   </div>
 
-                  {canEdit && (
+                  {canUploadPhotosForThisOrder && (
                     <div className="mt-4">
                       <OrderPhotosUpload
                         orderId={row.id}

@@ -178,6 +178,9 @@ export default function OrderDetail(): React.ReactElement {
 
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
   const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canUploadPhotos = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canUploadPhotosForThisOrder =
+    canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
 
   const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
   const [noteRows, setNoteRows] = useState<string[]>(['']);
@@ -1018,7 +1021,7 @@ export default function OrderDetail(): React.ReactElement {
                     />
                   </div>
 
-                  {canEdit && (
+                  {canUploadPhotosForThisOrder && (
                     <div className="mt-4">
                       <OrderPhotosUpload
                         orderId={row.id}
