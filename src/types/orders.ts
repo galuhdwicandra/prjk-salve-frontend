@@ -102,6 +102,17 @@ export interface OrderUpdatePayload {
     ready_at?: string | null;
 }
 
+export type OrderPaymentCorrectionType = 'RESET_TO_PENDING';
+
+export interface OrderPaymentCorrectionPayload {
+    correction_type: OrderPaymentCorrectionType;
+    reason: string;
+}
+
+export interface OrderPaymentCorrectionResult {
+    order: Order;
+}
+
 export interface OrderQuery {
     q?: string;
     status?: OrderBackendStatus;

@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-08 11:44:34_  
+_Dihasilkan otomatis: 2026-05-08 12:51:09_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -924,16 +924,23 @@ export async function uploadOrderPhotos(
 
 ### src\api\orders.ts
 
-- SHA: `79232b119642`  
-- Ukuran: 3 KB
+- SHA: `5a3ba0c07f2f`  
+- Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```ts
 // src/api/orders.ts
 import { api } from './client';
 import type {
-  Order, OrderCreatePayload, OrderUpdatePayload, OrderQuery,
-  Paginated, SingleResponse, OrderBackendStatus
+  Order,
+  OrderCreatePayload,
+  OrderUpdatePayload,
+  OrderQuery,
+  Paginated,
+  SingleResponse,
+  OrderBackendStatus,
+  OrderPaymentCorrectionPayload,
+  OrderPaymentCorrectionResult,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
 
@@ -990,17 +997,35 @@ export async function createOrderPayment(
   if (!data?.data) {
     throw new Error('Unexpected server response for payments');
   }
+
   return {
     order: data.data.order,
     payment: data.data.payment,
   };
 }
 
+export async function resetOrderPaymentToPending(
+  id: string,
+  payload: OrderPaymentCorrectionPayload
+): Promise<OrderPaymentCorrectionResult> {
+  const { data } = await api.post<SingleResponse<OrderPaymentCorrectionResult>>(
+    `/orders/${encodeURIComponent(id)}/payments/reset-to-pending`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  if (!data?.data) {
+    throw new Error('Unexpected server response for payment correction');
+  }
+
+  return data.data;
+}
+
 export async function getOrderReceiptHtml(id: string): Promise<string> {
   const { data } = await api.get(`/orders/${encodeURIComponent(id)}/receipt`, {
     headers: { Accept: 'text/html' },
     responseType: 'text',
-    transformResponse: (r) => r, // cegah axios mengutak-atik
+    transformResponse: (r) => r,
   });
   return data as string;
 }
@@ -1025,12 +1050,15 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
 }
 
 type ShareLinkPayload = { share_url: string; expires_in_minutes: number | null };
+
 export async function createOrderShareLink(id: string): Promise<string> {
   const { data } = await api.post<SingleResponse<ShareLinkPayload>>(
     `/orders/${encodeURIComponent(id)}/share-link`
   );
+
   const url = data?.data?.share_url;
   if (!url) throw new Error('Share link tidak tersedia dari server');
+
   return url;
 }
 ```
@@ -3282,7 +3310,7 @@ export interface LoyaltyManualAdjustPayload {
 
 ### src\types\orders.ts
 
-- SHA: `d81167ed6bf6`  
+- SHA: `39f6253e4ad0`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -3389,6 +3417,17 @@ export interface OrderUpdatePayload {
     notes?: string | null;
     received_at?: string | null;
     ready_at?: string | null;
+}
+
+export type OrderPaymentCorrectionType = 'RESET_TO_PENDING';
+
+export interface OrderPaymentCorrectionPayload {
+    correction_type: OrderPaymentCorrectionType;
+    reason: string;
+}
+
+export interface OrderPaymentCorrectionResult {
+    order: Order;
 }
 
 export interface OrderQuery {
@@ -13431,8 +13470,8 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `4121e8c8f27c`  
-- Ukuran: 53 KB
+- SHA: `55b95d23c061`  
+- Ukuran: 60 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -13445,6 +13484,7 @@ import {
   openOrderReceipt,
   updateOrder,
   createOrderShareLink,
+  resetOrderPaymentToPending,
 } from '../../api/orders';
 import type { OrderUpdatePayload } from '../../types/orders';
 import CustomerPicker from '../../components/customers/CustomerPicker';
@@ -13614,6 +13654,11 @@ export default function OrderDetail(): React.ReactElement {
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
 
+  const [paymentCorrectionOpen, setPaymentCorrectionOpen] = useState(false);
+  const [paymentCorrectionReason, setPaymentCorrectionReason] = useState('');
+  const [paymentCorrectionSubmitting, setPaymentCorrectionSubmitting] = useState(false);
+  const [paymentCorrectionError, setPaymentCorrectionError] = useState<string | null>(null);
+
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
   const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
   const canUploadPhotos = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
@@ -13666,6 +13711,42 @@ export default function OrderDetail(): React.ReactElement {
   }, [id]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  async function handleResetPaymentToPending(): Promise<void> {
+    if (!row) return;
+
+    const reason = paymentCorrectionReason.trim();
+
+    if (reason.length < 5) {
+      setPaymentCorrectionError('Alasan koreksi minimal 5 karakter.');
+      return;
+    }
+
+    setPaymentCorrectionSubmitting(true);
+    setPaymentCorrectionError(null);
+
+    try {
+      const result = await resetOrderPaymentToPending(row.id, {
+        correction_type: 'RESET_TO_PENDING',
+        reason,
+      });
+
+      setRow(result.order);
+      setPaymentCorrectionOpen(false);
+      setPaymentCorrectionReason('');
+
+      showSuccess('Pembayaran berhasil dikoreksi menjadi Pending.');
+      await refresh();
+    } catch (e: unknown) {
+      const normalized = normalizeApiError(e);
+      const message = normalized.message || 'Gagal melakukan koreksi pembayaran.';
+
+      setPaymentCorrectionError(message);
+      showError(message);
+    } finally {
+      setPaymentCorrectionSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     const orderId = row?.id;
@@ -14502,6 +14583,36 @@ export default function OrderDetail(): React.ReactElement {
                   )}
                 </section>
 
+                {canEdit && row.payment_status !== 'PENDING' && (
+                  <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                    <div className="text-sm font-semibold text-amber-900">
+                      Koreksi Pembayaran
+                    </div>
+
+                    <div className="mt-1 text-xs leading-5 text-amber-800">
+                      Gunakan hanya jika terjadi kesalahan input pembayaran, misalnya order seharusnya Pending tetapi terlanjur tercatat lunas.
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm">
+                      <RowLine label="Status Bayar" value={row.payment_status} strong />
+                      <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
+                      <RowLine label="Sisa" value={money(row.due_amount ?? 0)} strong />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+                      onClick={() => {
+                        setPaymentCorrectionOpen(true);
+                        setPaymentCorrectionReason('');
+                        setPaymentCorrectionError(null);
+                      }}
+                    >
+                      Reset Pembayaran ke Pending
+                    </button>
+                  </section>
+                )}
+
                 {/* Status transitions */}
                 <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
                   <div className="text-sm font-semibold text-slate-900">Ubah Status</div>
@@ -14551,6 +14662,94 @@ export default function OrderDetail(): React.ReactElement {
                 </section>
               </div>
             </div>
+
+            {/* Payment Correction Modal */}
+            {paymentCorrectionOpen && (
+              <div
+                className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+                onClick={() => {
+                  if (!paymentCorrectionSubmitting) setPaymentCorrectionOpen(false);
+                }}
+                role="dialog"
+                aria-modal="true"
+              >
+                <div
+                  className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="border-b border-slate-200 px-4 py-3">
+                    <div className="text-sm font-semibold text-slate-900">
+                      Reset Pembayaran ke Pending
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      Order: {row.invoice_no ?? row.number}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 px-4 py-4">
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                      Tindakan ini akan mengubah status bayar menjadi Pending, mengosongkan nilai pembayaran,
+                      membuka kembali piutang, dan menghapus mutasi kas dari pembayaran yang salah.
+                    </div>
+
+                    <div className="grid gap-2 text-sm">
+                      <RowLine label="Invoice" value={row.invoice_no ?? row.number ?? '-'} />
+                      <RowLine label="Grand Total" value={money(row.grand_total)} strong />
+                      <RowLine label="Status Saat Ini" value={row.payment_status} />
+                      <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="payment-correction-reason"
+                        className="text-xs font-semibold text-slate-600"
+                      >
+                        Alasan Koreksi
+                      </label>
+
+                      <textarea
+                        id="payment-correction-reason"
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none disabled:bg-slate-100"
+                        rows={4}
+                        value={paymentCorrectionReason}
+                        onChange={(e) => {
+                          setPaymentCorrectionReason(e.target.value);
+                          if (paymentCorrectionError) setPaymentCorrectionError(null);
+                        }}
+                        disabled={paymentCorrectionSubmitting}
+                        placeholder="Contoh: Salah input, seharusnya pelanggan belum membayar."
+                      />
+
+                      {paymentCorrectionError && (
+                        <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                          {paymentCorrectionError}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+                      onClick={() => setPaymentCorrectionOpen(false)}
+                      disabled={paymentCorrectionSubmitting}
+                    >
+                      Batal
+                    </button>
+
+                    <button
+                      type="button"
+                      className="inline-flex rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                      onClick={() => void handleResetPaymentToPending()}
+                      disabled={paymentCorrectionSubmitting || paymentCorrectionReason.trim().length < 5}
+                    >
+                      {paymentCorrectionSubmitting ? 'Memproses…' : 'Ya, Reset'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Receipt Preview Modal */}
             {receiptOpen && (

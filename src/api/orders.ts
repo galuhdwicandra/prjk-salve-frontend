@@ -1,8 +1,15 @@
 // src/api/orders.ts
 import { api } from './client';
 import type {
-  Order, OrderCreatePayload, OrderUpdatePayload, OrderQuery,
-  Paginated, SingleResponse, OrderBackendStatus
+  Order,
+  OrderCreatePayload,
+  OrderUpdatePayload,
+  OrderQuery,
+  Paginated,
+  SingleResponse,
+  OrderBackendStatus,
+  OrderPaymentCorrectionPayload,
+  OrderPaymentCorrectionResult,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
 
@@ -59,17 +66,35 @@ export async function createOrderPayment(
   if (!data?.data) {
     throw new Error('Unexpected server response for payments');
   }
+
   return {
     order: data.data.order,
     payment: data.data.payment,
   };
 }
 
+export async function resetOrderPaymentToPending(
+  id: string,
+  payload: OrderPaymentCorrectionPayload
+): Promise<OrderPaymentCorrectionResult> {
+  const { data } = await api.post<SingleResponse<OrderPaymentCorrectionResult>>(
+    `/orders/${encodeURIComponent(id)}/payments/reset-to-pending`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  if (!data?.data) {
+    throw new Error('Unexpected server response for payment correction');
+  }
+
+  return data.data;
+}
+
 export async function getOrderReceiptHtml(id: string): Promise<string> {
   const { data } = await api.get(`/orders/${encodeURIComponent(id)}/receipt`, {
     headers: { Accept: 'text/html' },
     responseType: 'text',
-    transformResponse: (r) => r, // cegah axios mengutak-atik
+    transformResponse: (r) => r,
   });
   return data as string;
 }
@@ -94,11 +119,14 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
 }
 
 type ShareLinkPayload = { share_url: string; expires_in_minutes: number | null };
+
 export async function createOrderShareLink(id: string): Promise<string> {
   const { data } = await api.post<SingleResponse<ShareLinkPayload>>(
     `/orders/${encodeURIComponent(id)}/share-link`
   );
+
   const url = data?.data?.share_url;
   if (!url) throw new Error('Share link tidak tersedia dari server');
+
   return url;
 }
