@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-06 14:34:21_  
+_Dihasilkan otomatis: 2026-05-08 11:44:34_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -6903,8 +6903,8 @@ export default function ReceiptPreview({
 
 ### src\components\receivables\SettleReceivableDialog.tsx
 
-- SHA: `b475312270aa`  
-- Ukuran: 8 KB
+- SHA: `368babaf0c05`  
+- Ukuran: 9 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -6927,8 +6927,18 @@ type Props = {
 
 const METHODS: PaymentMethod[] = ["CASH", "QRIS", "TRANSFER"];
 
+function toLocalDateTimeInputValue(date = new Date()): string {
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function toBackendDateTime(value: string): string | undefined {
+  if (!value) return undefined;
+  return value.replace("T", " ");
+}
+
 function extractOrderId(
-  order: Order | { order: Order; [k: string]: unknown } | undefined
+  order: Order | { order: Order;[k: string]: unknown } | undefined
 ): string | null {
   if (!order) return null;
   if ("id" in order && typeof (order as Order).id === "string") {
@@ -6964,7 +6974,7 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
     if (open && receivable) {
       setAmount(receivable.remaining_amount);
       setMethod("CASH");
-      setPaidAt(new Date().toISOString().slice(0, 16)); // "YYYY-MM-DDTHH:mm"
+      setPaidAt(toLocalDateTimeInputValue());
       setNote("");
       setErr("");
     }
@@ -6989,10 +6999,10 @@ export default function SettleReceivableDialog({ open, receivable, onClose, onSe
     setErr("");
     try {
       const res = await settleReceivable(receivable.id, {
-        amount,
+        amount: Number(amount),
         method,
-        paid_at: paidAt ? new Date(paidAt).toISOString() : undefined,
-        note: note || undefined,
+        paid_at: toBackendDateTime(paidAt),
+        note: note.trim() !== "" ? note.trim() : undefined,
       });
       const payload = res.data.data as ReceivableSettleResult;
       const next = payload.receivable;
