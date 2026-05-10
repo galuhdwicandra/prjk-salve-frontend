@@ -47,6 +47,8 @@ export interface OrderItem {
     service?: Service;
 }
 
+export type LoyaltyReward = 'NONE' | 'DISC25' | 'FREE100';
+
 export interface Order {
     id: string;
     branch_id: string;
@@ -57,6 +59,8 @@ export interface Order {
     discount: number;
     grand_total: number;
     due_amount: number;
+    loyalty_reward?: LoyaltyReward;
+    loyalty_discount?: number;
     notes: string | null;
     payment_status: PaymentStatus;
     latest_payment_method?: PaymentMethod | null;

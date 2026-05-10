@@ -10,6 +10,7 @@ import type {
   OrderBackendStatus,
   OrderPaymentCorrectionPayload,
   OrderPaymentCorrectionResult,
+  LoyaltyReward,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
 
@@ -88,6 +89,24 @@ export async function resetOrderPaymentToPending(
   }
 
   return data.data;
+}
+
+export type OrderLoyaltyCorrectionPayload = {
+  reward: Exclude<LoyaltyReward, 'NONE'>;
+  note: string;
+};
+
+export async function applyOrderLoyaltyCorrection(
+  id: string,
+  payload: OrderLoyaltyCorrectionPayload
+) {
+  const { data } = await api.post<SingleResponse<Order>>(
+    `/orders/${encodeURIComponent(id)}/loyalty-correction`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
 }
 
 export async function getOrderReceiptHtml(id: string): Promise<string> {

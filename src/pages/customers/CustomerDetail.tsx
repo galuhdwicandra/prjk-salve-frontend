@@ -653,7 +653,7 @@ export default function CustomerDetail() {
                   <div
                     key={i}
                     className={`h-2.5 rounded-full ${loyalty && i < loyalty.stamps ? "bg-slate-900" : "bg-slate-200"}`}
-                    title={`Stamp ${i + 1}`}
+                    title={`Stamp ke-${i}`}
                   />
                 ))}
               </div>
@@ -665,7 +665,7 @@ export default function CustomerDetail() {
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-slate-500">Next</span>
-                  <span className="font-semibold text-slate-900">{loyalty?.next ?? 1}</span>
+                  <span className="font-semibold text-slate-900">{loyalty?.next ?? 0}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-slate-500">Cycle</span>
@@ -696,7 +696,7 @@ export default function CustomerDetail() {
                     <span className="text-sm font-medium text-slate-700">Jumlah</span>
                     <input
                       type="number"
-                      min={1}
+                      min={manualType === "set" ? 0 : 1}
                       placeholder="Masukkan jumlah stamp"
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
                       value={manualAmount}

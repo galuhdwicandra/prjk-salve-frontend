@@ -8,6 +8,7 @@ import {
   updateOrder,
   createOrderShareLink,
   resetOrderPaymentToPending,
+  applyOrderLoyaltyCorrection,
 } from '../../api/orders';
 import type { OrderUpdatePayload } from '../../types/orders';
 import CustomerPicker from '../../components/customers/CustomerPicker';
@@ -182,8 +183,14 @@ export default function OrderDetail(): React.ReactElement {
   const [paymentCorrectionSubmitting, setPaymentCorrectionSubmitting] = useState(false);
   const [paymentCorrectionError, setPaymentCorrectionError] = useState<string | null>(null);
 
+  const [loyaltyCorrectionReward, setLoyaltyCorrectionReward] = useState<'DISC25' | 'FREE100'>('FREE100');
+  const [loyaltyCorrectionNote, setLoyaltyCorrectionNote] = useState('');
+  const [loyaltyCorrectionSubmitting, setLoyaltyCorrectionSubmitting] = useState(false);
+  const [loyaltyCorrectionErrors, setLoyaltyCorrectionErrors] = useState<FieldErrors>({});
+
   const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
   const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canCorrectLoyalty = canEdit;
   const canUploadPhotos = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
   const canUploadPhotosForThisOrder =
     canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
@@ -199,6 +206,26 @@ export default function OrderDetail(): React.ReactElement {
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [deliveryZoneId, setDeliveryZoneId] = useState<string>('');
   const [existingDeliveryId, setExistingDeliveryId] = useState<string | null>(null);
+
+  const loyaltyCorrectionDiscount = useMemo(() => {
+    const subtotal = Number(row?.subtotal ?? 0);
+
+    if (loyaltyCorrectionReward === 'FREE100') {
+      return subtotal;
+    }
+
+    return Math.round(subtotal * 0.25);
+  }, [row?.subtotal, loyaltyCorrectionReward]);
+
+  const loyaltyCorrectionGrandTotal = useMemo(() => {
+    const subtotal = Number(row?.subtotal ?? 0);
+    return Math.max(0, subtotal - loyaltyCorrectionDiscount);
+  }, [row?.subtotal, loyaltyCorrectionDiscount]);
+
+  const loyaltyCorrectionDueAmount = useMemo(() => {
+    const paid = Number(row?.paid_amount ?? 0);
+    return Math.max(0, loyaltyCorrectionGrandTotal - paid);
+  }, [row?.paid_amount, loyaltyCorrectionGrandTotal]);
 
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptHtml, setReceiptHtml] = useState<string>('');
@@ -308,6 +335,14 @@ export default function OrderDetail(): React.ReactElement {
     });
 
     setNoteRows(parseConsumerGoodsNotes(row.notes));
+
+    setLoyaltyCorrectionReward(
+      row.loyalty_reward === 'DISC25' || row.loyalty_reward === 'FREE100'
+        ? row.loyalty_reward
+        : 'FREE100'
+    );
+    setLoyaltyCorrectionNote('');
+    setLoyaltyCorrectionErrors({});
   }, [row]);
 
   const changeQty = useCallback((serviceId: string, qty: number) => {
@@ -359,6 +394,42 @@ export default function OrderDetail(): React.ReactElement {
   const consumerGoodsPreview = useMemo(() => {
     return buildConsumerGoodsNotes(noteRows);
   }, [noteRows]);
+
+  const onApplyLoyaltyCorrection = useCallback(async () => {
+    if (!id) return;
+
+    setLoyaltyCorrectionSubmitting(true);
+    setLoyaltyCorrectionErrors({});
+
+    try {
+      const res = await applyOrderLoyaltyCorrection(id, {
+        reward: loyaltyCorrectionReward,
+        note: loyaltyCorrectionNote,
+      });
+
+      if (res.data) {
+        setRow(res.data);
+      }
+
+      await refresh();
+      showSuccess(res.message?.trim() || 'Koreksi loyalty berhasil diterapkan.');
+    } catch (e: unknown) {
+      const normalized = normalizeApiError(e);
+      const nextErrors = normalized.errors ?? {};
+
+      setLoyaltyCorrectionErrors(nextErrors);
+      showError(normalized.message || 'Gagal menerapkan koreksi loyalty.');
+    } finally {
+      setLoyaltyCorrectionSubmitting(false);
+    }
+  }, [
+    id,
+    loyaltyCorrectionReward,
+    loyaltyCorrectionNote,
+    refresh,
+    showSuccess,
+    showError,
+  ]);
 
   const onTransit = useCallback(async (next: OrderBackendStatus) => {
     if (!id) return;
@@ -1083,6 +1154,30 @@ export default function OrderDetail(): React.ReactElement {
                   <div className="mt-3 grid gap-2 text-sm">
                     <RowLine label="Nomor" value={row.invoice_no ?? row.number ?? '-'} />
                     <RowLine label="Customer" value={row.customer?.name ?? '-'} />
+
+                    <RowLine label="Subtotal" value={money(row.subtotal ?? 0)} />
+
+                    {row.loyalty_reward && row.loyalty_reward !== 'NONE' ? (
+                      <>
+                        <RowLine
+                          label="Reward Loyalty"
+                          value={
+                            row.loyalty_reward === 'FREE100'
+                              ? 'Gratis 100%'
+                              : 'Diskon 25%'
+                          }
+                          strong
+                        />
+                        <RowLine
+                          label="Diskon Loyalty"
+                          value={money(row.loyalty_discount ?? row.discount ?? 0)}
+                          strong
+                        />
+                      </>
+                    ) : (
+                      <RowLine label="Diskon" value={money(row.discount ?? 0)} />
+                    )}
+
                     <RowLine label="Total" value={money(row.grand_total)} strong />
                     <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
                     <RowLine label="Sisa" value={money(row.due_amount)} strong />
@@ -1105,6 +1200,119 @@ export default function OrderDetail(): React.ReactElement {
                     </div>
                   )}
                 </section>
+
+                {canCorrectLoyalty && (
+                  <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
+                    <div className="text-sm font-semibold text-emerald-900">
+                      Koreksi Loyalty Manual
+                    </div>
+
+                    <div className="mt-1 text-xs leading-5 text-emerald-800">
+                      Gunakan hanya untuk membetulkan order lama yang seharusnya mendapat diskon loyalty,
+                      misalnya pelanggan sudah mencapai 10 stamp dan order seharusnya gratis.
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm">
+                      <RowLine
+                        label="Reward Saat Ini"
+                        value={row.loyalty_reward && row.loyalty_reward !== 'NONE' ? row.loyalty_reward : 'Belum ada'}
+                        strong
+                      />
+                      <RowLine label="Subtotal" value={money(row.subtotal ?? 0)} />
+                      <RowLine label="Diskon Saat Ini" value={money(row.discount ?? 0)} />
+                      <RowLine label="Grand Total Saat Ini" value={money(row.grand_total ?? 0)} strong />
+                    </div>
+
+                    <div className="mt-4">
+                      <label
+                        htmlFor="loyalty-correction-reward"
+                        className="text-xs font-semibold text-emerald-900"
+                      >
+                        Jenis Reward
+                      </label>
+
+                      <select
+                        id="loyalty-correction-reward"
+                        className="mt-1 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none disabled:bg-slate-100"
+                        value={loyaltyCorrectionReward}
+                        onChange={(e) => {
+                          const nextReward = e.target.value === 'DISC25' ? 'DISC25' : 'FREE100';
+                          setLoyaltyCorrectionReward(nextReward);
+
+                          if (loyaltyCorrectionErrors.reward) {
+                            setLoyaltyCorrectionErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.reward;
+                              return next;
+                            });
+                          }
+                        }}
+                        disabled={loyaltyCorrectionSubmitting}
+                      >
+                        <option value="FREE100">Gratis 100% / FREE100</option>
+                        <option value="DISC25">Diskon 25% / DISC25</option>
+                      </select>
+
+                      {loyaltyCorrectionErrors.reward?.[0] && (
+                        <div className="mt-1 text-[11px] text-red-600">
+                          {loyaltyCorrectionErrors.reward[0]}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 rounded-lg border border-emerald-200 bg-white px-3 py-2">
+                      <div className="grid gap-2 text-sm">
+                        <RowLine label="Diskon Loyalty" value={money(loyaltyCorrectionDiscount)} />
+                        <RowLine label="Grand Total" value={money(loyaltyCorrectionGrandTotal)} strong />
+                        <RowLine label="Sisa Tagihan" value={money(loyaltyCorrectionDueAmount)} strong />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label
+                        htmlFor="loyalty-correction-note"
+                        className="text-xs font-semibold text-emerald-900"
+                      >
+                        Alasan Koreksi
+                      </label>
+
+                      <textarea
+                        id="loyalty-correction-note"
+                        className="mt-1 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-700 focus:outline-none disabled:bg-slate-100"
+                        rows={4}
+                        value={loyaltyCorrectionNote}
+                        onChange={(e) => {
+                          setLoyaltyCorrectionNote(e.target.value);
+
+                          if (loyaltyCorrectionErrors.note) {
+                            setLoyaltyCorrectionErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.note;
+                              return next;
+                            });
+                          }
+                        }}
+                        disabled={loyaltyCorrectionSubmitting}
+                        placeholder="Contoh: Koreksi manual karena pelanggan sudah mencapai 10 stamp loyalty dan order ini seharusnya gratis."
+                      />
+
+                      {loyaltyCorrectionErrors.note?.[0] && (
+                        <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                          {loyaltyCorrectionErrors.note[0]}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void onApplyLoyaltyCorrection()}
+                      disabled={loyaltyCorrectionSubmitting || loyaltyCorrectionNote.trim().length < 10}
+                    >
+                      {loyaltyCorrectionSubmitting ? 'Memproses…' : 'Terapkan Koreksi Loyalty'}
+                    </button>
+                  </section>
+                )}
 
                 {canEdit && row.payment_status !== 'PENDING' && (
                   <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">

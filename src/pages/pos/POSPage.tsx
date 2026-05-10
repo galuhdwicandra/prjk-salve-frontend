@@ -1211,7 +1211,7 @@ export default function POSPage() {
 
               <Card
                 title="Stamp Loyalty"
-                subtitle={loy ? `Stamp ${loy.stamps}/10 · Next ${loy.next}` : 'Pilih customer untuk melihat stamp.'}
+                subtitle={loy ? `Stamp ${loy.stamps}/10 · Next ${loy.next ?? 0}` : 'Pilih customer untuk melihat stamp.'}
                 right={<Badge tone={loy ? 'neutral' : 'warn'}>{loy ? 'Aktif' : 'Belum dipilih'}</Badge>}
               >
                 <div className="grid grid-cols-10 gap-1" aria-label="Loyalty stamps">
@@ -1219,7 +1219,7 @@ export default function POSPage() {
                     <div
                       key={i}
                       className={`h-2.5 rounded-full ${loy && i < loy.stamps ? 'bg-slate-900' : 'bg-slate-200'}`}
-                      title={`Stamp ${i + 1}`}
+                      title={`Stamp ${i}`}
                     />
                   ))}
                 </div>
