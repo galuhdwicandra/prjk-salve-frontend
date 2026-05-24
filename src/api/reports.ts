@@ -9,14 +9,16 @@ export type ReportKind =
     | 'receivables'
     | 'expenses'
     | 'services'
+    | 'deep-clean'
     | 'cash';
 
 export interface ReportQuery {
-    from: string; // 'YYYY-MM-DD'
-    to: string;   // 'YYYY-MM-DD'
+    from: string;
+    to: string;  
     branch_id?: string | null;
-    method?: string | null; // sales
-    status?: string | null; // orders/receivables
+    method?: string | null;
+    status?: string | null;
+    page?: number;
     per_page?: number;
 }
 

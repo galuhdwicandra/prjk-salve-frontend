@@ -13,8 +13,17 @@ const KINDS: ReportKind[] = [
     'receivables',
     'expenses',
     'services',
+    'deep-clean',
     'cash',
 ];
+
+function reportKindLabel(kind: ReportKind): string {
+    if (kind === 'deep-clean') {
+        return 'DEEP CLEAN';
+    }
+
+    return kind.toUpperCase();
+}
 
 export default function ReportsIndex() {
     const [kind, setKind] = useState<ReportKind>('sales');
@@ -93,7 +102,8 @@ export default function ReportsIndex() {
                 delimiter: 'semicolon',
             });
 
-            const fname = `${kind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.csv`;
+            const safeKind = kind === 'deep-clean' ? 'treatment_deep_clean' : kind;
+            const fname = `${safeKind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.csv`;
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
 
@@ -132,7 +142,7 @@ export default function ReportsIndex() {
                                 className={active ? 'btn-primary' : 'btn-outline'}
                                 aria-current={active ? 'page' : undefined}
                             >
-                                {k.toUpperCase()}
+                                {reportKindLabel(k)}
                             </button>
                         );
                     })}
