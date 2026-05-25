@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-25 18:09:16_  
+_Dihasilkan otomatis: 2026-05-25 20:09:57_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -27994,8 +27994,8 @@ function IconBox() {
 
 ### src\pages\settings\WhatsappTemplatesPage.tsx
 
-- SHA: `0e9659060920`  
-- Ukuran: 12 KB
+- SHA: `4123579d38d0`  
+- Ukuran: 21 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -28005,7 +28005,9 @@ import {
   createWhatsappTemplate,
   updateWhatsappTemplate,
   resolveWhatsappTemplate,
+  deleteWhatsappTemplate,
 } from '../../api/whatsappTemplates';
+import type { WhatsappTemplate } from '../../types/whatsapp-templates';
 import { listBranches } from '../../api/branches';
 import { useAuth } from '../../store/useAuth';
 
@@ -28032,6 +28034,7 @@ type ApiErrorShape = {
 };
 
 type TemplateCardProps = {
+  sectionId: string;
   title: string;
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
@@ -28061,8 +28064,34 @@ Terima kasih sudah menggunakan layanan kami.
 {{app_name}}`;
 
 function getErrorMessage(error: unknown, fallback: string): string {
-  const err = error as ApiErrorShape;
-  return err.response?.data?.message ?? fallback;
+  const err = error as ApiErrorShape & {
+    response?: {
+      data?: {
+        message?: string;
+        errors?: Record<string, string[]>;
+      };
+    };
+  };
+
+  const message = err.response?.data?.message;
+
+  if (message) {
+    return message;
+  }
+
+  const errors = err.response?.data?.errors;
+
+  if (errors) {
+    const first = Object.values(errors)
+      .flat()
+      .find((item) => typeof item === 'string' && item.trim() !== '');
+
+    if (first) {
+      return first;
+    }
+  }
+
+  return fallback;
 }
 
 export default function WhatsappTemplatesPage() {
@@ -28074,12 +28103,16 @@ export default function WhatsappTemplatesPage() {
   );
 
   const branchIdFromAuth =
-    typeof me?.branch_id === 'string' ? me.branch_id : null;
+    me?.branch_id !== null && typeof me?.branch_id !== 'undefined'
+      ? String(me.branch_id)
+      : null;
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [templates, setTemplates] = useState<WhatsappTemplate[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedScope, setSelectedScope] = useState<string | null>(
     isSuperadmin ? null : branchIdFromAuth
   );
@@ -28118,6 +28151,8 @@ export default function WhatsappTemplatesPage() {
 
       const res = await listWhatsappTemplates({ per_page: 100 });
       const items = res.data ?? [];
+
+      setTemplates(items);
 
       const scopeBranchId = isSuperadmin ? selectedScope : branchIdFromAuth;
 
@@ -28205,6 +28240,86 @@ export default function WhatsappTemplatesPage() {
     void loadData();
   }, [loadData]);
 
+  function getTemplateScopeLabel(template: WhatsappTemplate): string {
+    if (!template.branch_id) {
+      return 'Global';
+    }
+
+    return template.branch?.name ?? template.branch_id;
+  }
+
+  function isTemplateCurrentlyUsed(template: WhatsappTemplate): boolean {
+    const isPendingTemplate = pending.id === template.id;
+    const isPaidTemplate = paid.id === template.id;
+
+    return isPendingTemplate || isPaidTemplate;
+  }
+
+  function handleEditTemplate(template: WhatsappTemplate): void {
+    const nextForm: FormState = {
+      id: template.id,
+      branch_id: template.branch_id,
+      key: template.key,
+      name: template.name,
+      content: template.content,
+      is_active: template.is_active,
+    };
+
+    if (isSuperadmin) {
+      setSelectedScope(template.branch_id ? String(template.branch_id) : null);
+    }
+
+    if (template.key === 'receipt_pending') {
+      setPending(nextForm);
+
+      window.setTimeout(() => {
+        document
+          .getElementById('wa-template-receipt-pending')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+
+      return;
+    }
+
+    setPaid(nextForm);
+
+    window.setTimeout(() => {
+      document
+        .getElementById('wa-template-receipt-paid')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
+  async function handleDeleteTemplate(template: WhatsappTemplate): Promise<void> {
+    const confirmed = window.confirm(
+      [
+        'Hapus permanen template WhatsApp ini?',
+        '',
+        `Key: ${template.key}`,
+        `Scope: ${getTemplateScopeLabel(template)}`,
+        '',
+        'Aksi ini hard delete dan tidak bisa dikembalikan.',
+      ].join('\n')
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingId(template.id);
+    setError(null);
+
+    try {
+      await deleteWhatsappTemplate(template.id);
+      await loadData();
+    } catch (err: unknown) {
+      console.error('[WA TEMPLATE][DELETE][error]', err);
+      setError(getErrorMessage(err, 'Gagal menghapus template WhatsApp.'));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function saveOne(form: FormState): Promise<void> {
     setSaving(true);
     setError(null);
@@ -28228,12 +28343,62 @@ export default function WhatsappTemplatesPage() {
         payload,
       });
 
+      let targetId = form.id;
+
+      if (!targetId) {
+        const latest = await listWhatsappTemplates({
+          key: form.key,
+          per_page: 100,
+        });
+
+        const existing = (latest.data ?? []).find((item) => {
+          if (item.key !== form.key) {
+            return false;
+          }
+
+          if (!isSuperadmin) {
+            return true;
+          }
+
+          return String(item.branch_id ?? '') === String(scopeBranchId ?? '');
+        });
+
+        if (existing?.id) {
+          targetId = existing.id;
+        }
+      }
+
       let saved;
 
-      if (form.id) {
-        saved = await updateWhatsappTemplate(form.id, payload);
+      if (targetId) {
+        saved = await updateWhatsappTemplate(targetId, payload);
       } else {
-        saved = await createWhatsappTemplate(payload);
+        try {
+          saved = await createWhatsappTemplate(payload);
+        } catch (createErr: unknown) {
+          const latest = await listWhatsappTemplates({
+            key: form.key,
+            per_page: 100,
+          });
+
+          const existing = (latest.data ?? []).find((item) => {
+            if (item.key !== form.key) {
+              return false;
+            }
+
+            if (!isSuperadmin) {
+              return true;
+            }
+
+            return String(item.branch_id ?? '') === String(scopeBranchId ?? '');
+          });
+
+          if (!existing?.id) {
+            throw createErr;
+          }
+
+          saved = await updateWhatsappTemplate(existing.id, payload);
+        }
       }
 
       console.log('[WA TEMPLATE][SAVE][after]', saved);
@@ -28247,17 +28412,7 @@ export default function WhatsappTemplatesPage() {
       });
 
       await loadData();
-      window.alert(
-        JSON.stringify(
-          {
-            saved_data: saved?.data ?? null,
-            resolved_data: resolved?.data ?? null,
-            resolved_meta: resolved?.meta ?? null,
-          },
-          null,
-          2
-        )
-      );
+
     } catch (err: unknown) {
       console.error('[WA TEMPLATE][SAVE][error]', err);
       setError(getErrorMessage(err, 'Gagal menyimpan template WhatsApp.'));
@@ -28300,7 +28455,19 @@ export default function WhatsappTemplatesPage() {
         </div>
       ) : (
         <>
+          <ExistingTemplatesPanel
+            templates={templates}
+            deletingId={deletingId}
+            getScopeLabel={getTemplateScopeLabel}
+            isCurrentlyUsed={isTemplateCurrentlyUsed}
+            onEdit={handleEditTemplate}
+            onDelete={(template) => {
+              void handleDeleteTemplate(template);
+            }}
+          />
+
           <TemplateCard
+            sectionId="wa-template-receipt-pending"
             title="Receipt Pending"
             form={pending}
             setForm={setPending}
@@ -28316,6 +28483,7 @@ export default function WhatsappTemplatesPage() {
           />
 
           <TemplateCard
+            sectionId="wa-template-receipt-paid"
             title="Receipt Paid"
             form={paid}
             setForm={setPaid}
@@ -28336,6 +28504,7 @@ export default function WhatsappTemplatesPage() {
 }
 
 function TemplateCard({
+  sectionId,
   title,
   form,
   setForm,
@@ -28348,7 +28517,10 @@ function TemplateCard({
   onChangeScope,
 }: TemplateCardProps) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]">
+    <section
+      id={sectionId}
+      className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]"
+    >
       <div className="border-b border-slate-200 px-4 py-3 sm:px-6">
         <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       </div>
@@ -28443,6 +28615,138 @@ function TemplateCard({
             Simpan
           </button>
         </div>
+      </div>
+    </section>
+  );
+}
+
+type ExistingTemplatesPanelProps = {
+  templates: WhatsappTemplate[];
+  deletingId: string | null;
+  getScopeLabel: (template: WhatsappTemplate) => string;
+  isCurrentlyUsed: (template: WhatsappTemplate) => boolean;
+  onEdit: (template: WhatsappTemplate) => void;
+  onDelete: (template: WhatsappTemplate) => void;
+};
+
+function ExistingTemplatesPanel({
+  templates,
+  deletingId,
+  getScopeLabel,
+  isCurrentlyUsed,
+  onEdit,
+  onDelete,
+}: ExistingTemplatesPanelProps) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white shadow-[0_14px_40px_-30px_rgba(0,0,0,.35)]">
+      <div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Template yang Sudah Ada
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Gunakan daftar ini untuk mengecek template global/cabang yang aktif dan menghapus template duplikat.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700 sm:px-6">
+                Key
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">
+                Scope
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">
+                Isi Template
+              </th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-700 sm:px-6">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {templates.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-4 py-6 text-center text-sm text-slate-500 sm:px-6"
+                >
+                  Belum ada template WhatsApp.
+                </td>
+              </tr>
+            ) : (
+              templates.map((template) => {
+                const used = isCurrentlyUsed(template);
+
+                return (
+                  <tr key={template.id} className={used ? 'bg-emerald-50/60' : undefined}>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900 sm:px-6">
+                      {template.key}
+                      {used && (
+                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          Sedang diedit
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                      {getScopeLabel(template)}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span
+                        className={[
+                          'rounded-full px-2 py-1 text-xs font-semibold',
+                          template.is_active
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-600',
+                        ].join(' ')}
+                      >
+                        {template.is_active ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </td>
+
+                    <td className="min-w-[320px] px-4 py-3 text-slate-600">
+                      <div className="line-clamp-3 whitespace-pre-line">
+                        {template.content}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-400">
+                        ID: {template.id}
+                      </div>
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-right sm:px-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(template)}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onDelete(template)}
+                          disabled={deletingId === template.id}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingId === template.id ? 'Menghapus…' : 'Hard Delete'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </section>
   );
