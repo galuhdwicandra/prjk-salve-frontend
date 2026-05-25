@@ -160,6 +160,12 @@ export default function CashSessionsIndex() {
     setSuccessMsg('');
     setSubmittingOpen(true);
 
+    if (isSuperadmin && !branchId) {
+      setErrorMsg('Cabang wajib dipilih.');
+      setSubmittingOpen(false);
+      return;
+    }
+
     try {
       await openCashSession({
         branch_id: isSuperadmin ? (branchId || undefined) : undefined,

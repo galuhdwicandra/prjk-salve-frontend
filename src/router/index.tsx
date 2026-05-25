@@ -38,6 +38,18 @@ const ProductionBoard = lazy(() => import('../pages/production/ProductionBoard')
 const ProductionReport = lazy(() => import('../pages/production/ProductionReport'));
 const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 const WhatsappTemplatesPage = lazy(() => import('../pages/settings/WhatsappTemplatesPage'));
+const AccountIndex = lazy(() => import('../pages/accounting/AccountIndex'));
+const AccountForm = lazy(() => import('../pages/accounting/AccountForm'));
+const AccountMappingIndex = lazy(() => import('../pages/accounting/AccountMappingIndex'));
+const AccountMappingForm = lazy(() => import('../pages/accounting/AccountMappingForm'));
+const JournalIndex = lazy(() => import('../pages/accounting/JournalIndex'));
+const JournalForm = lazy(() => import('../pages/accounting/JournalForm'));
+const JournalDetail = lazy(() => import('../pages/accounting/JournalDetail'));
+const LedgerPage = lazy(() => import('../pages/accounting/LedgerPage'));
+const ProfitLossPage = lazy(() => import('../pages/accounting/ProfitLossPage'));
+const BalanceSheetPage = lazy(() => import('../pages/accounting/BalanceSheetPage'));
+const CashFlowPage = lazy(() => import('../pages/accounting/CashFlowPage'));
+const AccountingDashboardPage = lazy(() => import('../pages/accounting/AccountingDashboardPage'));
 
 export const router = createBrowserRouter([
   {
@@ -440,6 +452,157 @@ export const router = createBrowserRouter([
               },
             ],
           },
+          {
+            path: 'accounting/dashboard',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountingDashboardPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/accounts',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/accounts/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/accounts/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/account-mappings',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountMappingIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/account-mappings/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountMappingForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/account-mappings/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountMappingForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals/:id',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalDetail />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/ledger',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <LedgerPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/profit-loss',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <ProfitLossPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/balance-sheet',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <BalanceSheetPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/cash-flow',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <CashFlowPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+
         ]
         : []),
     ],

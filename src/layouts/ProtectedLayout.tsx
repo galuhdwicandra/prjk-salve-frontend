@@ -29,6 +29,10 @@ type SidebarIconName =
   | "reportsSettings"
   | "reports"
   | "settings"
+  | "accounting"
+  | "profitLoss"
+  | "balanceSheet"
+  | "cashFlow"
   | "logout";
 
 type MenuItem = {
@@ -284,6 +288,51 @@ function SidebarIcon(props: { name: SidebarIconName; className?: string }) {
         </svg>
       );
 
+    case "accounting":
+      return (
+        <svg {...commonProps}>
+          <path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4Z" />
+          <path d="M7 20a2 2 0 0 1 0-4h12" />
+          <path d="M9 8h6" />
+          <path d="M9 12h4" />
+          <path d="M15 4v16" />
+        </svg>
+      );
+    case "profitLoss":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 19h16" />
+          <path d="M7 16V9" />
+          <path d="M12 16V5" />
+          <path d="M17 16v-4" />
+          <path d="M6 9l3-3 3 3 5-5" />
+          <path d="M17 4h-4" />
+          <path d="M17 4v4" />
+        </svg>
+      );
+    case "balanceSheet":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 5h16" />
+          <path d="M6 5v14" />
+          <path d="M18 5v14" />
+          <path d="M4 19h16" />
+          <path d="M9 9h6" />
+          <path d="M8 13h8" />
+          <path d="M12 5v14" />
+        </svg>
+      );
+    case "cashFlow":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 19V5" />
+          <path d="M4 19h16" />
+          <path d="M8 15c2-4 4-4 6 0s4 4 6 0" />
+          <path d="M8 9c2 4 4 4 6 0s4-4 6 0" />
+          <path d="M12 4v16" />
+        </svg>
+      );
+
     case "settings":
       return (
         <svg {...commonProps}>
@@ -316,6 +365,15 @@ function getTopbarTitle(pathname: string): string {
   if (pathname.startsWith("/expenses")) return "Pengeluaran";
   if (pathname.startsWith("/vouchers")) return "Voucher";
   if (pathname.startsWith("/reports")) return "Laporan";
+  if (pathname.startsWith("/accounting/dashboard")) return "Dashboard Akuntansi";
+  if (pathname.startsWith("/accounting/accounts")) return "COA";
+  if (pathname.startsWith("/accounting/account-mappings")) return "Mapping Akun";
+  if (pathname.startsWith("/accounting/journals")) return "Jurnal Umum";
+  if (pathname.startsWith("/accounting/ledger")) return "Buku Besar";
+  if (pathname.startsWith("/accounting/profit-loss")) return "Laba Rugi";
+  if (pathname.startsWith("/accounting/balance-sheet")) return "Neraca";
+  if (pathname.startsWith("/accounting/cash-flow")) return "Arus Kas";
+  if (pathname.startsWith("/accounting")) return "Akuntansi";
   if (pathname.startsWith("/settings")) return "Settings";
 
   return "Salve POS Laundry";
@@ -569,6 +627,60 @@ export default function ProtectedLayout() {
         { label: "Pengeluaran", to: "/expenses", roles: ["Superadmin", "Admin Cabang"], icon: "expenses" },
         { label: "Kas Hari Ini", to: "/cash-today", roles: ["Superadmin", "Admin Cabang", "Kasir"], icon: "cashToday" },
         { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], icon: "vouchers", show: FF.vouchers },
+      ],
+    },
+    {
+      title: "Akuntansi",
+      icon: "accounting",
+      items: [
+        {
+          label: "Dashboard Akuntansi",
+          to: "/accounting/dashboard",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "dashboard",
+        },
+        {
+          label: "COA",
+          to: "/accounting/accounts",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Mapping Akun",
+          to: "/accounting/account-mappings",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Jurnal Umum",
+          to: "/accounting/journals",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Buku Besar",
+          to: "/accounting/ledger",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Laba Rugi",
+          to: "/accounting/profit-loss",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "profitLoss",
+        },
+        {
+          label: "Neraca",
+          to: "/accounting/balance-sheet",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "balanceSheet",
+        },
+        {
+          label: "Arus Kas",
+          to: "/accounting/cash-flow",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "cashFlow",
+        },
       ],
     },
     {

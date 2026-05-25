@@ -1,12 +1,13 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-24 21:58:54_  
+_Dihasilkan otomatis: 2026-05-25 18:09:16_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
 ## Daftar Isi
 
 - [API (src/api)](#api-srcapi)
+  - [src\api\accounting.ts](#file-srcapiaccountingts)
   - [src\api\branches.ts](#file-srcapibranchests)
   - [src\api\cashSessions.ts](#file-srcapicashsessionsts)
   - [src\api\client.ts](#file-srcapiclientts)
@@ -42,6 +43,7 @@ _Dihasilkan otomatis: 2026-05-24 21:58:54_
   - [src\router\index.tsx](#file-srcrouterindextsx)
 
 - [Types (src/types)](#types-srctypes)
+  - [src\types\accounting.ts](#file-srctypesaccountingts)
   - [src\types\branches.ts](#file-srctypesbranchests)
   - [src\types\cash.ts](#file-srctypescashts)
   - [src\types\customers.ts](#file-srctypescustomersts)
@@ -80,6 +82,18 @@ _Dihasilkan otomatis: 2026-05-24 21:58:54_
   - [src\components\Toast.tsx](#file-srccomponentstoasttsx)
 
 - [Pages (src/pages)](#pages-srcpages)
+  - [src\pages\accounting\AccountForm.tsx](#file-srcpagesaccountingaccountformtsx)
+  - [src\pages\accounting\AccountIndex.tsx](#file-srcpagesaccountingaccountindextsx)
+  - [src\pages\accounting\AccountingDashboardPage.tsx](#file-srcpagesaccountingaccountingdashboardpagetsx)
+  - [src\pages\accounting\AccountMappingForm.tsx](#file-srcpagesaccountingaccountmappingformtsx)
+  - [src\pages\accounting\AccountMappingIndex.tsx](#file-srcpagesaccountingaccountmappingindextsx)
+  - [src\pages\accounting\BalanceSheetPage.tsx](#file-srcpagesaccountingbalancesheetpagetsx)
+  - [src\pages\accounting\CashFlowPage.tsx](#file-srcpagesaccountingcashflowpagetsx)
+  - [src\pages\accounting\JournalDetail.tsx](#file-srcpagesaccountingjournaldetailtsx)
+  - [src\pages\accounting\JournalForm.tsx](#file-srcpagesaccountingjournalformtsx)
+  - [src\pages\accounting\JournalIndex.tsx](#file-srcpagesaccountingjournalindextsx)
+  - [src\pages\accounting\LedgerPage.tsx](#file-srcpagesaccountingledgerpagetsx)
+  - [src\pages\accounting\ProfitLossPage.tsx](#file-srcpagesaccountingprofitlosspagetsx)
   - [src\pages\branches\BranchForm.tsx](#file-srcpagesbranchesbranchformtsx)
   - [src\pages\branches\BranchIndex.tsx](#file-srcpagesbranchesbranchindextsx)
   - [src\pages\branches\InvoiceSettings.tsx](#file-srcpagesbranchesinvoicesettingstsx)
@@ -129,6 +143,236 @@ _Dihasilkan otomatis: 2026-05-24 21:58:54_
 
 
 ## API (src/api)
+
+### src\api\accounting.ts
+
+- SHA: `9ad8c94ae4b4`  
+- Ukuran: 6 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+import { api, type ApiEnvelope } from './client';
+import type {
+  AccountingAccount,
+  AccountingAccountMapping,
+  AccountingAccountMappingPayload,
+  AccountingAccountMappingQuery,
+  AccountingAccountPayload,
+  AccountingAccountQuery,
+  AccountingBalanceSheetData,
+  AccountingBalanceSheetMeta,
+  AccountingBalanceSheetQuery,
+  AccountingJournalEntry,
+  AccountingJournalPayload,
+  AccountingJournalQuery,
+  AccountingLedgerMeta,
+  AccountingLedgerQuery,
+  AccountingLedgerRow,
+  AccountingProfitLossData,
+  AccountingProfitLossMeta,
+  AccountingProfitLossQuery,
+  AccountingCashFlowData,
+  AccountingCashFlowMeta,
+  AccountingCashFlowQuery,
+  AccountingDashboardData,
+  AccountingDashboardMeta,
+  AccountingDashboardQuery,
+  PaginationMeta,
+} from '../types/accounting';
+
+export async function getAccountingDashboard(params: AccountingDashboardQuery) {
+  const { data } = await api.get<ApiEnvelope<AccountingDashboardData, AccountingDashboardMeta>>(
+    '/accounting/dashboard',
+    { params }
+  );
+
+  return data;
+}
+
+export async function listAccountingAccounts(params: AccountingAccountQuery = {}) {
+  const { data } = await api.get<ApiEnvelope<AccountingAccount[], PaginationMeta>>(
+    '/accounting/accounts',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingAccount(id: string) {
+  const { data } = await api.get<ApiEnvelope<AccountingAccount, null>>(
+    `/accounting/accounts/${encodeURIComponent(id)}`
+  );
+
+  return data;
+}
+
+export async function createAccountingAccount(payload: AccountingAccountPayload) {
+  const { data } = await api.post<ApiEnvelope<AccountingAccount, null>>(
+    '/accounting/accounts',
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function updateAccountingAccount(id: string, payload: AccountingAccountPayload) {
+  const { data } = await api.put<ApiEnvelope<AccountingAccount, null>>(
+    `/accounting/accounts/${encodeURIComponent(id)}`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function deleteAccountingAccount(id: string) {
+  const { data } = await api.delete<ApiEnvelope<null, null>>(
+    `/accounting/accounts/${encodeURIComponent(id)}`
+  );
+
+  return data;
+}
+
+export async function listAccountingAccountMappings(params: AccountingAccountMappingQuery = {}) {
+  const { data } = await api.get<ApiEnvelope<AccountingAccountMapping[], PaginationMeta>>(
+    '/accounting/account-mappings',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingAccountMapping(id: string) {
+  const { data } = await api.get<ApiEnvelope<AccountingAccountMapping, null>>(
+    `/accounting/account-mappings/${encodeURIComponent(id)}`
+  );
+
+  return data;
+}
+
+export async function createAccountingAccountMapping(payload: AccountingAccountMappingPayload) {
+  const { data } = await api.post<ApiEnvelope<AccountingAccountMapping, null>>(
+    '/accounting/account-mappings',
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function updateAccountingAccountMapping(id: string, payload: AccountingAccountMappingPayload) {
+  const { data } = await api.put<ApiEnvelope<AccountingAccountMapping, null>>(
+    `/accounting/account-mappings/${encodeURIComponent(id)}`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function deleteAccountingAccountMapping(id: string) {
+  const { data } = await api.delete<ApiEnvelope<null, null>>(
+    `/accounting/account-mappings/${encodeURIComponent(id)}`
+  );
+
+  return data;
+}
+
+export async function listAccountingJournals(params: AccountingJournalQuery = {}) {
+  const { data } = await api.get<ApiEnvelope<AccountingJournalEntry[], PaginationMeta>>(
+    '/accounting/journals',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingJournal(id: string) {
+  const { data } = await api.get<ApiEnvelope<AccountingJournalEntry, null>>(
+    `/accounting/journals/${encodeURIComponent(id)}`
+  );
+
+  return data;
+}
+
+export async function createAccountingJournal(payload: AccountingJournalPayload) {
+  const { data } = await api.post<ApiEnvelope<AccountingJournalEntry, null>>(
+    '/accounting/journals',
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function updateAccountingJournal(id: string, payload: AccountingJournalPayload) {
+  const { data } = await api.put<ApiEnvelope<AccountingJournalEntry, null>>(
+    `/accounting/journals/${encodeURIComponent(id)}`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function postAccountingJournal(id: string) {
+  const { data } = await api.post<ApiEnvelope<AccountingJournalEntry, null>>(
+    `/accounting/journals/${encodeURIComponent(id)}/post`,
+    {},
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function voidAccountingJournal(id: string, void_reason: string) {
+  const { data } = await api.post<ApiEnvelope<AccountingJournalEntry, null>>(
+    `/accounting/journals/${encodeURIComponent(id)}/void`,
+    { void_reason },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function getAccountingLedger(params: AccountingLedgerQuery) {
+  const { data } = await api.get<ApiEnvelope<AccountingLedgerRow[], AccountingLedgerMeta>>(
+    '/accounting/ledger',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingProfitLoss(params: AccountingProfitLossQuery) {
+  const { data } = await api.get<ApiEnvelope<AccountingProfitLossData, AccountingProfitLossMeta>>(
+    '/accounting/reports/profit-loss',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingBalanceSheet(params: AccountingBalanceSheetQuery) {
+  const { data } = await api.get<ApiEnvelope<AccountingBalanceSheetData, AccountingBalanceSheetMeta>>(
+    '/accounting/reports/balance-sheet',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingCashFlow(params: AccountingCashFlowQuery) {
+  const { data } = await api.get<ApiEnvelope<AccountingCashFlowData, AccountingCashFlowMeta>>(
+    '/accounting/reports/cash-flow',
+    { params }
+  );
+
+  return data;
+}
+```
+</details>
 
 ### src\api\branches.ts
 
@@ -1882,8 +2126,8 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `9c510d222569`  
-- Ukuran: 64 KB
+- SHA: `09aae833cf22`  
+- Ukuran: 68 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -1918,6 +2162,10 @@ type SidebarIconName =
   | "reportsSettings"
   | "reports"
   | "settings"
+  | "accounting"
+  | "profitLoss"
+  | "balanceSheet"
+  | "cashFlow"
   | "logout";
 
 type MenuItem = {
@@ -2173,6 +2421,51 @@ function SidebarIcon(props: { name: SidebarIconName; className?: string }) {
         </svg>
       );
 
+    case "accounting":
+      return (
+        <svg {...commonProps}>
+          <path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4Z" />
+          <path d="M7 20a2 2 0 0 1 0-4h12" />
+          <path d="M9 8h6" />
+          <path d="M9 12h4" />
+          <path d="M15 4v16" />
+        </svg>
+      );
+    case "profitLoss":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 19h16" />
+          <path d="M7 16V9" />
+          <path d="M12 16V5" />
+          <path d="M17 16v-4" />
+          <path d="M6 9l3-3 3 3 5-5" />
+          <path d="M17 4h-4" />
+          <path d="M17 4v4" />
+        </svg>
+      );
+    case "balanceSheet":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 5h16" />
+          <path d="M6 5v14" />
+          <path d="M18 5v14" />
+          <path d="M4 19h16" />
+          <path d="M9 9h6" />
+          <path d="M8 13h8" />
+          <path d="M12 5v14" />
+        </svg>
+      );
+    case "cashFlow":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 19V5" />
+          <path d="M4 19h16" />
+          <path d="M8 15c2-4 4-4 6 0s4 4 6 0" />
+          <path d="M8 9c2 4 4 4 6 0s4-4 6 0" />
+          <path d="M12 4v16" />
+        </svg>
+      );
+
     case "settings":
       return (
         <svg {...commonProps}>
@@ -2205,6 +2498,15 @@ function getTopbarTitle(pathname: string): string {
   if (pathname.startsWith("/expenses")) return "Pengeluaran";
   if (pathname.startsWith("/vouchers")) return "Voucher";
   if (pathname.startsWith("/reports")) return "Laporan";
+  if (pathname.startsWith("/accounting/dashboard")) return "Dashboard Akuntansi";
+  if (pathname.startsWith("/accounting/accounts")) return "COA";
+  if (pathname.startsWith("/accounting/account-mappings")) return "Mapping Akun";
+  if (pathname.startsWith("/accounting/journals")) return "Jurnal Umum";
+  if (pathname.startsWith("/accounting/ledger")) return "Buku Besar";
+  if (pathname.startsWith("/accounting/profit-loss")) return "Laba Rugi";
+  if (pathname.startsWith("/accounting/balance-sheet")) return "Neraca";
+  if (pathname.startsWith("/accounting/cash-flow")) return "Arus Kas";
+  if (pathname.startsWith("/accounting")) return "Akuntansi";
   if (pathname.startsWith("/settings")) return "Settings";
 
   return "Salve POS Laundry";
@@ -2458,6 +2760,60 @@ export default function ProtectedLayout() {
         { label: "Pengeluaran", to: "/expenses", roles: ["Superadmin", "Admin Cabang"], icon: "expenses" },
         { label: "Kas Hari Ini", to: "/cash-today", roles: ["Superadmin", "Admin Cabang", "Kasir"], icon: "cashToday" },
         { label: "Vouchers", to: "/vouchers", roles: ["Superadmin", "Admin Cabang"], icon: "vouchers", show: FF.vouchers },
+      ],
+    },
+    {
+      title: "Akuntansi",
+      icon: "accounting",
+      items: [
+        {
+          label: "Dashboard Akuntansi",
+          to: "/accounting/dashboard",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "dashboard",
+        },
+        {
+          label: "COA",
+          to: "/accounting/accounts",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Mapping Akun",
+          to: "/accounting/account-mappings",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Jurnal Umum",
+          to: "/accounting/journals",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Buku Besar",
+          to: "/accounting/ledger",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "accounting",
+        },
+        {
+          label: "Laba Rugi",
+          to: "/accounting/profit-loss",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "profitLoss",
+        },
+        {
+          label: "Neraca",
+          to: "/accounting/balance-sheet",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "balanceSheet",
+        },
+        {
+          label: "Arus Kas",
+          to: "/accounting/cash-flow",
+          roles: ["Superadmin", "Admin Cabang"],
+          icon: "cashFlow",
+        },
       ],
     },
     {
@@ -3577,8 +3933,8 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `2658be51c8aa`  
-- Ukuran: 13 KB
+- SHA: `627bc04c9489`  
+- Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -3622,6 +3978,18 @@ const ProductionBoard = lazy(() => import('../pages/production/ProductionBoard')
 const ProductionReport = lazy(() => import('../pages/production/ProductionReport'));
 const WashNoteForm = lazy(() => import('../pages/wash-notes/WashNoteForm'));
 const WhatsappTemplatesPage = lazy(() => import('../pages/settings/WhatsappTemplatesPage'));
+const AccountIndex = lazy(() => import('../pages/accounting/AccountIndex'));
+const AccountForm = lazy(() => import('../pages/accounting/AccountForm'));
+const AccountMappingIndex = lazy(() => import('../pages/accounting/AccountMappingIndex'));
+const AccountMappingForm = lazy(() => import('../pages/accounting/AccountMappingForm'));
+const JournalIndex = lazy(() => import('../pages/accounting/JournalIndex'));
+const JournalForm = lazy(() => import('../pages/accounting/JournalForm'));
+const JournalDetail = lazy(() => import('../pages/accounting/JournalDetail'));
+const LedgerPage = lazy(() => import('../pages/accounting/LedgerPage'));
+const ProfitLossPage = lazy(() => import('../pages/accounting/ProfitLossPage'));
+const BalanceSheetPage = lazy(() => import('../pages/accounting/BalanceSheetPage'));
+const CashFlowPage = lazy(() => import('../pages/accounting/CashFlowPage'));
+const AccountingDashboardPage = lazy(() => import('../pages/accounting/AccountingDashboardPage'));
 
 export const router = createBrowserRouter([
   {
@@ -4024,6 +4392,157 @@ export const router = createBrowserRouter([
               },
             ],
           },
+          {
+            path: 'accounting/dashboard',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountingDashboardPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/accounts',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/accounts/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/accounts/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/account-mappings',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountMappingIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/account-mappings/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountMappingForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/account-mappings/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <AccountMappingForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalIndex />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals/new',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals/:id',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalDetail />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/journals/:id/edit',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <JournalForm />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/ledger',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <LedgerPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/profit-loss',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <ProfitLossPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/balance-sheet',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <BalanceSheetPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+          {
+            path: 'accounting/cash-flow',
+            element: (
+              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+                <LazyBoundary>
+                  <CashFlowPage />
+                </LazyBoundary>
+              </Guarded>
+            ),
+          },
+
         ]
         : []),
     ],
@@ -4036,6 +4555,481 @@ export const router = createBrowserRouter([
 
 
 ## Types (src/types)
+
+### src\types\accounting.ts
+
+- SHA: `8e5a0ea9fe14`  
+- Ukuran: 11 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```ts
+export type AccountingAccountType =
+  | 'ASSET'
+  | 'LIABILITY'
+  | 'EQUITY'
+  | 'REVENUE'
+  | 'EXPENSE';
+
+export type AccountingNormalBalance = 'DEBIT' | 'CREDIT';
+
+export type AccountingEventKey =
+  | 'ORDER_PAID_CASH'
+  | 'ORDER_PAID_QRIS'
+  | 'ORDER_PAID_TRANSFER'
+  | 'ORDER_RECEIVABLE_CREATED'
+  | 'RECEIVABLE_SETTLED_CASH'
+  | 'EXPENSE_CASH_BOX'
+  | 'EXPENSE_NON_CASH'
+  | 'CASH_OPENING_FLOAT'
+  | 'CASH_WITHDRAWAL'
+  | 'CASH_ADJUSTMENT_IN'
+  | 'CASH_ADJUSTMENT_OUT'
+  | 'ORDER_DISCOUNT';
+
+export type BranchMini = {
+  id: string;
+  code?: string | null;
+  name: string;
+};
+
+export type AccountingAccount = {
+  id: string;
+  branch_id: string | null;
+  parent_id: string | null;
+  code: string;
+  name: string;
+  type: AccountingAccountType;
+  normal_balance: AccountingNormalBalance;
+  is_cash_account: boolean;
+  is_active: boolean;
+  sort_order: number;
+  branch?: BranchMini | null;
+  parent?: Pick<AccountingAccount, 'id' | 'code' | 'name'> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type AccountingAccountMapping = {
+  id: string;
+  branch_id: string | null;
+  event_key: AccountingEventKey;
+  payment_method: string | null;
+  expense_category: string | null;
+  debit_account_id: string;
+  credit_account_id: string;
+  is_active: boolean;
+  branch?: BranchMini | null;
+  debit_account?: Pick<AccountingAccount, 'id' | 'code' | 'name' | 'type' | 'normal_balance'> | null;
+  credit_account?: Pick<AccountingAccount, 'id' | 'code' | 'name' | 'type' | 'normal_balance'> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type PaginationMeta = {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+};
+
+export type AccountingAccountQuery = {
+  q?: string;
+  branch_id?: string | null;
+  type?: AccountingAccountType | '';
+  is_active?: boolean | string;
+  page?: number;
+  per_page?: number;
+};
+
+export type AccountingAccountPayload = {
+  branch_id?: string | null;
+  parent_id?: string | null;
+  code: string;
+  name: string;
+  type: AccountingAccountType;
+  normal_balance: AccountingNormalBalance;
+  is_cash_account: boolean;
+  is_active: boolean;
+  sort_order: number;
+};
+
+export type AccountingAccountMappingQuery = {
+  q?: string;
+  branch_id?: string | null;
+  event_key?: AccountingEventKey | '';
+  is_active?: boolean | string;
+  page?: number;
+  per_page?: number;
+};
+
+export type AccountingAccountMappingPayload = {
+  branch_id?: string | null;
+  event_key: AccountingEventKey;
+  payment_method?: string | null;
+  expense_category?: string | null;
+  debit_account_id: string;
+  credit_account_id: string;
+  is_active: boolean;
+};
+
+export type ApiEnvelope<T, M = unknown> = {
+  data: T;
+  meta: M;
+  message: string | null;
+  errors: Record<string, string[]> | null;
+};
+
+export type AccountingJournalStatus = 'DRAFT' | 'POSTED' | 'VOID';
+
+export type AccountingJournalLine = {
+  id: string;
+  journal_entry_id: string;
+  account_id: string;
+  description: string | null;
+  debit: string | number;
+  credit: string | number;
+  line_order: number;
+  account?: Pick<AccountingAccount, 'id' | 'code' | 'name' | 'type' | 'normal_balance' | 'branch_id' | 'is_active'> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type AccountingJournalEntry = {
+  id: string;
+  branch_id: string;
+  mapping_id: string | null;
+  journal_no: string;
+  journal_date: string;
+  source_type: string | null;
+  source_id: string | null;
+  source_no: string | null;
+  status: AccountingJournalStatus;
+  description: string | null;
+  total_debit: string | number;
+  total_credit: string | number;
+  created_by: number | string | null;
+  posted_by: number | string | null;
+  posted_at: string | null;
+  voided_by: number | string | null;
+  voided_at: string | null;
+  void_reason: string | null;
+  branch?: BranchMini | null;
+  lines?: AccountingJournalLine[];
+  lines_count?: number;
+  creator?: { id: number | string; name: string } | null;
+  poster?: { id: number | string; name: string } | null;
+  voider?: { id: number | string; name: string } | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type AccountingJournalLinePayload = {
+  account_id: string;
+  description?: string | null;
+  debit?: number;
+  credit?: number;
+};
+
+export type AccountingJournalPayload = {
+  branch_id?: string | null;
+  journal_date: string;
+  description?: string | null;
+  lines: AccountingJournalLinePayload[];
+};
+
+export type AccountingJournalQuery = {
+  q?: string;
+  branch_id?: string | null;
+  status?: AccountingJournalStatus | '';
+  source_type?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  per_page?: number;
+};
+
+export type AccountingLedgerRow = {
+  id: string;
+  journal_entry_id: string;
+  journal_date: string | null;
+  journal_no: string | null;
+  source_type: string | null;
+  source_no: string | null;
+  branch?: BranchMini | null;
+  description: string | null;
+  debit: string | number;
+  credit: string | number;
+  balance: string | number;
+};
+
+export type AccountingLedgerMeta = PaginationMeta & {
+  account: Pick<AccountingAccount, 'id' | 'code' | 'name' | 'type' | 'normal_balance' | 'branch_id'>;
+  branch_id: string | null;
+  date_from: string;
+  date_to: string;
+  opening_balance: string | number;
+  total_debit: string | number;
+  total_credit: string | number;
+  ending_balance: string | number;
+};
+
+export type AccountingProfitLossQuery = {
+  date_from: string;
+  date_to: string;
+  branch_id?: string | null;
+  basis?: 'posted' | 'journal_posted';
+};
+
+export type AccountingProfitLossAccountRow = {
+  account_id: string;
+  code: string;
+  name: string;
+  type: AccountingAccountType;
+  normal_balance: AccountingNormalBalance;
+  debit: number;
+  credit: number;
+  amount: number;
+};
+
+export type AccountingProfitLossSummary = {
+  total_gross_revenue: number;
+  total_contra_revenue: number;
+  net_revenue: number;
+  total_expense: number;
+  net_profit: number;
+  is_profit: boolean;
+};
+
+export type AccountingProfitLossData = {
+  revenues: AccountingProfitLossAccountRow[];
+  contra_revenues: AccountingProfitLossAccountRow[];
+  expenses: AccountingProfitLossAccountRow[];
+  summary: AccountingProfitLossSummary;
+};
+
+export type AccountingProfitLossMeta = {
+  date_from: string;
+  date_to: string;
+  branch_id: string | null;
+  basis: 'POSTED';
+};
+
+export type AccountingLedgerQuery = {
+  account_id: string;
+  branch_id?: string | null;
+  date_from: string;
+  date_to: string;
+  page?: number;
+  per_page?: number;
+};
+
+export type AccountingBalanceSheetQuery = {
+  date_from: string;
+  date_to: string;
+  branch_id?: string | null;
+};
+
+export type AccountingBalanceSheetAccountRow = {
+  id: string | null;
+  code: string;
+  name: string;
+  type: 'ASSET' | 'LIABILITY' | 'EQUITY';
+  normal_balance: 'DEBIT' | 'CREDIT';
+  total_debit: number;
+  total_credit: number;
+  balance: number;
+};
+
+export type AccountingBalanceSheetSummary = {
+  total_assets: number;
+  total_liabilities: number;
+  total_equities: number;
+  total_liabilities_and_equities: number;
+  difference: number;
+  is_balanced: boolean;
+  status: 'BALANCED' | 'NOT_BALANCED';
+};
+
+export type AccountingBalanceSheetData = {
+  assets: AccountingBalanceSheetAccountRow[];
+  liabilities: AccountingBalanceSheetAccountRow[];
+  equities: AccountingBalanceSheetAccountRow[];
+  current_year_profit: number;
+  summary: AccountingBalanceSheetSummary;
+};
+
+export type AccountingBalanceSheetMeta = {
+  date_from: string;
+  date_to: string;
+  as_of_date: string;
+  branch_id: string | null;
+  basis: 'posted';
+};
+
+export type AccountingCashFlowQuery = {
+  date_from: string;
+  date_to: string;
+  branch_id?: string | null;
+  basis?: 'posted' | 'journal_posted';
+};
+
+export type AccountingCashFlowAccount = {
+  id: string;
+  code: string | null;
+  name: string | null;
+  normal_balance: AccountingNormalBalance;
+};
+
+export type AccountingCashFlowBranch = {
+  id: string;
+  code?: string | null;
+  name?: string | null;
+};
+
+export type AccountingCashFlowItem = {
+  id: string;
+  journal_entry_id: string;
+  journal_date: string | null;
+  journal_no: string | null;
+  source_type: string | null;
+  source_no: string | null;
+  event_key: AccountingEventKey | string | null;
+  description: string | null;
+  cash_account: AccountingCashFlowAccount;
+  branch: AccountingCashFlowBranch;
+  cash_in: number;
+  cash_out: number;
+  net_amount: number;
+};
+
+export type AccountingCashFlowActivity = {
+  label: string;
+  items: AccountingCashFlowItem[];
+  total: number;
+};
+
+export type AccountingCashFlowSummary = {
+  opening_balance: number;
+  total_cash_in: number;
+  total_cash_out: number;
+  net_cash_flow: number;
+  ending_balance: number;
+};
+
+export type AccountingCashFlowData = {
+  operating_activities: AccountingCashFlowActivity;
+  investing_activities: AccountingCashFlowActivity;
+  financing_activities: AccountingCashFlowActivity;
+  summary: AccountingCashFlowSummary;
+};
+
+export type AccountingCashFlowMeta = {
+  date_from: string;
+  date_to: string;
+  branch_id: string | null;
+  basis: 'POSTED';
+  source: 'accounting_journal_lines';
+};
+
+export type AccountingDashboardQuery = {
+  date_from: string;
+  date_to: string;
+  branch_id?: string | null;
+  basis?: 'posted';
+};
+
+export type AccountingDashboardSummary = {
+  total_cash: number;
+  total_receivables: number;
+  total_revenue: number;
+  total_expense: number;
+  net_profit: number;
+  total_assets: number;
+  total_liabilities: number;
+  total_equities: number;
+  total_liabilities_and_equities: number;
+  balance_difference: number;
+  is_balance_sheet_balanced: boolean;
+  balance_status: 'BALANCED' | 'NOT_BALANCED';
+};
+
+export type AccountingDashboardRevenueExpensePoint = {
+  period: string;
+  revenue: number;
+  expense: number;
+  net_profit: number;
+};
+
+export type AccountingDashboardCashFlowPoint = {
+  period: string;
+  cash_in: number;
+  cash_out: number;
+  net_cash_flow: number;
+};
+
+export type AccountingDashboardProfitByBranchPoint = {
+  branch_id: string;
+  branch_code: string | null;
+  branch_name: string | null;
+  revenue: number;
+  expense: number;
+  net_profit: number;
+};
+
+export type AccountingDashboardReceivablesPoint = {
+  period: string;
+  receivables_in: number;
+  receivables_out: number;
+  net_receivables: number;
+};
+
+export type AccountingDashboardWarningSeverity = 'info' | 'warning' | 'danger';
+
+export type AccountingDashboardWarningItem = {
+  key:
+    | 'MAPPING_INCOMPLETE'
+    | 'UNBALANCED_JOURNALS'
+    | 'DRAFT_JOURNALS'
+    | 'BALANCE_SHEET_NOT_BALANCED'
+    | string;
+  label: string;
+  message: string;
+  count: number;
+  severity: AccountingDashboardWarningSeverity;
+};
+
+export type AccountingDashboardWarnings = {
+  items: AccountingDashboardWarningItem[];
+  summary: {
+    mapping_issue_count: number;
+    unbalanced_journal_count: number;
+    draft_journal_count: number;
+    balance_difference: number;
+    has_warning: boolean;
+  };
+};
+
+export type AccountingDashboardCharts = {
+  revenue_vs_expense: AccountingDashboardRevenueExpensePoint[];
+  cash_in_vs_cash_out: AccountingDashboardCashFlowPoint[];
+  net_profit_by_branch: AccountingDashboardProfitByBranchPoint[];
+  receivables_trend: AccountingDashboardReceivablesPoint[];
+};
+
+export type AccountingDashboardData = {
+  summary: AccountingDashboardSummary;
+  charts: AccountingDashboardCharts;
+  warnings: AccountingDashboardWarnings;
+};
+
+export type AccountingDashboardMeta = {
+  date_from: string;
+  date_to: string;
+  branch_id: string | null;
+  basis: 'posted';
+};
+```
+</details>
 
 ### src\types\branches.ts
 
@@ -8606,6 +9600,3712 @@ function IconInfo() {
 
 ## Pages (src/pages)
 
+### src\pages\accounting\AccountForm.tsx
+
+- SHA: `697be0030f1d`  
+- Ukuran: 8 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  createAccountingAccount,
+  getAccountingAccount,
+  listAccountingAccounts,
+  updateAccountingAccount,
+} from '../../api/accounting';
+import { getErrorMessage } from '../../api/client';
+import type {
+  AccountingAccount,
+  AccountingAccountPayload,
+  AccountingAccountType,
+  AccountingNormalBalance,
+} from '../../types/accounting';
+
+const initialForm: AccountingAccountPayload = {
+  branch_id: null,
+  parent_id: null,
+  code: '',
+  name: '',
+  type: 'ASSET',
+  normal_balance: 'DEBIT',
+  is_cash_account: false,
+  is_active: true,
+  sort_order: 0,
+};
+
+function normalByType(type: AccountingAccountType): AccountingNormalBalance {
+  if (type === 'ASSET' || type === 'EXPENSE') return 'DEBIT';
+  return 'CREDIT';
+}
+
+export default function AccountForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEdit = Boolean(id);
+
+  const [form, setForm] = useState<AccountingAccountPayload>(initialForm);
+  const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const pageTitle = useMemo(() => (isEdit ? 'Edit Akun' : 'Tambah Akun'), [isEdit]);
+
+  function setValue<K extends keyof AccountingAccountPayload>(key: K, value: AccountingAccountPayload[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function loadOptions() {
+    const res = await listAccountingAccounts({ per_page: 200, is_active: true });
+    setAccounts(Array.isArray(res.data) ? res.data : []);
+  }
+
+  async function loadDetail(accountId: string) {
+    setLoading(true);
+
+    try {
+      const res = await getAccountingAccount(accountId);
+      const row = res.data;
+
+      setForm({
+        branch_id: row.branch_id,
+        parent_id: row.parent_id,
+        code: row.code,
+        name: row.name,
+        type: row.type,
+        normal_balance: row.normal_balance,
+        is_cash_account: row.is_cash_account,
+        is_active: row.is_active,
+        sort_order: row.sort_order ?? 0,
+      });
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal memuat akun.'));
+      navigate('/accounting/accounts');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      if (id) {
+        await updateAccountingAccount(id, form);
+      } else {
+        await createAccountingAccount(form);
+      }
+
+      navigate('/accounting/accounts');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menyimpan akun.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    loadOptions();
+
+    if (id) {
+      loadDetail(id);
+    }
+  }, [id]);
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{pageTitle}</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Normal balance akan mengikuti tipe akun agar COA tetap konsisten.
+          </p>
+        </div>
+
+        <Link to="/accounting/accounts" className="btn-outline">
+          Kembali
+        </Link>
+      </div>
+
+      <form
+        onSubmit={submit}
+        className="space-y-4 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5"
+      >
+        {loading ? (
+          <div className="text-sm text-[color:var(--color-text-muted)]">Memuat data...</div>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Kode Akun</span>
+            <input
+              value={form.code}
+              onChange={(e) => setValue('code', e.target.value)}
+              className="input"
+              required
+              maxLength={32}
+              placeholder="Contoh: 1010"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Nama Akun</span>
+            <input
+              value={form.name}
+              onChange={(e) => setValue('name', e.target.value)}
+              className="input"
+              required
+              maxLength={150}
+              placeholder="Contoh: Kas Cabang"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Tipe</span>
+            <select
+              value={form.type}
+              onChange={(e) => {
+                const nextType = e.target.value as AccountingAccountType;
+                setForm((prev) => ({
+                  ...prev,
+                  type: nextType,
+                  normal_balance: normalByType(nextType),
+                }));
+              }}
+              className="input"
+            >
+              <option value="ASSET">Aset</option>
+              <option value="LIABILITY">Liabilitas</option>
+              <option value="EQUITY">Ekuitas</option>
+              <option value="REVENUE">Pendapatan</option>
+              <option value="EXPENSE">Beban</option>
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Normal Balance</span>
+            <select
+              value={form.normal_balance}
+              onChange={(e) => setValue('normal_balance', e.target.value as AccountingNormalBalance)}
+              className="input"
+            >
+              <option value="DEBIT">Debit</option>
+              <option value="CREDIT">Credit</option>
+            </select>
+          </label>
+
+          <label className="space-y-1 sm:col-span-2">
+            <span className="text-sm font-medium">Akun Induk</span>
+            <select
+              value={form.parent_id ?? ''}
+              onChange={(e) => setValue('parent_id', e.target.value || null)}
+              className="input"
+            >
+              <option value="">Tidak ada</option>
+              {accounts
+                .filter((account) => account.id !== id)
+                .map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Urutan</span>
+            <input
+              type="number"
+              value={form.sort_order}
+              onChange={(e) => setValue('sort_order', Number(e.target.value || 0))}
+              className="input"
+              min={0}
+            />
+          </label>
+
+          <div className="grid gap-3 rounded-xl border border-[color:var(--color-border)] p-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_cash_account}
+                onChange={(e) => setValue('is_cash_account', e.target.checked)}
+              />
+              Akun kas / bank
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_active}
+                onChange={(e) => setValue('is_active', e.target.checked)}
+              />
+              Aktif
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[color:var(--color-border)] pt-4">
+          <Link to="/accounting/accounts" className="btn-outline">
+            Batal
+          </Link>
+
+          <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\AccountIndex.tsx
+
+- SHA: `b0f587f25bd0`  
+- Ukuran: 6 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { deleteAccountingAccount, listAccountingAccounts } from '../../api/accounting';
+import type { AccountingAccount } from '../../types/accounting';
+import { getErrorMessage } from '../../api/client';
+
+const TYPE_LABEL: Record<string, string> = {
+  ASSET: 'Aset',
+  LIABILITY: 'Liabilitas',
+  EQUITY: 'Ekuitas',
+  REVENUE: 'Pendapatan',
+  EXPENSE: 'Beban',
+};
+
+export default function AccountIndex() {
+  const [rows, setRows] = useState<AccountingAccount[]>([]);
+  const [q, setQ] = useState('');
+  const [type, setType] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await listAccountingAccounts({
+        q: q || undefined,
+        type: type as never,
+        per_page: 100,
+      });
+
+      setRows(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat COA.'));
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (!confirm('Hapus akun ini?')) return;
+
+    try {
+      await deleteAccountingAccount(id);
+      await load();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus akun.'));
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(load, 350);
+    return () => window.clearTimeout(timer);
+  }, [q, type]);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[color:var(--color-text-default)]">COA</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Kelola Chart of Accounts sebagai fondasi modul akuntansi.
+          </p>
+        </div>
+
+        <Link
+          to="/accounting/accounts/new"
+          className="btn-primary"
+        >
+          Tambah Akun
+        </Link>
+      </div>
+
+      <div className="grid gap-3 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 sm:grid-cols-[1fr_220px]">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="input"
+          placeholder="Cari kode atau nama akun..."
+        />
+
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="input"
+        >
+          <option value="">Semua Tipe</option>
+          <option value="ASSET">Aset</option>
+          <option value="LIABILITY">Liabilitas</option>
+          <option value="EQUITY">Ekuitas</option>
+          <option value="REVENUE">Pendapatan</option>
+          <option value="EXPENSE">Beban</option>
+        </select>
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-[color:var(--color-border)] bg-black/5">
+              <tr>
+                <th className="px-4 py-3 text-left">Kode</th>
+                <th className="px-4 py-3 text-left">Nama Akun</th>
+                <th className="px-4 py-3 text-left">Tipe</th>
+                <th className="px-4 py-3 text-left">Normal</th>
+                <th className="px-4 py-3 text-left">Scope</th>
+                <th className="px-4 py-3 text-left">Kas/Bank</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                    Memuat data...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                    Belum ada akun.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-[color:var(--color-border)] last:border-0">
+                    <td className="px-4 py-3 font-semibold">{row.code}</td>
+                    <td className="px-4 py-3">{row.name}</td>
+                    <td className="px-4 py-3">{TYPE_LABEL[row.type] ?? row.type}</td>
+                    <td className="px-4 py-3">{row.normal_balance}</td>
+                    <td className="px-4 py-3">{row.branch?.name ?? 'Global'}</td>
+                    <td className="px-4 py-3">{row.is_cash_account ? 'Ya' : 'Tidak'}</td>
+                    <td className="px-4 py-3">{row.is_active ? 'Aktif' : 'Nonaktif'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex gap-2">
+                        <Link
+                          to={`/accounting/accounts/${row.id}/edit`}
+                          className="rounded-lg border border-[color:var(--color-border)] px-3 py-1.5 text-xs font-medium"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => remove(row.id)}
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\AccountingDashboardPage.tsx
+
+- SHA: `ffb3b6c44531`  
+- Ukuran: 19 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { getAccountingDashboard } from '../../api/accounting';
+import { listBranches } from '../../api/branches';
+import { getErrorMessage } from '../../api/client';
+import { useAuth } from '../../store/useAuth';
+import type {
+  AccountingDashboardCashFlowPoint,
+  AccountingDashboardData,
+  AccountingDashboardMeta,
+  AccountingDashboardProfitByBranchPoint,
+  AccountingDashboardReceivablesPoint,
+  AccountingDashboardRevenueExpensePoint,
+  AccountingDashboardWarningItem,
+} from '../../types/accounting';
+import type { Branch } from '../../types/branches';
+
+function todayDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function firstDayOfMonth(): string {
+  const now = new Date();
+
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function money(value: number | string | null | undefined): string {
+  const amount = Number(value ?? 0);
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
+
+function numberValue(value: number | string | null | undefined): number {
+  const amount = Number(value ?? 0);
+
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function formatPeriod(value: string | null | undefined): string {
+  if (!value) return '-';
+
+  return String(value).slice(0, 10);
+}
+
+function warningToneClass(severity: AccountingDashboardWarningItem['severity']): string {
+  if (severity === 'danger') {
+    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200';
+  }
+
+  if (severity === 'warning') {
+    return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200';
+  }
+
+  return 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200';
+}
+
+type ReportState = {
+  data: AccountingDashboardData | null;
+  meta: AccountingDashboardMeta | null;
+};
+
+function SummaryCard(props: {
+  title: string;
+  value: string;
+  helper?: string;
+  tone?: 'default' | 'positive' | 'negative' | 'warning';
+}) {
+  const toneClass =
+    props.tone === 'positive'
+      ? 'text-green-700 dark:text-green-300'
+      : props.tone === 'negative'
+        ? 'text-red-700 dark:text-red-300'
+        : props.tone === 'warning'
+          ? 'text-amber-700 dark:text-amber-300'
+          : 'text-[color:var(--color-text)]';
+
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+      <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+        {props.title}
+      </div>
+      <div className={`mt-2 text-xl font-bold ${toneClass}`}>{props.value}</div>
+      {props.helper ? (
+        <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">{props.helper}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function SimpleBar(props: {
+  value: number;
+  max: number;
+  label: string;
+}) {
+  const percentage = props.max > 0 ? Math.min(100, Math.abs(props.value / props.max) * 100) : 0;
+
+  return (
+    <div>
+      <div className="mb-1 flex justify-between gap-3 text-xs">
+        <span className="truncate text-[color:var(--color-text-muted)]">{props.label}</span>
+        <span className="font-semibold">{money(props.value)}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+        <div
+          className="h-full rounded-full bg-[color:var(--color-brand-primary)]"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function RevenueExpenseChart(props: {
+  rows: AccountingDashboardRevenueExpensePoint[];
+}) {
+  const max = Math.max(
+    0,
+    ...props.rows.map((row) => Math.max(numberValue(row.revenue), numberValue(row.expense))),
+  );
+
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">Pendapatan vs Beban</h2>
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Dibaca dari jurnal posted pada periode filter.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {props.rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-4 text-sm text-[color:var(--color-text-muted)]">
+            Belum ada data pendapatan atau beban.
+          </div>
+        ) : (
+          props.rows.map((row) => (
+            <div key={row.period} className="space-y-2">
+              <div className="text-sm font-semibold">{formatPeriod(row.period)}</div>
+              <SimpleBar label="Pendapatan" value={numberValue(row.revenue)} max={max} />
+              <SimpleBar label="Beban" value={numberValue(row.expense)} max={max} />
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CashFlowChart(props: {
+  rows: AccountingDashboardCashFlowPoint[];
+}) {
+  const max = Math.max(
+    0,
+    ...props.rows.map((row) => Math.max(numberValue(row.cash_in), numberValue(row.cash_out))),
+  );
+
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">Kas Masuk vs Kas Keluar</h2>
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Hanya dari akun yang ditandai sebagai akun kas atau bank.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {props.rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-4 text-sm text-[color:var(--color-text-muted)]">
+            Belum ada mutasi akun kas pada periode ini.
+          </div>
+        ) : (
+          props.rows.map((row) => (
+            <div key={row.period} className="space-y-2">
+              <div className="text-sm font-semibold">{formatPeriod(row.period)}</div>
+              <SimpleBar label="Kas Masuk" value={numberValue(row.cash_in)} max={max} />
+              <SimpleBar label="Kas Keluar" value={numberValue(row.cash_out)} max={max} />
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BranchProfitTable(props: {
+  rows: AccountingDashboardProfitByBranchPoint[];
+}) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">Laba Bersih per Cabang</h2>
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Khusus Superadmin. Data mengikuti filter cabang jika dipilih.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="bg-black/5 text-left dark:bg-white/5">
+            <tr>
+              <th className="px-3 py-3">Cabang</th>
+              <th className="px-3 py-3 text-right">Pendapatan</th>
+              <th className="px-3 py-3 text-right">Beban</th>
+              <th className="px-3 py-3 text-right">Laba/Rugi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {props.rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                  Belum ada data per cabang.
+                </td>
+              </tr>
+            ) : (
+              props.rows.map((row) => (
+                <tr key={row.branch_id} className="border-b border-[color:var(--color-border)] last:border-0">
+                  <td className="px-3 py-3">
+                    <div className="font-semibold">{row.branch_name ?? '-'}</div>
+                    <div className="text-xs text-[color:var(--color-text-muted)]">{row.branch_code ?? '-'}</div>
+                  </td>
+                  <td className="px-3 py-3 text-right">{money(row.revenue)}</td>
+                  <td className="px-3 py-3 text-right">{money(row.expense)}</td>
+                  <td className="px-3 py-3 text-right font-semibold">{money(row.net_profit)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ReceivablesTable(props: {
+  rows: AccountingDashboardReceivablesPoint[];
+}) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">Piutang Berjalan</h2>
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Mutasi akun piutang berdasarkan jurnal posted.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="bg-black/5 text-left dark:bg-white/5">
+            <tr>
+              <th className="px-3 py-3">Tanggal</th>
+              <th className="px-3 py-3 text-right">Piutang Masuk</th>
+              <th className="px-3 py-3 text-right">Piutang Berkurang</th>
+              <th className="px-3 py-3 text-right">Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {props.rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                  Belum ada mutasi piutang pada periode ini.
+                </td>
+              </tr>
+            ) : (
+              props.rows.map((row) => (
+                <tr key={row.period} className="border-b border-[color:var(--color-border)] last:border-0">
+                  <td className="px-3 py-3 font-semibold">{formatPeriod(row.period)}</td>
+                  <td className="px-3 py-3 text-right">{money(row.receivables_in)}</td>
+                  <td className="px-3 py-3 text-right">{money(row.receivables_out)}</td>
+                  <td className="px-3 py-3 text-right font-semibold">{money(row.net_receivables)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export default function AccountingDashboardPage() {
+  const isSuperadmin = useAuth.hasRole('Superadmin');
+
+  const [dateFrom, setDateFrom] = useState(firstDayOfMonth());
+  const [dateTo, setDateTo] = useState(todayDate());
+  const [branchId, setBranchId] = useState('');
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [report, setReport] = useState<ReportState>({
+    data: null,
+    meta: null,
+  });
+
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [error, setError] = useState('');
+
+  const summary = report.data?.summary;
+  const charts = report.data?.charts;
+  const warnings = report.data?.warnings;
+
+  const netProfitTone = useMemo(() => {
+    const value = numberValue(summary?.net_profit);
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+
+    return 'default';
+  }, [summary?.net_profit]);
+
+  const balanceTone = summary?.is_balance_sheet_balanced ? 'positive' : 'warning';
+
+  async function loadBranches() {
+    if (!isSuperadmin) return;
+
+    setLoadingBranches(true);
+
+    try {
+      const res = await listBranches({ per_page: 500 });
+      setBranches(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setBranches([]);
+    } finally {
+      setLoadingBranches(false);
+    }
+  }
+
+  async function loadDashboard() {
+    setLoadingReport(true);
+    setError('');
+
+    try {
+      const res = await getAccountingDashboard({
+        date_from: dateFrom,
+        date_to: dateTo,
+        branch_id: isSuperadmin && branchId ? branchId : null,
+        basis: 'posted',
+      });
+
+      setReport({
+        data: res.data,
+        meta: res.meta,
+      });
+    } catch (err) {
+      setReport({
+        data: null,
+        meta: null,
+      });
+      setError(getErrorMessage(err, 'Gagal memuat dashboard akuntansi.'));
+    } finally {
+      setLoadingReport(false);
+    }
+  }
+
+  function submitFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void loadDashboard();
+  }
+
+  useEffect(() => {
+    void loadBranches();
+    void loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!dateFrom || !dateTo) return;
+
+    void loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+        <div>
+          <h1 className="text-2xl font-semibold text-[color:var(--color-text)]">
+            Dashboard Akuntansi
+          </h1>
+          <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+            Ringkasan akuntansi dari jurnal posted, COA, mapping akun, laba rugi, neraca, dan arus kas.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link to="/accounting/journals" className="btn-outline">
+            Jurnal Umum
+          </Link>
+          <Link to="/accounting/profit-loss" className="btn-outline">
+            Laba Rugi
+          </Link>
+          <Link to="/accounting/balance-sheet" className="btn-outline">
+            Neraca
+          </Link>
+        </div>
+      </div>
+
+      <form
+        onSubmit={submitFilter}
+        className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm"
+      >
+        <div className="grid gap-4 md:grid-cols-4">
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Tanggal Awal</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="input"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Tanggal Akhir</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="input"
+            />
+          </label>
+
+          {isSuperadmin ? (
+            <label className="space-y-1">
+              <span className="text-sm font-medium">Cabang</span>
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="input"
+                disabled={loadingBranches}
+              >
+                <option value="">Semua cabang</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.code} - {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          <div className="flex items-end">
+            <button type="submit" className="btn-primary w-full" disabled={loadingReport}>
+              {loadingReport ? 'Memuat...' : 'Tampilkan'}
+            </button>
+          </div>
+        </div>
+
+        {report.meta ? (
+          <div className="mt-3 text-xs text-[color:var(--color-text-muted)]">
+            Basis: jurnal {report.meta.basis.toUpperCase()} · Periode {report.meta.date_from} s/d {report.meta.date_to}
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+      </form>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard title="Total Kas" value={money(summary?.total_cash)} />
+        <SummaryCard title="Total Piutang" value={money(summary?.total_receivables)} />
+        <SummaryCard title="Total Pendapatan" value={money(summary?.total_revenue)} />
+        <SummaryCard title="Total Beban" value={money(summary?.total_expense)} />
+        <SummaryCard title="Laba Bersih" value={money(summary?.net_profit)} tone={netProfitTone} />
+        <SummaryCard title="Total Aset" value={money(summary?.total_assets)} />
+        <SummaryCard title="Total Liabilitas" value={money(summary?.total_liabilities)} />
+        <SummaryCard title="Total Ekuitas" value={money(summary?.total_equities)} />
+        <SummaryCard
+          title="Status Neraca"
+          value={summary?.is_balance_sheet_balanced ? 'Balance' : 'Tidak Balance'}
+          helper={`Selisih: ${money(summary?.balance_difference)}`}
+          tone={balanceTone}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+        <div className="mb-4 flex flex-col justify-between gap-2 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-base font-semibold">Warning Akuntansi</h2>
+            <p className="text-sm text-[color:var(--color-text-muted)]">
+              Validasi cepat untuk mapping, jurnal, draft, dan keseimbangan neraca.
+            </p>
+          </div>
+
+          <div className="text-sm font-semibold">
+            {warnings?.summary.has_warning ? 'Perlu dicek' : 'Aman'}
+          </div>
+        </div>
+
+        {!warnings || warnings.items.length === 0 ? (
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/40 dark:text-green-200">
+            Tidak ada warning utama pada periode dan scope cabang ini.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {warnings.items.map((item) => (
+              <div key={item.key} className={`rounded-xl border px-4 py-3 text-sm ${warningToneClass(item.severity)}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold">{item.label}</div>
+                    <div className="mt-1">{item.message}</div>
+                  </div>
+                  <div className="rounded-full bg-white/70 px-2 py-1 text-xs font-bold dark:bg-black/20">
+                    {item.count}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <RevenueExpenseChart rows={charts?.revenue_vs_expense ?? []} />
+        <CashFlowChart rows={charts?.cash_in_vs_cash_out ?? []} />
+      </div>
+
+      {isSuperadmin ? (
+        <BranchProfitTable rows={charts?.net_profit_by_branch ?? []} />
+      ) : null}
+
+      <ReceivablesTable rows={charts?.receivables_trend ?? []} />
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\AccountMappingForm.tsx
+
+- SHA: `740b2d92597f`  
+- Ukuran: 7 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  createAccountingAccountMapping,
+  getAccountingAccountMapping,
+  listAccountingAccounts,
+  updateAccountingAccountMapping,
+} from '../../api/accounting';
+import { getErrorMessage } from '../../api/client';
+import type {
+  AccountingAccount,
+  AccountingAccountMappingPayload,
+  AccountingEventKey,
+} from '../../types/accounting';
+
+const EVENT_KEYS: AccountingEventKey[] = [
+  'ORDER_PAID_CASH',
+  'ORDER_PAID_QRIS',
+  'ORDER_PAID_TRANSFER',
+  'ORDER_RECEIVABLE_CREATED',
+  'RECEIVABLE_SETTLED_CASH',
+  'EXPENSE_CASH_BOX',
+  'EXPENSE_NON_CASH',
+  'CASH_OPENING_FLOAT',
+  'CASH_WITHDRAWAL',
+  'CASH_ADJUSTMENT_IN',
+  'CASH_ADJUSTMENT_OUT',
+  'ORDER_DISCOUNT',
+];
+
+const initialForm: AccountingAccountMappingPayload = {
+  branch_id: null,
+  event_key: 'ORDER_PAID_CASH',
+  payment_method: '',
+  expense_category: '',
+  debit_account_id: '',
+  credit_account_id: '',
+  is_active: true,
+};
+
+export default function AccountMappingForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEdit = Boolean(id);
+
+  const [form, setForm] = useState<AccountingAccountMappingPayload>(initialForm);
+  const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const pageTitle = useMemo(() => (isEdit ? 'Edit Mapping Akun' : 'Tambah Mapping Akun'), [isEdit]);
+
+  function setValue<K extends keyof AccountingAccountMappingPayload>(
+    key: K,
+    value: AccountingAccountMappingPayload[K],
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function loadAccounts() {
+    const res = await listAccountingAccounts({ per_page: 300, is_active: true });
+    setAccounts(Array.isArray(res.data) ? res.data : []);
+  }
+
+  async function loadDetail(mappingId: string) {
+    setLoading(true);
+
+    try {
+      const res = await getAccountingAccountMapping(mappingId);
+      const row = res.data;
+
+      setForm({
+        branch_id: row.branch_id,
+        event_key: row.event_key,
+        payment_method: row.payment_method ?? '',
+        expense_category: row.expense_category ?? '',
+        debit_account_id: row.debit_account_id,
+        credit_account_id: row.credit_account_id,
+        is_active: row.is_active,
+      });
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal memuat mapping akun.'));
+      navigate('/accounting/account-mappings');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+
+    if (form.debit_account_id === form.credit_account_id) {
+      alert('Akun debit dan kredit tidak boleh sama.');
+      return;
+    }
+
+    setSaving(true);
+
+    const payload: AccountingAccountMappingPayload = {
+      ...form,
+      payment_method: form.payment_method?.trim() || null,
+      expense_category: form.expense_category?.trim() || null,
+    };
+
+    try {
+      if (id) {
+        await updateAccountingAccountMapping(id, payload);
+      } else {
+        await createAccountingAccountMapping(payload);
+      }
+
+      navigate('/accounting/account-mappings');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menyimpan mapping akun.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAccounts();
+
+    if (id) {
+      loadDetail(id);
+    }
+  }, [id]);
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{pageTitle}</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Pilih pasangan debit dan kredit untuk event transaksi existing.
+          </p>
+        </div>
+
+        <Link to="/accounting/account-mappings" className="btn-outline">
+          Kembali
+        </Link>
+      </div>
+
+      <form
+        onSubmit={submit}
+        className="space-y-4 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5"
+      >
+        {loading ? (
+          <div className="text-sm text-[color:var(--color-text-muted)]">Memuat data...</div>
+        ) : null}
+
+        <label className="space-y-1">
+          <span className="text-sm font-medium">Event Transaksi</span>
+          <select
+            value={form.event_key}
+            onChange={(e) => setValue('event_key', e.target.value as AccountingEventKey)}
+            className="input"
+          >
+            {EVENT_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {key}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Metode Bayar</span>
+            <input
+              value={form.payment_method ?? ''}
+              onChange={(e) => setValue('payment_method', e.target.value)}
+              className="input"
+              placeholder="Contoh: CASH / QRIS / TRANSFER"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Kategori Expense</span>
+            <input
+              value={form.expense_category ?? ''}
+              onChange={(e) => setValue('expense_category', e.target.value)}
+              className="input"
+              placeholder="Opsional"
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Akun Debit</span>
+            <select
+              value={form.debit_account_id}
+              onChange={(e) => setValue('debit_account_id', e.target.value)}
+              className="input"
+              required
+            >
+              <option value="">Pilih akun debit</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.code} - {account.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Akun Kredit</span>
+            <select
+              value={form.credit_account_id}
+              onChange={(e) => setValue('credit_account_id', e.target.value)}
+              className="input"
+              required
+            >
+              <option value="">Pilih akun kredit</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.code} - {account.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] p-3 text-sm">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => setValue('is_active', e.target.checked)}
+          />
+          Mapping aktif
+        </label>
+
+        <div className="flex justify-end gap-2 border-t border-[color:var(--color-border)] pt-4">
+          <Link to="/accounting/account-mappings" className="btn-outline">
+            Batal
+          </Link>
+
+          <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\AccountMappingIndex.tsx
+
+- SHA: `62c042653055`  
+- Ukuran: 6 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  deleteAccountingAccountMapping,
+  listAccountingAccountMappings,
+} from '../../api/accounting';
+import { getErrorMessage } from '../../api/client';
+import type { AccountingAccountMapping } from '../../types/accounting';
+
+export default function AccountMappingIndex() {
+  const [rows, setRows] = useState<AccountingAccountMapping[]>([]);
+  const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await listAccountingAccountMappings({
+        q: q || undefined,
+        per_page: 100,
+      });
+
+      setRows(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat mapping akun.'));
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (!confirm('Hapus mapping akun ini?')) return;
+
+    try {
+      await deleteAccountingAccountMapping(id);
+      await load();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus mapping akun.'));
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(load, 350);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Mapping Akun</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Mapping ini menjadi dasar posting jurnal otomatis pada tahap berikutnya.
+          </p>
+        </div>
+
+        <Link to="/accounting/account-mappings/new" className="btn-primary">
+          Tambah Mapping
+        </Link>
+      </div>
+
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="input"
+          placeholder="Cari event, metode bayar, atau kategori expense..."
+        />
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-[color:var(--color-border)] bg-black/5">
+              <tr>
+                <th className="px-4 py-3 text-left">Event</th>
+                <th className="px-4 py-3 text-left">Metode</th>
+                <th className="px-4 py-3 text-left">Kategori</th>
+                <th className="px-4 py-3 text-left">Debit</th>
+                <th className="px-4 py-3 text-left">Kredit</th>
+                <th className="px-4 py-3 text-left">Scope</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                    Memuat data...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                    Belum ada mapping akun.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-[color:var(--color-border)] last:border-0">
+                    <td className="px-4 py-3 font-semibold">{row.event_key}</td>
+                    <td className="px-4 py-3">{row.payment_method ?? '-'}</td>
+                    <td className="px-4 py-3">{row.expense_category ?? '-'}</td>
+                    <td className="px-4 py-3">
+                      {row.debit_account
+                        ? `${row.debit_account.code} - ${row.debit_account.name}`
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.credit_account
+                        ? `${row.credit_account.code} - ${row.credit_account.name}`
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3">{row.branch?.name ?? 'Global'}</td>
+                    <td className="px-4 py-3">{row.is_active ? 'Aktif' : 'Nonaktif'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex gap-2">
+                        <Link
+                          to={`/accounting/account-mappings/${row.id}/edit`}
+                          className="rounded-lg border border-[color:var(--color-border)] px-3 py-1.5 text-xs font-medium"
+                        >
+                          Edit
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => remove(row.id)}
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\BalanceSheetPage.tsx
+
+- SHA: `39e848274099`  
+- Ukuran: 14 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { getAccountingBalanceSheet } from '../../api/accounting';
+import { listBranches } from '../../api/branches';
+import { getErrorMessage } from '../../api/client';
+import type {
+    AccountingBalanceSheetAccountRow,
+    AccountingBalanceSheetData,
+    AccountingBalanceSheetMeta,
+} from '../../types/accounting';
+import type { Branch } from '../../types/branches';
+
+function todayDate(): string {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function firstDateOfMonth(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+
+    return `${year}-${month}-01`;
+}
+
+function money(value: number | string | null | undefined): string {
+    const amount = Number(value ?? 0);
+
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function numberValue(value: number | string | null | undefined): number {
+    return Number(value ?? 0);
+}
+
+type ReportState = {
+    data: AccountingBalanceSheetData | null;
+    meta: AccountingBalanceSheetMeta | null;
+};
+
+function AccountSection(props: {
+    title: string;
+    rows: AccountingBalanceSheetAccountRow[];
+    totalLabel: string;
+    total: number;
+}) {
+    return (
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-sm">
+            <div className="border-b border-[color:var(--color-border)] px-5 py-4">
+                <h2 className="text-base font-semibold text-[color:var(--color-text-default)]">
+                    {props.title}
+                </h2>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                    <thead className="bg-black/[0.02] text-xs uppercase tracking-wide text-[color:var(--color-text-muted)] dark:bg-white/[0.04]">
+                        <tr>
+                            <th className="px-5 py-3 text-left">Kode</th>
+                            <th className="px-5 py-3 text-left">Nama Akun</th>
+                            <th className="px-5 py-3 text-right">Debit</th>
+                            <th className="px-5 py-3 text-right">Kredit</th>
+                            <th className="px-5 py-3 text-right">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {props.rows.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-5 py-8 text-center text-[color:var(--color-text-muted)]">
+                                    Belum ada data akun.
+                                </td>
+                            </tr>
+                        ) : (
+                            props.rows.map((row) => (
+                                <tr key={`${row.code}-${row.name}`} className="border-b border-[color:var(--color-border)] last:border-0">
+                                    <td className="px-5 py-3 font-semibold">{row.code}</td>
+                                    <td className="px-5 py-3">{row.name}</td>
+                                    <td className="px-5 py-3 text-right">{money(row.total_debit)}</td>
+                                    <td className="px-5 py-3 text-right">{money(row.total_credit)}</td>
+                                    <td className="px-5 py-3 text-right font-semibold">{money(row.balance)}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                    <tfoot>
+                        <tr className="border-t border-[color:var(--color-border)] bg-black/[0.02] dark:bg-white/[0.04]">
+                            <td colSpan={4} className="px-5 py-3 font-semibold">
+                                {props.totalLabel}
+                            </td>
+                            <td className="px-5 py-3 text-right font-bold">
+                                {money(props.total)}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+export default function BalanceSheetPage() {
+    const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
+    const [dateTo, setDateTo] = useState(todayDate());
+    const [branchId, setBranchId] = useState('');
+
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [report, setReport] = useState<ReportState>({
+        data: null,
+        meta: null,
+    });
+
+    const [loading, setLoading] = useState(false);
+    const [loadingBranches, setLoadingBranches] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const summary = report.data?.summary;
+
+    const statusLabel = useMemo(() => {
+        if (!summary) return 'Belum dimuat';
+
+        return summary.is_balanced ? 'Neraca Seimbang' : 'Neraca Belum Seimbang';
+    }, [summary]);
+
+    const statusClassName = useMemo(() => {
+        if (!summary) {
+            return 'border-gray-200 bg-gray-50 text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200';
+        }
+
+        if (summary.is_balanced) {
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200';
+        }
+
+        return 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200';
+    }, [summary]);
+
+    async function loadBranches() {
+        try {
+            setLoadingBranches(true);
+            const res = await listBranches({ per_page: 100 });
+            setBranches(res.data ?? []);
+        } catch {
+            setBranches([]);
+        } finally {
+            setLoadingBranches(false);
+        }
+    }
+
+    async function loadReport() {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const res = await getAccountingBalanceSheet({
+                date_from: dateFrom,
+                date_to: dateTo,
+                branch_id: branchId || null,
+            });
+
+            setReport({
+                data: res.data,
+                meta: res.meta,
+            });
+        } catch (err) {
+            setReport({
+                data: null,
+                meta: null,
+            });
+            setError(getErrorMessage(err, 'Gagal memuat Neraca.'));
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        loadBranches();
+    }, []);
+
+    useEffect(() => {
+        if (!dateFrom || !dateTo) {
+            return;
+        }
+
+        loadReport();
+    }, [dateFrom, dateTo, branchId]);
+
+    function submitFilter(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        if (dateTo < dateFrom) {
+            setError('Tanggal akhir harus sama atau setelah tanggal awal.');
+            return;
+        }
+
+        loadReport();
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-default)]">
+                        Neraca
+                    </h1>
+                    <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+                        Posisi aset, liabilitas, ekuitas, dan laba tahun berjalan berdasarkan jurnal posted.
+                    </p>
+                </div>
+
+                <div className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${statusClassName}`}>
+                    {statusLabel}
+                </div>
+            </div>
+
+            <form
+                onSubmit={submitFilter}
+                className="grid gap-4 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm md:grid-cols-[1fr_1fr_1fr_auto]"
+            >
+                <label className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Dari Tanggal
+                    </span>
+                    <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(event) => setDateFrom(event.target.value)}
+                        className="input"
+                        required
+                    />
+                </label>
+
+                <label className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Sampai Tanggal
+                    </span>
+                    <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(event) => setDateTo(event.target.value)}
+                        className="input"
+                        required
+                    />
+                </label>
+
+                <label className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Cabang
+                    </span>
+                    <select
+                        value={branchId}
+                        onChange={(event) => setBranchId(event.target.value)}
+                        className="input"
+                        disabled={loadingBranches}
+                    >
+                        <option value="">Semua / sesuai akses</option>
+                        {branches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                                {branch.name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <div className="flex items-end">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
+                    >
+                        {loading ? 'Memuat...' : 'Terapkan'}
+                    </button>
+                </div>
+            </form>
+
+            {error ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+                    {error}
+                </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-4">
+                <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Total Aset
+                    </div>
+                    <div className="mt-2 text-xl font-bold">{money(summary?.total_assets)}</div>
+                </div>
+
+                <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Total Liabilitas
+                    </div>
+                    <div className="mt-2 text-xl font-bold">{money(summary?.total_liabilities)}</div>
+                </div>
+
+                <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Total Ekuitas
+                    </div>
+                    <div className="mt-2 text-xl font-bold">{money(summary?.total_equities)}</div>
+                </div>
+
+                <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                        Selisih
+                    </div>
+                    <div className="mt-2 text-xl font-bold">{money(summary?.difference)}</div>
+                </div>
+            </div>
+
+            {summary && !summary.is_balanced ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                    Neraca belum seimbang. Periksa jurnal posted, mapping akun, dan apakah seluruh transaksi sudah diposting ke jurnal.
+                    Selisih saat ini: <strong>{money(numberValue(summary.difference))}</strong>.
+                </div>
+            ) : null}
+
+            <div className="grid gap-6 xl:grid-cols-2">
+                <AccountSection
+                    title="Aset"
+                    rows={report.data?.assets ?? []}
+                    totalLabel="Total Aset"
+                    total={numberValue(summary?.total_assets)}
+                />
+
+                <div className="space-y-6">
+                    <AccountSection
+                        title="Liabilitas"
+                        rows={report.data?.liabilities ?? []}
+                        totalLabel="Total Liabilitas"
+                        total={numberValue(summary?.total_liabilities)}
+                    />
+
+                    <AccountSection
+                        title="Ekuitas"
+                        rows={report.data?.equities ?? []}
+                        totalLabel="Total Ekuitas + Laba Tahun Berjalan"
+                        total={numberValue(summary?.total_equities)}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+</details>
+
+### src\pages\accounting\CashFlowPage.tsx
+
+- SHA: `756fc529a9d0`  
+- Ukuran: 13 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { getAccountingCashFlow } from '../../api/accounting';
+import { listBranches } from '../../api/branches';
+import { getErrorMessage } from '../../api/client';
+import type {
+  AccountingCashFlowActivity,
+  AccountingCashFlowData,
+  AccountingCashFlowItem,
+  AccountingCashFlowMeta,
+} from '../../types/accounting';
+import type { Branch } from '../../types/branches';
+import { useAuth } from '../../store/useAuth';
+import { todayLocalYMD } from '../../utils/date';
+import { toIDR } from '../../utils/money';
+
+function firstDateOfMonth(): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+
+  return `${year}-${month}-01`;
+}
+
+function num(value: string | number | null | undefined): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDate(value?: string | null): string {
+  if (!value) return '-';
+  return value.slice(0, 10);
+}
+
+type ReportState = {
+  data: AccountingCashFlowData | null;
+  meta: AccountingCashFlowMeta | null;
+};
+
+function SummaryCard(props: {
+  label: string;
+  value: number;
+  tone?: 'default' | 'positive' | 'negative';
+}) {
+  const toneClass =
+    props.tone === 'positive'
+      ? 'text-emerald-600'
+      : props.tone === 'negative'
+        ? 'text-red-600'
+        : 'text-[color:var(--color-text-default)]';
+
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-1)]">
+      <div className="text-sm text-[color:var(--color-text-muted)]">{props.label}</div>
+      <div className={`mt-2 text-xl font-bold ${toneClass}`}>{toIDR(props.value)}</div>
+    </div>
+  );
+}
+
+function ActivityTable(props: {
+  activity: AccountingCashFlowActivity;
+  emptyText: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[var(--shadow-1)]">
+      <div className="flex flex-col gap-1 border-b border-[color:var(--color-border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold">{props.activity.label}</h2>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Mutasi akun kas/bank dari jurnal posted.
+          </p>
+        </div>
+
+        <div className="text-right">
+          <div className="text-xs text-[color:var(--color-text-muted)]">Total</div>
+          <div className="text-base font-bold">{toIDR(num(props.activity.total))}</div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-[color:var(--color-bg-muted)] text-left">
+            <tr>
+              <th className="px-3 py-3 font-semibold">Tanggal</th>
+              <th className="px-3 py-3 font-semibold">Jurnal</th>
+              <th className="px-3 py-3 font-semibold">Keterangan</th>
+              <th className="px-3 py-3 font-semibold">Akun Kas</th>
+              <th className="px-3 py-3 text-right font-semibold">Kas Masuk</th>
+              <th className="px-3 py-3 text-right font-semibold">Kas Keluar</th>
+              <th className="px-3 py-3 text-right font-semibold">Net</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {props.activity.items.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                  {props.emptyText}
+                </td>
+              </tr>
+            ) : (
+              props.activity.items.map((item: AccountingCashFlowItem) => (
+                <tr key={item.id} className="border-b border-[color:var(--color-border)] last:border-0">
+                  <td className="px-3 py-3">{formatDate(item.journal_date)}</td>
+                  <td className="px-3 py-3">
+                    <div className="font-medium">{item.journal_no ?? '-'}</div>
+                    <div className="text-xs text-[color:var(--color-text-muted)]">
+                      {item.source_no ?? item.event_key ?? '-'}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div>{item.description || '-'}</div>
+                    {item.branch?.name ? (
+                      <div className="text-xs text-[color:var(--color-text-muted)]">
+                        {item.branch.code ? `${item.branch.code} - ` : ''}
+                        {item.branch.name}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-3">
+                    {item.cash_account
+                      ? `${item.cash_account.code ?? '-'} - ${item.cash_account.name ?? '-'}`
+                      : '-'}
+                  </td>
+                  <td className="px-3 py-3 text-right">{toIDR(num(item.cash_in))}</td>
+                  <td className="px-3 py-3 text-right">{toIDR(num(item.cash_out))}</td>
+                  <td className="px-3 py-3 text-right font-semibold">{toIDR(num(item.net_amount))}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export default function CashFlowPage() {
+  const isSuperadmin = useAuth.hasRole('Superadmin');
+
+  const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
+  const [dateTo, setDateTo] = useState(todayLocalYMD());
+  const [branchId, setBranchId] = useState('');
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [report, setReport] = useState<ReportState>({
+    data: null,
+    meta: null,
+  });
+
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [error, setError] = useState('');
+
+  const summary = report.data?.summary;
+
+  const netCashFlowTone = useMemo(() => {
+    const value = num(summary?.net_cash_flow);
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+    return 'default';
+  }, [summary?.net_cash_flow]);
+
+  async function loadBranches() {
+    if (!isSuperadmin) return;
+
+    setLoadingBranches(true);
+    setError('');
+
+    try {
+      const res = await listBranches({ per_page: 500 });
+      setBranches(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat data cabang.'));
+    } finally {
+      setLoadingBranches(false);
+    }
+  }
+
+  async function loadReport() {
+    setLoadingReport(true);
+    setError('');
+
+    try {
+      const res = await getAccountingCashFlow({
+        date_from: dateFrom,
+        date_to: dateTo,
+        branch_id: isSuperadmin && branchId ? branchId : undefined,
+        basis: 'posted',
+      });
+
+      setReport({
+        data: res.data,
+        meta: res.meta,
+      });
+    } catch (err) {
+      setReport({
+        data: null,
+        meta: null,
+      });
+      setError(getErrorMessage(err, 'Gagal memuat laporan arus kas.'));
+    } finally {
+      setLoadingReport(false);
+    }
+  }
+
+  function submitFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void loadReport();
+  }
+
+  useEffect(() => {
+    void loadBranches();
+    void loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-1)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-xl font-bold">Arus Kas</h1>
+            <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+              Laporan kas masuk, kas keluar, dan saldo kas berdasarkan jurnal akuntansi posted.
+            </p>
+          </div>
+
+          <form onSubmit={submitFilter} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="space-y-1">
+              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                Tanggal awal
+              </span>
+              <input
+                type="date"
+                className="input"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                Tanggal akhir
+              </span>
+              <input
+                type="date"
+                className="input"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </label>
+
+            {isSuperadmin ? (
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                  Cabang
+                </span>
+                <select
+                  className="input"
+                  value={branchId}
+                  disabled={loadingBranches}
+                  onChange={(event) => setBranchId(event.target.value)}
+                >
+                  <option value="">Semua cabang</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.code ? `${branch.code} - ` : ''}
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="btn-primary w-full disabled:opacity-60"
+                disabled={loadingReport}
+              >
+                {loadingReport ? 'Memuat...' : 'Terapkan'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <SummaryCard label="Saldo Awal Kas" value={num(summary?.opening_balance)} />
+        <SummaryCard label="Total Kas Masuk" value={num(summary?.total_cash_in)} tone="positive" />
+        <SummaryCard label="Total Kas Keluar" value={num(summary?.total_cash_out)} tone="negative" />
+        <SummaryCard label="Arus Kas Bersih" value={num(summary?.net_cash_flow)} tone={netCashFlowTone} />
+        <SummaryCard label="Saldo Akhir Kas" value={num(summary?.ending_balance)} />
+      </div>
+
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 text-sm text-[color:var(--color-text-muted)] shadow-[var(--shadow-1)]">
+        Basis laporan: <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.basis ?? 'POSTED'}</span>
+        {' '}· Sumber: <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.source ?? 'accounting_journal_lines'}</span>
+        {' '}· Periode: <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.date_from ?? dateFrom}</span>
+        {' '}s/d <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.date_to ?? dateTo}</span>
+      </div>
+
+      {loadingReport ? (
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-8 text-center text-sm text-[color:var(--color-text-muted)] shadow-[var(--shadow-1)]">
+          Memuat laporan arus kas...
+        </div>
+      ) : (
+        <>
+          <ActivityTable
+            activity={
+              report.data?.operating_activities ?? {
+                label: 'Aktivitas Operasional',
+                items: [],
+                total: 0,
+              }
+            }
+            emptyText="Belum ada aktivitas operasional pada periode ini."
+          />
+
+          <ActivityTable
+            activity={
+              report.data?.investing_activities ?? {
+                label: 'Aktivitas Investasi',
+                items: [],
+                total: 0,
+              }
+            }
+            emptyText="Belum ada aktivitas investasi pada periode ini."
+          />
+
+          <ActivityTable
+            activity={
+              report.data?.financing_activities ?? {
+                label: 'Aktivitas Pendanaan',
+                items: [],
+                total: 0,
+              }
+            }
+            emptyText="Belum ada aktivitas pendanaan pada periode ini."
+          />
+        </>
+      )}
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\JournalDetail.tsx
+
+- SHA: `ace2c7e1d1f7`  
+- Ukuran: 6 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  getAccountingJournal,
+  postAccountingJournal,
+  voidAccountingJournal,
+} from '../../api/accounting';
+import { getErrorMessage } from '../../api/client';
+import type { AccountingJournalEntry } from '../../types/accounting';
+
+function money(value: string | number | null | undefined): string {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+}
+
+function shortDate(value?: string | null): string {
+  if (!value) return '-';
+
+  return String(value).slice(0, 10);
+}
+
+export default function JournalDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [journal, setJournal] = useState<AccountingJournalEntry | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    if (!id) return;
+
+    setLoading(true);
+
+    try {
+      const res = await getAccountingJournal(id);
+      setJournal(res.data);
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal memuat jurnal.'));
+      navigate('/accounting/journals');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function postJournal() {
+    if (!journal) return;
+
+    if (!confirm(`Posting jurnal ${journal.journal_no}?`)) {
+      return;
+    }
+
+    try {
+      await postAccountingJournal(journal.id);
+      await load();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal posting jurnal.'));
+    }
+  }
+
+  async function voidJournal() {
+    if (!journal) return;
+
+    const reason = prompt(`Alasan void jurnal ${journal.journal_no}:`);
+
+    if (!reason || !reason.trim()) {
+      return;
+    }
+
+    try {
+      await voidAccountingJournal(journal.id, reason.trim());
+      await load();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal void jurnal.'));
+    }
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading || !journal) {
+    return (
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6">
+        Memuat jurnal...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{journal.journal_no}</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Detail jurnal umum dan baris debit-kredit.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link to="/accounting/journals" className="btn-outline">
+            Kembali
+          </Link>
+
+          {journal.status === 'DRAFT' && journal.source_type === 'manual' ? (
+            <Link to={`/accounting/journals/${journal.id}/edit`} className="btn-outline">
+              Edit
+            </Link>
+          ) : null}
+
+          {journal.status === 'DRAFT' ? (
+            <button type="button" onClick={postJournal} className="btn-primary">
+              Post
+            </button>
+          ) : null}
+
+          {journal.status !== 'VOID' ? (
+            <button type="button" onClick={voidJournal} className="btn-outline text-red-600">
+              Void
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-4 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 md:grid-cols-4">
+        <div>
+          <div className="text-xs text-[color:var(--color-text-muted)]">Tanggal</div>
+          <div className="font-semibold">{shortDate(journal.journal_date)}</div>
+        </div>
+
+        <div>
+          <div className="text-xs text-[color:var(--color-text-muted)]">Cabang</div>
+          <div className="font-semibold">{journal.branch?.name ?? '-'}</div>
+        </div>
+
+        <div>
+          <div className="text-xs text-[color:var(--color-text-muted)]">Sumber</div>
+          <div className="font-semibold">{journal.source_type ?? '-'}</div>
+        </div>
+
+        <div>
+          <div className="text-xs text-[color:var(--color-text-muted)]">Status</div>
+          <div className="font-semibold">{journal.status}</div>
+        </div>
+
+        <div className="md:col-span-4">
+          <div className="text-xs text-[color:var(--color-text-muted)]">Deskripsi</div>
+          <div className="font-semibold">{journal.description ?? '-'}</div>
+        </div>
+
+        {journal.void_reason ? (
+          <div className="md:col-span-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            Alasan void: {journal.void_reason}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-[900px] w-full text-sm">
+            <thead className="bg-black/[0.03] text-left text-xs uppercase tracking-wide text-[color:var(--color-text-muted)]">
+              <tr>
+                <th className="px-4 py-3">Akun</th>
+                <th className="px-4 py-3">Deskripsi</th>
+                <th className="px-4 py-3 text-right">Debit</th>
+                <th className="px-4 py-3 text-right">Kredit</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {(journal.lines ?? []).map((line) => (
+                <tr key={line.id} className="border-b border-[color:var(--color-border)] last:border-0">
+                  <td className="px-4 py-3 font-semibold">
+                    {line.account ? `${line.account.code} - ${line.account.name}` : line.account_id}
+                  </td>
+                  <td className="px-4 py-3">{line.description ?? '-'}</td>
+                  <td className="px-4 py-3 text-right">{money(line.debit)}</td>
+                  <td className="px-4 py-3 text-right">{money(line.credit)}</td>
+                </tr>
+              ))}
+            </tbody>
+
+            <tfoot className="bg-black/[0.02] font-semibold">
+              <tr>
+                <td colSpan={2} className="px-4 py-3 text-right">
+                  Total
+                </td>
+                <td className="px-4 py-3 text-right">{money(journal.total_debit)}</td>
+                <td className="px-4 py-3 text-right">{money(journal.total_credit)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\JournalForm.tsx
+
+- SHA: `cb12bf1739af`  
+- Ukuran: 11 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  createAccountingJournal,
+  getAccountingJournal,
+  listAccountingAccounts,
+  updateAccountingJournal,
+} from '../../api/accounting';
+import { getErrorMessage } from '../../api/client';
+import type {
+  AccountingAccount,
+  AccountingJournalLinePayload,
+  AccountingJournalPayload,
+} from '../../types/accounting';
+
+type JournalLineForm = AccountingJournalLinePayload & {
+  row_id: string;
+};
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function newLine(): JournalLineForm {
+  return {
+    row_id: crypto.randomUUID(),
+    account_id: '',
+    description: '',
+    debit: 0,
+    credit: 0,
+  };
+}
+
+const initialForm: AccountingJournalPayload = {
+  branch_id: null,
+  journal_date: today(),
+  description: '',
+  lines: [],
+};
+
+function money(value: number): string {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+export default function JournalForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEdit = Boolean(id);
+
+  const [form, setForm] = useState<AccountingJournalPayload>(initialForm);
+  const [lines, setLines] = useState<JournalLineForm[]>([newLine(), newLine()]);
+  const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const pageTitle = useMemo(() => (isEdit ? 'Edit Jurnal' : 'Tambah Jurnal'), [isEdit]);
+
+  const totalDebit = useMemo(
+    () => lines.reduce((sum, line) => sum + Number(line.debit || 0), 0),
+    [lines]
+  );
+
+  const totalCredit = useMemo(
+    () => lines.reduce((sum, line) => sum + Number(line.credit || 0), 0),
+    [lines]
+  );
+
+  const isBalance = totalDebit > 0 && totalCredit > 0 && totalDebit === totalCredit;
+
+  function setValue<K extends keyof AccountingJournalPayload>(key: K, value: AccountingJournalPayload[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateLine<K extends keyof JournalLineForm>(rowId: string, key: K, value: JournalLineForm[K]) {
+    setLines((prev) =>
+      prev.map((line) => {
+        if (line.row_id !== rowId) return line;
+
+        const next = { ...line, [key]: value };
+
+        if (key === 'debit' && Number(value || 0) > 0) {
+          next.credit = 0;
+        }
+
+        if (key === 'credit' && Number(value || 0) > 0) {
+          next.debit = 0;
+        }
+
+        return next;
+      })
+    );
+  }
+
+  function addLine() {
+    setLines((prev) => [...prev, newLine()]);
+  }
+
+  function removeLine(rowId: string) {
+    setLines((prev) => {
+      if (prev.length <= 2) return prev;
+      return prev.filter((line) => line.row_id !== rowId);
+    });
+  }
+
+  async function loadOptions() {
+    const res = await listAccountingAccounts({ per_page: 300, is_active: true });
+    setAccounts(Array.isArray(res.data) ? res.data : []);
+  }
+
+  async function loadDetail(journalId: string) {
+    setLoading(true);
+
+    try {
+      const res = await getAccountingJournal(journalId);
+      const row = res.data;
+
+      if (row.status !== 'DRAFT') {
+        alert('Hanya jurnal DRAFT yang dapat diedit.');
+        navigate(`/accounting/journals/${row.id}`);
+        return;
+      }
+
+      if (row.source_type !== 'manual') {
+        alert('Jurnal otomatis tidak boleh diedit manual.');
+        navigate(`/accounting/journals/${row.id}`);
+        return;
+      }
+
+      setForm({
+        branch_id: row.branch_id,
+        journal_date: String(row.journal_date).slice(0, 10),
+        description: row.description ?? '',
+        lines: [],
+      });
+
+      setLines(
+        (row.lines ?? []).map((line) => ({
+          row_id: crypto.randomUUID(),
+          account_id: line.account_id,
+          description: line.description ?? '',
+          debit: Number(line.debit ?? 0),
+          credit: Number(line.credit ?? 0),
+        }))
+      );
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal memuat jurnal.'));
+      navigate('/accounting/journals');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+
+    const payload: AccountingJournalPayload = {
+      ...form,
+      lines: lines.map((line) => ({
+        account_id: line.account_id,
+        description: line.description || null,
+        debit: Number(line.debit || 0),
+        credit: Number(line.credit || 0),
+      })),
+    };
+
+    if (!isBalance) {
+      alert('Total debit harus sama dengan total kredit dan lebih dari nol.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      if (isEdit && id) {
+        await updateAccountingJournal(id, payload);
+      } else {
+        await createAccountingJournal(payload);
+      }
+
+      navigate('/accounting/journals');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menyimpan jurnal.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadOptions();
+
+    if (id) {
+      void loadDetail(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6">
+        Memuat jurnal...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">{pageTitle}</h1>
+        <p className="text-sm text-[color:var(--color-text-muted)]">
+          Input jurnal manual dengan minimal dua baris dan total debit-kredit harus balance.
+        </p>
+      </div>
+
+      <form onSubmit={submit} className="space-y-5 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Tanggal Jurnal</span>
+            <input
+              type="date"
+              value={form.journal_date}
+              onChange={(e) => setValue('journal_date', e.target.value)}
+              className="input"
+              required
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Deskripsi</span>
+            <input
+              value={form.description ?? ''}
+              onChange={(e) => setValue('description', e.target.value)}
+              className="input"
+              placeholder="Contoh: Penyesuaian saldo awal"
+            />
+          </label>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)]">
+          <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
+            <div>
+              <h2 className="font-semibold">Detail Debit Kredit</h2>
+              <p className="text-xs text-[color:var(--color-text-muted)]">
+                Satu baris hanya boleh berisi debit atau kredit.
+              </p>
+            </div>
+
+            <button type="button" onClick={addLine} className="btn-outline">
+              Tambah Baris
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-[900px] w-full text-sm">
+              <thead className="bg-black/[0.03] text-left text-xs uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                <tr>
+                  <th className="px-4 py-3">Akun</th>
+                  <th className="px-4 py-3">Deskripsi Line</th>
+                  <th className="px-4 py-3 text-right">Debit</th>
+                  <th className="px-4 py-3 text-right">Kredit</th>
+                  <th className="px-4 py-3 text-right">Aksi</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {lines.map((line) => (
+                  <tr key={line.row_id} className="border-b border-[color:var(--color-border)] last:border-0">
+                    <td className="px-4 py-3">
+                      <select
+                        value={line.account_id}
+                        onChange={(e) => updateLine(line.row_id, 'account_id', e.target.value)}
+                        className="input"
+                        required
+                      >
+                        <option value="">Pilih akun</option>
+                        {accounts.map((account) => (
+                          <option key={account.id} value={account.id}>
+                            {account.code} - {account.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <input
+                        value={line.description ?? ''}
+                        onChange={(e) => updateLine(line.row_id, 'description', e.target.value)}
+                        className="input"
+                        placeholder="Opsional"
+                      />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        value={line.debit ?? 0}
+                        onChange={(e) => updateLine(line.row_id, 'debit', Number(e.target.value || 0))}
+                        className="input text-right"
+                        min={0}
+                      />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        value={line.credit ?? 0}
+                        onChange={(e) => updateLine(line.row_id, 'credit', Number(e.target.value || 0))}
+                        className="input text-right"
+                        min={0}
+                      />
+                    </td>
+
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => removeLine(line.row_id)}
+                        disabled={lines.length <= 2}
+                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 disabled:opacity-40"
+                      >
+                        Hapus
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+
+              <tfoot className="bg-black/[0.02] font-semibold">
+                <tr>
+                  <td colSpan={2} className="px-4 py-3 text-right">
+                    Total
+                  </td>
+                  <td className="px-4 py-3 text-right">{money(totalDebit)}</td>
+                  <td className="px-4 py-3 text-right">{money(totalCredit)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <span className={isBalance ? 'text-green-700' : 'text-red-600'}>
+                      {isBalance ? 'Balance' : 'Belum balance'}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[color:var(--color-border)] pt-4">
+          <Link to="/accounting/journals" className="btn-outline">
+            Batal
+          </Link>
+
+          <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
+            {saving ? 'Menyimpan...' : 'Simpan Draft'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\JournalIndex.tsx
+
+- SHA: `1d97f2bfafff`  
+- Ukuran: 9 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  listAccountingJournals,
+  postAccountingJournal,
+  voidAccountingJournal,
+} from '../../api/accounting';
+import { getErrorMessage } from '../../api/client';
+import type { AccountingJournalEntry, AccountingJournalStatus } from '../../types/accounting';
+
+function money(value: string | number | null | undefined): string {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+}
+
+function shortDate(value?: string | null): string {
+  if (!value) return '-';
+
+  return String(value).slice(0, 10);
+}
+
+const STATUS_LABEL: Record<AccountingJournalStatus, string> = {
+  DRAFT: 'Draft',
+  POSTED: 'Posted',
+  VOID: 'Void',
+};
+
+export default function JournalIndex() {
+  const [rows, setRows] = useState<AccountingJournalEntry[]>([]);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState<AccountingJournalStatus | ''>('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await listAccountingJournals({
+        q: q || undefined,
+        status,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        per_page: 100,
+      });
+
+      setRows(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat jurnal.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function postJournal(row: AccountingJournalEntry) {
+    if (!confirm(`Posting jurnal ${row.journal_no}? Setelah posted, jurnal tidak bisa diedit langsung.`)) {
+      return;
+    }
+
+    try {
+      await postAccountingJournal(row.id);
+      await load();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal posting jurnal.'));
+    }
+  }
+
+  async function voidJournal(row: AccountingJournalEntry) {
+    const reason = prompt(`Alasan void jurnal ${row.journal_no}:`);
+
+    if (!reason || !reason.trim()) {
+      return;
+    }
+
+    try {
+      await voidAccountingJournal(row.id, reason.trim());
+      await load();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal void jurnal.'));
+    }
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Jurnal Umum</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Kelola jurnal manual, lihat jurnal otomatis, lalu lakukan posting atau void.
+          </p>
+        </div>
+
+        <Link to="/accounting/journals/new" className="btn-primary">
+          Tambah Jurnal
+        </Link>
+      </div>
+
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+        <div className="grid gap-3 md:grid-cols-5">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="input md:col-span-2"
+            placeholder="Cari no jurnal, referensi, deskripsi..."
+          />
+
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as AccountingJournalStatus | '')}
+            className="input"
+          >
+            <option value="">Semua Status</option>
+            <option value="DRAFT">Draft</option>
+            <option value="POSTED">Posted</option>
+            <option value="VOID">Void</option>
+          </select>
+
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="input"
+          />
+
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="input"
+          />
+        </div>
+
+        <div className="mt-3 flex justify-end">
+          <button type="button" onClick={load} disabled={loading} className="btn-outline disabled:opacity-60">
+            {loading ? 'Memuat...' : 'Terapkan Filter'}
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-[1100px] w-full text-sm">
+            <thead className="bg-black/[0.03] text-left text-xs uppercase tracking-wide text-[color:var(--color-text-muted)]">
+              <tr>
+                <th className="px-4 py-3">Tanggal</th>
+                <th className="px-4 py-3">No Jurnal</th>
+                <th className="px-4 py-3">Cabang</th>
+                <th className="px-4 py-3">Sumber</th>
+                <th className="px-4 py-3">Deskripsi</th>
+                <th className="px-4 py-3 text-right">Debit</th>
+                <th className="px-4 py-3 text-right">Kredit</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                    Memuat data...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                    Belum ada jurnal.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-[color:var(--color-border)] last:border-0">
+                    <td className="px-4 py-3">{shortDate(row.journal_date)}</td>
+                    <td className="px-4 py-3 font-semibold">{row.journal_no}</td>
+                    <td className="px-4 py-3">{row.branch?.name ?? '-'}</td>
+                    <td className="px-4 py-3">{row.source_type ?? '-'}</td>
+                    <td className="px-4 py-3">{row.description ?? '-'}</td>
+                    <td className="px-4 py-3 text-right">{money(row.total_debit)}</td>
+                    <td className="px-4 py-3 text-right">{money(row.total_credit)}</td>
+                    <td className="px-4 py-3">{STATUS_LABEL[row.status] ?? row.status}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex flex-wrap justify-end gap-2">
+                        <Link
+                          to={`/accounting/journals/${row.id}`}
+                          className="rounded-lg border border-[color:var(--color-border)] px-3 py-1.5 text-xs font-medium"
+                        >
+                          Detail
+                        </Link>
+
+                        {row.status === 'DRAFT' && row.source_type === 'manual' ? (
+                          <Link
+                            to={`/accounting/journals/${row.id}/edit`}
+                            className="rounded-lg border border-[color:var(--color-border)] px-3 py-1.5 text-xs font-medium"
+                          >
+                            Edit
+                          </Link>
+                        ) : null}
+
+                        {row.status === 'DRAFT' ? (
+                          <button
+                            type="button"
+                            onClick={() => postJournal(row)}
+                            className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700"
+                          >
+                            Post
+                          </button>
+                        ) : null}
+
+                        {row.status !== 'VOID' ? (
+                          <button
+                            type="button"
+                            onClick={() => voidJournal(row)}
+                            className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600"
+                          >
+                            Void
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\LedgerPage.tsx
+
+- SHA: `c60c9ec15fa7`  
+- Ukuran: 12 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import { getErrorMessage } from '../../api/client';
+import { getAccountingLedger, listAccountingAccounts } from '../../api/accounting';
+import { listBranches } from '../../api/branches';
+import type {
+  AccountingAccount,
+  AccountingLedgerMeta,
+  AccountingLedgerRow,
+} from '../../types/accounting';
+import type { Branch } from '../../types/branches';
+import { todayLocalYMD } from '../../utils/date';
+import { toIDR } from '../../utils/money';
+import { useAuth } from '../../store/useAuth';
+
+function firstDateOfMonth(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+
+  return `${y}-${m}-01`;
+}
+
+function num(value: string | number | null | undefined): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDate(value?: string | null): string {
+  if (!value) return '-';
+  return value.slice(0, 10);
+}
+
+export default function LedgerPage() {
+  const isSuperadmin = useAuth.hasRole('Superadmin');
+
+  const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [rows, setRows] = useState<AccountingLedgerRow[]>([]);
+  const [meta, setMeta] = useState<AccountingLedgerMeta | null>(null);
+
+  const [accountId, setAccountId] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
+  const [dateTo, setDateTo] = useState(todayLocalYMD());
+  const [page, setPage] = useState(1);
+
+  const [loadingMaster, setLoadingMaster] = useState(false);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+  const [error, setError] = useState('');
+
+  const selectedAccount = useMemo(
+    () => accounts.find((account) => account.id === accountId) ?? null,
+    [accounts, accountId],
+  );
+
+  async function loadMaster() {
+    setLoadingMaster(true);
+    setError('');
+
+    try {
+      const [accountRes, branchRes] = await Promise.all([
+        listAccountingAccounts({
+          is_active: true,
+          per_page: 500,
+        }),
+        isSuperadmin
+          ? listBranches({ per_page: 500 })
+          : Promise.resolve({ data: [], meta: null, message: null, errors: null }),
+      ]);
+
+      const accountRows = Array.isArray(accountRes.data) ? accountRes.data : [];
+      const branchRows = Array.isArray(branchRes.data) ? branchRes.data : [];
+
+      setAccounts(accountRows);
+      setBranches(branchRows);
+
+      if (!accountId && accountRows.length > 0) {
+        setAccountId(accountRows[0].id);
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat data master buku besar.'));
+    } finally {
+      setLoadingMaster(false);
+    }
+  }
+
+  async function loadLedger(nextPage = page) {
+    if (!accountId) {
+      setRows([]);
+      setMeta(null);
+      return;
+    }
+
+    setLoadingLedger(true);
+    setError('');
+
+    try {
+      const res = await getAccountingLedger({
+        account_id: accountId,
+        branch_id: isSuperadmin && branchId ? branchId : undefined,
+        date_from: dateFrom,
+        date_to: dateTo,
+        page: nextPage,
+        per_page: 50,
+      });
+
+      setRows(Array.isArray(res.data) ? res.data : []);
+      setMeta(res.meta ?? null);
+      setPage(nextPage);
+    } catch (err) {
+      setRows([]);
+      setMeta(null);
+      setError(getErrorMessage(err, 'Gagal memuat buku besar.'));
+    } finally {
+      setLoadingLedger(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadMaster();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (accountId) {
+      void loadLedger(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
+  function submitFilter(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    void loadLedger(1);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-1)]">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Buku Besar</h1>
+            <p className="text-sm text-[color:var(--color-text-muted)]">
+              Mutasi akun dari jurnal akuntansi yang sudah POSTED.
+            </p>
+          </div>
+
+          {selectedAccount ? (
+            <div className="rounded-xl border border-[color:var(--color-border)] px-3 py-2 text-sm">
+              <div className="font-semibold">
+                {selectedAccount.code} - {selectedAccount.name}
+              </div>
+              <div className="text-[color:var(--color-text-muted)]">
+                Normal: {selectedAccount.normal_balance}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <form onSubmit={submitFilter} className="mt-4 grid gap-3 md:grid-cols-5">
+          <label className="space-y-1 md:col-span-2">
+            <span className="text-sm font-medium">Akun</span>
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              className="input"
+              disabled={loadingMaster}
+            >
+              <option value="">Pilih akun</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.code} - {account.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {isSuperadmin ? (
+            <label className="space-y-1">
+              <span className="text-sm font-medium">Cabang</span>
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="input"
+              >
+                <option value="">Semua cabang</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.code} - {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Tanggal Awal</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="input"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm font-medium">Tanggal Akhir</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="input"
+            />
+          </label>
+
+          <div className="flex items-end">
+            <button type="submit" className="btn-primary w-full" disabled={loadingLedger || !accountId}>
+              {loadingLedger ? 'Memuat...' : 'Tampilkan'}
+            </button>
+          </div>
+        </form>
+
+        {error ? (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+          <div className="text-sm text-[color:var(--color-text-muted)]">Saldo Awal</div>
+          <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.opening_balance))}</div>
+        </div>
+
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+          <div className="text-sm text-[color:var(--color-text-muted)]">Total Debit</div>
+          <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.total_debit))}</div>
+        </div>
+
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+          <div className="text-sm text-[color:var(--color-text-muted)]">Total Kredit</div>
+          <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.total_credit))}</div>
+        </div>
+
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+          <div className="text-sm text-[color:var(--color-text-muted)]">Saldo Akhir</div>
+          <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.ending_balance))}</div>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[var(--shadow-1)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-[color:var(--color-border)] bg-black/5">
+              <tr>
+                <th className="px-3 py-3 text-left font-semibold">Tanggal</th>
+                <th className="px-3 py-3 text-left font-semibold">No Jurnal</th>
+                <th className="px-3 py-3 text-left font-semibold">Keterangan</th>
+                <th className="px-3 py-3 text-right font-semibold">Debit</th>
+                <th className="px-3 py-3 text-right font-semibold">Kredit</th>
+                <th className="px-3 py-3 text-right font-semibold">Saldo</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loadingLedger ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                    Memuat buku besar...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                    Belum ada mutasi untuk filter ini.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-[color:var(--color-border)] last:border-0">
+                    <td className="px-3 py-3">{formatDate(row.journal_date)}</td>
+                    <td className="px-3 py-3">
+                      <div className="font-medium">{row.journal_no ?? '-'}</div>
+                      <div className="text-xs text-[color:var(--color-text-muted)]">{row.source_no ?? '-'}</div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div>{row.description || '-'}</div>
+                      {row.branch ? (
+                        <div className="text-xs text-[color:var(--color-text-muted)]">
+                          {row.branch.code} - {row.branch.name}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-3 text-right">{toIDR(num(row.debit))}</td>
+                    <td className="px-3 py-3 text-right">{toIDR(num(row.credit))}</td>
+                    <td className="px-3 py-3 text-right font-semibold">{toIDR(num(row.balance))}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-[color:var(--color-border)] px-4 py-3 text-sm">
+          <div className="text-[color:var(--color-text-muted)]">
+            Total data: {meta?.total ?? 0}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn-outline disabled:opacity-50"
+              disabled={page <= 1 || loadingLedger}
+              onClick={() => void loadLedger(page - 1)}
+            >
+              Sebelumnya
+            </button>
+
+            <span>
+              Halaman {meta?.current_page ?? page} / {meta?.last_page ?? 1}
+            </span>
+
+            <button
+              type="button"
+              className="btn-outline disabled:opacity-50"
+              disabled={!meta || page >= meta.last_page || loadingLedger}
+              onClick={() => void loadLedger(page + 1)}
+            >
+              Berikutnya
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+</details>
+
+### src\pages\accounting\ProfitLossPage.tsx
+
+- SHA: `177742417e79`  
+- Ukuran: 12 KB
+<details><summary><strong>Lihat Kode Lengkap</strong></summary>
+
+```tsx
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { getErrorMessage } from '../../api/client';
+import { getAccountingProfitLoss } from '../../api/accounting';
+import { listBranches } from '../../api/branches';
+import type {
+  AccountingProfitLossAccountRow,
+  AccountingProfitLossData,
+  AccountingProfitLossMeta,
+} from '../../types/accounting';
+import type { Branch } from '../../types/branches';
+
+function todayDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function firstDayOfMonth(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function money(value: number | string | null | undefined): string {
+  const amount = Number(value ?? 0);
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function numberValue(value: number | string | null | undefined): number {
+  return Number(value ?? 0);
+}
+
+type ReportState = {
+  data: AccountingProfitLossData | null;
+  meta: AccountingProfitLossMeta | null;
+};
+
+export default function ProfitLossPage() {
+  const [dateFrom, setDateFrom] = useState(firstDayOfMonth());
+  const [dateTo, setDateTo] = useState(todayDate());
+  const [branchId, setBranchId] = useState('');
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [report, setReport] = useState<ReportState>({
+    data: null,
+    meta: null,
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const summary = report.data?.summary;
+
+  const netProfitLabel = useMemo(() => {
+    const value = numberValue(summary?.net_profit);
+
+    if (value > 0) return 'Laba Bersih';
+    if (value < 0) return 'Rugi Bersih';
+
+    return 'Impas';
+  }, [summary?.net_profit]);
+
+  async function loadBranches() {
+    try {
+      setLoadingBranches(true);
+      const res = await listBranches({ per_page: 100 });
+      setBranches(res.data ?? []);
+    } catch {
+      setBranches([]);
+    } finally {
+      setLoadingBranches(false);
+    }
+  }
+
+  async function loadReport() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await getAccountingProfitLoss({
+        date_from: dateFrom,
+        date_to: dateTo,
+        branch_id: branchId || null,
+        basis: 'posted',
+      });
+
+      setReport({
+        data: res.data,
+        meta: res.meta,
+      });
+    } catch (err) {
+      setReport({
+        data: null,
+        meta: null,
+      });
+      setError(getErrorMessage(err, 'Gagal memuat laporan laba rugi.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadBranches();
+  }, []);
+
+  useEffect(() => {
+    if (!dateFrom || !dateTo) {
+      return;
+    }
+
+    loadReport();
+  }, [dateFrom, dateTo, branchId]);
+
+  function submitFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    loadReport();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+        <div>
+          <h1 className="text-2xl font-semibold text-[color:var(--color-text)]">
+            Laporan Laba Rugi
+          </h1>
+          <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+            Laporan performa usaha dari jurnal akuntansi yang sudah diposting.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 text-sm">
+          <div className="text-[color:var(--color-text-muted)]">Basis</div>
+          <div className="font-semibold text-[color:var(--color-text)]">
+            Jurnal POSTED
+          </div>
+        </div>
+      </div>
+
+      <form
+        onSubmit={submitFilter}
+        className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm"
+      >
+        <div className="grid gap-4 md:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[color:var(--color-text)]">
+              Tanggal Awal
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+              className="w-full rounded-xl border border-[color:var(--color-border)] bg-transparent px-3 py-2 text-sm outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[color:var(--color-text)]">
+              Tanggal Akhir
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+              className="w-full rounded-xl border border-[color:var(--color-border)] bg-transparent px-3 py-2 text-sm outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[color:var(--color-text)]">
+              Cabang
+            </label>
+            <select
+              value={branchId}
+              onChange={(event) => setBranchId(event.target.value)}
+              className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-2 text-sm outline-none"
+              disabled={loadingBranches}
+            >
+              <option value="">Semua / Cabang Saya</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-[color:var(--color-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {loading ? 'Memuat...' : 'Refresh Laporan'}
+            </button>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+      </form>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <SummaryCard
+          label="Pendapatan Kotor"
+          value={money(summary?.total_gross_revenue)}
+        />
+        <SummaryCard
+          label="Diskon / Kontra Pendapatan"
+          value={money(summary?.total_contra_revenue)}
+        />
+        <SummaryCard
+          label="Total Beban"
+          value={money(summary?.total_expense)}
+        />
+        <SummaryCard
+          label={netProfitLabel}
+          value={money(summary?.net_profit)}
+          strong
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <ReportSection
+          title="Pendapatan"
+          rows={report.data?.revenues ?? []}
+          emptyText="Belum ada akun pendapatan pada periode ini."
+          totalLabel="Total Pendapatan Kotor"
+          totalValue={summary?.total_gross_revenue ?? 0}
+          loading={loading}
+        />
+
+        <ReportSection
+          title="Diskon / Kontra Pendapatan"
+          rows={report.data?.contra_revenues ?? []}
+          emptyText="Belum ada diskon atau kontra pendapatan pada periode ini."
+          totalLabel="Total Kontra Pendapatan"
+          totalValue={summary?.total_contra_revenue ?? 0}
+          loading={loading}
+        />
+
+        <ReportSection
+          title="Beban"
+          rows={report.data?.expenses ?? []}
+          emptyText="Belum ada akun beban pada periode ini."
+          totalLabel="Total Beban"
+          totalValue={summary?.total_expense ?? 0}
+          loading={loading}
+        />
+
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-[color:var(--color-text)]">
+            Ringkasan Laba Rugi
+          </h2>
+
+          <div className="mt-4 space-y-3 text-sm">
+            <SummaryLine label="Pendapatan Kotor" value={money(summary?.total_gross_revenue)} />
+            <SummaryLine label="Diskon / Kontra Pendapatan" value={`(${money(summary?.total_contra_revenue)})`} />
+            <SummaryLine label="Pendapatan Bersih" value={money(summary?.net_revenue)} strong />
+            <SummaryLine label="Total Beban" value={`(${money(summary?.total_expense)})`} />
+            <div className="border-t border-[color:var(--color-border)] pt-3">
+              <SummaryLine label={netProfitLabel} value={money(summary?.net_profit)} strong />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-sm">
+      <div className="text-sm text-[color:var(--color-text-muted)]">{label}</div>
+      <div className={`mt-2 text-xl ${strong ? 'font-bold' : 'font-semibold'} text-[color:var(--color-text)]`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ReportSection({
+  title,
+  rows,
+  emptyText,
+  totalLabel,
+  totalValue,
+  loading,
+}: {
+  title: string;
+  rows: AccountingProfitLossAccountRow[];
+  emptyText: string;
+  totalLabel: string;
+  totalValue: number;
+  loading: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-sm">
+      <div className="border-b border-[color:var(--color-border)] px-5 py-4">
+        <h2 className="text-lg font-semibold text-[color:var(--color-text)]">{title}</h2>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-[color:var(--color-surface-muted)] text-[color:var(--color-text-muted)]">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold">Kode</th>
+              <th className="px-4 py-3 text-left font-semibold">Akun</th>
+              <th className="px-4 py-3 text-right font-semibold">Debit</th>
+              <th className="px-4 py-3 text-right font-semibold">Kredit</th>
+              <th className="px-4 py-3 text-right font-semibold">Jumlah</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                  Memuat data...
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-[color:var(--color-text-muted)]">
+                  {emptyText}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.account_id} className="border-b border-[color:var(--color-border)] last:border-0">
+                  <td className="px-4 py-3 font-semibold">{row.code}</td>
+                  <td className="px-4 py-3">{row.name}</td>
+                  <td className="px-4 py-3 text-right">{money(row.debit)}</td>
+                  <td className="px-4 py-3 text-right">{money(row.credit)}</td>
+                  <td className="px-4 py-3 text-right font-semibold">{money(row.amount)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-[color:var(--color-border)]">
+              <td colSpan={4} className="px-4 py-3 text-right font-semibold">
+                {totalLabel}
+              </td>
+              <td className="px-4 py-3 text-right font-bold">
+                {money(totalValue)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function SummaryLine({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className={`${strong ? 'font-semibold' : ''} text-[color:var(--color-text)]`}>
+        {label}
+      </div>
+      <div className={`${strong ? 'font-bold' : 'font-medium'} text-right text-[color:var(--color-text)]`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+```
+</details>
+
 ### src\pages\branches\BranchForm.tsx
 
 - SHA: `6fe07ba832f7`  
@@ -9532,7 +14232,7 @@ function RowSkeleton() {
 
 ### src\pages\cash\CashSessionsIndex.tsx
 
-- SHA: `bb8edfe1d702`  
+- SHA: `6668b7179ced`  
 - Ukuran: 40 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -9698,6 +14398,12 @@ export default function CashSessionsIndex() {
     setErrorMsg('');
     setSuccessMsg('');
     setSubmittingOpen(true);
+
+    if (isSuperadmin && !branchId) {
+      setErrorMsg('Cabang wajib dipilih.');
+      setSubmittingOpen(false);
+      return;
+    }
 
     try {
       await openCashSession({
