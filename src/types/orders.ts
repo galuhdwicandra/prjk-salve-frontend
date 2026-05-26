@@ -98,6 +98,7 @@ export interface OrderCreatePayload {
 }
 
 export interface OrderUpdatePayload {
+    invoice_no?: string;
     customer_id?: string | null;
     items?: OrderItemInput[];
     discount?: number;

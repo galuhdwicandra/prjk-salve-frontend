@@ -134,6 +134,7 @@ type DraftItem = {
   note?: string | null;
 };
 type Draft = {
+  invoice_no: string;
   customer_id: string | null;
   notes: string | null;
   discount?: number;
@@ -195,7 +196,12 @@ export default function OrderDetail(): React.ReactElement {
   const canUploadPhotosForThisOrder =
     canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
 
-  const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
+  const [draft, setDraft] = useState<Draft>({
+    invoice_no: '',
+    customer_id: null,
+    notes: null,
+    items: [],
+  });
   const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   // Delivery UI
@@ -320,6 +326,7 @@ export default function OrderDetail(): React.ReactElement {
     if (!row) return;
 
     setDraft({
+      invoice_no: row.invoice_no ?? '',
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
       received_at: row.received_at ?? null,
@@ -719,7 +726,26 @@ export default function OrderDetail(): React.ReactElement {
                       onClick={() => {
                         setIsEditing(false);
                         setFieldErr({});
-                        setNoteRows(parseConsumerGoodsNotes(row?.notes ?? null));
+
+                        if (row) {
+                          setDraft({
+                            invoice_no: row.invoice_no ?? '',
+                            customer_id: row.customer?.id ?? row.customer_id ?? null,
+                            notes: row.notes ?? null,
+                            received_at: row.received_at ?? null,
+                            ready_at: row.ready_at ?? null,
+                            items: (row.items ?? []).map(it => ({
+                              id: it.id,
+                              service_id: it.service_id,
+                              service_name: it.service?.name,
+                              price: Number(it.price),
+                              qty: Number(it.qty),
+                              note: it.note ?? null,
+                            })),
+                          });
+
+                          setNoteRows(parseConsumerGoodsNotes(row.notes));
+                        }
                       }}
                       title="Batalkan perubahan"
                     >
@@ -734,6 +760,7 @@ export default function OrderDetail(): React.ReactElement {
                         setSaving(true); setFieldErr({});
                         try {
                           const payload: OrderUpdatePayload = {
+                            invoice_no: draft.invoice_no.trim(),
                             customer_id: draft.customer_id ?? null,
                             notes: buildConsumerGoodsNotes(noteRows),
                             items: draft.items.map(it => ({
@@ -841,6 +868,28 @@ export default function OrderDetail(): React.ReactElement {
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          No Invoice <span className="text-red-600">*</span>
+                        </div>
+                        <input
+                          id="invoice_no"
+                          type="text"
+                          className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+                          value={draft.invoice_no}
+                          onChange={(e) => setDraft(d => ({ ...d, invoice_no: e.target.value }))}
+                          disabled={!canEdit}
+                          required
+                          placeholder="Contoh: INV-15-04-0001"
+                        />
+                        {fieldErr['invoice_no'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['invoice_no']}</div>
+                        )}
+                      </div>
+
+                      <div>
                         <div className="text-xs font-semibold text-slate-600">Pelanggan</div>
                         <div className="mt-1">
                           <CustomerPicker
@@ -848,7 +897,9 @@ export default function OrderDetail(): React.ReactElement {
                             onChange={(cid) => setDraft(d => ({ ...d, customer_id: cid || null }))}
                           />
                         </div>
-                        {fieldErr['customer_id'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>}
+                        {fieldErr['customer_id'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>
+                        )}
                       </div>
 
                       <div className="md:col-span-2">
@@ -881,10 +932,10 @@ export default function OrderDetail(): React.ReactElement {
                                 placeholder={`Isi catatan barang #${index + 1}`}
                                 disabled={!canEdit}
                                 className="
-            h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
-            placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
-            disabled:cursor-not-allowed disabled:bg-slate-50
-          "
+                                h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
+                                placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                                disabled:cursor-not-allowed disabled:bg-slate-50
+                              "
                               />
 
                               <button
@@ -1555,7 +1606,7 @@ export default function OrderDetail(): React.ReactElement {
             )}
           </>
         )}
-      </div>
+      </div >
     </>
   );
 }

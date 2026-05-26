@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-05-25 20:09:57_  
+_Dihasilkan otomatis: 2026-05-26 17:53:57_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -5569,7 +5569,7 @@ export interface LoyaltyManualAdjustPayload {
 
 ### src\types\orders.ts
 
-- SHA: `60b7e6e226e9`  
+- SHA: `2467d6972fc5`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -5674,6 +5674,7 @@ export interface OrderCreatePayload {
 }
 
 export interface OrderUpdatePayload {
+    invoice_no?: string;
     customer_id?: string | null;
     items?: OrderItemInput[];
     discount?: number;
@@ -19496,8 +19497,8 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `851c52028c47`  
-- Ukuran: 70 KB
+- SHA: `b5a64fb1696c`  
+- Ukuran: 72 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -19637,6 +19638,7 @@ type DraftItem = {
   note?: string | null;
 };
 type Draft = {
+  invoice_no: string;
   customer_id: string | null;
   notes: string | null;
   discount?: number;
@@ -19698,7 +19700,12 @@ export default function OrderDetail(): React.ReactElement {
   const canUploadPhotosForThisOrder =
     canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
 
-  const [draft, setDraft] = useState<Draft>({ customer_id: null, notes: null, items: [] });
+  const [draft, setDraft] = useState<Draft>({
+    invoice_no: '',
+    customer_id: null,
+    notes: null,
+    items: [],
+  });
   const [noteRows, setNoteRows] = useState<string[]>(['']);
 
   // Delivery UI
@@ -19823,6 +19830,7 @@ export default function OrderDetail(): React.ReactElement {
     if (!row) return;
 
     setDraft({
+      invoice_no: row.invoice_no ?? '',
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
       received_at: row.received_at ?? null,
@@ -20222,7 +20230,26 @@ export default function OrderDetail(): React.ReactElement {
                       onClick={() => {
                         setIsEditing(false);
                         setFieldErr({});
-                        setNoteRows(parseConsumerGoodsNotes(row?.notes ?? null));
+
+                        if (row) {
+                          setDraft({
+                            invoice_no: row.invoice_no ?? '',
+                            customer_id: row.customer?.id ?? row.customer_id ?? null,
+                            notes: row.notes ?? null,
+                            received_at: row.received_at ?? null,
+                            ready_at: row.ready_at ?? null,
+                            items: (row.items ?? []).map(it => ({
+                              id: it.id,
+                              service_id: it.service_id,
+                              service_name: it.service?.name,
+                              price: Number(it.price),
+                              qty: Number(it.qty),
+                              note: it.note ?? null,
+                            })),
+                          });
+
+                          setNoteRows(parseConsumerGoodsNotes(row.notes));
+                        }
                       }}
                       title="Batalkan perubahan"
                     >
@@ -20237,6 +20264,7 @@ export default function OrderDetail(): React.ReactElement {
                         setSaving(true); setFieldErr({});
                         try {
                           const payload: OrderUpdatePayload = {
+                            invoice_no: draft.invoice_no.trim(),
                             customer_id: draft.customer_id ?? null,
                             notes: buildConsumerGoodsNotes(noteRows),
                             items: draft.items.map(it => ({
@@ -20344,6 +20372,28 @@ export default function OrderDetail(): React.ReactElement {
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          No Invoice <span className="text-red-600">*</span>
+                        </div>
+                        <input
+                          id="invoice_no"
+                          type="text"
+                          className="
+        mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+        focus:border-slate-900 focus:outline-none
+      "
+                          value={draft.invoice_no}
+                          onChange={(e) => setDraft(d => ({ ...d, invoice_no: e.target.value }))}
+                          disabled={!canEdit}
+                          required
+                          placeholder="Contoh: INV-15-04-0001"
+                        />
+                        {fieldErr['invoice_no'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['invoice_no']}</div>
+                        )}
+                      </div>
+
+                      <div>
                         <div className="text-xs font-semibold text-slate-600">Pelanggan</div>
                         <div className="mt-1">
                           <CustomerPicker
@@ -20351,7 +20401,9 @@ export default function OrderDetail(): React.ReactElement {
                             onChange={(cid) => setDraft(d => ({ ...d, customer_id: cid || null }))}
                           />
                         </div>
-                        {fieldErr['customer_id'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>}
+                        {fieldErr['customer_id'] && (
+                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>
+                        )}
                       </div>
 
                       <div className="md:col-span-2">
@@ -20384,10 +20436,10 @@ export default function OrderDetail(): React.ReactElement {
                                 placeholder={`Isi catatan barang #${index + 1}`}
                                 disabled={!canEdit}
                                 className="
-            h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
-            placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
-            disabled:cursor-not-allowed disabled:bg-slate-50
-          "
+                                h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
+                                placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
+                                disabled:cursor-not-allowed disabled:bg-slate-50
+                              "
                               />
 
                               <button
@@ -21058,7 +21110,7 @@ export default function OrderDetail(): React.ReactElement {
             )}
           </>
         )}
-      </div>
+      </div >
     </>
   );
 }
@@ -21686,15 +21738,18 @@ export default function OrderReceipt(): React.ReactElement {
 
 ### src\pages\orders\OrdersIndex.tsx
 
-- SHA: `34d53e3ab6b3`  
-- Ukuran: 37 KB
+- SHA: `3a6b65d878d9`  
+- Ukuran: 40 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/orders/OrdersIndex.tsx
 import { useCallback, useEffect, useState } from 'react';
 import { deleteOrder, listOrders, openOrderReceipt } from '../../api/orders';
+import { listBranches } from '../../api/branches';
 import { getErrorMessage } from '../../api/client';
+import { useHasRole } from '../../store/useAuth';
+import type { Branch } from '../../types/branches';
 import type { Order, OrderBackendStatus, PaginationMeta, PaymentMethod, PaymentStatus } from '../../types/orders';
 import { Link } from 'react-router-dom';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -21788,9 +21843,13 @@ function formatDateOnly(v?: string | null): string {
 }
 
 export default function OrdersIndex(): React.ReactElement {
+    const isSuperadmin = useHasRole('Superadmin');
+
     const [rows, setRows] = useState<Order[]>([]);
     const [meta, setMeta] = useState<PaginationMeta | null>(null);
     const [q, setQ] = useState('');
+    const [branchId, setBranchId] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [status, setStatus] = useState<OrderBackendStatus | ''>('');
     const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | ''>('');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
@@ -21805,9 +21864,41 @@ export default function OrdersIndex(): React.ReactElement {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
+    useEffect(() => {
+        if (!isSuperadmin) {
+            setBranchId('');
+            setBranches([]);
+            return;
+        }
+
+        let ignore = false;
+
+        async function loadBranches() {
+            try {
+                const res = await listBranches({ per_page: 100 });
+
+                if (!ignore) {
+                    setBranches(res.data ?? []);
+                }
+            } catch (e) {
+                if (!ignore) {
+                    dlog('load branches error', e);
+                    setError(getErrorMessage(e, 'Gagal memuat daftar cabang.'));
+                }
+            }
+        }
+
+        void loadBranches();
+
+        return () => {
+            ignore = true;
+        };
+    }, [isSuperadmin]);
+
     const refresh = useCallback(async (p = 1) => {
         dlog('refresh start', {
             q: q || undefined,
+            branch_id: isSuperadmin && branchId ? branchId : undefined,
             status: status || undefined,
             payment_status: paymentStatus || undefined,
             payment_method: paymentMethod || undefined,
@@ -21825,6 +21916,7 @@ export default function OrdersIndex(): React.ReactElement {
         try {
             const res = await listOrders({
                 q: q || undefined,
+                branch_id: isSuperadmin && branchId ? branchId : undefined,
                 status: status || undefined,
                 payment_status: paymentStatus || undefined,
                 payment_method: paymentMethod || undefined,
@@ -21849,6 +21941,8 @@ export default function OrdersIndex(): React.ReactElement {
         }
     }, [
         q,
+        branchId,
+        isSuperadmin,
         status,
         paymentStatus,
         paymentMethod,
@@ -21861,6 +21955,7 @@ export default function OrdersIndex(): React.ReactElement {
 
     useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
     useEffect(() => { dlog('query changed', q); }, [q]);
+    useEffect(() => { dlog('branchId changed', branchId); }, [branchId]);
     useEffect(() => { dlog('status changed', status); }, [status]);
     useEffect(() => { dlog('page changed', page); }, [page]);
     useEffect(() => { dlog('rows/meta updated', { rows: rows.length, meta }); }, [rows, meta]);
@@ -21880,6 +21975,7 @@ export default function OrdersIndex(): React.ReactElement {
     const onReset = () => {
         dlog('reset filter clicked');
         setQ('');
+        setBranchId('');
         setStatus('');
         setPaymentStatus('');
         setPaymentMethod('');
@@ -22013,11 +22109,11 @@ export default function OrdersIndex(): React.ReactElement {
                             </span>
                             <input
                                 className="
-          w-full rounded-lg border border-slate-200 bg-white
-          pl-10 pr-3 py-2 text-sm text-slate-900
-          placeholder:text-slate-400
-          focus:border-slate-900 focus:outline-none
-        "
+                                    w-full rounded-lg border border-slate-200 bg-white
+                                    pl-10 pr-3 py-2 text-sm text-slate-900
+                                    placeholder:text-slate-400
+                                    focus:border-slate-900 focus:outline-none
+                                    "
                                 placeholder="No order / invoice / nama / WhatsApp / catatan"
                                 value={q}
                                 onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
@@ -22032,10 +22128,10 @@ export default function OrdersIndex(): React.ReactElement {
                         </label>
                         <select
                             className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
+                                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                px-3 py-2 text-sm text-slate-900
+                                focus:border-slate-900 focus:outline-none
+                            "
                             value={status}
                             onChange={(e) => {
                                 const v = e.target.value as OrderBackendStatus | '';
@@ -22056,16 +22152,44 @@ export default function OrdersIndex(): React.ReactElement {
                         </select>
                     </div>
 
+                    {isSuperadmin && (
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                                Cabang
+                            </label>
+                            <select
+                                className="
+                                    mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                    px-3 py-2 text-sm text-slate-900
+                                    focus:border-slate-900 focus:outline-none
+                                "
+                                value={branchId}
+                                onChange={(e) => {
+                                    dlog('branch select', e.target.value);
+                                    setBranchId(e.target.value);
+                                }}
+                                aria-label="Filter cabang"
+                            >
+                                <option value="">Semua Cabang</option>
+                                {branches.map((branch) => (
+                                    <option key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="md:col-span-2">
                         <label className="block text-xs font-medium text-slate-600">
                             Status Bayar
                         </label>
                         <select
                             className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
+                                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                px-3 py-2 text-sm text-slate-900
+                                focus:border-slate-900 focus:outline-none
+                            "
                             value={paymentStatus}
                             onChange={(e) => {
                                 const v = e.target.value as PaymentStatus | '';

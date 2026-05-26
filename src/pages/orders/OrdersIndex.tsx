@@ -1,7 +1,10 @@
 // src/pages/orders/OrdersIndex.tsx
 import { useCallback, useEffect, useState } from 'react';
 import { deleteOrder, listOrders, openOrderReceipt } from '../../api/orders';
+import { listBranches } from '../../api/branches';
 import { getErrorMessage } from '../../api/client';
+import { useHasRole } from '../../store/useAuth';
+import type { Branch } from '../../types/branches';
 import type { Order, OrderBackendStatus, PaginationMeta, PaymentMethod, PaymentStatus } from '../../types/orders';
 import { Link } from 'react-router-dom';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -95,9 +98,13 @@ function formatDateOnly(v?: string | null): string {
 }
 
 export default function OrdersIndex(): React.ReactElement {
+    const isSuperadmin = useHasRole('Superadmin');
+
     const [rows, setRows] = useState<Order[]>([]);
     const [meta, setMeta] = useState<PaginationMeta | null>(null);
     const [q, setQ] = useState('');
+    const [branchId, setBranchId] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [status, setStatus] = useState<OrderBackendStatus | ''>('');
     const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | ''>('');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
@@ -112,9 +119,41 @@ export default function OrdersIndex(): React.ReactElement {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
+    useEffect(() => {
+        if (!isSuperadmin) {
+            setBranchId('');
+            setBranches([]);
+            return;
+        }
+
+        let ignore = false;
+
+        async function loadBranches() {
+            try {
+                const res = await listBranches({ per_page: 100 });
+
+                if (!ignore) {
+                    setBranches(res.data ?? []);
+                }
+            } catch (e) {
+                if (!ignore) {
+                    dlog('load branches error', e);
+                    setError(getErrorMessage(e, 'Gagal memuat daftar cabang.'));
+                }
+            }
+        }
+
+        void loadBranches();
+
+        return () => {
+            ignore = true;
+        };
+    }, [isSuperadmin]);
+
     const refresh = useCallback(async (p = 1) => {
         dlog('refresh start', {
             q: q || undefined,
+            branch_id: isSuperadmin && branchId ? branchId : undefined,
             status: status || undefined,
             payment_status: paymentStatus || undefined,
             payment_method: paymentMethod || undefined,
@@ -132,6 +171,7 @@ export default function OrdersIndex(): React.ReactElement {
         try {
             const res = await listOrders({
                 q: q || undefined,
+                branch_id: isSuperadmin && branchId ? branchId : undefined,
                 status: status || undefined,
                 payment_status: paymentStatus || undefined,
                 payment_method: paymentMethod || undefined,
@@ -156,6 +196,8 @@ export default function OrdersIndex(): React.ReactElement {
         }
     }, [
         q,
+        branchId,
+        isSuperadmin,
         status,
         paymentStatus,
         paymentMethod,
@@ -168,6 +210,7 @@ export default function OrdersIndex(): React.ReactElement {
 
     useEffect(() => { dlog('mount'); return () => dlog('unmount'); }, []);
     useEffect(() => { dlog('query changed', q); }, [q]);
+    useEffect(() => { dlog('branchId changed', branchId); }, [branchId]);
     useEffect(() => { dlog('status changed', status); }, [status]);
     useEffect(() => { dlog('page changed', page); }, [page]);
     useEffect(() => { dlog('rows/meta updated', { rows: rows.length, meta }); }, [rows, meta]);
@@ -187,6 +230,7 @@ export default function OrdersIndex(): React.ReactElement {
     const onReset = () => {
         dlog('reset filter clicked');
         setQ('');
+        setBranchId('');
         setStatus('');
         setPaymentStatus('');
         setPaymentMethod('');
@@ -320,11 +364,11 @@ export default function OrdersIndex(): React.ReactElement {
                             </span>
                             <input
                                 className="
-          w-full rounded-lg border border-slate-200 bg-white
-          pl-10 pr-3 py-2 text-sm text-slate-900
-          placeholder:text-slate-400
-          focus:border-slate-900 focus:outline-none
-        "
+                                    w-full rounded-lg border border-slate-200 bg-white
+                                    pl-10 pr-3 py-2 text-sm text-slate-900
+                                    placeholder:text-slate-400
+                                    focus:border-slate-900 focus:outline-none
+                                    "
                                 placeholder="No order / invoice / nama / WhatsApp / catatan"
                                 value={q}
                                 onChange={(e) => { dlog('q input', e.target.value); setQ(e.target.value); }}
@@ -339,10 +383,10 @@ export default function OrdersIndex(): React.ReactElement {
                         </label>
                         <select
                             className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
+                                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                px-3 py-2 text-sm text-slate-900
+                                focus:border-slate-900 focus:outline-none
+                            "
                             value={status}
                             onChange={(e) => {
                                 const v = e.target.value as OrderBackendStatus | '';
@@ -363,16 +407,44 @@ export default function OrdersIndex(): React.ReactElement {
                         </select>
                     </div>
 
+                    {isSuperadmin && (
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                                Cabang
+                            </label>
+                            <select
+                                className="
+                                    mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                    px-3 py-2 text-sm text-slate-900
+                                    focus:border-slate-900 focus:outline-none
+                                "
+                                value={branchId}
+                                onChange={(e) => {
+                                    dlog('branch select', e.target.value);
+                                    setBranchId(e.target.value);
+                                }}
+                                aria-label="Filter cabang"
+                            >
+                                <option value="">Semua Cabang</option>
+                                {branches.map((branch) => (
+                                    <option key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="md:col-span-2">
                         <label className="block text-xs font-medium text-slate-600">
                             Status Bayar
                         </label>
                         <select
                             className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white
-        px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
+                                mt-1 w-full rounded-lg border border-slate-200 bg-white
+                                px-3 py-2 text-sm text-slate-900
+                                focus:border-slate-900 focus:outline-none
+                            "
                             value={paymentStatus}
                             onChange={(e) => {
                                 const v = e.target.value as PaymentStatus | '';
