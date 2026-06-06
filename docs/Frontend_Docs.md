@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-06-06 13:32:36_  
+_Dihasilkan otomatis: 2026-06-06 13:46:25_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -7486,7 +7486,7 @@ function PreviewGrid({
 
 ### src\components\orders\OrderPhotosGallery.tsx
 
-- SHA: `3f280a7ad868`  
+- SHA: `ad2e0ac33020`  
 - Ukuran: 7 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -7562,35 +7562,61 @@ export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] })
       {/* Lightbox Modal */}
       {preview && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="
+      fixed inset-0 z-50
+      flex min-h-dvh items-center justify-center
+      bg-black/80 px-3 py-4
+      sm:p-6
+    "
           onClick={() => setPreview(null)}
         >
           <div
-            className="relative max-w-5xl w-full"
+            className="
+        relative flex h-full w-full max-w-5xl flex-col
+        sm:h-auto
+      "
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setPreview(null)}
-              className="absolute -top-10 right-0 text-white text-sm font-semibold"
-            >
-              ✕ Close
-            </button>
-
-            <div className="rounded-xl bg-white overflow-hidden shadow-2xl">
-              <img
-                src={preview.url}
-                alt={preview.label}
-                className="w-full max-h-[80vh] object-contain bg-black"
-              />
-              <div className="px-4 py-3 border-t border-slate-200">
-                <div className="text-sm font-semibold text-slate-900">
+            <div className="mb-3 flex items-center justify-between gap-3 text-white">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold">
                   {preview.label}
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="truncate text-xs text-white/70">
                   {preview.ts ?? "-"}
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="
+            inline-flex h-10 shrink-0 items-center justify-center
+            rounded-full bg-white/15 px-4 text-sm font-semibold text-white
+            backdrop-blur transition hover:bg-white/25 active:scale-95
+          "
+                aria-label="Tutup preview foto"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+
+            <div
+              className="
+          flex min-h-0 flex-1 items-center justify-center
+          overflow-hidden rounded-2xl bg-black shadow-2xl
+          sm:max-h-[82vh]
+        "
+            >
+              <img
+                src={preview.url}
+                alt={preview.label}
+                className="
+            h-auto max-h-[calc(100dvh-7.5rem)] w-auto max-w-full
+            object-contain
+            sm:max-h-[82vh]
+          "
+              />
             </div>
           </div>
         </div>
@@ -19502,7 +19528,7 @@ export default function LoginPage() {
 
 ### src\pages\orders\OrderDetail.tsx
 
-- SHA: `b5a64fb1696c`  
+- SHA: `677de3e0beff`  
 - Ukuran: 72 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -20341,7 +20367,13 @@ export default function OrderDetail(): React.ReactElement {
                   <button
                     type="button"
                     className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                    onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
+                    onClick={() => {
+                      const targetInvoice = row.invoice_no ?? row.number ?? '';
+
+                      navigate(
+                        `/receivables?q=${encodeURIComponent(targetInvoice)}&focus_invoice=${encodeURIComponent(targetInvoice)}`
+                      );
+                    }}
                     title="Menuju halaman Piutang untuk pelunasan"
                   >
                     Pelunasan
@@ -20753,7 +20785,13 @@ export default function OrderDetail(): React.ReactElement {
                       <button
                         type="button"
                         className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                        onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
+                        onClick={() => {
+                          const targetInvoice = row.invoice_no ?? row.number ?? '';
+
+                          navigate(
+                            `/receivables?q=${encodeURIComponent(targetInvoice)}&focus_invoice=${encodeURIComponent(targetInvoice)}`
+                          );
+                        }}
                       >
                         Proses Pelunasan
                       </button>
@@ -25321,13 +25359,14 @@ function OverdueBadge(props: { isOverdue: boolean; overdueText?: string | null }
 
 ### src\pages\receivables\ReceivablesIndex.tsx
 
-- SHA: `efdb4dca6a09`  
-- Ukuran: 11 KB
+- SHA: `05b47becc334`  
+- Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
 // src/pages/receivables/ReceivablesIndex.tsx
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Receivable, ReceivableQuery, ReceivableStatus } from "../../types/receivables";
 import { listReceivables } from "../../api/receivables";
 import { toIDR } from "../../utils/money";
@@ -25337,13 +25376,32 @@ type Meta = { current_page: number; per_page: number; total: number; last_page: 
 
 const STATUS: Array<ReceivableStatus | ""> = ["", "OPEN", "PARTIAL", "OVERDUE", "SETTLED"];
 
+function normalizeInvoice(value: string | null | undefined): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isReceivableTarget(row: Receivable, targetInvoice: string): boolean {
+  const target = normalizeInvoice(targetInvoice);
+
+  if (!target) return false;
+
+  return (
+    normalizeInvoice(row.order?.invoice_no) === target ||
+    normalizeInvoice(row.order_id) === target
+  );
+}
+
 export default function ReceivablesIndex() {
+  const [searchParams] = useSearchParams();
+  const targetInvoice = searchParams.get("focus_invoice") ?? searchParams.get("q") ?? "";
+  const targetRowRef = useRef<HTMLTableRowElement | null>(null);
+
   const [rows, setRows] = useState<Receivable[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
-  const [q, setQ] = useState<string>("");
+  const [q, setQ] = useState<string>(() => searchParams.get("q") ?? "");
   const [status, setStatus] = useState<ReceivableStatus | "">("");
   const [dueBefore, setDueBefore] = useState<string>("");
   const [page, setPage] = useState<number>(1);
@@ -25372,6 +25430,19 @@ export default function ReceivablesIndex() {
   }, [params]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!targetInvoice || loading || rows.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      targetRowRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [targetInvoice, loading, rows]);
 
   return (
     <div className="space-y-4">
@@ -25493,8 +25564,19 @@ export default function ReceivablesIndex() {
                       ? new Date(r.due_date).toLocaleDateString("id-ID")
                       : "-";
                     const isOverdue = r.status === "OVERDUE";
+                    const isTarget = isReceivableTarget(r, targetInvoice);
+
                     return (
-                      <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <tr
+                        key={r.id}
+                        ref={isTarget ? targetRowRef : undefined}
+                        className={[
+                          "transition-colors",
+                          isTarget
+                            ? "bg-amber-50 ring-2 ring-amber-300"
+                            : "hover:bg-black/5",
+                        ].join(" ")}
+                      >
                         <Td>{r.order?.invoice_no ?? "-"}</Td>
                         <Td><span className="line-clamp-1">{r.order?.customer?.name ?? "-"}</span></Td>
                         <Td>

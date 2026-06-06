@@ -1,5 +1,6 @@
 // src/pages/receivables/ReceivablesIndex.tsx
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Receivable, ReceivableQuery, ReceivableStatus } from "../../types/receivables";
 import { listReceivables } from "../../api/receivables";
 import { toIDR } from "../../utils/money";
@@ -9,13 +10,32 @@ type Meta = { current_page: number; per_page: number; total: number; last_page: 
 
 const STATUS: Array<ReceivableStatus | ""> = ["", "OPEN", "PARTIAL", "OVERDUE", "SETTLED"];
 
+function normalizeInvoice(value: string | null | undefined): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isReceivableTarget(row: Receivable, targetInvoice: string): boolean {
+  const target = normalizeInvoice(targetInvoice);
+
+  if (!target) return false;
+
+  return (
+    normalizeInvoice(row.order?.invoice_no) === target ||
+    normalizeInvoice(row.order_id) === target
+  );
+}
+
 export default function ReceivablesIndex() {
+  const [searchParams] = useSearchParams();
+  const targetInvoice = searchParams.get("focus_invoice") ?? searchParams.get("q") ?? "";
+  const targetRowRef = useRef<HTMLTableRowElement | null>(null);
+
   const [rows, setRows] = useState<Receivable[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
-  const [q, setQ] = useState<string>("");
+  const [q, setQ] = useState<string>(() => searchParams.get("q") ?? "");
   const [status, setStatus] = useState<ReceivableStatus | "">("");
   const [dueBefore, setDueBefore] = useState<string>("");
   const [page, setPage] = useState<number>(1);
@@ -44,6 +64,19 @@ export default function ReceivablesIndex() {
   }, [params]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!targetInvoice || loading || rows.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      targetRowRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [targetInvoice, loading, rows]);
 
   return (
     <div className="space-y-4">
@@ -165,8 +198,19 @@ export default function ReceivablesIndex() {
                       ? new Date(r.due_date).toLocaleDateString("id-ID")
                       : "-";
                     const isOverdue = r.status === "OVERDUE";
+                    const isTarget = isReceivableTarget(r, targetInvoice);
+
                     return (
-                      <tr key={r.id} className="hover:bg-black/5 transition-colors">
+                      <tr
+                        key={r.id}
+                        ref={isTarget ? targetRowRef : undefined}
+                        className={[
+                          "transition-colors",
+                          isTarget
+                            ? "bg-amber-50 ring-2 ring-amber-300"
+                            : "hover:bg-black/5",
+                        ].join(" ")}
+                      >
                         <Td>{r.order?.invoice_no ?? "-"}</Td>
                         <Td><span className="line-clamp-1">{r.order?.customer?.name ?? "-"}</span></Td>
                         <Td>

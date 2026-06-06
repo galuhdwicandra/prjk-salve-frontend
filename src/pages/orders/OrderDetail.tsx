@@ -832,7 +832,13 @@ export default function OrderDetail(): React.ReactElement {
                   <button
                     type="button"
                     className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                    onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
+                    onClick={() => {
+                      const targetInvoice = row.invoice_no ?? row.number ?? '';
+
+                      navigate(
+                        `/receivables?q=${encodeURIComponent(targetInvoice)}&focus_invoice=${encodeURIComponent(targetInvoice)}`
+                      );
+                    }}
                     title="Menuju halaman Piutang untuk pelunasan"
                   >
                     Pelunasan
@@ -1244,7 +1250,13 @@ export default function OrderDetail(): React.ReactElement {
                       <button
                         type="button"
                         className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                        onClick={() => navigate(`/receivables?q=${encodeURIComponent(row.invoice_no ?? row.number ?? '')}`)}
+                        onClick={() => {
+                          const targetInvoice = row.invoice_no ?? row.number ?? '';
+
+                          navigate(
+                            `/receivables?q=${encodeURIComponent(targetInvoice)}&focus_invoice=${encodeURIComponent(targetInvoice)}`
+                          );
+                        }}
                       >
                         Proses Pelunasan
                       </button>

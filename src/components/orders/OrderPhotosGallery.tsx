@@ -69,35 +69,61 @@ export default function OrderPhotosGallery({ photos }: { photos: OrderPhoto[] })
       {/* Lightbox Modal */}
       {preview && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="
+      fixed inset-0 z-50
+      flex min-h-dvh items-center justify-center
+      bg-black/80 px-3 py-4
+      sm:p-6
+    "
           onClick={() => setPreview(null)}
         >
           <div
-            className="relative max-w-5xl w-full"
+            className="
+        relative flex h-full w-full max-w-5xl flex-col
+        sm:h-auto
+      "
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setPreview(null)}
-              className="absolute -top-10 right-0 text-white text-sm font-semibold"
-            >
-              ✕ Close
-            </button>
-
-            <div className="rounded-xl bg-white overflow-hidden shadow-2xl">
-              <img
-                src={preview.url}
-                alt={preview.label}
-                className="w-full max-h-[80vh] object-contain bg-black"
-              />
-              <div className="px-4 py-3 border-t border-slate-200">
-                <div className="text-sm font-semibold text-slate-900">
+            <div className="mb-3 flex items-center justify-between gap-3 text-white">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold">
                   {preview.label}
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="truncate text-xs text-white/70">
                   {preview.ts ?? "-"}
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="
+            inline-flex h-10 shrink-0 items-center justify-center
+            rounded-full bg-white/15 px-4 text-sm font-semibold text-white
+            backdrop-blur transition hover:bg-white/25 active:scale-95
+          "
+                aria-label="Tutup preview foto"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+
+            <div
+              className="
+          flex min-h-0 flex-1 items-center justify-center
+          overflow-hidden rounded-2xl bg-black shadow-2xl
+          sm:max-h-[82vh]
+        "
+            >
+              <img
+                src={preview.url}
+                alt={preview.label}
+                className="
+            h-auto max-h-[calc(100dvh-7.5rem)] w-auto max-w-full
+            object-contain
+            sm:max-h-[82vh]
+          "
+              />
             </div>
           </div>
         </div>
