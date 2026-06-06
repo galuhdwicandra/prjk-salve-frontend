@@ -32,17 +32,17 @@ export default function Toast({
   const tone =
     kind === 'success'
       ? {
-          wrap: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-          icon: 'text-emerald-600',
-          button: 'text-emerald-700 hover:bg-emerald-100',
-        }
+        wrap: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+        icon: 'text-emerald-600',
+        button: 'text-emerald-700 hover:bg-emerald-100',
+      }
       : kind === 'error'
-      ? {
+        ? {
           wrap: 'border-red-200 bg-red-50 text-red-800',
           icon: 'text-red-600',
           button: 'text-red-700 hover:bg-red-100',
         }
-      : {
+        : {
           wrap: 'border-sky-200 bg-sky-50 text-sky-800',
           icon: 'text-sky-600',
           button: 'text-sky-700 hover:bg-sky-100',
@@ -50,7 +50,7 @@ export default function Toast({
 
   return (
     <div
-      className="pointer-events-none fixed right-4 top-4 z-[1000] w-full max-w-sm"
+      className="pointer-events-none fixed right-4 top-4 z-[9999] w-full max-w-sm"
       aria-live="polite"
       aria-atomic="true"
       role="status"

@@ -179,24 +179,28 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
       {/* Popup pencarian layanan */}
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3"
+          className="fixed inset-0 z-[1200] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-3"
           onClick={() => { setOpen(false); setError(null); }}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="w-full max-w-3xl rounded-2xl bg-white shadow-xl border border-slate-200"
+            className="
+        flex max-h-[92dvh] w-full flex-col overflow-hidden
+        rounded-t-3xl border border-slate-200 bg-white shadow-xl
+        sm:max-h-[86dvh] sm:max-w-3xl sm:rounded-2xl
+      "
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between gap-3 p-4 border-b border-slate-200">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-900">Pilih Layanan</div>
-                <div className="text-xs text-slate-500">{hintText}</div>
+                <div className="text-base font-semibold text-slate-900 sm:text-sm">Pilih Layanan</div>
+                <div className="mt-0.5 text-xs leading-5 text-slate-500">{hintText}</div>
               </div>
               <button
                 type="button"
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+                className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"
                 onClick={() => { setOpen(false); setError(null); }}
               >
                 Tutup
@@ -204,8 +208,8 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
             </div>
 
             {/* Search bar di dalam modal */}
-            <div className="p-4 space-y-3">
-              <div className="flex items-stretch gap-2">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 pb-5 sm:p-4">
+              <div className="grid gap-2 sm:flex sm:items-stretch">
                 <div className="relative flex-1">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                     <SearchIcon />
@@ -271,10 +275,11 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
                 <button
                   type="button"
                   className="
-                    inline-flex items-center justify-center gap-2
+                    inline-flex w-full items-center justify-center gap-2
                     rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
                     hover:bg-slate-800 active:bg-slate-950
                     disabled:cursor-not-allowed disabled:opacity-60
+                    sm:w-auto
                   "
                   onClick={() => void refresh()}
                   disabled={loading}
@@ -318,24 +323,24 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
                         ].join(" ")}
                         onClick={() => {
                           onPick(r);
-                          setQ('');       // reset agar tidak penuh
-                          setOpen(false); // tutup modal setelah pilih
+                          setQ('');
+                          setOpen(false);
                         }}
                         title="Klik untuk menambah ke keranjang"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-semibold text-slate-900">
+                          <div className="min-w-0 flex-1">
+                            <div className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900">
                               {highlight(r.name, debouncedQ)}
                             </div>
-                            <div className="mt-0.5 text-xs text-slate-500">{r.unit}</div>
+                            <div className="mt-1 text-xs text-slate-500">{r.unit}</div>
                           </div>
 
                           <div className="shrink-0 text-right">
                             <div className="text-sm font-semibold tracking-tight text-slate-900 tabular-nums">
                               {formatIDR(r.price_effective)}
                             </div>
-                            <div className="mt-1 inline-flex rounded-full bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+                            <div className="mt-2 inline-flex rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-semibold text-white sm:opacity-0 sm:transition sm:group-hover:opacity-100">
                               Tambah
                             </div>
                           </div>
@@ -345,7 +350,7 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
                   </div>
 
                   {/* Pagination sederhana: muat lagi */}
-                  <div className="pt-2">
+                  <div className="sticky bottom-0 -mx-3 bg-white px-3 pt-2 pb-1 sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
                     <button
                       type="button"
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"

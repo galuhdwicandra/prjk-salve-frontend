@@ -819,7 +819,7 @@ export default function ProtectedLayout() {
       />
 
       {/* Topbar */}
-      <header className="sticky top-0 z-30 px-3 pt-2 sm:px-4 lg:px-6">
+      <header className="relative z-30 px-3 pt-2 sm:px-4 lg:px-6">
         <div className="container-app">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[1.7rem] border border-[color:var(--color-border)] bg-[color:var(--color-surface)]/85 p-1.5 shadow-[0_16px_34px_-28px_rgba(0,0,0,.45)] backdrop-blur sm:p-2">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -1212,7 +1212,7 @@ export default function ProtectedLayout() {
         ].join(" ")}
       >
         {/* Sidebar (desktop) */}
-        <aside className="hidden md:block sticky top-[5.75rem] self-start z-50">
+        <aside className="hidden md:block sticky top-4 self-start z-50">
           <div
             className={[
               "relative max-h-[calc(100dvh-6.75rem)] overflow-visible rounded-2xl border border-[color:var(--color-border)] bg-white/70 dark:bg-white/5 shadow-[0_18px_48px_-36px_rgba(0,0,0,.65)] transition-all duration-300",
