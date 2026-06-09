@@ -136,7 +136,7 @@ function ActivityTable(props: {
 }
 
 export default function CashFlowPage() {
-  const isSuperadmin = useAuth.hasRole('Superadmin');
+  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
 
   const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
   const [dateTo, setDateTo] = useState(todayLocalYMD());
@@ -162,7 +162,7 @@ export default function CashFlowPage() {
   }, [summary?.net_cash_flow]);
 
   async function loadBranches() {
-    if (!isSuperadmin) return;
+    if (!canAccessAllBranches) return;
 
     setLoadingBranches(true);
     setError('');
@@ -185,7 +185,7 @@ export default function CashFlowPage() {
       const res = await getAccountingCashFlow({
         date_from: dateFrom,
         date_to: dateTo,
-        branch_id: isSuperadmin && branchId ? branchId : undefined,
+        branch_id: canAccessAllBranches && branchId ? branchId : undefined,
         basis: 'posted',
       });
 
@@ -251,7 +251,7 @@ export default function CashFlowPage() {
               />
             </label>
 
-            {isSuperadmin ? (
+            {canAccessAllBranches ? (
               <label className="space-y-1">
                 <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
                   Cabang

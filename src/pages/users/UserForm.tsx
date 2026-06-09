@@ -10,9 +10,19 @@ import { useAuth, useHasRole } from '../../store/useAuth';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-const ALL_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir'];
+const ALL_ROLES: RoleName[] = [
+  'Superadmin',
+  'Admin Cabang',
+  'Kasir',
+  'Petugas Cuci',
+  'Kurir',
+  'Akuntansi',
+];
+
 function allowedRoles(isSuperadmin: boolean): RoleName[] {
-  return isSuperadmin ? ALL_ROLES : (ALL_ROLES.filter(r => r !== 'Superadmin') as RoleName[]);
+  return isSuperadmin
+    ? ALL_ROLES
+    : (ALL_ROLES.filter((role) => role !== 'Superadmin' && role !== 'Akuntansi') as RoleName[]);
 }
 
 export default function UserForm() {

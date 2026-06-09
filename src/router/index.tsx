@@ -82,7 +82,7 @@ export const router = createBrowserRouter([
       {
         path: '/reports',
         element: (
-          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Akuntansi']}>
             <LazyBoundary>
               <ReportsIndex />
             </LazyBoundary>
@@ -455,7 +455,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/dashboard',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountingDashboardPage />
                 </LazyBoundary>
@@ -465,7 +465,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/accounts',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountIndex />
                 </LazyBoundary>
@@ -475,7 +475,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/accounts/new',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountForm />
                 </LazyBoundary>
@@ -485,7 +485,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/accounts/:id/edit',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountForm />
                 </LazyBoundary>
@@ -495,7 +495,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/account-mappings',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountMappingIndex />
                 </LazyBoundary>
@@ -505,7 +505,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/account-mappings/new',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountMappingForm />
                 </LazyBoundary>
@@ -515,7 +515,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/account-mappings/:id/edit',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountMappingForm />
                 </LazyBoundary>
@@ -525,7 +525,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalIndex />
                 </LazyBoundary>
@@ -535,7 +535,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals/new',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalForm />
                 </LazyBoundary>
@@ -545,7 +545,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals/:id',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalDetail />
                 </LazyBoundary>
@@ -555,7 +555,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals/:id/edit',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalForm />
                 </LazyBoundary>
@@ -565,7 +565,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/ledger',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <LedgerPage />
                 </LazyBoundary>
@@ -575,7 +575,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/profit-loss',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <ProfitLossPage />
                 </LazyBoundary>
@@ -585,7 +585,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/balance-sheet',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <BalanceSheetPage />
                 </LazyBoundary>
@@ -595,7 +595,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/cash-flow',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <CashFlowPage />
                 </LazyBoundary>

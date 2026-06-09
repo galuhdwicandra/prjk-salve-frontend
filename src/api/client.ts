@@ -8,7 +8,13 @@ const api = axios.create({
 });
 
 import type { BranchMini } from '../types/users';
-export type RoleName = 'Superadmin' | 'Admin Cabang' | 'Kasir' | 'Petugas Cuci' | 'Kurir';
+export type RoleName =
+  | 'Superadmin'
+  | 'Admin Cabang'
+  | 'Kasir'
+  | 'Petugas Cuci'
+  | 'Kurir'
+  | 'Akuntansi';
 export interface MeUser {
     id: number | string;
     name: string;

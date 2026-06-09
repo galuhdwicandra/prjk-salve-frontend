@@ -284,7 +284,7 @@ function ReceivablesTable(props: {
 }
 
 export default function AccountingDashboardPage() {
-  const isSuperadmin = useAuth.hasRole('Superadmin');
+  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
 
   const [dateFrom, setDateFrom] = useState(firstDayOfMonth());
   const [dateTo, setDateTo] = useState(todayDate());
@@ -315,7 +315,7 @@ export default function AccountingDashboardPage() {
   const balanceTone = summary?.is_balance_sheet_balanced ? 'positive' : 'warning';
 
   async function loadBranches() {
-    if (!isSuperadmin) return;
+    if (!canAccessAllBranches) return;
 
     setLoadingBranches(true);
 
@@ -337,7 +337,7 @@ export default function AccountingDashboardPage() {
       const res = await getAccountingDashboard({
         date_from: dateFrom,
         date_to: dateTo,
-        branch_id: isSuperadmin && branchId ? branchId : null,
+        branch_id: canAccessAllBranches && branchId ? branchId : null,
         basis: 'posted',
       });
 
@@ -424,7 +424,7 @@ export default function AccountingDashboardPage() {
             />
           </label>
 
-          {isSuperadmin ? (
+          {canAccessAllBranches ? (
             <label className="space-y-1">
               <span className="text-sm font-medium">Cabang</span>
               <select
@@ -522,7 +522,7 @@ export default function AccountingDashboardPage() {
         <CashFlowChart rows={charts?.cash_in_vs_cash_out ?? []} />
       </div>
 
-      {isSuperadmin ? (
+      {canAccessAllBranches ? (
         <BranchProfitTable rows={charts?.net_profit_by_branch ?? []} />
       ) : null}
 

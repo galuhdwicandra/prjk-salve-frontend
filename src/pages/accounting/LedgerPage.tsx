@@ -31,7 +31,7 @@ function formatDate(value?: string | null): string {
 }
 
 export default function LedgerPage() {
-  const isSuperadmin = useAuth.hasRole('Superadmin');
+  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
 
   const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -63,7 +63,7 @@ export default function LedgerPage() {
           is_active: true,
           per_page: 500,
         }),
-        isSuperadmin
+        canAccessAllBranches
           ? listBranches({ per_page: 500 })
           : Promise.resolve({ data: [], meta: null, message: null, errors: null }),
       ]);
@@ -97,7 +97,7 @@ export default function LedgerPage() {
     try {
       const res = await getAccountingLedger({
         account_id: accountId,
-        branch_id: isSuperadmin && branchId ? branchId : undefined,
+        branch_id: canAccessAllBranches && branchId ? branchId : undefined,
         date_from: dateFrom,
         date_to: dateTo,
         page: nextPage,
@@ -174,7 +174,7 @@ export default function LedgerPage() {
             </select>
           </label>
 
-          {isSuperadmin ? (
+          {canAccessAllBranches ? (
             <label className="space-y-1">
               <span className="text-sm font-medium">Cabang</span>
               <select

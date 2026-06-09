@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-06-06 13:46:25_  
+_Dihasilkan otomatis: 2026-06-09 16:16:34_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -495,7 +495,7 @@ export async function getCashToday(params?: { branch_id?: string; business_date?
 
 ### src\api\client.ts
 
-- SHA: `9912b3902819`  
+- SHA: `6b09ff19c517`  
 - Ukuran: 6 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -510,7 +510,13 @@ const api = axios.create({
 });
 
 import type { BranchMini } from '../types/users';
-export type RoleName = 'Superadmin' | 'Admin Cabang' | 'Kasir' | 'Petugas Cuci' | 'Kurir';
+export type RoleName =
+  | 'Superadmin'
+  | 'Admin Cabang'
+  | 'Kasir'
+  | 'Petugas Cuci'
+  | 'Kurir'
+  | 'Akuntansi';
 export interface MeUser {
     id: number | string;
     name: string;
@@ -1961,7 +1967,7 @@ export async function resolveWhatsappTemplate(
 
 ### src\store\useAuth.ts
 
-- SHA: `eda11d34c313`  
+- SHA: `81af9d0a8a55`  
 - Ukuran: 4 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -1984,6 +1990,7 @@ const state: AuthState = {
 const isDev = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV;
 
 export function homePathByRole(roles: RoleName[]): string {
+    if (roles.includes('Akuntansi')) return '/accounting/dashboard';
     if (roles.includes('Petugas Cuci')) return '/production-board';
     if (roles.includes('Kurir')) return '/deliveries';
     if (roles.includes('Kasir')) return '/pos';
@@ -2126,7 +2133,7 @@ export default function GuestLayout() {
 
 ### src\layouts\ProtectedLayout.tsx
 
-- SHA: `5dd279b4b5eb`  
+- SHA: `6d5f8b9dad49`  
 - Ukuran: 68 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -2769,49 +2776,49 @@ export default function ProtectedLayout() {
         {
           label: "Dashboard Akuntansi",
           to: "/accounting/dashboard",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "dashboard",
         },
         {
           label: "COA",
           to: "/accounting/accounts",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "accounting",
         },
         {
           label: "Mapping Akun",
           to: "/accounting/account-mappings",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "accounting",
         },
         {
           label: "Jurnal Umum",
           to: "/accounting/journals",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "accounting",
         },
         {
           label: "Buku Besar",
           to: "/accounting/ledger",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "accounting",
         },
         {
           label: "Laba Rugi",
           to: "/accounting/profit-loss",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "profitLoss",
         },
         {
           label: "Neraca",
           to: "/accounting/balance-sheet",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "balanceSheet",
         },
         {
           label: "Arus Kas",
           to: "/accounting/cash-flow",
-          roles: ["Superadmin", "Admin Cabang"],
+          roles: ["Superadmin", "Admin Cabang", "Akuntansi"],
           icon: "cashFlow",
         },
       ],
@@ -2820,7 +2827,7 @@ export default function ProtectedLayout() {
       title: "Laporan & Pengaturan",
       icon: "reportsSettings",
       items: [
-        { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir"], icon: "reports" },
+        { label: "Laporan", to: "/reports", roles: ["Superadmin", "Admin Cabang", "Kasir", "Akuntansi"], icon: "reports" },
         { label: "Settings", to: "/settings", roles: ["Superadmin", "Admin Cabang"], icon: "settings" },
       ],
     },
@@ -3933,7 +3940,7 @@ export default function Guarded(props: { roles: RoleName[]; children: ReactNode 
 
 ### src\router\index.tsx
 
-- SHA: `627bc04c9489`  
+- SHA: `fd0bb7e34f31`  
 - Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -4022,7 +4029,7 @@ export const router = createBrowserRouter([
       {
         path: '/reports',
         element: (
-          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir']}>
+          <Guarded roles={['Superadmin', 'Admin Cabang', 'Kasir', 'Akuntansi']}>
             <LazyBoundary>
               <ReportsIndex />
             </LazyBoundary>
@@ -4395,7 +4402,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/dashboard',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountingDashboardPage />
                 </LazyBoundary>
@@ -4405,7 +4412,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/accounts',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountIndex />
                 </LazyBoundary>
@@ -4415,7 +4422,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/accounts/new',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountForm />
                 </LazyBoundary>
@@ -4425,7 +4432,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/accounts/:id/edit',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountForm />
                 </LazyBoundary>
@@ -4435,7 +4442,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/account-mappings',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountMappingIndex />
                 </LazyBoundary>
@@ -4445,7 +4452,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/account-mappings/new',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountMappingForm />
                 </LazyBoundary>
@@ -4455,7 +4462,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/account-mappings/:id/edit',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <AccountMappingForm />
                 </LazyBoundary>
@@ -4465,7 +4472,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalIndex />
                 </LazyBoundary>
@@ -4475,7 +4482,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals/new',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalForm />
                 </LazyBoundary>
@@ -4485,7 +4492,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals/:id',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalDetail />
                 </LazyBoundary>
@@ -4495,7 +4502,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/journals/:id/edit',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <JournalForm />
                 </LazyBoundary>
@@ -4505,7 +4512,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/ledger',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <LedgerPage />
                 </LazyBoundary>
@@ -4515,7 +4522,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/profit-loss',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <ProfitLossPage />
                 </LazyBoundary>
@@ -4525,7 +4532,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/balance-sheet',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <BalanceSheetPage />
                 </LazyBoundary>
@@ -4535,7 +4542,7 @@ export const router = createBrowserRouter([
           {
             path: 'accounting/cash-flow',
             element: (
-              <Guarded roles={['Superadmin', 'Admin Cabang']}>
+              <Guarded roles={['Superadmin', 'Admin Cabang', 'Akuntansi']}>
                 <LazyBoundary>
                   <CashFlowPage />
                 </LazyBoundary>
@@ -10076,7 +10083,7 @@ export default function AccountIndex() {
 
 ### src\pages\accounting\AccountingDashboardPage.tsx
 
-- SHA: `ffb3b6c44531`  
+- SHA: `3d1fcdb3f0ff`  
 - Ukuran: 19 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -10367,7 +10374,7 @@ function ReceivablesTable(props: {
 }
 
 export default function AccountingDashboardPage() {
-  const isSuperadmin = useAuth.hasRole('Superadmin');
+  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
 
   const [dateFrom, setDateFrom] = useState(firstDayOfMonth());
   const [dateTo, setDateTo] = useState(todayDate());
@@ -10398,7 +10405,7 @@ export default function AccountingDashboardPage() {
   const balanceTone = summary?.is_balance_sheet_balanced ? 'positive' : 'warning';
 
   async function loadBranches() {
-    if (!isSuperadmin) return;
+    if (!canAccessAllBranches) return;
 
     setLoadingBranches(true);
 
@@ -10420,7 +10427,7 @@ export default function AccountingDashboardPage() {
       const res = await getAccountingDashboard({
         date_from: dateFrom,
         date_to: dateTo,
-        branch_id: isSuperadmin && branchId ? branchId : null,
+        branch_id: canAccessAllBranches && branchId ? branchId : null,
         basis: 'posted',
       });
 
@@ -10507,7 +10514,7 @@ export default function AccountingDashboardPage() {
             />
           </label>
 
-          {isSuperadmin ? (
+          {canAccessAllBranches ? (
             <label className="space-y-1">
               <span className="text-sm font-medium">Cabang</span>
               <select
@@ -10605,7 +10612,7 @@ export default function AccountingDashboardPage() {
         <CashFlowChart rows={charts?.cash_in_vs_cash_out ?? []} />
       </div>
 
-      {isSuperadmin ? (
+      {canAccessAllBranches ? (
         <BranchProfitTable rows={charts?.net_profit_by_branch ?? []} />
       ) : null}
 
@@ -11395,7 +11402,7 @@ export default function BalanceSheetPage() {
 
 ### src\pages\accounting\CashFlowPage.tsx
 
-- SHA: `756fc529a9d0`  
+- SHA: `93605b565413`  
 - Ukuran: 13 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -11538,7 +11545,7 @@ function ActivityTable(props: {
 }
 
 export default function CashFlowPage() {
-  const isSuperadmin = useAuth.hasRole('Superadmin');
+  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
 
   const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
   const [dateTo, setDateTo] = useState(todayLocalYMD());
@@ -11564,7 +11571,7 @@ export default function CashFlowPage() {
   }, [summary?.net_cash_flow]);
 
   async function loadBranches() {
-    if (!isSuperadmin) return;
+    if (!canAccessAllBranches) return;
 
     setLoadingBranches(true);
     setError('');
@@ -11587,7 +11594,7 @@ export default function CashFlowPage() {
       const res = await getAccountingCashFlow({
         date_from: dateFrom,
         date_to: dateTo,
-        branch_id: isSuperadmin && branchId ? branchId : undefined,
+        branch_id: canAccessAllBranches && branchId ? branchId : undefined,
         basis: 'posted',
       });
 
@@ -11653,7 +11660,7 @@ export default function CashFlowPage() {
               />
             </label>
 
-            {isSuperadmin ? (
+            {canAccessAllBranches ? (
               <label className="space-y-1">
                 <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
                   Cabang
@@ -12594,7 +12601,7 @@ export default function JournalIndex() {
 
 ### src\pages\accounting\LedgerPage.tsx
 
-- SHA: `c60c9ec15fa7`  
+- SHA: `2ab800c91389`  
 - Ukuran: 12 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -12632,7 +12639,7 @@ function formatDate(value?: string | null): string {
 }
 
 export default function LedgerPage() {
-  const isSuperadmin = useAuth.hasRole('Superadmin');
+  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
 
   const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -12664,7 +12671,7 @@ export default function LedgerPage() {
           is_active: true,
           per_page: 500,
         }),
-        isSuperadmin
+        canAccessAllBranches
           ? listBranches({ per_page: 500 })
           : Promise.resolve({ data: [], meta: null, message: null, errors: null }),
       ]);
@@ -12698,7 +12705,7 @@ export default function LedgerPage() {
     try {
       const res = await getAccountingLedger({
         account_id: accountId,
-        branch_id: isSuperadmin && branchId ? branchId : undefined,
+        branch_id: canAccessAllBranches && branchId ? branchId : undefined,
         date_from: dateFrom,
         date_to: dateTo,
         page: nextPage,
@@ -12775,7 +12782,7 @@ export default function LedgerPage() {
             </select>
           </label>
 
-          {isSuperadmin ? (
+          {canAccessAllBranches ? (
             <label className="space-y-1">
               <span className="text-sm font-medium">Cabang</span>
               <select
@@ -28967,7 +28974,7 @@ function ExistingTemplatesPanel({
 
 ### src\pages\users\UserForm.tsx
 
-- SHA: `723d068a07e6`  
+- SHA: `aea1fd5bf589`  
 - Ukuran: 28 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
@@ -28984,9 +28991,19 @@ import { useAuth, useHasRole } from '../../store/useAuth';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-const ALL_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir'];
+const ALL_ROLES: RoleName[] = [
+  'Superadmin',
+  'Admin Cabang',
+  'Kasir',
+  'Petugas Cuci',
+  'Kurir',
+  'Akuntansi',
+];
+
 function allowedRoles(isSuperadmin: boolean): RoleName[] {
-  return isSuperadmin ? ALL_ROLES : (ALL_ROLES.filter(r => r !== 'Superadmin') as RoleName[]);
+  return isSuperadmin
+    ? ALL_ROLES
+    : (ALL_ROLES.filter((role) => role !== 'Superadmin' && role !== 'Akuntansi') as RoleName[]);
 }
 
 export default function UserForm() {
