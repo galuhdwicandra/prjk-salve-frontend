@@ -1,6 +1,6 @@
 # Dokumentasi Frontend (FULL Source)
 
-_Dihasilkan otomatis: 2026-06-09 16:16:34_  
+_Dihasilkan otomatis: 2026-06-09 16:34:02_  
 **Root:** `G:\.galuh\latihanlaravel\A-Portfolio-Project\2026\clone_salve\frontend`
 
 
@@ -25700,8 +25700,8 @@ function renderStatusChip(s?: ReceivableStatus) {
 
 ### src\pages\reports\ReportsIndex.tsx
 
-- SHA: `a44b78396680`  
-- Ukuran: 14 KB
+- SHA: `718d5421fb05`  
+- Ukuran: 15 KB
 <details><summary><strong>Lihat Kode Lengkap</strong></summary>
 
 ```tsx
@@ -25730,6 +25730,39 @@ function reportKindLabel(kind: ReportKind): string {
     }
 
     return kind.toUpperCase();
+}
+
+function reportColumnLabel(column: string): string {
+    const labels: Record<string, string> = {
+        branch_code: 'Kode Cabang',
+        branch_name: 'Cabang',
+        invoice: 'Invoice',
+        order_number: 'No Order',
+        invoice_no: 'No Invoice',
+        order_created_at: 'Tanggal Order',
+        received_at: 'Tanggal Masuk',
+        ready_at: 'Tanggal Selesai',
+        customer_name: 'Customer',
+        customer_whatsapp: 'WhatsApp',
+        customer_address: 'Alamat',
+        services: 'Service',
+        qty: 'Qty',
+        order_status: 'Status Order',
+        payment_status: 'Status Bayar',
+        payment_method: 'Metode Bayar',
+        payment_amount: 'Nominal Bayar',
+        paid_at: 'Tanggal Bayar',
+        payment_note: 'Catatan Bayar',
+        subtotal: 'Subtotal',
+        discount: 'Diskon',
+        dp_amount: 'DP',
+        grand_total: 'Grand Total',
+        paid_amount: 'Total Dibayar',
+        due_amount: 'Sisa Bayar',
+        cashier: 'Kasir',
+    };
+
+    return labels[column] ?? column;
 }
 
 export default function ReportsIndex() {
@@ -25972,7 +26005,7 @@ export default function ReportsIndex() {
                             <thead className="bg-[#E6EDFF] sticky top-0 z-10">
                                 <tr className="divide-x divide-[color:var(--color-border)]">
                                     {columns.map((c) => (
-                                        <Th key={c}>{c}</Th>
+                                        <Th key={c}>{reportColumnLabel(c)}</Th>
                                     ))}
                                 </tr>
                             </thead>
