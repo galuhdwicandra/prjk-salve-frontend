@@ -402,7 +402,7 @@ export default function POSPage() {
   const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
 
   function parseMoneyInput(value: string): number {
-    const normalized = value.trim();
+    const normalized = value.replace(/[^\d]/g, '');
     if (normalized === '') return 0;
 
     const parsed = Number(normalized);
@@ -820,10 +820,10 @@ export default function POSPage() {
                       <label className="text-xs font-medium text-slate-700">Diskon (Rp)</label>
                       <Input
                         id="discount"
-                        type="number"
-                        min={0}
+                        type="text"
+                        inputMode="numeric"
                         value={discount}
-                        onChange={(e) => setDiscount(e.target.value)}
+                        onChange={(e) => setDiscount(e.target.value.replace(/[^\d.]/g, ''))}
                         placeholder="0"
                       />
                     </div>

@@ -130,7 +130,7 @@ type DraftItem = {
   service_id: string;
   service_name?: string;
   price?: number;
-  qty: number;
+  qty: number | '';
   note?: string | null;
 };
 type Draft = {
@@ -145,6 +145,13 @@ type Draft = {
 
 function money(v: unknown): string {
   return toIDR(Number(v ?? 0));
+}
+
+function editableDiscount(order: Order): number {
+  return Math.max(
+    0,
+    Number(order.discount ?? 0) - Number(order.loyalty_discount ?? 0)
+  );
 }
 
 function statusBadgeClass(status: OrderBackendStatus): string {
@@ -329,6 +336,7 @@ export default function OrderDetail(): React.ReactElement {
       invoice_no: row.invoice_no ?? '',
       customer_id: row.customer?.id ?? row.customer_id ?? null,
       notes: row.notes ?? null,
+      discount: editableDiscount(row),
       received_at: row.received_at ?? null,
       ready_at: row.ready_at ?? null,
       items: (row.items ?? []).map(it => ({
@@ -352,10 +360,18 @@ export default function OrderDetail(): React.ReactElement {
     setLoyaltyCorrectionErrors({});
   }, [row]);
 
-  const changeQty = useCallback((serviceId: string, qty: number) => {
+  const changeQty = useCallback((serviceId: string, qty: number | '') => {
     setDraft(d => ({
       ...d,
-      items: d.items.map(it => it.service_id === serviceId ? { ...it, qty: Math.max(1, qty) } : it),
+      items: d.items.map(it => {
+        if (it.service_id !== serviceId) return it;
+
+        if (qty === '') {
+          return { ...it, qty: '' };
+        }
+
+        return { ...it, qty: Math.max(1, Math.trunc(qty)) };
+      }),
     }));
   }, []);
   const changeNote = useCallback((serviceId: string, note: string) => {
@@ -373,7 +389,11 @@ export default function OrderDetail(): React.ReactElement {
       if (found) {
         return {
           ...d,
-          items: d.items.map(it => it.service_id === svc.id ? { ...it, qty: it.qty + 1, price: svc.price_effective } : it),
+          items: d.items.map(it =>
+            it.service_id === svc.id
+              ? { ...it, qty: Number(it.qty || 0) + 1, price: svc.price_effective }
+              : it
+          ),
         };
       }
       return {
@@ -732,6 +752,7 @@ export default function OrderDetail(): React.ReactElement {
                             invoice_no: row.invoice_no ?? '',
                             customer_id: row.customer?.id ?? row.customer_id ?? null,
                             notes: row.notes ?? null,
+                            discount: editableDiscount(row),
                             received_at: row.received_at ?? null,
                             ready_at: row.ready_at ?? null,
                             items: (row.items ?? []).map(it => ({
@@ -762,10 +783,11 @@ export default function OrderDetail(): React.ReactElement {
                           const payload: OrderUpdatePayload = {
                             invoice_no: draft.invoice_no.trim(),
                             customer_id: draft.customer_id ?? null,
+                            discount: Math.max(0, Number(draft.discount ?? 0)),
                             notes: buildConsumerGoodsNotes(noteRows),
                             items: draft.items.map(it => ({
                               service_id: it.service_id,
-                              qty: it.qty,
+                              qty: Number(it.qty || 1),
                               note: (it.note ?? '') || null,
                             })),
                             received_at: draft.received_at ? toDateInputValue(draft.received_at) : null,
@@ -1134,8 +1156,26 @@ export default function OrderDetail(): React.ReactElement {
                                       w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
                                       focus:border-slate-900 focus:outline-none
                                     "
-                                    value={qtyDisplay(it.qty)}
-                                    onChange={(e) => changeQty(it.service_id, Number(e.target.value || 1))}
+                                    value={it.qty === '' ? '' : qtyDisplay(it.qty)}
+                                    onFocus={(e) => e.currentTarget.select()}
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+
+                                      if (raw === '') {
+                                        changeQty(it.service_id, '');
+                                        return;
+                                      }
+
+                                      const next = Number(raw);
+                                      if (Number.isFinite(next)) {
+                                        changeQty(it.service_id, next);
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      if (it.qty === '') {
+                                        changeQty(it.service_id, 1);
+                                      }
+                                    }}
                                     disabled={!canEdit}
                                   />
                                 </Td>
@@ -1166,9 +1206,37 @@ export default function OrderDetail(): React.ReactElement {
                     </div>
 
                     <div className="border-t border-slate-200 px-4 py-3">
-                      <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
-                        <div className="text-slate-600">
+                      <div className="flex flex-wrap items-end justify-between gap-3 text-sm">
+                        <div className="grid gap-1">
+                          <label htmlFor="discount" className="text-xs font-medium text-slate-700">
+                            Diskon (Rp)
+                          </label>
+                          <input
+                            id="discount"
+                            type="number"
+                            min={0}
+                            max={previewSubtotal}
+                            inputMode="numeric"
+                            className="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                            value={draft.discount ?? 0}
+                            onChange={(e) =>
+                              setDraft((d) => ({
+                                ...d,
+                                discount: Math.max(0, Number(e.target.value || 0)),
+                              }))
+                            }
+                            disabled={!canEdit}
+                          />
+                          {fieldErr['discount'] && (
+                            <div className="text-[11px] text-red-600">{fieldErr['discount']}</div>
+                          )}
+                        </div>
+
+                        <div className="text-right text-slate-600">
                           Subtotal (preview): <span className="font-semibold text-slate-900">{money(previewSubtotal)}</span>
+                          <div>
+                            Setelah diskon: <span className="font-semibold text-slate-900">{money(Math.max(0, previewSubtotal - Number(draft.discount ?? 0)))}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
