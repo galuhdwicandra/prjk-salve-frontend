@@ -1,5 +1,6 @@
 @import "./styles/tokens.css";
 @import "tailwindcss";
+@import "./styles/craft.css";
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 

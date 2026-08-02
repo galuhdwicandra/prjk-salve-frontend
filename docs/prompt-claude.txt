@@ -4,6 +4,10 @@ Mode: analisis dan saran saja. Jangan menerapkan perubahan apa pun — saya yang
 akan menerapkannya sendiri. Jangan jalankan perintah yang menulis file atau
 cache (install, migration, build, format, test). 
 
+Website:
+salvecs.com <- utama
+staging.salvecs.com <- cek2
+
 Konteks project:
 - Baca dahulu seluruh file yang relevan dan telusuri alur sebenarnya, termasuk
   caller dan callee yang terkait.
@@ -36,9 +40,9 @@ Format jawaban:
 LARK STORY
 
 Deskripsi:
-Setup environment dan deploy staging PWA
+Scope styles.css ke prefix .craft agar tidak bentrok dengan .btn dan .chip di index.css
 
 Acceptance Criteria:
-URL staging dapat dibuka dari HP dan aplikasi dapat di-install.
+Setelah styles.css diterapkan, buka lima halaman admin lama. Tampilan tombol dan chip tidak berubah.
 
 bantu saya kerjakan story ini. tetap ikuti aturan ya.
