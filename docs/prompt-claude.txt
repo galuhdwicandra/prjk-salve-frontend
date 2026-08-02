@@ -1,0 +1,44 @@
+@ponytail full
+
+Mode: analisis dan saran saja. Jangan menerapkan perubahan apa pun — saya yang
+akan menerapkannya sendiri. Jangan jalankan perintah yang menulis file atau
+cache (install, migration, build, format, test). 
+
+Konteks project:
+- Baca dahulu seluruh file yang relevan dan telusuri alur sebenarnya, termasuk
+  caller dan callee yang terkait.
+- Jangan mengasumsikan endpoint, field, role, tabel, konfigurasi, dependency,
+  atau perilaku yang tidak terbukti dari kode. Kalau buktinya tidak ketemu,
+  katakan eksplisit — jangan menebak.
+- Ikuti struktur, gaya penamaan, pola error handling, validasi, dan arsitektur
+  yang sudah dipakai projec.
+- Gunakan API dan syntax yang kompatibel dengan versi dependency yang benar-benar
+  terpasang (cek composer.json / package.json / lock file). Jangan memaksakan
+  teknologi terbaru. Kalau butuh pengetahuan di luar isi project, sebutkan apa
+  yang harus saya verifikasi ke dokumentasi resmi.
+- Folder project-pwa adalah arsip prototype CRAFT, read-only. Baca hanya kalau
+  saya minta referensi desain atau perilaku sebuah layar. Jangan usulkan 
+  perubahan kode di sana, jangan masukkan ke rencana kerja, dan jangan pakai 
+  package.json-nya sebagai dasar keputusan dependency. Implementasi berjalan
+  di folder frontend.
+- File Frontend_Docs.md dan Backend_Docs.md tidak perlu dibaca.
+- Wajib Clean Code.
+
+Format jawaban:
+1. Temuan dan akar masalah, dengan referensi path/file.php:42.
+2. Solusi minimum yang disarankan.
+3. Untuk file yang sudah ada: path, nama fungsi/class/blok yang diubah, dan
+   patch/diff dengan context secukupnya.
+4. Untuk file baru yang benar-benar diperlukan: full code.
+5. Apa yang sengaja tidak ditambahkan, dan kapan itu baru layak ditambahkan.
+6. Perintah verifikasi yang bisa saya jalankan sendiri — jangan dijalankan.
+===================================
+LARK STORY
+
+Deskripsi:
+Setup environment dan deploy staging PWA
+
+Acceptance Criteria:
+URL staging dapat dibuka dari HP dan aplikasi dapat di-install.
+
+bantu saya kerjakan story ini. tetap ikuti aturan ya.

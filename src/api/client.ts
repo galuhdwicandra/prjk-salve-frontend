@@ -4,7 +4,6 @@ import type { AxiosError } from 'axios';
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     withCredentials: false,
-    headers: { 'Content-Type': 'application/json' },
 });
 
 import type { BranchMini } from '../types/users';
@@ -168,7 +167,7 @@ api.interceptors.response.use(
     (res) => res,
     (err: AxiosError<ApiErrorResponse>) => {
         const status = err.response?.status;
-        if (status === 401) {
+        if (status === 401 && getToken()) {
             // Bersihkan token & lempar ke /login
             clearAuthSideEffects();
             if (location.pathname !== '/login') {

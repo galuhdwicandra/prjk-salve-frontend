@@ -1,0 +1,17 @@
+AddType application/manifest+json .webmanifest
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # dipasang di produksi: /staging/* dilempar ke subdomain.
+  # dipasang di staging: inert, karena docroot-nya sudah folder staging.
+  RewriteRule ^staging/ https://staging.salvecs.com/ [R=301,L]
+
+  # file/direktori nyata (assets, sw.js, manifest) dilayani langsung
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>
