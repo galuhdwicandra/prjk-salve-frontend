@@ -26,7 +26,8 @@ Konteks project:
   package.json-nya sebagai dasar keputusan dependency. Implementasi berjalan
   di folder frontend.
 - File Frontend_Docs.md dan Backend_Docs.md tidak perlu dibaca.
-- Wajib Clean Code.
+- Wajib Clean Code, jangan ada komentar apapun di code.
+- code tanpa any, karena suka error.
 
 Format jawaban:
 1. Temuan dan akar masalah, dengan referensi path/file.php:42.
@@ -40,9 +41,9 @@ Format jawaban:
 LARK STORY
 
 Deskripsi:
-Scope styles.css ke prefix .craft agar tidak bentrok dengan .btn dan .chip di index.css
+Pindahkan fungsi murni dari main.js ke frontend/src/utils dengan tipe yang jelas
 
 Acceptance Criteria:
-Setelah styles.css diterapkan, buka lima halaman admin lama. Tampilan tombol dan chip tidak berubah.
+Fungsi rp, num, esc, fmtDate, orderPaid, orderOutstanding, payStatus, dan rangeFor sudah dipindahkan. Tersedia minimal satu test untuk orderOutstanding.
 
 bantu saya kerjakan story ini. tetap ikuti aturan ya.

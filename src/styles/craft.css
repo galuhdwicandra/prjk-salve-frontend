@@ -23,7 +23,6 @@
   background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
 
-  & *{box-sizing:border-box;margin:0;padding:0}
   & :is(button,input,select,textarea){font-family:inherit;font-size:14px;color:var(--ink)}
   & button{cursor:pointer}
   & :is(h1,h2,h3){letter-spacing:-.01em}
@@ -32,7 +31,6 @@
   & svg{display:block}
 
 
-.hidden{display:none!important}
 .mono{font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 .mini{font-size:12px;color:var(--muted)}

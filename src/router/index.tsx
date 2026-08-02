@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import GuestLayout from '../layouts/GuestLayout';
 import ProtectedLayout from '../layouts/ProtectedLayout';
+import CraftLayout from '../layouts/CraftLayout';
 import LoginPage from '../pages/Login';
 import { lazy } from 'react';
 import Guarded from './Guarded';
@@ -50,6 +51,7 @@ const ProfitLossPage = lazy(() => import('../pages/accounting/ProfitLossPage'));
 const BalanceSheetPage = lazy(() => import('../pages/accounting/BalanceSheetPage'));
 const CashFlowPage = lazy(() => import('../pages/accounting/CashFlowPage'));
 const AccountingDashboardPage = lazy(() => import('../pages/accounting/AccountingDashboardPage'));
+const AppLayout = import.meta.env.VITE_CRAFT_SHELL === 'true' ? CraftLayout : ProtectedLayout;
 
 export const router = createBrowserRouter([
   {
@@ -67,7 +69,7 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    element: <ProtectedLayout />,
+    element: <AppLayout />,
     children: [
       {
         path: '/',
