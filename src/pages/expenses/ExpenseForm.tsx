@@ -6,15 +6,15 @@ import { listBranches } from '../../api/branches';
 import type { Expense } from '../../types/expenses';
 import type { Branch } from '../../types/branches';
 import { toIDR } from '../../utils/money';
-import { useHasRole } from '../../store/useAuth';
+import { useAuth, useIsManager } from '../../store/useAuth';
 
 export default function ExpenseForm() {
   const params = useParams();
   const id = params.id ? String(params.id) : null;
   const editing = !!id;
   const nav = useNavigate();
-  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
-  const isSuperadmin = useHasRole(['Superadmin']);
+  const canManage = useIsManager();
+  const isSuperadmin = (useAuth.user?.branches.length ?? 0) > 1;
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string>('');

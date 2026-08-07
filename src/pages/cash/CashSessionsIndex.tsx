@@ -71,7 +71,7 @@ function parseMoneyInput(value: string): number {
 
 export default function CashSessionsIndex() {
   const me = useAuth.user;
-  const isSuperadmin = (me?.roles ?? []).includes('Superadmin');
+  const isSuperadmin = me?.role_label === 'Superadmin';
 
   const [rows, setRows] = useState<CashSession[]>([]);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);

@@ -4,8 +4,9 @@ import type { Customer, CustomerQuery, Paginated } from "../../types/customers";
 import { deleteCustomer, listCustomers } from "../../api/customers";
 import { getErrorMessage } from "../../api/client";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import { useAuth, useHasRole } from "../../store/useAuth";
+import { useAuth, useIsManager } from "../../store/useAuth";
 import { Link } from "react-router-dom";
+import { useCustomerLabels } from "../../hooks/useCustomerLabels";
 
 function IconSearch(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -65,22 +66,6 @@ function mapsUrl(address?: string | null) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
 }
 
-const TAG_STYLES: Record<string, string> = {
-    VIP: "border-amber-200 bg-amber-50 text-amber-700",
-    Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    Corporate: "border-blue-200 bg-blue-50 text-blue-700",
-    Member: "border-violet-200 bg-violet-50 text-violet-700",
-    Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
-    Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
-    Komplain: "border-orange-200 bg-orange-50 text-orange-700",
-    Blacklist: "border-red-200 bg-red-50 text-red-700",
-};
-
-function tagClass(tag?: string) {
-    if (!tag) return "border-slate-200 bg-slate-50 text-slate-700";
-    return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
-}
-
 export default function CustomersIndex() {
     // Snapshot auth store (sesuai pola Anda)
     function useAuthSnapshot() {
@@ -97,9 +82,9 @@ export default function CustomersIndex() {
 
     const auth = useAuthSnapshot();
     const user = auth.user;
-    const canManage = useHasRole(["Superadmin", "Admin Cabang", "Kasir"]);
-    const canDelete = useHasRole(["Superadmin", "Admin Cabang"]);
-    const isSuperadmin = useHasRole("Superadmin");
+    const canDelete = useIsManager();
+    const isSuperadmin = (user?.branches.length ?? 0) > 1;
+    const { chipClass } = useCustomerLabels();
 
     const [query, setQuery] = useState<CustomerQuery>({ page: 1, per_page: 10 });
     const [rows, setRows] = useState<Paginated<Customer> | null>(null);
@@ -111,12 +96,8 @@ export default function CustomersIndex() {
     const [deleting, setDeleting] = useState(false);
 
     const branchIdForScope = useMemo(() => {
-        if (isSuperadmin) return query.branch_id ?? undefined;
-        const id = user?.branch_id as string | number | undefined;
-        if (typeof id === "string") return id;
-        if (typeof id === "number") return String(id);
-        return undefined;
-    }, [isSuperadmin, query.branch_id, user?.branch_id]);
+        return user?.branches[0]?.id;
+    }, [isSuperadmin, query.branch_id, user]);
 
     async function fetchCustomers() {
         const data = await listCustomers({
@@ -208,7 +189,7 @@ export default function CustomersIndex() {
                     </div>
                 </div>
 
-                {canManage && (
+                {(
                     <Link
                         to="/customers/new"
                         className="
@@ -308,8 +289,8 @@ export default function CustomersIndex() {
                                     <Th className="pl-4">Customer</Th>
                                     <Th>WhatsApp</Th>
                                     <Th>Alamat</Th>
-                                    <Th className="pr-4 text-right">Aksi</Th>
                                     <Th>Tags</Th>
+                                    <Th className="pr-4 text-right">Aksi</Th>
                                 </tr>
                             </thead>
 
@@ -366,9 +347,9 @@ export default function CustomersIndex() {
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="
-            line-clamp-2 max-w-[56ch] text-blue-600
-            hover:text-blue-700 hover:underline
-            "
+                                                            line-clamp-2 max-w-[56ch] text-blue-600
+                                                            hover:text-blue-700 hover:underline
+                                                            "
                                                         title="Buka di Google Maps"
                                                         aria-label={`Buka alamat ${c.name} di Google Maps`}
                                                     >
@@ -379,15 +360,32 @@ export default function CustomersIndex() {
                                                 )}
                                             </Td>
 
+                                            <Td>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {Array.isArray(c.tags) && c.tags.length > 0 ? (
+                                                        c.tags.map((tag) => (
+                                                            <span
+                                                                key={`${c.id}-${tag}`}
+                                                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${chipClass(tag)}`}
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-slate-400">-</span>
+                                                    )}
+                                                </div>
+                                            </Td>
+
                                             <Td className="pr-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <Link
                                                         to={`/customers/${String(c.id)}`}
                                                         className="
-                inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2
-                text-xs font-semibold text-slate-900
-                hover:bg-slate-50 active:bg-slate-100
-            "
+                                                            inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2
+                                                            text-xs font-semibold text-slate-900
+                                                            hover:bg-slate-50 active:bg-slate-100
+                                                            "
                                                         aria-label={`Lihat detail pelanggan ${c.name}`}
                                                     >
                                                         Detail
@@ -409,22 +407,6 @@ export default function CustomersIndex() {
                                                         >
                                                             Hapus
                                                         </button>
-                                                    )}
-                                                </div>
-                                            </Td>
-                                            <Td>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {Array.isArray(c.tags) && c.tags.length > 0 ? (
-                                                        c.tags.map((tag) => (
-                                                            <span
-                                                                key={`${c.id}-${tag}`}
-                                                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${tagClass(tag)}`}
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-slate-400">-</span>
                                                     )}
                                                 </div>
                                             </Td>
@@ -538,6 +520,9 @@ function RowSkeleton() {
             </td>
             <td className="px-3 py-4">
                 <div className="h-4 w-64 rounded bg-black/10 animate-pulse" />
+            </td>
+            <td className="px-3 py-4">
+                <div className="h-4 w-24 rounded bg-black/10 animate-pulse" />
             </td>
             <td className="px-3 py-4 pr-4 text-right">
                 <div className="inline-block h-9 w-20 rounded bg-black/10 animate-pulse" />

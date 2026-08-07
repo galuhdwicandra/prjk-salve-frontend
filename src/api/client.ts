@@ -7,21 +7,74 @@ const api = axios.create({
 });
 
 import type { BranchMini } from '../types/users';
-export type RoleName =
-  | 'Superadmin'
-  | 'Admin Cabang'
-  | 'Kasir'
-  | 'Petugas Cuci'
-  | 'Kurir'
-  | 'Akuntansi';
+export const MODULE_KEYS = [
+    'dashboard',
+    'kasir-pos', 'kasir-receipt', 'kasir-customer', 'kasir-promo',
+    'ops-sorting', 'ops-proses', 'ops-kirim', 'ops-tracker',
+    'fin-kas', 'fin-transaksi', 'fin-kontak',
+    'laporan',
+    'set-user', 'set-master', 'set-outlet', 'set-coa', 'set-jurnal',
+    'set-labels', 'set-paymethod', 'set-num', 'set-wa',
+] as const;
+export type ModuleKey = (typeof MODULE_KEYS)[number];
+export interface ModuleGroup {
+    label: string;
+    items: { key: ModuleKey; label: string }[];
+}
+
+export const MODULE_GROUPS: ModuleGroup[] = [
+    { label: 'Dashboard', items: [{ key: 'dashboard', label: 'Dashboard' }] },
+    {
+        label: 'Kasir', items: [
+            { key: 'kasir-pos', label: 'POS' },
+            { key: 'kasir-receipt', label: 'Receipt List' },
+            { key: 'kasir-customer', label: 'Database Customer' },
+            { key: 'kasir-promo', label: 'Master Promo' },
+        ]
+    },
+    {
+        label: 'Operasional', items: [
+            { key: 'ops-sorting', label: 'Sorting List' },
+            { key: 'ops-proses', label: 'Workshop' },
+            { key: 'ops-kirim', label: 'Pengiriman' },
+            { key: 'ops-tracker', label: 'Tracker' },
+        ]
+    },
+    {
+        label: 'Keuangan', items: [
+            { key: 'fin-kas', label: 'Kas & Bank' },
+            { key: 'fin-transaksi', label: 'Transaksi' },
+            { key: 'fin-kontak', label: 'Database Kontak' },
+        ]
+    },
+    { label: 'Laporan', items: [{ key: 'laporan', label: 'Laporan' }] },
+    {
+        label: 'Pengaturan', items: [
+            { key: 'set-user', label: 'User & Access' },
+            { key: 'set-master', label: 'Master Produk & Layanan' },
+            { key: 'set-outlet', label: 'Master Outlet' },
+            { key: 'set-coa', label: 'Master Kategori Transaksi' },
+            { key: 'set-jurnal', label: 'COA & Mapping Jurnal' },
+            { key: 'set-labels', label: 'Master Label Customer' },
+            { key: 'set-paymethod', label: 'Master Metode Pembayaran' },
+            { key: 'set-num', label: 'Penomoran Otomatis' },
+            { key: 'set-wa', label: 'Konfigurasi Pesan WhatsApp' },
+        ]
+    },
+];
+
 export interface MeUser {
     id: number | string;
     name: string;
     email: string;
-    branch_id: number | string | null;
-    branch?: BranchMini | null;
     is_active: boolean;
-    roles: RoleName[];
+    branch_id: number | string | null;
+    branches: BranchMini[];
+    role_label: string | null;
+    modules: ModuleKey[];
+    manager: boolean;
+    show_balance: boolean;
+    custom_price: boolean;
 }
 export interface ApiEnvelope<T = unknown, M = unknown> {
     data: T;

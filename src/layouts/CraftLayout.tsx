@@ -4,6 +4,7 @@ import { useAuth } from "../store/useAuth";
 import { SidebarIcon } from "./SidebarIcon";
 import { getTopbarTitle, isRouteActive, useVisibleMenuGroups } from "./menu";
 import type { MenuGroup } from "./menu";
+import BranchPicker from "../components/BranchPicker";
 
 type NavSheet = MenuGroup | "profile" | null;
 
@@ -79,7 +80,7 @@ export default function CraftLayout() {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  const roleText = (me.roles ?? []).join(", ");
+  const roleText = me.role_label ?? "";
   const pageTitle = getTopbarTitle(location.pathname);
   const avatarText = (me.name || "U").slice(0, 1).toUpperCase();
 
@@ -148,6 +149,7 @@ export default function CraftLayout() {
             </div>
 
             <div className="tb-right">
+              <BranchPicker />
               <div className={userMenuOpen ? "user-menu open" : "user-menu"} ref={userMenuRef}>
                 <button
                   type="button"

@@ -2,27 +2,31 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createUser, getUser, updateUser, setUserRoles, resetUserPassword } from '../../api/users';
 import type { UserUpsertPayload } from '../../types/users';
-import { normalizeApiError, type RoleName } from '../../api/client';
+import { normalizeApiError, MODULE_GROUPS, MODULE_KEYS } from '../../api/client';
+import type { ModuleKey } from '../../api/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import { listBranches } from '../../api/branches';
 import type { Branch } from '../../types/branches';
-import { useAuth, useHasRole } from '../../store/useAuth';
+import { useAuth, useIsManager } from '../../store/useAuth';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-const ALL_ROLES: RoleName[] = [
-  'Superadmin',
-  'Admin Cabang',
-  'Kasir',
-  'Petugas Cuci',
-  'Kurir',
-  'Akuntansi',
-];
+const SYSTEM_ROLES = [
+  'Superadmin', 'Admin Cabang', 'Kasir', 'Petugas Cuci', 'Kurir', 'Akuntansi',
+] as const;
 
-function allowedRoles(isSuperadmin: boolean): RoleName[] {
+function allowedRoles(isSuperadmin: boolean): string[] {
   return isSuperadmin
-    ? ALL_ROLES
-    : (ALL_ROLES.filter((role) => role !== 'Superadmin' && role !== 'Akuntansi') as RoleName[]);
+    ? [...SYSTEM_ROLES]
+    : SYSTEM_ROLES.filter((role) => role !== 'Superadmin' && role !== 'Akuntansi');
+}
+
+const ALL_MODULES: ModuleKey[] = [...MODULE_KEYS];
+
+function toggleAll<T>(list: T[], values: T[], on: boolean): T[] {
+  return on
+    ? Array.from(new Set([...list, ...values]))
+    : list.filter((item) => !values.includes(item));
 }
 
 export default function UserForm() {
@@ -31,9 +35,8 @@ export default function UserForm() {
   const nav = useNavigate();
 
   const me = useAuth.user;
-  const isSuperadmin = useHasRole('Superadmin');
-  const isAdminCabang = useHasRole('Admin Cabang');
-  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const isSuperadmin = (me?.branches.length ?? 0) > 1;
+  const canManage = useIsManager();
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [form, setForm] = useState<UserUpsertPayload>({
@@ -44,6 +47,12 @@ export default function UserForm() {
     is_active: true,
     roles: [],
     password: '',
+    role_label: '',
+    modules: ALL_MODULES,
+    manager: false,
+    show_balance: true,
+    custom_price: false,
+    branch_ids: [],
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -78,7 +87,7 @@ export default function UserForm() {
   }
 
   // debug awal (dipertahankan)
-  console.log('[UserForm] mount:', { editing, id, me, isSuperadmin, isAdminCabang, canManage });
+  console.log('[UserForm] mount:', { editing, id, me, isSuperadmin, canManage });
 
   const v = useMemo(
     () => ({
@@ -89,9 +98,18 @@ export default function UserForm() {
       branch_id: form.branch_id === null ? '' : (form.branch_id ?? ''),
       is_active: !!form.is_active,
       roles: Array.isArray(form.roles) ? form.roles : [],
+      role_label: form.role_label ?? '',
+      modules: Array.isArray(form.modules) ? form.modules : [],
+      manager: !!form.manager,
+      show_balance: !!form.show_balance,
+      custom_price: !!form.custom_price,
+      branch_ids: Array.isArray(form.branch_ids) ? form.branch_ids : [],
     }),
     [form]
   );
+
+  const allModulesOn = ALL_MODULES.every((k) => v.modules.includes(k));
+  const allBranchesOn = branches.length > 0 && branches.every((b) => v.branch_ids.includes(b.id));
 
   useEffect(() => {
     (async () => {
@@ -101,6 +119,9 @@ export default function UserForm() {
         const br = await listBranches({ per_page: 100 });
         console.log('[UserForm] fetched branches:', br.data);
         setBranches(br.data ?? []);
+        if (!editing) {
+          setForm((f) => ({ ...f, branch_ids: (br.data ?? []).map((b) => b.id) }));
+        }
       } catch (err) {
         console.warn('[UserForm] gagal load branches:', err);
       }
@@ -118,8 +139,14 @@ export default function UserForm() {
             email: u?.email ?? '',
             branch_id: (u?.branch_id ?? null),
             is_active: typeof u?.is_active === 'boolean' ? u.is_active : true,
-            roles: Array.isArray(u?.roles) ? (u.roles as RoleName[]) : [],
+            roles: Array.isArray(u?.roles) ? u.roles : [],
             password: '',
+            role_label: u?.role_label ?? '',
+            modules: Array.isArray(u?.modules) ? u.modules : [],
+            manager: u?.manager === true,
+            show_balance: u?.show_balance !== false,
+            custom_price: u?.custom_price === true,
+            branch_ids: (u?.branches ?? []).map((b) => b.id),
           });
         } catch (err) {
           console.error('[UserForm] gagal load user:', err);
@@ -191,6 +218,12 @@ export default function UserForm() {
           email: v.email,
           branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
           is_active: v.is_active,
+          role_label: v.role_label,
+          modules: v.modules,
+          manager: v.manager,
+          show_balance: v.show_balance,
+          custom_price: v.custom_price,
+          branch_ids: v.branch_ids,
         };
         console.log('[UserForm] updateUser payload:', payload);
         await updateUser(id!, payload);
@@ -221,7 +254,7 @@ export default function UserForm() {
           return;
         }
 
-        const primaryRole = v.roles[0] as RoleName;
+        const primaryRole = v.roles[0];
         const payload: UserUpsertPayload = {
           name: v.name,
           username: v.username,
@@ -230,6 +263,12 @@ export default function UserForm() {
           branch_id: isSuperadmin ? (v.branch_id || null) : (me?.branch_id ? String(me.branch_id) : null),
           is_active: v.is_active,
           role: primaryRole,
+          role_label: v.role_label,
+          modules: v.modules,
+          manager: v.manager,
+          show_balance: v.show_balance,
+          custom_price: v.custom_price,
+          branch_ids: v.branch_ids,
         };
         console.log('[UserForm] createUser payload:', payload);
 
@@ -543,60 +582,153 @@ export default function UserForm() {
 
           {/* Section: Roles */}
           {canManage && (
-            <Section
-              title="Roles"
-              subtitle="Multi-role: pilih minimal satu. Role pertama akan jadi primary saat create."
-            >
-              <div className="grid grid-cols-1 gap-3">
-                <Field label="Roles *" htmlFor="roles" error={fieldErrors.roles} hint="Tahan Ctrl / Cmd untuk memilih lebih dari satu.">
-                  <select
-                    id="roles"
-                    multiple
-                    className={[
-                      inputClass(!!fieldErrors.roles),
-                      'min-h-32 py-2',
-                    ].join(' ')}
-                    value={v.roles}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions)
-                        .map((o) => (o.value || '').trim() as RoleName)
-                        .filter(Boolean);
-                      const uniq = Array.from(new Set(values)) as RoleName[];
-                      setForm({ ...form, roles: uniq });
-                    }}
-                    required
-                    aria-invalid={!!fieldErrors.roles}
-                    aria-describedby={fieldErrors.roles ? 'err-roles' : undefined}
-                  >
-                    {allowedRoles(isSuperadmin).map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+            <>
+              <Section title="Role" subtitle="Nama role bebas diketik — hanya label, tidak menentukan akses.">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="Nama Role" htmlFor="role_label" error={fieldErrors.role_label}>
+                    <input
+                      id="role_label"
+                      className={inputClass(!!fieldErrors.role_label)}
+                      value={v.role_label}
+                      placeholder="mis. Kasir, Supervisor, Owner"
+                      onChange={(e) => setForm({ ...form, role_label: e.target.value })}
+                    />
+                  </Field>
 
-                {v.roles.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {v.roles.map((r) => (
-                      <span
-                        key={r}
-                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700"
-                      >
-                        {r}
-                      </span>
+                  <Field
+                    label="Role sistem *"
+                    htmlFor="roles"
+                    error={fieldErrors.roles}
+                    hint="Sementara masih dipakai Policy backend. Tahan Ctrl / Cmd untuk memilih lebih dari satu."
+                  >
+                    <select
+                      id="roles"
+                      multiple
+                      className={[inputClass(!!fieldErrors.roles), 'min-h-32 py-2'].join(' ')}
+                      value={v.roles}
+                      onChange={(e) => {
+                        const values = Array.from(e.target.selectedOptions)
+                          .map((o) => (o.value || '').trim())
+                          .filter(Boolean);
+                        setForm({ ...form, roles: Array.from(new Set(values)) });
+                      }}
+                      required
+                      aria-invalid={!!fieldErrors.roles}
+                    >
+                      {allowedRoles(isSuperadmin).map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              </Section>
+
+              <Section title="Akses Modul" subtitle="Modul yang tidak dicentang hilang dari sidebar dan endpoint-nya menolak akses.">
+                <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <input
+                    type="checkbox"
+                    checked={allModulesOn}
+                    onChange={(e) => setForm({ ...form, modules: e.target.checked ? ALL_MODULES : [] })}
+                  />
+                  Semua modul
+                </label>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {MODULE_GROUPS.map((group) => {
+                    const keys = group.items.map((i) => i.key);
+                    const groupOn = keys.every((k) => v.modules.includes(k));
+
+                    return (
+                      <div key={group.label} className="rounded-lg border border-slate-200 p-3">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-900">
+                          <input
+                            type="checkbox"
+                            checked={groupOn}
+                            onChange={(e) => setForm({ ...form, modules: toggleAll(v.modules, keys, e.target.checked) })}
+                          />
+                          {group.label}
+                        </label>
+
+                        <div className="mt-2 grid gap-1.5">
+                          {group.items.map((item) => (
+                            <label key={item.key} className="flex items-center gap-2 text-sm text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={v.modules.includes(item.key)}
+                                onChange={(e) => setForm({ ...form, modules: toggleAll(v.modules, [item.key], e.target.checked) })}
+                              />
+                              {item.label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+
+              <Section title="Hak Khusus">
+                <div className="grid gap-3">
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={v.manager}
+                      onChange={(e) => setForm({ ...form, manager: e.target.checked })}
+                    />
+                    <span><b>Akses manager</b> — bisa edit dan void / delete</span>
+                  </label>
+
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={v.show_balance}
+                      onChange={(e) => setForm({ ...form, show_balance: e.target.checked })}
+                    />
+                    <span><b>Tampilkan saldo terkini di transaksi</b> — saat catat uang masuk/keluar &amp; pindah dana</span>
+                  </label>
+
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={v.custom_price}
+                      onChange={(e) => setForm({ ...form, custom_price: e.target.checked })}
+                    />
+                    <span><b>Akses custom harga</b> — boleh mengubah harga satuan saat input order di POS</span>
+                  </label>
+                </div>
+              </Section>
+
+              <Section title="Akses Cabang" subtitle="Cabang yang boleh diakses user ini.">
+                <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <input
+                    type="checkbox"
+                    checked={allBranchesOn}
+                    onChange={(e) => setForm({ ...form, branch_ids: e.target.checked ? branches.map((b) => b.id) : [] })}
+                  />
+                  Semua cabang
+                </label>
+
+                {branches.length === 0 ? (
+                  <div className="text-sm text-slate-500">Belum ada cabang.</div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+                    {branches.map((b) => (
+                      <label key={b.id} className="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={v.branch_ids.includes(b.id)}
+                          onChange={(e) => setForm({ ...form, branch_ids: toggleAll(v.branch_ids, [b.id], e.target.checked) })}
+                        />
+                        <b>{b.code}</b> <span className="text-slate-500">{b.name}</span>
+                      </label>
                     ))}
                   </div>
                 )}
-
-                {Object.keys(fieldErrors).length > 0 && (
-                  <details className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                    <summary className="cursor-pointer font-semibold">Detail error (debug)</summary>
-                    <pre className="mt-2 whitespace-pre-wrap">{JSON.stringify(fieldErrors, null, 2)}</pre>
-                  </details>
-                )}
-              </div>
-            </Section>
+              </Section>
+            </>
           )}
         </div>
 
@@ -632,7 +764,7 @@ export default function UserForm() {
                 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100
               "
               onClick={async () => {
-                if (!isSuperadmin && !isAdminCabang) return;
+                if (!canManage) return;
                 const p1 = prompt('Password baru (min 8, mix-case+angka)');
 
                 if (!p1) return;

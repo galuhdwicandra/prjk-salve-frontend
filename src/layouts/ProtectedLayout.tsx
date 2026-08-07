@@ -1,14 +1,14 @@
 // src/layouts/ProtectedLayout.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate, NavLink } from "react-router-dom";
-import { useAuth, useHasRole } from "../store/useAuth";
-import type { RoleName } from "../api/client";
+import { useAuth } from "../store/useAuth";
 import { SidebarIcon } from "./SidebarIcon";
 import { getTopbarTitle, isRouteActive, useVisibleMenuGroups } from "./menu";
 import type { MenuGroup, SidebarIconName } from "./menu";
 import { listOrders } from "../api/orders";
 import type { Order } from "../types/orders";
 import { buildWhatsAppLink } from "../utils/wa";
+import BranchPicker from "../components/BranchPicker";
 
 type TopbarSearchResult = {
   label: string;
@@ -221,8 +221,6 @@ export default function ProtectedLayout() {
     };
   }, [open]);
 
-  const safeRoles = me?.roles ?? [];
-
   const VISIBLE_GROUPS = useVisibleMenuGroups();
 
   const topbarSearchResults = useMemo(
@@ -314,7 +312,7 @@ export default function ProtectedLayout() {
     nav(`/orders/${encodeURIComponent(orderId)}`);
   }
 
-  const roleText = safeRoles.join(", ");
+  const roleText = me?.role_label ?? "";
   const pageTitle = useMemo(() => getTopbarTitle(location.pathname), [location.pathname]);
 
   if (!me) {
@@ -482,6 +480,7 @@ export default function ProtectedLayout() {
             </div>
 
             <div className="flex items-center justify-end gap-2">
+              <BranchPicker className="hidden items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-1.5 text-sm font-semibold text-[color:var(--color-text-default)] sm:flex" />
               <div className="flex items-center gap-2">
                 <div ref={notificationRef} className="relative">
                   <div className="relative">
@@ -813,7 +812,7 @@ export default function ProtectedLayout() {
 
               <div className="mt-6 space-y-2 border-t border-[color:var(--color-border)] pt-4">
                 {!desktopCollapsed ? (
-                  <UserCard name={me.name} roles={me.roles ?? []} />
+                  <UserCard name={me.name} roleLabel={me.role_label ?? ""} />
                 ) : (
                   <div className="flex justify-center">
                     <div className="h-9 w-9 rounded-xl bg-black/10 dark:bg-white/10 flex items-center justify-center text-sm font-bold text-[color:var(--color-text-default)]">
@@ -872,7 +871,7 @@ export default function ProtectedLayout() {
               </div>
 
               <div className="mt-4">
-                <UserCard name={me.name} roles={me.roles ?? []} />
+                <UserCard name={me.name} roleLabel={me.role_label ?? ""} />
               </div>
 
               <nav className="mt-4">
@@ -1148,7 +1147,7 @@ function subNavItemClass(isActive: boolean) {
   ].join(" ");
 }
 
-function UserCard(props: { name: string; roles: string[]; variant?: "default" | "dark" }) {
+function UserCard(props: { name: string; roleLabel: string; variant?: "default" | "dark" }) {
   const isDark = props.variant === "dark";
 
   return (
@@ -1188,7 +1187,7 @@ function UserCard(props: { name: string; roles: string[]; variant?: "default" | 
               isDark ? "text-slate-400" : "text-[color:var(--color-text-muted)]",
             ].join(" ")}
           >
-            {props.roles?.join(", ")}
+            {props.roleLabel}
           </div>
         </div>
       </div>
@@ -1225,11 +1224,4 @@ function MobileDrawer(props: { open: boolean; onClose: () => void; children: Rea
       </aside>
     </>
   );
-}
-
-/** Komponen guard untuk tombol/aksi dalam halaman */
-export function RequireRole(props: { roles: RoleName[]; children: React.ReactNode; fallback?: React.ReactNode }) {
-  const allowed = useHasRole(props.roles);
-  if (!allowed) return props.fallback ?? null;
-  return <>{props.children}</>;
 }

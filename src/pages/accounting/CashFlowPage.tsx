@@ -136,7 +136,7 @@ function ActivityTable(props: {
 }
 
 export default function CashFlowPage() {
-  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
+  const canAccessAllBranches = (useAuth.user?.branches.length ?? 0) > 1;
 
   const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
   const [dateTo, setDateTo] = useState(todayLocalYMD());

@@ -5,7 +5,7 @@ import {
   type FieldErrors,
   type LoginPayload,
 } from "../api/client";
-import { useAuth, homePathByRole } from "../store/useAuth";
+import { useAuth, firstAccessiblePath } from "../store/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import Toast from "../components/Toast";
 import { useToast } from "../hooks/useToast";
@@ -165,7 +165,7 @@ export default function LoginPage() {
       const profile = await useAuth.fetchMe();
 
       const from = (loc.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
-      const fallback = homePathByRole(profile?.roles ?? me?.roles ?? []);
+      const fallback = firstAccessiblePath(profile?.modules ?? me?.modules ?? []);
 
       showSuccess("Login berhasil.");
 

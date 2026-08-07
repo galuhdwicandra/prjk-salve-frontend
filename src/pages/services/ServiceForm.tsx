@@ -1,8 +1,8 @@
 // src/pages/customers/ServiceForm.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Service, ServiceCategory } from '../../types/services';
-import { createService, getService, updateService } from '../../api/services';
+import { createService, getService, listServices, updateService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
 import PricePerBranchInput from './PricePerBranchInput';
 import { normalizeApiError } from '../../api/client';
@@ -12,6 +12,7 @@ import { useToast } from '../../hooks/useToast';
 const UNIT_PRESETS = ['ITEM', 'PASANG', 'KG'] as const;
 type ServiceFormState = {
   category_id: string;
+  parent_id: string;
   name: string;
   unit: string;
   price_default: string;
@@ -20,12 +21,15 @@ type ServiceFormState = {
 
 export default function ServiceForm() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const nav = useNavigate();
   const editing = Boolean(id);
 
   const [cats, setCats] = useState<ServiceCategory[]>([]);
+  const [parents, setParents] = useState<Service[]>([]);
   const [form, setForm] = useState<ServiceFormState>({
     category_id: '',
+    parent_id: searchParams.get('parent_id') ?? '',
     name: '',
     unit: 'ITEM',
     price_default: '',
@@ -79,12 +83,15 @@ export default function ServiceForm() {
       try {
         const sc = await listServiceCategories({ per_page: 100 });
         setCats(sc.data ?? []);
+        const roots = await listServices({ tree: true, per_page: 100 });
+        setParents(roots.data ?? []);
         if (editing) {
           const res = await getService(id!);
           const s = res.data as Service;
           setService(s);
           setForm({
             category_id: s.category_id,
+            parent_id: s.parent_id ?? '',
             name: s.name,
             unit: s.unit,
             price_default: s.price_default != null ? String(Number(s.price_default)) : '',
@@ -99,6 +106,14 @@ export default function ServiceForm() {
       }
     })();
   }, [editing, id]);
+
+  useEffect(() => {
+    if (!form.parent_id) return;
+    const parent = parents.find((p) => p.id === form.parent_id);
+    if (parent && parent.category_id !== form.category_id) {
+      setForm((prev) => ({ ...prev, category_id: parent.category_id }));
+    }
+  }, [form.parent_id, form.category_id, parents]);
 
   const errorList = useMemo(() => {
     const all = Object.entries(fieldErrors).flatMap(([k, v]) => v.map((msg) => `${k}: ${msg}`));
@@ -142,6 +157,7 @@ export default function ServiceForm() {
     try {
       const payload = {
         category_id: form.category_id,
+        parent_id: form.parent_id || null,
         name: form.name.trim(),
         unit: form.unit.trim().toUpperCase(),
         price_default: Number(form.price_default),
@@ -258,6 +274,39 @@ export default function ServiceForm() {
           <div className="text-xs text-slate-500">{loading ? 'Memproses…' : null}</div>
         </div>
 
+        <Field
+          label="Produk Induk"
+          htmlFor="parent_id"
+          hint="Kosongkan untuk membuat produk induk. Pilih induk untuk membuat varian."
+          error={fieldErrors.parent_id?.join(', ')}
+        >
+          <div className="relative">
+            <select
+              id="parent_id"
+              className={inputClass(Boolean(fieldErrors.parent_id))}
+              value={form.parent_id}
+              onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
+              disabled={loading || (editing && (service?.variants?.length ?? 0) > 0)}
+            >
+              <option value="">— produk induk (tanpa induk) —</option>
+              {parents
+                .filter((p) => p.id !== id)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <IconChevronDown />
+            </span>
+          </div>
+          {fieldErrors.parent_id && (
+            <p className="mt-1 text-xs text-red-600">{fieldErrors.parent_id.join(', ')}</p>
+          )}
+        </Field>
+
+
         {/* Grid */}
         <div className="grid grid-cols-1 gap-4">
           {/* Kategori */}
@@ -274,7 +323,7 @@ export default function ServiceForm() {
                 className={inputClass(Boolean(fieldErrors.category_id))}
                 value={form.category_id}
                 onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                disabled={loading}
+                disabled={loading || Boolean(form.parent_id)}
                 aria-required="true"
                 aria-invalid={Boolean(fieldErrors.category_id)}
                 aria-describedby={fieldErrors.category_id ? 'err-category_id' : undefined}

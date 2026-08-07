@@ -3,12 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listUsers, deleteUser, setUserActive } from '../../api/users';
 import type { User, PaginationMeta, UserQuery } from '../../types/users';
 import { Link } from 'react-router-dom';
-import { useAuth, useHasRole } from '../../store/useAuth';
+import { useAuth, useIsManager } from '../../store/useAuth';
 
 export default function UsersList() {
   const me = useAuth.user; // akses user login (branch_id, roles)
-  const isSuperadmin = useHasRole('Superadmin');
-  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const isSuperadmin = (me?.branches.length ?? 0) > 1;
+  const canManage = useIsManager();
 
   const [rows, setRows] = useState<User[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);

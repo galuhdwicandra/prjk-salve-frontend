@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { listWashNotes, deleteWashNote } from '../../api/washNotes';
-import { useHasRole } from '../../store/useAuth';
+import type { WashNote, WashNoteListMeta } from '../../api/washNotes';
+import { useIsManager } from '../../store/useAuth';
 import { todayLocalYMD } from '../../utils/date';
 
 function InfoTips() {
@@ -40,11 +41,11 @@ export default function WashNotesIndex() {
   const today = todayLocalYMD();
   const [from, setFrom] = useState<string>(today);
   const [to, setTo] = useState<string>(today);
-  const [rows, setRows] = useState<any[]>([]);
-  const [meta, setMeta] = useState<any | null>(null);
+  const [rows, setRows] = useState<WashNote[]>([]);
+  const [meta, setMeta] = useState<WashNoteListMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const canDelete = useHasRole(['Superadmin', 'Admin Cabang']);
+  const canDelete = useIsManager();
 
   const load = async () => {
     setLoading(true);

@@ -25,7 +25,7 @@ import type {
     ProductionTask,
 } from '../../types/production';
 import { Link } from 'react-router-dom';
-import { useHasRole } from '../../store/useAuth';
+import { useIsManager } from '../../store/useAuth';
 
 const BOARD_COLUMNS: Array<{
     status: ProductionBoardStatus;
@@ -118,7 +118,7 @@ export default function ProductionBoard() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const isManager = useHasRole(['Superadmin', 'Admin Cabang']);
+    const isManager = useIsManager();
     const [correctionRequests, setCorrectionRequests] = useState<ProductionCorrectionRequest[]>([]);
     const [correctionLoading, setCorrectionLoading] = useState<string | null>(null);
     const [correctionModal, setCorrectionModal] = useState<{
@@ -131,7 +131,7 @@ export default function ProductionBoard() {
         () => Object.values(columns).reduce((total, rows) => total + rows.length, 0),
         [columns]
     );
-    const isSuperadmin = useAuth.hasRole('Superadmin');
+    const isSuperadmin = (useAuth.user?.branches.length ?? 0) > 1;
 
     const canGoPrev = meta.current_page > 1;
     const canGoNext = meta.current_page < meta.last_page;

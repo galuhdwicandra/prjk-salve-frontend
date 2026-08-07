@@ -148,6 +148,20 @@ export interface Paginated<T> {
     errors: Record<string, string[] | string> | null;
 }
 
+export interface OrderTrackItem {
+    service: string | null;
+    qty: number;
+}
+
+export interface OrderTrackResult {
+    number: string;
+    status: OrderBackendStatus;
+    branch: string | null;
+    received_at: string | null;
+    ready_at: string | null;
+    items: OrderTrackItem[];
+}
+
 export interface SingleResponse<T> {
     data: T | null;
     meta: Record<string, unknown> | null;

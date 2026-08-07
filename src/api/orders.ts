@@ -11,6 +11,7 @@ import type {
   OrderPaymentCorrectionPayload,
   OrderPaymentCorrectionResult,
   LoyaltyReward,
+  OrderTrackResult,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
 
@@ -21,6 +22,13 @@ export async function listOrders(params: OrderQuery = {}) {
 
 export async function getOrder(id: string) {
   const { data } = await api.get<SingleResponse<Order>>(`/orders/${encodeURIComponent(id)}`);
+  return data;
+}
+
+export async function trackOrder(number: string) {
+  const { data } = await api.get<SingleResponse<OrderTrackResult>>(
+    `/track/${encodeURIComponent(number)}`
+  );
   return data;
 }
 

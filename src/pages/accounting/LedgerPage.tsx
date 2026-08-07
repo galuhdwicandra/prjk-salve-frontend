@@ -31,7 +31,7 @@ function formatDate(value?: string | null): string {
 }
 
 export default function LedgerPage() {
-  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
+  const canAccessAllBranches = (useAuth.user?.branches.length ?? 0) > 1;
 
   const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);

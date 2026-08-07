@@ -1,49 +1,65 @@
-@ponytail full
+# /ponytail full
 
-Mode: analisis dan saran saja. Jangan menerapkan perubahan apa pun — saya yang
-akan menerapkannya sendiri. Jangan jalankan perintah yang menulis file atau
-cache (install, migration, build, format, test). 
+Use Serena to explore the code symbolically. Prioritize searching for symbols,
+references, callers, and callees before reading entire files.
+
+Serena must only be used for analysis. Do not use any Serena tools that modify
+files, symbols, memory, or project contents.
+
+Read only the relevant files and code sections. Do not read the entire repository
+if the requirements can already be verified from the discovered symbols and references.
+=======================================================================================
+
+Mode: analysis and recommendations only. Do not apply any changes — I will
+apply them myself. Do not run commands that write files or cache
+(install, migration, build, format, test).
+==========================================
 
 Website:
-salvecs.com <- utama
-staging.salvecs.com <- cek2
+salvecs.com <- primary
+staging.salvecs.com <- testing
+==============================
 
-Konteks project:
-- Baca dahulu seluruh file yang relevan dan telusuri alur sebenarnya, termasuk
-  caller dan callee yang terkait.
-- Jangan mengasumsikan endpoint, field, role, tabel, konfigurasi, dependency,
-  atau perilaku yang tidak terbukti dari kode. Kalau buktinya tidak ketemu,
-  katakan eksplisit — jangan menebak.
-- Ikuti struktur, gaya penamaan, pola error handling, validasi, dan arsitektur
-  yang sudah dipakai projec.
-- Gunakan API dan syntax yang kompatibel dengan versi dependency yang benar-benar
-  terpasang (cek composer.json / package.json / lock file). Jangan memaksakan
-  teknologi terbaru. Kalau butuh pengetahuan di luar isi project, sebutkan apa
-  yang harus saya verifikasi ke dokumentasi resmi.
-- Folder project-pwa adalah arsip prototype CRAFT, read-only. Baca hanya kalau
-  saya minta referensi desain atau perilaku sebuah layar. Jangan usulkan 
-  perubahan kode di sana, jangan masukkan ke rencana kerja, dan jangan pakai 
-  package.json-nya sebagai dasar keputusan dependency. Implementasi berjalan
-  di folder frontend.
-- File Frontend_Docs.md dan Backend_Docs.md tidak perlu dibaca.
-- Wajib Clean Code, jangan ada komentar apapun di code.
-- code tanpa any, karena suka error.
+Project context:
 
-Format jawaban:
-1. Temuan dan akar masalah, dengan referensi path/file.php:42.
-2. Solusi minimum yang disarankan.
-3. Untuk file yang sudah ada: path, nama fungsi/class/blok yang diubah, dan
-   patch/diff dengan context secukupnya.
-4. Untuk file baru yang benar-benar diperlukan: full code.
-5. Apa yang sengaja tidak ditambahkan, dan kapan itu baru layak ditambahkan.
-6. Perintah verifikasi yang bisa saya jalankan sendiri — jangan dijalankan.
+* Explore the relevant files and symbols using Serena, including related callers,
+  callees, imports, exports, and references. Read files in full only if symbol
+  analysis is insufficient.
+* Do not assume endpoints, fields, roles, tables, configurations, dependencies,
+  or behavior that cannot be proven from the code. If the evidence cannot be found,
+  state that explicitly — do not guess.
+* Follow the existing project structure, naming conventions, error-handling patterns,
+  validation patterns, and architecture.
+* Use APIs and syntax compatible with the dependency versions actually installed
+  in the project (check composer.json / package.json / lock files). Do not force
+  the latest technology. If external knowledge beyond the project contents is needed,
+  state what I need to verify in the official documentation.
+* The project-pwa folder is a read-only archive of the CRAFT prototype. Read it only
+  when I ask for a design or screen-behavior reference. Do not propose code changes
+  there, do not include it in the implementation plan, and do not use its package.json
+  as the basis for dependency decisions. The active implementation is in the
+  frontend folder.
+* Frontend_Docs.md and Backend_Docs.md do not need to be read.
+* Clean Code is mandatory. Do not include any comments in the code.
+* Carefully if want to use `any` in the code because it often causes errors.
+* For every file that needs to be changed, Provide the code snippet that was changed, along with the code before the change so I don't get confused.
+==============================
+Response format:
+
+1. Findings and root cause, with references such as path/file.php:42.
+2. Recommended minimum solution.
+3. For existing files: path, function/class/block name to be changed, and
+   a patch/diff with sufficient context.
+4. For genuinely necessary new files: full code.
+5. What was intentionally not added, and when it would become appropriate to add it.
+6. Verification commands that I can run myself — do not run them.
 ===================================
-LARK STORY
+LARK STORY [SPRINT 2 Kasir/POS]
 
-Deskripsi:
-Pindahkan fungsi murni dari main.js ke frontend/src/utils dengan tipe yang jelas
+Description:
+WhatsApp Template via /whatsapp-templates and status sending
 
 Acceptance Criteria:
-Fungsi rp, num, esc, fmtDate, orderPaid, orderOutstanding, payStatus, dan rangeFor sudah dipindahkan. Tersedia minimal satu test untuk orderOutstanding.
+Name, order number, and status placeholders are filled in correctly.
 
-bantu saya kerjakan story ini. tetap ikuti aturan ya.
+Help me complete this story. Continue to follow all of the rules above.

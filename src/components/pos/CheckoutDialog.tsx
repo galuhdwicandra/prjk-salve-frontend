@@ -2,12 +2,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createOrderPayment } from "../../api/orders";
 import type { PaymentCreatePayload, PaymentMethod } from "../../types/payments";
+import { useActivePaymentMethods } from "../../hooks/useActivePaymentMethods";
 import { applyVoucherToOrder } from "../../api/vouchers";
 import type { Order } from "../../types/orders";
 import { toIDR } from "../../utils/money";
-import type { AxiosError } from 'axios';
+import { getErrorMessage } from "../../api/client";
 
-type PayMode = 'PENDING' | 'DP' | PaymentMethod;
+type PayMode = PaymentMethod;
 
 type Props = {
   open: boolean;
@@ -16,10 +17,9 @@ type Props = {
   onPaid: (order: Order) => void;
 };
 
-const METHODS: PaymentMethod[] = ['CASH', 'QRIS', 'TRANSFER'];
-
 export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) {
   const [mode, setMode] = useState<PayMode>('PENDING');
+  const paymentMethods = useActivePaymentMethods();
   const [dpAmount, setDpAmount] = useState<number>(0);
   const [payAmount, setPayAmount] = useState<number>(order.grand_total);
   const [loading, setLoading] = useState(false);
@@ -74,24 +74,11 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
       }
 
       setLoading(true);
-      const resp = await createOrderPayment(order.id, payload);
-      const updated = (resp as any)?.order ?? (resp as any)?.data?.order ?? resp;
-      onPaid(updated as Order);
+      const { order: updated } = await createOrderPayment(order.id, payload);
       onPaid(updated);
       onClose();
     } catch (ex: unknown) {
-      const ax = ex as AxiosError<any>;
-      if (ax?.response) {
-        if (ax.response.status === 403) {
-          setErr(ax.response.data?.message ?? 'Forbidden: Anda tidak diizinkan melakukan pembayaran untuk order ini.');
-        } else if (ax.response.status === 422) {
-          setErr(ax.response.data?.message ?? 'Validasi gagal (422). Periksa nominal dan syarat pembayaran.');
-        } else {
-          setErr(ax.message ?? 'Gagal menyimpan pembayaran');
-        }
-      } else {
-        setErr((ex as Error)?.message ?? 'Gagal menyimpan pembayaran');
-      }
+      setErr(getErrorMessage(ex, 'Gagal menyimpan pembayaran'));
     } finally {
       setLoading(false);
     }
@@ -169,7 +156,7 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
           <div className="space-y-2">
             <label className="block text-sm font-medium">Mode</label>
             <div className="inline-flex rounded-lg border border-(--color-border) overflow-hidden">
-              {(['PENDING', 'DP', ...METHODS] as PayMode[]).map((m) => {
+              {(['PENDING', 'DP', ...paymentMethods.map((pm) => pm.code)] as PayMode[]).map((m) => {
                 const active = mode === m;
                 return (
                   <button

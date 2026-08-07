@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import AssignCourierSelect from '../../components/delivery/AssignCourierSelect';
 import { listDeliveries, assignCourier, updateDeliveryStatus } from '../../api/deliveries';
 import type { Delivery, DeliveryStatus } from '../../types/deliveries';
-import { useHasRole } from '../../store/useAuth';
 import { Link } from 'react-router-dom';
 import { getOrder } from '../../api/orders';
 
@@ -44,8 +43,8 @@ const dbg = {
 /* eslint-enable no-console */
 
 export default function DeliveryIndex() {
-  const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
-  const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
+  const canAssign = true;
+  const canUpdate = true;
 
   const [status, setStatus] = useState<DeliveryStatus | ''>('');
   const [courier, setCourier] = useState<string | number | ''>('');

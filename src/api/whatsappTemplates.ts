@@ -35,7 +35,7 @@ export async function deleteWhatsappTemplate(id: string) {
 }
 
 export async function resolveWhatsappTemplate(
-    key: 'receipt_pending' | 'receipt_paid',
+    key: 'receipt_pending' | 'receipt_paid' | 'order_status',
     branch_id?: string | null,
 ) {
     const params: Record<string, string> = { key };

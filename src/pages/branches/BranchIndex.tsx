@@ -3,10 +3,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listBranches, deleteBranch } from '../../api/branches';
 import type { Branch, PaginationMeta } from '../../types/branches';
-import { useHasRole } from '../../store/useAuth';
+import { useAuth, useIsManager } from '../../store/useAuth';
 
 export default function BranchIndex() {
-  const canManage = useHasRole(['Superadmin']);
+  const isManager = useIsManager();
+  const canManage = isManager && (useAuth.user?.branches.length ?? 0) > 1;
   const nav = useNavigate();
 
   const [rows, setRows] = useState<Branch[]>([]);
@@ -107,6 +108,9 @@ export default function BranchIndex() {
                 <tr className="divide-x divide-[color:var(--color-border)]">
                   <Th>Kode</Th>
                   <Th>Nama</Th>
+                  <Th>Jenis</Th>
+                  <Th>Jam Operasional</Th>
+                  <Th>Alamat</Th>
                   <Th>Prefix Invoice</Th>
                   <Th>Reset</Th>
                   <Th className="text-right pr-4">Aksi</Th>
@@ -126,6 +130,9 @@ export default function BranchIndex() {
                     <tr key={b.id} className="hover:bg-black/5 transition-colors">
                       <Td><span className="font-medium">{b.code}</span></Td>
                       <Td><span className="line-clamp-1">{b.name}</span></Td>
+                      <Td>{b.type === 'droppoint' ? 'Drop Point' : 'Workshop'}</Td>
+                      <Td>{b.hours || '—'}</Td>
+                      <Td><span className="line-clamp-1">{b.address || '—'}</span></Td>
                       <Td>{b.invoice_prefix ?? '—'}</Td>
                       <Td className="uppercase">{b.reset_policy ?? '—'}</Td>
                       <Td className="text-right">
@@ -136,13 +143,6 @@ export default function BranchIndex() {
                             aria-label={`Edit cabang ${b.name}`}
                           >
                             Edit
-                          </button>
-                          <button
-                            className="btn-outline px-2 py-1 text-xs"
-                            onClick={() => nav(`/branches/${b.id}/invoice-settings`)}
-                            aria-label={`Pengaturan invoice cabang ${b.name}`}
-                          >
-                            Invoice
                           </button>
                           {canManage && (
                             <button
@@ -212,6 +212,9 @@ function Td({ children, className = '' }: { children: React.ReactNode; className
 function RowSkeleton() {
   return (
     <tr>
+      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
+      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
       <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-black/10 animate-pulse" /></td>

@@ -22,6 +22,14 @@ export interface WashNote {
     orders_count: number;
     total_qty: number;
     items?: WashNoteItem[];
+    user?: { id: number; name: string } | null;
+}
+
+export interface WashNoteListMeta {
+    page: number;
+    pages: number;
+    total: number;
+    recap: { orders_count: number; total_qty: number };
 }
 
 export interface OrderLite {
@@ -49,7 +57,7 @@ export interface SearchOrderCandidatesParams {
 export async function listWashNotes(params?: {
     date_from?: string; date_to?: string; page?: number; per_page?: number;
 }) {
-    const { data } = await api.get<ApiEnvelope<WashNote[]>>('/wash-notes', { params });
+    const { data } = await api.get<ApiEnvelope<WashNote[], WashNoteListMeta>>('/wash-notes', { params });
     return data;
 }
 

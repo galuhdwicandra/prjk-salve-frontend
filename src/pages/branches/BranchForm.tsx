@@ -1,7 +1,7 @@
 // src/pages/branches/BranchForm.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { createBranch, getBranch, updateBranch } from '../../api/branches';
-import type { Branch, BranchUpsertPayload, ResetPolicy } from '../../types/branches';
+import type { Branch, BranchType, BranchUpsertPayload, ResetPolicy } from '../../types/branches';
 import { useNavigate, useParams } from 'react-router-dom';
 import { normalizeApiError } from '../../api/client';
 import Toast from '../../components/Toast';
@@ -11,7 +11,23 @@ function toResetPolicy(value: string): ResetPolicy {
   return value === 'never' ? 'never' : 'monthly';
 }
 
+function toBranchType(value: string): BranchType {
+  return value === 'droppoint' ? 'droppoint' : 'workshop';
+}
+
+function splitHours(hours: string | null | undefined): [string, string] {
+  const [open = '', close = ''] = (hours ?? '').split(/[–-]/);
+  return [open.trim().replace('.', ':'), close.trim().replace('.', ':')];
+}
+
+function joinHours(open: string, close: string): string | null {
+  if (!open || !close) return null;
+  return `${open.replace(':', '.')}–${close.replace(':', '.')}`;
+}
+
 const POLICIES: ResetPolicy[] = ['monthly', 'never'];
+const TYPES: BranchType[] = ['workshop', 'droppoint'];
+const TYPE_LABELS: Record<BranchType, string> = { workshop: 'Workshop', droppoint: 'Drop Point' };
 type BranchFieldErrors = Record<string, string[]>;
 
 function focusFirstErrorField(errors: BranchFieldErrors) {
@@ -55,6 +71,10 @@ function validateBranchForm(form: BranchUpsertPayload): BranchFieldErrors {
     errors.address = ['Alamat maksimal 255 karakter'];
   }
 
+  if (!TYPES.includes(form.type)) {
+    errors.type = ['Jenis outlet tidak valid'];
+  }
+
   if (!invoicePrefix) {
     errors.invoice_prefix = ['Prefix invoice wajib diisi'];
   } else if (invoicePrefix.length > 8) {
@@ -76,10 +96,13 @@ export default function BranchForm() {
   const [form, setForm] = useState<BranchUpsertPayload>({
     code: '',
     name: '',
+    type: 'workshop',
     address: '',
     invoice_prefix: 'SLV',
     reset_policy: 'monthly',
   });
+  const [openTime, setOpenTime] = useState('');
+  const [closeTime, setCloseTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -89,6 +112,7 @@ export default function BranchForm() {
     () => ({
       code: form.code ?? '',
       name: form.name ?? '',
+      type: form.type ?? 'workshop',
       address: form.address ?? '',
       invoice_prefix: form.invoice_prefix ?? '',
       reset_policy: form.reset_policy ?? 'monthly',
@@ -110,10 +134,15 @@ export default function BranchForm() {
         setForm({
           code: b.code ?? '',
           name: b.name ?? '',
+          type: b.type ?? 'workshop',
           address: b.address ?? '',
           invoice_prefix: b.invoice_prefix ?? 'SLV',
           reset_policy: b.reset_policy ?? 'monthly',
         });
+
+        const [open, close] = splitHours(b.hours);
+        setOpenTime(open);
+        setCloseTime(close);
       } catch (err) {
         const e = normalizeApiError(err);
         setError(e.message || 'Gagal memuat data cabang');
@@ -134,7 +163,9 @@ export default function BranchForm() {
     const payload: BranchUpsertPayload = {
       code: v.code.trim(),
       name: v.name.trim(),
+      type: v.type,
       address: v.address.trim() || null,
+      hours: joinHours(openTime, closeTime),
       invoice_prefix: v.invoice_prefix.trim().toUpperCase(),
       reset_policy: v.reset_policy,
     };
@@ -261,8 +292,59 @@ export default function BranchForm() {
               />
             </div>
 
-            {/* Prefix Invoice */}
+            {/* Jenis Outlet */}
             <div className="grid gap-1">
+              <label htmlFor="type" className="text-xs font-medium">
+                Jenis Outlet <span className="text-red-600">*</span>
+              </label>
+              <select
+                id="type"
+                className="input"
+                value={form.type}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                  setForm({ ...form, type: toBranchType(e.target.value) });
+                  setFieldErrors((prev) => ({ ...prev, type: [] }));
+                }}
+                aria-invalid={Boolean(fieldErrors.type)}
+                aria-describedby={fieldErrors.type ? 'err-type' : undefined}
+              >
+                {TYPES.map((t) => (
+                  <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+              {fieldErrors.type && (
+                <p id="err-type" className="text-xs text-red-600">{fieldErrors.type.join(', ')}</p>
+              )}
+            </div>
+
+            {/* Jam Operasional */}
+            <div className="grid gap-1">
+              <span className="text-xs font-medium">Jam Operasional</span>
+              <div className="flex items-center gap-2">
+                <input
+                  id="hours_open"
+                  type="time"
+                  className="input"
+                  value={openTime}
+                  onChange={(e) => setOpenTime(e.target.value)}
+                  aria-label="Jam buka"
+                />
+                <span className="text-xs text-gray-500">sampai</span>
+                <input
+                  id="hours_close"
+                  type="time"
+                  className="input"
+                  value={closeTime}
+                  onChange={(e) => setCloseTime(e.target.value)}
+                  aria-label="Jam tutup"
+                />
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Kosongkan salah satu bila outlet tidak punya jam tetap.
+              </p>
+            </div>
+
+            {/* Prefix Invoice */}            <div className="grid gap-1">
               <label htmlFor="invoice_prefix" className="text-xs font-medium">
                 Prefix Invoice (max 8) <span className="text-red-600">*</span>
               </label>

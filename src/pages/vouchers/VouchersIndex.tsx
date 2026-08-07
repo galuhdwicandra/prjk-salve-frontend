@@ -3,10 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listVouchers, deleteVoucher } from '../../api/vouchers';
 import type { Voucher, PaginationMeta } from '../../types/vouchers';
 import { useNavigate } from 'react-router-dom';
-import { useHasRole } from '../../store/useAuth';
+import { useIsManager } from '../../store/useAuth';
 
 export default function VouchersIndex() {
-  const canManage = useHasRole(['Superadmin', 'Admin Cabang']);
+  const canManage = useIsManager()
   const nav = useNavigate();
   const [rows, setRows] = useState<Voucher[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);

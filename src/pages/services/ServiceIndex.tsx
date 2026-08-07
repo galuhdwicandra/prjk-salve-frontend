@@ -1,8 +1,9 @@
 // src/pages/services/ServiceIndex.tsx
-import { useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import type { Service, PaginationMeta, ServiceCategory } from '../../types/services';
 import { listServices, deleteService } from '../../api/services';
 import { listServiceCategories } from '../../api/serviceCategories';
+import { normalizeApiError } from '../../api/client';
 import { useNavigate, Link } from 'react-router-dom';
 import { toIDR } from '../../utils/money';
 
@@ -35,6 +36,7 @@ export default function ServiceIndex() {
         const res = await listServices({
           q,
           category_id: category_id || undefined,
+          tree: true,
           page: p,
           per_page: perPage,
         });
@@ -64,6 +66,17 @@ export default function ServiceIndex() {
     }, 300);
     return () => clearTimeout(t);
   }, [q, category_id, refresh]);
+
+  async function handleDelete(row: Service) {
+    const label = row.parent_id ? 'varian' : 'produk';
+    if (!confirm(`Hapus ${label} ${row.name}?`)) return;
+    try {
+      await deleteService(row.id);
+      await refresh(page);
+    } catch (err) {
+      setError(normalizeApiError(err).message || 'Gagal menghapus');
+    }
+  }
 
   const total = (meta?.total ?? rows?.length ?? 0);
 
@@ -250,71 +263,114 @@ export default function ServiceIndex() {
                     <RowSkeleton />
                   </>
                 ) : (
-                  rows.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
-                      <Td>
-                        <div className="min-w-[220px]">
-                          <div className="line-clamp-1 font-semibold text-slate-900">{s.name}</div>
-                          <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                            ID: <span className="tabular-nums">{s.id}</span>
+                  rows.map((p) => (
+                    <Fragment key={p.id}>
+                      <tr className="bg-slate-50/80">
+                        <Td>
+                          <div className="min-w-[220px]">
+                            <div className="line-clamp-1 font-semibold text-slate-900">{p.name}</div>
+                            <div className="mt-0.5 text-xs text-slate-500">Produk induk</div>
                           </div>
-                        </div>
-                      </Td>
+                        </Td>
+                        <Td>
+                          <span className="line-clamp-1 text-slate-700">{p.category?.name ?? '-'}</span>
+                        </Td>
+                        <Td>
+                          <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700">
+                            {p.unit}
+                          </span>
+                        </Td>
+                        <Td className="text-right tabular-nums font-semibold text-slate-900">
+                          {toIDR(Number(p.price_default))}
+                        </Td>
+                        <Td className="text-right">
+                          <StatusPill active={!!p.is_active} />
+                        </Td>
+                        <Td className="text-right pr-4">
+                          <div className="inline-flex items-center justify-end gap-2">
+                            <button
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                              onClick={() => nav(`/services/new?parent_id=${p.id}`)}
+                              aria-label={`Tambah varian untuk ${p.name}`}
+                            >
+                              <IconPlus />
+                              Varian
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                              onClick={() => nav(`/services/${p.id}/edit`)}
+                              aria-label={`Edit produk ${p.name}`}
+                            >
+                              <IconPencil />
+                              Edit
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100"
+                              onClick={() => void handleDelete(p)}
+                              aria-label={`Hapus produk ${p.name}`}
+                            >
+                              <IconTrash />
+                              Delete
+                            </button>
+                          </div>
+                        </Td>
+                      </tr>
 
-                      <Td>
-                        <span className="line-clamp-1 text-slate-700">{s.category?.name ?? '-'}</span>
-                      </Td>
-
-                      <Td>
-                        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
-                          {s.unit}
-                        </span>
-                      </Td>
-
-                      <Td className="text-right tabular-nums font-semibold text-slate-900">
-                        {toIDR(Number(s.price_default))}
-                      </Td>
-
-                      <Td className="text-right">
-                        <StatusPill active={!!s.is_active} />
-                      </Td>
-
-                      <Td className="text-right pr-4">
-                        <div className="inline-flex items-center justify-end gap-2">
-                          <button
-                            className="
-                              inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
-                              text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
-                            "
-                            onClick={() => nav(`/services/${s.id}/edit`)}
-                            aria-label={`Edit layanan ${s.name}`}
-                          >
-                            <IconPencil />
-                            Edit
-                          </button>
-
-                          <button
-                            className="
-                              inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2
-                              text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100
-                            "
-                            onClick={async () => {
-                              if (!confirm(`Hapus layanan ${s.name}?`)) return;
-                              try {
-                                await deleteService(s.id);
-                                await refresh(page);
-                              } catch {
-                                alert('Gagal hapus');
-                              }
-                            }}
-                            aria-label={`Hapus layanan ${s.name}`}
-                          >
-                            <IconTrash />
-                            Delete
-                          </button>
-                        </div>
-                      </Td>
-                    </tr>
+                      {(p.variants ?? []).length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-3 pl-10 text-xs text-slate-500">
+                            Belum ada varian di produk ini.
+                          </td>
+                        </tr>
+                      ) : (
+                        (p.variants ?? []).map((v) => (
+                          <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                            <Td>
+                              <div className="min-w-[220px] pl-6">
+                                <div className="line-clamp-1 font-medium text-slate-900">{v.name}</div>
+                                <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                                  ID: <span className="tabular-nums">{v.id}</span>
+                                </div>
+                              </div>
+                            </Td>
+                            <Td>
+                              <span className="text-slate-400">—</span>
+                            </Td>
+                            <Td>
+                              <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                                {v.unit}
+                              </span>
+                            </Td>
+                            <Td className="text-right tabular-nums font-semibold text-slate-900">
+                              {toIDR(Number(v.price_default))}
+                            </Td>
+                            <Td className="text-right">
+                              <StatusPill active={!!v.is_active} />
+                            </Td>
+                            <Td className="text-right pr-4">
+                              <div className="inline-flex items-center justify-end gap-2">
+                                <button
+                                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                                  onClick={() => nav(`/services/${v.id}/edit`)}
+                                  aria-label={`Edit varian ${v.name}`}
+                                >
+                                  <IconPencil />
+                                  Edit
+                                </button>
+                                <button
+                                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100"
+                                  onClick={() => void handleDelete(v)}
+                                  aria-label={`Hapus varian ${v.name}`}
+                                >
+                                  <IconTrash />
+                                  Delete
+                                </button>
+                              </div>
+                            </Td>
+                          </tr>
+                        ))
+                      )}
+                    </Fragment>
                   ))
                 )}
               </tbody>

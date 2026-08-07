@@ -5,7 +5,6 @@ import { assignCourier, listDeliveries, updateDeliveryStatus } from '../../api/d
 import type { Delivery, DeliveryStatus } from '../../types/deliveries';
 import AssignCourierSelect from '../../components/delivery/AssignCourierSelect';
 import DeliveryStatusStepper from '../../components/delivery/DeliveryStatusStepper';
-import { useHasRole } from '../../store/useAuth';
 
 /* eslint-disable no-console */
 const TAG = '[DeliveryDetail]';
@@ -25,8 +24,8 @@ export default function DeliveryDetail() {
     const [err, setErr] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
 
-    const canAssign = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
-    const canUpdate = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir', 'Kurir']);
+    const canAssign = true;
+    const canUpdate = true;
 
     const load = useCallback(async () => {
         dbg.group('load() start');

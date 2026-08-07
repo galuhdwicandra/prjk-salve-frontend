@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { deleteOrder, listOrders, openOrderReceipt } from '../../api/orders';
 import { listBranches } from '../../api/branches';
 import { getErrorMessage } from '../../api/client';
-import { useHasRole } from '../../store/useAuth';
+import { useAuth } from '../../store/useAuth';
 import type { Branch } from '../../types/branches';
 import type { Order, OrderBackendStatus, PaginationMeta, PaymentMethod, PaymentStatus } from '../../types/orders';
 import { Link } from 'react-router-dom';
@@ -98,7 +98,7 @@ function formatDateOnly(v?: string | null): string {
 }
 
 export default function OrdersIndex(): React.ReactElement {
-    const isSuperadmin = useHasRole('Superadmin');
+    const isSuperadmin = (useAuth.user?.branches.length ?? 0) > 1;
 
     const [rows, setRows] = useState<Order[]>([]);
     const [meta, setMeta] = useState<PaginationMeta | null>(null);

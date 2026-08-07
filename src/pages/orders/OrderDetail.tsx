@@ -22,8 +22,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAllowedNext } from '../../utils/order-status';
 import { toIDR } from '../../utils/money';
 import { buildWhatsAppLink } from '../../utils/wa';
-import { buildReceiptMessage } from '../../utils/receipt-wa';
-import { useHasRole } from '../../store/useAuth';
+import { buildReceiptMessage, buildStatusMessage } from '../../utils/receipt-wa';
+import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
+import { useIsManager } from '../../store/useAuth';
 import { createDelivery, listDeliveries } from '../../api/deliveries';
 import type { Delivery, DeliveryType } from '../../types/deliveries';
 import { normalizeApiError, type FieldErrors } from '../../api/client';
@@ -196,10 +197,10 @@ export default function OrderDetail(): React.ReactElement {
   const [loyaltyCorrectionSubmitting, setLoyaltyCorrectionSubmitting] = useState(false);
   const [loyaltyCorrectionErrors, setLoyaltyCorrectionErrors] = useState<FieldErrors>({});
 
-  const canEdit = useHasRole(['Superadmin', 'Admin Cabang']);
-  const canCreateDelivery = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canEdit = useIsManager();
+  const canCreateDelivery = true;
   const canCorrectLoyalty = canEdit;
-  const canUploadPhotos = useHasRole(['Superadmin', 'Admin Cabang', 'Kasir']);
+  const canUploadPhotos = true;
   const canUploadPhotosForThisOrder =
     canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
 
@@ -514,6 +515,25 @@ export default function OrderDetail(): React.ReactElement {
       alert('Gagal menyiapkan pesan WhatsApp.');
     }
   }, [row]);
+
+  const onSendStatusWA = useCallback(async () => {
+    if (!row) return;
+    const orderRow = row as OrderWithOptionalPhone;
+    const wa = orderRow.customer?.whatsapp || orderRow.customer?.phone || '';
+    if (!wa) {
+      alert('Nomor WhatsApp pelanggan belum tersedia.');
+      return;
+    }
+    try {
+      const resolved = await resolveWhatsappTemplate('order_status', row.branch_id);
+      const msg = buildStatusMessage(row as unknown as Order, resolved.data);
+      const url = buildWhatsAppLink(wa, msg);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      alert('Gagal menyiapkan pesan WhatsApp.');
+    }
+  }, [row]);
+
 
   const previewSubtotal = row
     ? draft.items.reduce((s, it) => {
@@ -1097,7 +1117,7 @@ export default function OrderDetail(): React.ReactElement {
                     </div>
 
                     <div className="px-4 pb-4">
-                      <ProductSearch onPick={addItemFromSearch} />
+                      <ProductSearch onPick={addItemFromSearch} branchId={row.branch_id} />
                       {fieldErr['items'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['items']}</div>}
                     </div>
 
@@ -1520,6 +1540,15 @@ export default function OrderDetail(): React.ReactElement {
                         </p>
                       )}
                     </div>
+
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                      onClick={onSendStatusWA}
+                      title="Kirim status order via WhatsApp"
+                    >
+                      Kirim Status via WA
+                    </button>
                   </div>
                 </section>
               </div>

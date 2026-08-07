@@ -1,7 +1,7 @@
 export interface WhatsappTemplate {
     id: string;
     branch_id: string | null;
-    key: 'receipt_pending' | 'receipt_paid';
+    key: 'receipt_pending' | 'receipt_paid' | 'order_status';
     name: string;
     content: string;
     is_active: boolean;
@@ -11,7 +11,7 @@ export interface WhatsappTemplate {
 }
 
 export interface WhatsappTemplateQuery {
-    key?: 'receipt_pending' | 'receipt_paid';
+    key?: 'receipt_pending' | 'receipt_paid' | 'order_status';
     branch_id?: string | 'global';
     is_active?: boolean;
     page?: number;
@@ -20,7 +20,7 @@ export interface WhatsappTemplateQuery {
 
 export interface WhatsappTemplateUpsertPayload {
     branch_id?: string | null;
-    key: 'receipt_pending' | 'receipt_paid';
+    key: 'receipt_pending' | 'receipt_paid' | 'order_status';
     name: string;
     content: string;
     is_active?: boolean;

@@ -1,4 +1,4 @@
-export type PaymentMethod = 'PENDING' | 'DP' | 'CASH' | 'QRIS' | 'TRANSFER';
+export type PaymentMethod = string;
 
 export type PaymentCreatePayload = {
     method: PaymentMethod;
@@ -16,3 +16,18 @@ export type Payment = {
     note: string | null;
     created_at: string;
 };
+
+export interface PaymentMethodMaster {
+    id: string;
+    code: string;
+    name: string;
+    is_active: boolean;
+    sort_order: number;
+}
+
+export interface PaymentMethodUpsertPayload {
+    code: string;
+    name: string;
+    is_active?: boolean;
+    sort_order?: number;
+}

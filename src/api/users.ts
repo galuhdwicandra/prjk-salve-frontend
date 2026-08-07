@@ -2,7 +2,6 @@
 import { api } from './client';
 import type { Envelope } from '../types/users';
 import type { User, UserUpsertPayload, UserQuery, PaginationMeta, } from '../types/users';
-import type { RoleName } from './client';
 
 export async function listUsers(params: UserQuery = {}) {
     const { data } = await api.get<Envelope<User[], PaginationMeta>>('/users', { params });
@@ -38,7 +37,7 @@ export async function setUserActive(id: string, is_active: boolean) {
     const { data } = await api.post<Envelope<User, null>>(`/users/${id}/active`, { is_active });
     return data;
 }
-export async function setUserRoles(id: string, roles: RoleName[]) {
+export async function setUserRoles(id: string, roles: string[]) {
   const { data } = await api.post<Envelope<User, null>>(
     `/users/${encodeURIComponent(id)}/roles`,
     { roles },

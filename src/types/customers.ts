@@ -29,7 +29,22 @@ export interface CustomerQuery {
     q?: string;
     page?: number;
     per_page?: number;
-    branch_id?: string; // hanya efektif untuk Superadmin
+    branch_id?: string;
+}
+
+export interface CustomerLabel {
+    id: string;
+    name: string;
+    color: string | null;
+    is_active: boolean;
+    created_at?: string | null;
+    updated_at?: string | null;
+}
+
+export interface CustomerLabelUpsertPayload {
+    name: string;
+    color?: string | null;
+    is_active?: boolean;
 }
 
 export interface PaginationMeta {

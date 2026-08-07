@@ -1,5 +1,5 @@
 // src/types/users.ts
-import type { RoleName } from '../api/client';
+import type { ModuleKey } from '../api/client';
 
 export interface BranchMini {
     id: string;
@@ -13,9 +13,14 @@ export interface User {
     username: string;
     email: string;
     branch_id: string | null;
-    branch?: BranchMini | null;
     is_active: boolean;
-    roles: RoleName[];
+    roles: string[];
+    branches?: BranchMini[];
+    role_label?: string | null;
+    modules?: ModuleKey[];
+    manager?: boolean;
+    show_balance?: boolean;
+    custom_price?: boolean;
     created_at?: string | null;
     updated_at?: string | null;
 }
@@ -25,16 +30,22 @@ export interface UserUpsertPayload {
     username?: string;
     email: string;
     password?: string;
-    branch_id?: string | null;
     is_active?: boolean;
-    role?: RoleName;        // ⬅️ single role untuk kompatibel create
-    roles?: RoleName[];     // ⬅️ multi roles (dipakai via endpoint khusus)
+    branch_id?: string | null;
+    role?: string;
+    roles?: string[];
+    role_label?: string | null;
+    modules?: ModuleKey[];
+    manager?: boolean;
+    show_balance?: boolean;
+    custom_price?: boolean;
+    branch_ids?: string[];
 }
 
 export interface UserQuery {
     q?: string;
-    role?: RoleName;
-    branch_id?: string; // efektif untuk Superadmin
+    role?: string;
+    branch_id?: string;
     page?: number;
     per_page?: number;
 }

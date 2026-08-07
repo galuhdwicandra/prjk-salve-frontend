@@ -18,7 +18,7 @@ type BranchOption = {
 type FormState = {
   id?: string;
   branch_id: string | null;
-  key: 'receipt_pending' | 'receipt_paid';
+  key: 'receipt_pending' | 'receipt_paid' | 'order_status';
   name: string;
   content: string;
   is_active: boolean;
@@ -62,6 +62,10 @@ Total: {{grand_total}}
 Terima kasih sudah menggunakan layanan kami.
 {{app_name}}`;
 
+const DEFAULT_STATUS = `Halo {{customer_name}},
+Status order Anda ({{invoice_no}}) saat ini: {{status}}.
+{{app_name}}`;
+
 function getErrorMessage(error: unknown, fallback: string): string {
   const err = error as ApiErrorShape & {
     response?: {
@@ -97,8 +101,8 @@ export default function WhatsappTemplatesPage() {
   const me = useAuth.user;
 
   const isSuperadmin = useMemo(
-    () => (me?.roles ?? []).includes('Superadmin'),
-    [me?.roles]
+    () => me?.role_label === 'Superadmin',
+    [me?.role_label]
   );
 
   const branchIdFromAuth =
@@ -129,6 +133,14 @@ export default function WhatsappTemplatesPage() {
     key: 'receipt_paid',
     name: 'Receipt Paid',
     content: DEFAULT_PAID,
+    is_active: true,
+  });
+
+  const [status, setStatus] = useState<FormState>({
+    branch_id: isSuperadmin ? null : branchIdFromAuth,
+    key: 'order_status',
+    name: 'Order Status',
+    content: DEFAULT_STATUS,
     is_active: true,
   });
 
@@ -424,6 +436,7 @@ export default function WhatsappTemplatesPage() {
     '{{customer_name}}',
     '{{invoice_no}}',
     '{{order_no}}',
+    '{{status}}',
     '{{grand_total}}',
     '{{payment_status}}',
     '{{share_url}}',
@@ -488,6 +501,22 @@ export default function WhatsappTemplatesPage() {
             setForm={setPaid}
             onSave={() => {
               void saveOne(paid);
+            }}
+            saving={saving}
+            branches={branches}
+            isSuperadmin={isSuperadmin}
+            helpPlaceholders={helpPlaceholders}
+            selectedScope={selectedScope}
+            onChangeScope={setSelectedScope}
+          />
+
+          <TemplateCard
+            sectionId="wa-template-order-status"
+            title="Order Status"
+            form={status}
+            setForm={setStatus}
+            onSave={() => {
+              void saveOne(status);
             }}
             saving={saving}
             branches={branches}

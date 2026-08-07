@@ -103,3 +103,33 @@ export function buildReceiptMessage(
             'Salve Laundry',
         ].join('\n');
 }
+
+export function buildStatusMessage(
+    order: Order,
+    templateRow?: WhatsappTemplate | null,
+): string {
+    const rawOrder = asObject(order);
+
+    const customerName = normalizeText(order.customer?.name, 'Pelanggan');
+    const invoiceNo = pickString(rawOrder, 'invoice_no') || pickString(rawOrder, 'number', '-');
+    const orderNo = pickString(rawOrder, 'number', '-');
+    const status = pickString(rawOrder, 'status', '-');
+
+    const vars: Record<string, string> = {
+        customer_name: customerName,
+        invoice_no: invoiceNo,
+        order_no: orderNo,
+        status,
+        app_name: 'Salve Laundry',
+    };
+
+    if (templateRow?.content?.trim()) {
+        return applyTemplate(templateRow.content, vars);
+    }
+
+    return [
+        `Halo ${customerName},`,
+        `Status order ${invoiceNo} saat ini: ${status}.`,
+        'Salve Laundry',
+    ].join('\n');
+}

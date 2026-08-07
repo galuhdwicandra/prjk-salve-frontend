@@ -1,5 +1,12 @@
 AddType application/manifest+json .webmanifest
 
+<IfModule mod_headers.c>
+  <FilesMatch "^(sw\.js|index\.html)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

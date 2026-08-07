@@ -15,6 +15,7 @@ import type {
   LoyaltyManualAdjustType,
 } from "../../types/loyalty";
 import { useAuth } from "../../store/useAuth";
+import { useCustomerLabels } from "../../hooks/useCustomerLabels";
 
 function IconArrowLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -57,39 +58,16 @@ function initials(name?: string) {
   return (a + b).toUpperCase();
 }
 
-const CUSTOMER_TAG_OPTIONS = [
-  "VIP",
-  "Langganan",
-  "Corporate",
-  "Member",
-  "Prioritas",
-  "Outlet",
-  "Komplain",
-  "Blacklist",
-] as const;
-
-const TAG_STYLES: Record<string, string> = {
-  VIP: "border-amber-200 bg-amber-50 text-amber-700",
-  Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Corporate: "border-blue-200 bg-blue-50 text-blue-700",
-  Member: "border-violet-200 bg-violet-50 text-violet-700",
-  Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
-  Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
-  Komplain: "border-orange-200 bg-orange-50 text-orange-700",
-  Blacklist: "border-red-200 bg-red-50 text-red-700",
-};
-
-function tagClass(tag: string): string {
-  return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
-}
-
 export default function CustomerDetail() {
   const params = useParams();
   const navigate = useNavigate();
   const isNew = !params.id || params.id === "new";
-  const { hasRole, user } = useAuth;
+  const isManager = useAuth.isManager();
+  const user = useAuth.user;
+  const canPickAnyBranch = (user?.branches.length ?? 0) > 1;
+  const { labels: customerLabels, chipClass } = useCustomerLabels();
 
-  const canEdit = hasRole("Superadmin") || hasRole("Admin Cabang") || hasRole("Kasir");
+  const canEdit = true;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,8 +80,7 @@ export default function CustomerDetail() {
     tags: [],
   });
   const [entity, setEntity] = useState<Customer | null>(null);
-  const canManageLoyaltyManual =
-    hasRole("Superadmin") || hasRole("Admin Cabang");
+  const canManageLoyaltyManual = isManager;
 
   const [loyalty, setLoyalty] = useState<LoyaltySummary | null>(null);
   const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyHistoryItem[]>([]);
@@ -214,10 +191,10 @@ export default function CustomerDetail() {
         const cleanedBase = clean(basePayload);
 
         let finalBranchId: string | undefined;
-        if (hasRole("Superadmin")) {
+        if (canPickAnyBranch) {
           finalBranchId = form.branch_id && form.branch_id.trim() !== "" ? form.branch_id.trim() : undefined;
         } else {
-          finalBranchId = user?.branch_id ? String(user.branch_id) : undefined;
+          finalBranchId = user?.branches[0]?.id;
           if (!finalBranchId) {
             setError("Akun Anda belum terikat ke cabang. Hubungi admin pusat.");
             setSaving(false);
@@ -246,7 +223,7 @@ export default function CustomerDetail() {
           address: form.address,
           notes: form.notes,
           tags: form.tags,
-          ...(hasRole("Superadmin") && form.branch_id && String(form.branch_id).trim() !== ""
+          ...(canPickAnyBranch && form.branch_id && String(form.branch_id).trim() !== ""
             ? { branch_id: String(form.branch_id).trim() }
             : {}),
         });
@@ -256,7 +233,7 @@ export default function CustomerDetail() {
           ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
           ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
           ...(cleanedUpdate.tags !== undefined ? { tags: cleanedUpdate.tags as string[] } : {}),
-          ...(hasRole("Superadmin") && cleanedUpdate.branch_id !== undefined ? { branch_id: String(cleanedUpdate.branch_id) } : {}),
+          ...(canPickAnyBranch && cleanedUpdate.branch_id !== undefined ? { branch_id: String(cleanedUpdate.branch_id) } : {}),
         };
         res = await updateCustomer(params.id, payloadUpdate);
       }
@@ -423,7 +400,7 @@ export default function CustomerDetail() {
           {/* Cabang */}
           <div className="mt-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-              Cabang: <span className="font-semibold text-slate-900">{entity?.branch?.name ?? user?.branch?.name ?? "-"}</span>
+              Cabang: <span className="font-semibold text-slate-900">{entity?.branch?.name ?? user?.branches[0]?.name ?? "-"}</span>
             </div>
           </div>
 
@@ -489,13 +466,13 @@ export default function CustomerDetail() {
                 }}
               >
                 <option value="">Pilih tag customer</option>
-                {CUSTOMER_TAG_OPTIONS.map((tag) => (
+                {customerLabels.map((label) => (
                   <option
-                    key={tag}
-                    value={tag}
-                    disabled={(form.tags ?? []).includes(tag)}
+                    key={label.id}
+                    value={label.name}
+                    disabled={(form.tags ?? []).includes(label.name)}
                   >
-                    {tag}
+                    {label.name}
                   </option>
                 ))}
               </select>
@@ -509,7 +486,7 @@ export default function CustomerDetail() {
                   (form.tags ?? []).map((tag) => (
                     <span
                       key={tag}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${tagClass(tag)}`}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${chipClass(tag)}`}
                     >
                       {tag}
                       {canEdit && (

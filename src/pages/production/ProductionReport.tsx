@@ -31,7 +31,7 @@ export default function ProductionReport() {
     const [rows, setRows] = useState<ProductionStaffReportRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const isSuperadmin = useAuth.hasRole('Superadmin');
+    const isSuperadmin = (useAuth.user?.branches.length ?? 0) > 1;
 
     const totals = useMemo(() => {
         return rows.reduce(

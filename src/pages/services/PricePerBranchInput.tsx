@@ -28,6 +28,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const slaRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,9 +65,10 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
     })();
   }, [serviceId, defaultPrice]);
 
-  async function onSaveOne(branch_id_raw: string | number, price_raw: number) {
+  async function onSaveOne(branch_id_raw: string | number, price_raw: string, sla_raw: string) {
     const branch_id = toStr(branch_id_raw);
-    const price = toNum(price_raw);
+    const price = toNum(price_raw, NaN);
+    const sla_days = sla_raw.trim() === "" ? null : toNum(sla_raw, NaN);
 
     if (!Number.isFinite(price) || price <= 0) {
       setNotice(null);
@@ -74,7 +76,13 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
       return;
     }
 
-    const payload: ServicePriceSetPayload = { service_id: serviceId, branch_id, price };
+    if (sla_days !== null && (!Number.isInteger(sla_days) || sla_days < 0 || sla_days > 365)) {
+      setNotice(null);
+      setError("SLA harus bilangan bulat 0-365 hari.");
+      return;
+    }
+
+    const payload: ServicePriceSetPayload = { service_id: serviceId, branch_id, price, sla_days };
 
     try {
       setSaving(branch_id);
@@ -82,31 +90,34 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
       setNotice(null);
 
       const res = await setServicePrice(payload);
-      const updated: ServicePrice = (res && (res as any).data ? (res as any).data : res) as ServicePrice;
+      const updated = res.data;
 
       if (updated?.id) {
         setRows((prev) =>
           prev.map((r) =>
             toStr(r.id) === branch_id
-              ? {
-                  ...r,
-                  override: updated,
-                  effective: toNum(updated.price, r.effective),
-                }
+              ? { ...r, override: updated, effective: toNum(updated.price, r.effective) }
               : r
           )
         );
 
-        const ref = inputRefs.current[branch_id];
-        if (ref) ref.value = toStr(updated.price);
+        const priceRef = inputRefs.current[branch_id];
+        if (priceRef) priceRef.value = toStr(updated.price);
+
+        const slaRef = slaRefs.current[branch_id];
+        if (slaRef) slaRef.value = toStr(updated.sla_days);
       }
 
-      setNotice("Harga cabang diperbarui.");
+      setNotice("Harga & SLA cabang diperbarui.");
     } catch {
       setError("Gagal menyimpan harga cabang.");
     } finally {
       setSaving(null);
     }
+  }
+
+  function submitRow(key: string) {
+    void onSaveOne(key, inputRefs.current[key]?.value ?? "", slaRefs.current[key]?.value ?? "");
   }
 
   if (loading) {
@@ -176,6 +187,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
               <Th>Cabang</Th>
               <Th className="text-right">Harga Efektif</Th>
               <Th className="text-right">Override</Th>
+              <Th className="text-right">SLA (hari)</Th>
               <Th className="text-right pr-6">Aksi</Th>
             </tr>
           </thead>
@@ -228,16 +240,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                       placeholder={`Default ${toIDR(Number(defaultPrice))}`}
                       ref={(el) => { inputRefs.current[key] = el; }}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const raw = inputRefs.current[key]?.value;
-                          const val = toNum(raw, NaN);
-                          if (!Number.isFinite(val) || val <= 0) {
-                            setError("Harga tidak valid.");
-                            setNotice(null);
-                            return;
-                          }
-                          void onSaveOne(key, val);
-                        }
+                        if (e.key === "Enter") submitRow(key);
                       }}
                     />
                   </Td>
@@ -250,16 +253,7 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                           hover:bg-slate-800 disabled:opacity-50
                         "
                         disabled={isSaving}
-                        onClick={() => {
-                          const raw = inputRefs.current[key]?.value;
-                          const val = toNum(raw, NaN);
-                          if (!Number.isFinite(val) || val <= 0) {
-                            setError("Harga tidak valid.");
-                            setNotice(null);
-                            return;
-                          }
-                          void onSaveOne(key, val);
-                        }}
+                        onClick={() => submitRow(key)}
                       >
                         {isSaving ? "Menyimpan…" : "Simpan"}
                       </button>
@@ -271,22 +265,39 @@ export default function PricePerBranchInput({ serviceId, defaultPrice }: Props) 
                           hover:bg-slate-50
                         "
                         onClick={() => {
-                          const ref = inputRefs.current[key];
-                          if (ref) ref.value = "";
-                          setRows((prev) =>
-                            prev.map((x) =>
-                              toStr(x.id) === key
-                                ? { ...x, override: null, effective: Number(defaultPrice) }
-                                : x
-                            )
-                          );
-                          setNotice("Override dihapus (kembali ke default). Belum tersimpan ke server.");
+                          const priceRef = inputRefs.current[key];
+                          if (priceRef) priceRef.value = toStr(r.override?.price ?? "");
+                          const slaRef = slaRefs.current[key];
+                          if (slaRef) slaRef.value = toStr(r.override?.sla_days ?? "");
+                          setError(null);
+                          setNotice(null);
                         }}
                       >
                         Reset
                       </button>
                     </div>
                   </Td>
+                  <Td className="text-right">
+                    <input
+                      type="number"
+                      min={0}
+                      max={365}
+                      step="1"
+                      className="
+                        w-28 rounded-md border border-slate-200 bg-white
+                        px-3 py-2 text-right text-sm text-slate-900
+                        placeholder:text-slate-400
+                        focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200
+                      "
+                      defaultValue={r.override?.sla_days ?? ""}
+                      placeholder="—"
+                      ref={(el) => { slaRefs.current[key] = el; }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitRow(key);
+                      }}
+                    />
+                  </Td>
+
                 </tr>
               );
             })}

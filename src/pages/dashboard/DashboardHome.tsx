@@ -5,7 +5,7 @@ import { getDashboardSummary } from "../../api/dashboard";
 import type { Branch } from "../../types/branches";
 import type { DashboardSummary, DashboardSummaryMeta } from "../../types/dashboard";
 import { toIDR } from "../../utils/money";
-import { useAuth, useHasRole } from "../../store/useAuth";
+import { useAuth } from "../../store/useAuth";
 
 type Meta = DashboardSummaryMeta;
 
@@ -23,7 +23,7 @@ function firstDayThisMonth(): string {
 
 export default function DashboardHome() {
   const me = useAuth.user;
-  const isSuperadmin = useHasRole(["Superadmin"]);
+  const isSuperadmin = (me?.branches.length ?? 0) > 1;
 
   // filter
   const [branchList, setBranchList] = useState<Branch[]>([]);

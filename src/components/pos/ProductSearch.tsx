@@ -1,13 +1,13 @@
 // src/components/pos/ProductSearch.tsx
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Service } from '../../types/services';
 import { listServices } from '../../api/services';
 import { listServicePricesByService, computeEffectivePrice } from '../../api/servicePrices';
 import type { ServicePrice } from '../../types/services';
-import { useAuth } from '../../store/useAuth';
 
 type Props = {
   onPick: (row: Service & { price_effective: number }) => void;
+  branchId: string | null;
 };
 
 type Row = Service & { price_effective: number };
@@ -60,12 +60,7 @@ function highlight(text: string, keyword: string): React.ReactNode {
   );
 }
 
-export default function ProductSearch({ onPick }: Props): React.ReactElement {
-  const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
-  const branchId: string | null =
-    user?.branch?.id != null ? String(user.branch.id)
-      : user?.branch_id != null ? String(user.branch_id)
-        : null;
+export default function ProductSearch({ onPick, branchId }: Props): React.ReactElement {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const priceCacheRef = useRef<Record<string, ServicePrice[]>>({});
 
@@ -95,7 +90,7 @@ export default function ProductSearch({ onPick }: Props): React.ReactElement {
         setLoading(false);
         return;
       }
-      const res = await listServices({ q: keyword, is_active: true, per_page: 10, page });
+      const res = await listServices({ q: keyword, is_active: true, leaf: true, per_page: 10, page });
       const list = (res.data ?? []) as Service[];
       setHasMore(list.length === 10);
 

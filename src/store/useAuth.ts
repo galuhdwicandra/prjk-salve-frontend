@@ -1,7 +1,8 @@
 // src/store/useAuth.ts
 import { apiLogin, apiMe, apiLogout } from '../api/client';
-import type { MeUser, RoleName, LoginPayload } from '../api/client';
+import type { MeUser, ModuleKey, LoginPayload } from '../api/client';
 import { useSyncExternalStore } from 'react';
+import { firstAccessiblePath } from '../layouts/menu';
 
 interface AuthState {
     token: string | null;
@@ -15,14 +16,7 @@ const state: AuthState = {
 
 const isDev = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV;
 
-export function homePathByRole(roles: RoleName[]): string {
-    if (roles.includes('Akuntansi')) return '/accounting/dashboard';
-    if (roles.includes('Petugas Cuci')) return '/production-board';
-    if (roles.includes('Kurir')) return '/deliveries';
-    if (roles.includes('Kasir')) return '/pos';
-
-    return '/';
-}
+export { firstAccessiblePath };
 
 const subscribers = new Set<() => void>();
 function notify() { subscribers.forEach((fn) => fn()); }
@@ -57,13 +51,17 @@ export const useAuth = {
     get user() {
         return state.user;
     },
-    get roles(): RoleName[] {
-        return state.user?.roles ?? [];
+    get modules(): ModuleKey[] {
+        return state.user?.modules ?? [];
     },
-    hasRole(role: RoleName | RoleName[]): boolean {
-        const list = Array.isArray(role) ? role : [role];
-        const roles = state.user?.roles ?? [];
-        return roles.some((r) => list.includes(r));
+    get branchIds(): string[] {
+        return (state.user?.branches ?? []).map((b) => b.id);
+    },
+    canModule(key: ModuleKey): boolean {
+        return (state.user?.modules ?? []).includes(key);
+    },
+    isManager(): boolean {
+        return state.user?.manager === true;
     },
     async login(payload: LoginPayload) {
         const res = await apiLogin(payload);
@@ -106,16 +104,24 @@ export const useAuth = {
     },
 };
 
-/**
-* Hook ringan untuk cek role yang reaktif terhadap perubahan auth.
-* Penggunaan: const can = useHasRole(['Superadmin','Admin Cabang'])
-*/
-export function useHasRole(required: RoleName | RoleName[]): boolean {
-    // re-render saat auth state berubah
-    useSyncExternalStore(
+function useAuthSnapshot(): string {
+    return useSyncExternalStore(
         useAuth.subscribe,
-        () => String(useAuth.user?.id ?? '0') + '|' + (useAuth.user?.roles ?? []).join(','),
+        () => [
+            String(useAuth.user?.id ?? '0'),
+            (useAuth.user?.modules ?? []).join(','),
+        ].join('|'),
     );
-    const roles = Array.isArray(required) ? required : [required];
-    return (useAuth.user?.roles ?? []).some((r) => roles.includes(r));
+}
+
+export function useCanModule(key: ModuleKey): boolean {
+    useAuthSnapshot();
+
+    return useAuth.canModule(key);
+}
+
+export function useIsManager(): boolean {
+    useAuthSnapshot();
+
+    return useAuth.isManager();
 }

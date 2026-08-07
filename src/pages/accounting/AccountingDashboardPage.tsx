@@ -284,7 +284,7 @@ function ReceivablesTable(props: {
 }
 
 export default function AccountingDashboardPage() {
-  const canAccessAllBranches = useAuth.hasRole(['Superadmin', 'Akuntansi']);
+  const canAccessAllBranches = (useAuth.user?.branches.length ?? 0) > 1;
 
   const [dateFrom, setDateFrom] = useState(firstDayOfMonth());
   const [dateTo, setDateTo] = useState(todayDate());

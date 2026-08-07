@@ -5,10 +5,11 @@ import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
 import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
 import type { OrderCreatePayload } from '../../types/orders';
 import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
+import { useActivePaymentMethods } from '../../hooks/useActivePaymentMethods';
+import { useCustomerLabels } from '../../hooks/useCustomerLabels';
 import {
   normalizeApiError,
   type FieldErrors,
-  type RoleName,
   type MeUser,
   type ApiEnvelope,
 } from '../../api/client';
@@ -27,42 +28,9 @@ import type { Branch } from '../../types/branches';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-function getUserBranchId(user: MeUser | null): string {
-  if (!user) return '';
-  if (user.branch_id != null) return String(user.branch_id);
-  if (user.branch?.id != null) return String(user.branch.id);
-  return '';
-}
-
-function getUserBranchCode(user: MeUser | null): string | null {
-  if (!user) return null;
-  return user.branch?.code ?? null;
-}
-
-const CUSTOMER_TAG_OPTIONS = [
-  "VIP",
-  "Langganan",
-  "Corporate",
-  "Member",
-  "Prioritas",
-  "Outlet",
-  "Komplain",
-  "Blacklist",
-] as const;
-
-const TAG_STYLES: Record<string, string> = {
-  VIP: "border-amber-200 bg-amber-50 text-amber-700",
-  Langganan: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Corporate: "border-blue-200 bg-blue-50 text-blue-700",
-  Member: "border-violet-200 bg-violet-50 text-violet-700",
-  Prioritas: "border-rose-200 bg-rose-50 text-rose-700",
-  Outlet: "border-cyan-200 bg-cyan-50 text-cyan-700",
-  Komplain: "border-orange-200 bg-orange-50 text-orange-700",
-  Blacklist: "border-red-200 bg-red-50 text-red-700",
-};
-
-function customerTagClass(tag: string): string {
-  return TAG_STYLES[tag] ?? "border-slate-200 bg-slate-50 text-slate-700";
+function getDefaultBranchId(user: MeUser | null): string {
+  if (user?.branch_id) return String(user.branch_id);
+  return user?.branches[0]?.id ?? '';
 }
 
 function focusFirstErrorField(errors: FieldErrors) {
@@ -281,17 +249,27 @@ export default function POSPage() {
     () => useAuth.user as MeUser | null
   );
 
-  const branchId = getUserBranchId(user);
+  const [branchId, setBranchId] = useState<string>('');
+  useEffect(() => {
+    setBranchId((prev) => prev || getDefaultBranchId(user));
+  }, [user]);
+
+  const branchOptions = user?.branches ?? [];
+  const showBranchPicker = branchOptions.length > 1;
 
   useEffect(() => {
     if (import.meta.env?.DEV) console.log('[POSPage] user:', user, 'branchId:', branchId);
   }, [user, branchId]);
 
   const [branchCode, setBranchCode] = useState<string | null>(null);
-  const branchCodeFromUser = getUserBranchCode(user);
+  const branchCodeFromUser = branchOptions.find((b) => b.id === branchId)?.code ?? null;
 
   // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
+  useEffect(() => {
+    setItems([]);
+  }, [branchId]);
+
   const [customerId, setCustomerId] = useState<string>('');
   const [discount, setDiscount] = useState<string>('');
   const [noteRows, setNoteRows] = useState<string[]>(['']);
@@ -302,9 +280,7 @@ export default function POSPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const { toast, showSuccess, showError, hideToast } = useToast();
 
-  const PAY_ROLES: RoleName[] = ['Superadmin', 'Admin Cabang', 'Kasir'];
-
-  const canPay = useAuth.hasRole(PAY_ROLES);
+  const canPay = true;
 
   // photos
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
@@ -319,6 +295,15 @@ export default function POSPage() {
   type PayMode = 'PENDING' | 'DP' | 'FULL';
   const [mode, setMode] = useState<PayMode>('PENDING');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
+  const paymentMethods = useActivePaymentMethods();
+  const { labels: customerLabels, chipClass: customerTagClass } = useCustomerLabels();
+
+  useEffect(() => {
+    if (paymentMethods.length === 0) return;
+    if (paymentMethods.some((pm) => pm.code === method)) return;
+    setMethod(paymentMethods[0].code);
+  }, [paymentMethods, method]);
+
   const [dpAmount, setDpAmount] = useState<string>('');
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
@@ -514,7 +499,7 @@ export default function POSPage() {
       errors.items = ['Keranjang kosong. Tambahkan minimal satu layanan.'];
     }
 
-    if (useAuth.hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
+    if (!branchId) {
       errors.branch_id = ['Akun Anda belum terikat ke cabang.'];
     }
 
@@ -586,6 +571,7 @@ export default function POSPage() {
     }
     try {
       const payload: OrderCreatePayload = {
+        branch_id: branchId || undefined,
         customer_id: customerId,
         items: items.map((it) => ({
           service_id: it.service_id,
@@ -688,11 +674,26 @@ export default function POSPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-lg font-semibold">Point of Sale</h1>
-                <Badge tone={branchId ? 'brand' : 'warn'}>
-                  {branchId
-                    ? `Cabang: ${branchCode ?? branchCodeFromUser ?? `#${branchId}`}`
-                    : 'Cabang belum terikat'}
-                </Badge>
+                {showBranchPicker ? (
+                  <select
+                    id="active_branch"
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-900"
+                  >
+                    {branchOptions.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        Cabang: {b.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Badge tone={branchId ? 'brand' : 'warn'}>
+                    {branchId
+                      ? `Cabang: ${branchCode ?? branchCodeFromUser ?? `#${branchId}`}`
+                      : 'Cabang belum terikat'}
+                  </Badge>
+                )}
               </div>
               <div className="mt-1 text-xs text-slate-500">
                 Alur cepat: pilih customer → cari layanan → set pembayaran → simpan & cetak.
@@ -923,7 +924,7 @@ export default function POSPage() {
                   </button>
                 }
               >
-                <ProductSearch onPick={addItem} />
+                <ProductSearch onPick={addItem} branchId={branchId} />
                 {fieldErrors.items?.[0] && (
                   <div className="mt-2 text-xs text-red-600">
                     {fieldErrors.items[0]}
@@ -1061,13 +1062,13 @@ export default function POSPage() {
                             }}
                           >
                             <option value="">Pilih tag customer</option>
-                            {CUSTOMER_TAG_OPTIONS.map((tag) => (
+                            {customerLabels.map((label) => (
                               <option
-                                key={tag}
-                                value={tag}
-                                disabled={newCustomerTags.includes(tag)}
+                                key={label.id}
+                                value={label.name}
+                                disabled={newCustomerTags.includes(label.name)}
                               >
-                                {tag}
+                                {label.name}
                               </option>
                             ))}
                           </select>
@@ -1124,7 +1125,7 @@ export default function POSPage() {
                               setCustomerError('Nama dan WhatsApp wajib diisi.');
                               return;
                             }
-                            if (useAuth.hasRole(['Kasir', 'Admin Cabang']) && !branchId) {
+                            if (!branchId) {
                               setCustomerError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
                               return;
                             }
@@ -1262,19 +1263,19 @@ export default function POSPage() {
                     <div>
                       <div className="mb-1 text-xs font-semibold text-slate-700">Metode</div>
                       <div className="flex flex-wrap gap-2">
-                        {(['CASH', 'QRIS', 'TRANSFER'] as PaymentMethod[]).map((pm) => {
-                          const active = method === pm;
+                        {paymentMethods.map((pm) => {
+                          const active = method === pm.code;
                           return (
                             <button
-                              key={pm}
-                              onClick={() => setMethod(pm)}
+                              key={pm.id}
+                              onClick={() => setMethod(pm.code)}
                               className={[
                                 'rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
                                 active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white hover:bg-slate-50',
                               ].join(' ')}
                               aria-pressed={active}
                             >
-                              {pm}
+                              {pm.name}
                             </button>
                           );
                         })}
@@ -1398,7 +1399,7 @@ export default function POSPage() {
                       onClick={() => {
                         setMode(m);
                         if (m !== 'DP') setDpAmount('');
-                        if (m === 'FULL') setMethod('CASH');
+                        if (m === 'FULL') setMethod(paymentMethods[0]?.code ?? 'CASH');
                         setModePickerOpen(false);
                       }}
                       className={[
