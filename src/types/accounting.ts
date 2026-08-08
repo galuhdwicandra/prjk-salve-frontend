@@ -38,10 +38,20 @@ export type AccountingAccount = {
   is_cash_account: boolean;
   is_active: boolean;
   sort_order: number;
+  balance?: number | string | null;
   branch?: BranchMini | null;
   parent?: Pick<AccountingAccount, 'id' | 'code' | 'name'> | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+export type AccountingFundTransferPayload = {
+  branch_id?: string | null;
+  journal_date: string;
+  description?: string | null;
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
 };
 
 export type AccountingAccountMapping = {

@@ -101,9 +101,16 @@ export default function JournalIndex() {
           </p>
         </div>
 
-        <Link to="/accounting/journals/new" className="btn-primary">
-          Tambah Jurnal
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/accounting/journals/transfer" className="btn-outline">
+            Transfer Dana
+          </Link>
+
+          <Link to="/accounting/journals/new" className="btn-primary">
+            Tambah Jurnal
+          </Link>
+        </div>
+
       </div>
 
       <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">

@@ -57,9 +57,9 @@ Response format:
 LARK STORY [SPRINT 2 Kasir/POS]
 
 Description:
-WhatsApp Template via /whatsapp-templates and status sending
+Contact Database UI for vendors, employees, and other categories
 
 Acceptance Criteria:
-Name, order number, and status placeholders are filled in correctly.
+Filters by category and archive function are available.
 
 Help me complete this story. Continue to follow all of the rules above.

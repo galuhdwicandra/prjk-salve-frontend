@@ -125,3 +125,9 @@ export function useIsManager(): boolean {
 
     return useAuth.isManager();
 }
+
+export function useShowBalance(): boolean {
+    useAuthSnapshot();
+
+    return state.user?.show_balance === true;
+}

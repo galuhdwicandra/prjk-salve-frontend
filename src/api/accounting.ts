@@ -9,6 +9,7 @@ import type {
   AccountingBalanceSheetData,
   AccountingBalanceSheetMeta,
   AccountingBalanceSheetQuery,
+  AccountingFundTransferPayload,
   AccountingJournalEntry,
   AccountingJournalPayload,
   AccountingJournalQuery,
@@ -156,6 +157,16 @@ export async function createAccountingJournal(payload: AccountingJournalPayload)
 export async function updateAccountingJournal(id: string, payload: AccountingJournalPayload) {
   const { data } = await api.put<ApiEnvelope<AccountingJournalEntry, null>>(
     `/accounting/journals/${encodeURIComponent(id)}`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  return data;
+}
+
+export async function transferAccountingFunds(payload: AccountingFundTransferPayload) {
+  const { data } = await api.post<ApiEnvelope<AccountingJournalEntry, null>>(
+    '/accounting/journals/transfer',
     payload,
     { headers: { 'Content-Type': 'application/json' } }
   );
