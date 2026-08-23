@@ -51,9 +51,9 @@ function focusFirstErrorField(errors: BranchFieldErrors) {
 function validateBranchForm(form: BranchUpsertPayload): BranchFieldErrors {
   const errors: BranchFieldErrors = {};
 
-  const code = form.code.trim();
+  const code = (form.code ?? '').trim();
   const name = form.name.trim();
-  const invoicePrefix = form.invoice_prefix.trim();
+  const invoicePrefix = (form.invoice_prefix ?? '').trim();
 
   if (!code) {
     errors.code = ['Kode cabang wajib diisi'];
@@ -81,7 +81,7 @@ function validateBranchForm(form: BranchUpsertPayload): BranchFieldErrors {
     errors.invoice_prefix = ['Prefix invoice maksimal 8 karakter'];
   }
 
-  if (!POLICIES.includes(form.reset_policy)) {
+  if (!POLICIES.includes(form.reset_policy ?? 'monthly')) {
     errors.reset_policy = ['Reset policy tidak valid'];
   }
 
@@ -250,7 +250,7 @@ export default function BranchForm() {
               <input
                 id="code"
                 className="input"
-                value={form.code}
+                value={v.code}
                 onChange={(e) => {
                   setForm({ ...form, code: e.target.value });
                   setFieldErrors((prev) => ({ ...prev, code: [] }));
