@@ -16,7 +16,8 @@ import { useAuth, useIsManager } from '../../store/useAuth';
 import { IconTrash } from '../users/icons';
 import { fmtDate } from '../../utils/date';
 import { rp } from '../../utils/money';
-import { buildReceiptMessage } from '../../utils/receipt-wa';
+import { buildOrderWaMessage } from '../../utils/wa-templates';
+import type { WaConfigKey } from '../../types/whatsapp-templates';
 import { buildWhatsAppLink } from '../../utils/wa';
 import EditOrderModal from './EditOrderModal';
 import OrderAdvancedPanel from './OrderAdvancedPanel';
@@ -83,7 +84,7 @@ export default function OrderDetail() {
     void refresh();
   }, [refresh]);
 
-  const sendWa = useCallback(async () => {
+  const sendWa = useCallback(async (key: WaConfigKey) => {
     if (!row) return;
 
     const target = row as OrderWithPhone;
@@ -96,9 +97,12 @@ export default function OrderDetail() {
 
     try {
       const link = await createOrderShareLink(row.id);
-      const templateKey = Number(row.due_amount ?? 0) > 0 ? 'receipt_pending' : 'receipt_paid';
-      const resolved = await resolveWhatsappTemplate(templateKey, row.branch_id);
-      const message = buildReceiptMessage(row, link, resolved.data);
+      const resolved = await resolveWhatsappTemplate(key, row.branch_id);
+      const branch = useAuth.user?.branches.find((b) => String(b.id) === String(row.branch_id));
+      const message = buildOrderWaMessage(row, key, resolved.data?.content, {
+        outletName: branch?.name,
+        trackerUrl: link,
+      });
 
       window.open(buildWhatsAppLink(wa, message), '_blank', 'noopener,noreferrer');
     } catch {
@@ -294,7 +298,7 @@ export default function OrderDetail() {
                 <IconPrinter /> Cetak Receipt
               </button>
 
-              <button type="button" className="btn block" onClick={() => void sendWa()}>
+              <button type="button" className="btn block" onClick={() => void sendWa('struk')}>
                 <IconChat /> Kirim via WA
               </button>
 
@@ -313,7 +317,7 @@ export default function OrderDetail() {
                     Terima Pembayaran
                   </button>
 
-                  <button type="button" className="btn orange block" onClick={() => void sendWa()}>
+                  <button type="button" className="btn orange block" onClick={() => void sendWa('reminder')}>
                     <IconChat /> WA: Ingatkan Bayar
                   </button>
                 </>

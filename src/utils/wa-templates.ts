@@ -1,6 +1,7 @@
 import { rp } from './money';
 import { fmtDate } from './date';
 import type { WaConfigKey } from '../types/whatsapp-templates';
+import type { Order } from '../types/orders';
 
 export type WaTemplateDef = {
     key: WaConfigKey;
@@ -118,4 +119,59 @@ export function waSampleVars(): Record<string, string> {
 
 export function waRender(template: string, vars: Record<string, string>): string {
     return template.replace(/\{([a-z_]+)\}/g, (match, key: string) => vars[key] ?? match);
+}
+
+type WaOrderOptions = {
+    outletName?: string;
+    outletAddress?: string;
+    trackerUrl?: string;
+};
+
+export function waOrderVars(order: Order, options: WaOrderOptions = {}): Record<string, string> {
+    const items = order.items ?? [];
+    const subtotal = Number(order.subtotal ?? 0);
+    const discount = Number(order.discount ?? 0);
+    const total = Number(order.grand_total ?? 0);
+    const paid = Number(order.paid_amount ?? 0);
+    const due = Number(order.due_amount ?? 0);
+    const sisa = due > 0 ? rp(due) : 'LUNAS';
+
+    const ringkasan = [
+        `Subtotal: ${rp(subtotal)}`,
+        discount > 0 ? `Diskon: -${rp(discount)}` : null,
+        `*TOTAL: ${rp(total)}*`,
+        `Dibayar: ${rp(paid)}`,
+        `Sisa: ${sisa}`,
+    ]
+        .filter((line): line is string => line !== null)
+        .join('\n');
+
+    return {
+        nama: order.customer?.name ?? order.customer_name ?? '',
+        no_order: order.invoice_no || order.number,
+        tanggal: fmtDate(order.created_at),
+        outlet: options.outletName ?? '',
+        alamat_outlet: options.outletAddress ?? '',
+        pasang: String(items.reduce((sum, item) => sum + Number(item.qty ?? 0), 0)),
+        total: rp(total),
+        subtotal: rp(subtotal),
+        diskon: rp(discount),
+        dibayar: rp(paid),
+        sisa,
+        estimasi: fmtDate(order.ready_at),
+        items: items
+            .map((item) => `${item.service?.name ?? ''}  ${item.qty} \u00D7 ${rp(Number(item.price ?? 0))} = ${rp(Number(item.total ?? 0))}`)
+            .join('\n'),
+        ringkasan,
+        link_tracker: options.trackerUrl ?? '',
+    };
+}
+
+export function buildOrderWaMessage(
+    order: Order,
+    key: WaConfigKey,
+    template: string | null | undefined,
+    options: WaOrderOptions = {},
+): string {
+    return waRender(template?.trim() || WA_TEMPLATE_DEFAULTS[key], waOrderVars(order, options));
 }

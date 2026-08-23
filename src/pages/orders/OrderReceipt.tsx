@@ -4,7 +4,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
 import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import { buildWhatsAppLink } from '../../utils/wa';
-import { buildReceiptMessage } from '../../utils/receipt-wa';
+import { buildOrderWaMessage } from '../../utils/wa-templates';
 import type { Order } from '../../types/orders';
 import { toIDR } from '../../utils/money';
 
@@ -170,22 +170,7 @@ export default function OrderReceipt(): React.ReactElement {
       throw new Error('Data order belum tersedia.');
     }
 
-    const isUnpaid = Number(order.due_amount ?? 0) > 0;
-    const key = isUnpaid ? 'receipt_pending' : 'receipt_paid';
-
-    const res = await resolveWhatsappTemplate(key, order.branch_id);
-
-    console.log('[WA TEMPLATE][resolve]', {
-      key,
-      branch_id: order.branch_id,
-      response: res,
-    });
-
-    if (!res.data?.content?.trim()) {
-      throw new Error(
-        `Template WhatsApp tidak ditemukan / tidak aktif untuk key=${key} dan branch_id=${String(order.branch_id)}`
-      );
-    }
+    const res = await resolveWhatsappTemplate('struk', order.branch_id);
 
     return res.data;
   };
@@ -196,7 +181,9 @@ export default function OrderReceipt(): React.ReactElement {
     }
 
     const templateRow = await getResolvedTemplate();
-    const message = buildReceiptMessage(order, shareUrl || '', templateRow);
+    const message = buildOrderWaMessage(order, 'struk', templateRow?.content, {
+      trackerUrl: shareUrl || '',
+    });
 
     console.log('[WA TEMPLATE][message]', {
       order_id: order.id,
@@ -215,7 +202,9 @@ export default function OrderReceipt(): React.ReactElement {
       setWaBusy(true);
 
       const templateRow = await getResolvedTemplate();
-      const message = buildReceiptMessage(order, shareUrl || '', templateRow);
+      const message = buildOrderWaMessage(order, 'struk', templateRow?.content, {
+        trackerUrl: shareUrl || '',
+      });
 
       console.log('[WA TEMPLATE][final-send]', {
         order_id: order.id,
