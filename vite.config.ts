@@ -4,6 +4,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    watch: {
+      usePolling: true,
+      interval: 500,
+    },
+  },
+  
   plugins: [
     react(),
     tailwindcss(),
@@ -19,6 +26,20 @@ export default defineConfig({
             options: {
               cacheName: 'salve-storage-assets',
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' &&
+              /\/(services|customers|payment-methods|customer-labels|service-prices\/by-service)$/.test(
+                url.pathname
+              ),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'salve-pos-catalog',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 7 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

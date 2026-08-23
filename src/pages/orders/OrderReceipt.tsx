@@ -321,7 +321,7 @@ export default function OrderReceipt(): React.ReactElement {
 
   // ====== Render ======
   const nomor = order?.invoice_no ?? order?.number ?? '';
-  const customer = order?.customer?.name ?? '-';
+  const customer = order?.customer?.name ?? order?.customer_name ?? '-';
   const total = toIDR(Number(order?.grand_total ?? 0));
 
   return (

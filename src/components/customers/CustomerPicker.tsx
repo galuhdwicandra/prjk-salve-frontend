@@ -3,14 +3,13 @@ import React, { useEffect, useMemo, useRef, useState, useId } from "react";
 import { listCustomers } from "../../api/customers";
 
 type Props = {
-  /** id pelanggan terpilih (untuk form/submit) */
   value: string | "";
-  /** callback saat id berubah */
   onChange: (id: string | "") => void;
-  /** placeholder input */
   placeholder?: string;
-  /** opsional: tampilkan teks kecil error bila wajib */
   requiredText?: string;
+  branchId?: string;
+  onPicked?: (name: string) => void;
+  onCreateNew?: (name: string) => void;
 };
 
 type CustomerLite = {
@@ -27,6 +26,9 @@ export default function CustomerPicker({
   onChange,
   placeholder = "Cari nama/WA/alamat pelanggan...",
   requiredText,
+  branchId,
+  onPicked,
+  onCreateNew,
 }: Props): React.ReactElement {
   const [query, setQuery] = useState<string>("");
   const [open, setOpen] = useState(false);
@@ -81,7 +83,11 @@ export default function CustomerPicker({
     timerRef.current = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await listCustomers({ q: query, per_page: 8 });
+        const res = await listCustomers({
+          q: query,
+          per_page: 8,
+          ...(branchId ? { branch_id: branchId } : {}),
+        });
         const rowsUnknown = extractRows(res as unknown);
         const items: CustomerLite[] = rowsUnknown
           .map((r) => {
@@ -107,7 +113,7 @@ export default function CustomerPicker({
         setLoading(false);
       }
     }, 300) as unknown as number;
-  }, [query]);
+  }, [query, branchId]);
 
   // Jika parent reset value → kosongkan label
   useEffect(() => {
@@ -121,6 +127,7 @@ export default function CustomerPicker({
     setSelectedLabel(c.name);
     setQuery(c.name);
     onChange(c.id);
+    onPicked?.(c.name);
     setOpen(false);
     setActiveIndex(-1);
     inputRef.current?.focus();
@@ -219,7 +226,7 @@ export default function CustomerPicker({
             </div>
           )}
 
-          {!loading && list.length === 0 && (
+          {!loading && list.length === 0 && !onCreateNew && (
             <div className="px-3 py-2 text-sm opacity-70">Tidak ada hasil</div>
           )}
 
@@ -234,9 +241,8 @@ export default function CustomerPicker({
                       id={`option-${listboxId}-${c.id}`}
                       role="option"
                       aria-selected={value === c.id || active}
-                      className={`w-full text-left px-3 py-2 transition-colors ${
-                        active ? "bg-[#E6EDFF]" : "hover:bg-black/5"
-                      }`}
+                      className={`w-full text-left px-3 py-2 transition-colors ${active ? "bg-[#E6EDFF]" : "hover:bg-black/5"
+                        }`}
                       onMouseEnter={() => setActiveIndex(idx)}
                       onMouseDown={(e) => e.preventDefault()} // cegah blur sebelum click
                       onClick={() => pick(c)}
@@ -256,6 +262,19 @@ export default function CustomerPicker({
                 );
               })}
             </ul>
+          )}
+          {!loading && onCreateNew && query.trim().length >= 2 && (
+            <button
+              type="button"
+              className="ss-foot"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onCreateNew(query.trim());
+                setOpen(false);
+              }}
+            >
+              + Tambah pelanggan baru (nama: <b>{query.trim()}</b>)
+            </button>
           )}
         </div>
       )}

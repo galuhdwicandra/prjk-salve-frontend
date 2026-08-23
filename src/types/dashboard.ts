@@ -1,68 +1,33 @@
-// src/types/dashboard.ts
-export interface TopServiceRow {
-  service_id: number | string;
+export interface CashflowPoint {
+  date: string;
+  cash_in: number;
+  cash_out: number;
+}
+
+export interface BranchRevenueRow {
+  branch_id: string;
+  code: string;
+  name: string;
+  amount: number;
+}
+
+export interface CategoryMixRow {
   name: string;
   qty: number;
   amount: number;
 }
 
-export interface OmzetDailyPoint {
-  date: string;
-  amount: number;
-}
-
-export interface OmzetMonthlyPoint {
-  month: string;
-  amount: number;
-}
-
-export interface PaymentMethodTotals {
-  dp_amount: number;
-  cash_amount: number;
-  transfer_amount: number;
-  qris_amount: number;
-}
-
-export interface PaymentStatusTotals {
-  pending_count: number;
-  pending_amount: number;
-  dp_count: number;
-  dp_due_amount: number;
-  paid_count: number;
-}
-
-/**
- * Cerminan tepat dari payload backend /dashboard/summary
- * Lihat Backend_Docs.md M11 DashboardController::summary()
- */
 export interface DashboardSummary {
-  omzet_total: number;
-  orders_count: number;
-
-  payment_method_totals: PaymentMethodTotals;
-  payment_status_totals: PaymentStatusTotals;
-
-  top_services: TopServiceRow[];
-
-  vouchers_used_count: number;
-  vouchers_used_amount: number;
-
-  delivery_shipping_fee: number;
-
-  receivables_open_count: number;
-  receivables_open_amount: number;
-
-  dp_outstanding_count: number;
-  dp_outstanding_amount: number;
-
-  cash_in_total: number;
-  cash_out_total: number;
-  cash_withdrawal_total: number;
-  cash_on_hand_now: number;
-  cash_difference_last_closed: number;
-
-  omzet_daily: OmzetDailyPoint[];
-  omzet_monthly: OmzetMonthlyPoint[];
+  revenue_recognized: number;
+  unearned_revenue: number;
+  pairs: number;
+  atv_per_pair: number;
+  outstanding: number;
+  cashflow_daily: CashflowPoint[];
+  revenue_by_branch: BranchRevenueRow[];
+  customers_new: number;
+  customers_returning: number;
+  category_mix: CategoryMixRow[];
 }
 
 export interface DashboardSummaryMeta {

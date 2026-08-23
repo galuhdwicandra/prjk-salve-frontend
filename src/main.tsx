@@ -2,10 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { initTheme } from './utils/theme';
 import { registerSW } from 'virtual:pwa-register'
+import { flushQueue } from './utils/offline-queue'
 import './index.css'
 import App from './App.tsx'
 
 initTheme();
+
+window.addEventListener('online', () => void flushQueue());
+void flushQueue();
 
 const updateSW = registerSW({
   onRegisteredSW(_swUrl, registration) {

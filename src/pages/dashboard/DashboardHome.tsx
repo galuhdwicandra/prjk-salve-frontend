@@ -1,782 +1,489 @@
-// src/pages/dashboard/DashboardHome.tsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listBranches } from "../../api/branches";
 import { getDashboardSummary } from "../../api/dashboard";
+import { fetchAllReportRows } from "../../api/reports";
 import type { Branch } from "../../types/branches";
-import type { DashboardSummary, DashboardSummaryMeta } from "../../types/dashboard";
+import type { CashflowPoint, DashboardSummary, DashboardSummaryMeta } from "../../types/dashboard";
+import { downloadXlsx, printPdf } from "../../utils/export-table";
+import { ORDER_EXPORT_COLUMNS, reportColumnLabel } from "../../utils/report-columns";
 import { toIDR } from "../../utils/money";
 import { useAuth } from "../../store/useAuth";
 
-type Meta = DashboardSummaryMeta;
+type Gran = "harian" | "mingguan" | "bulanan" | "tahunan";
+type Bucket = { key: string; label: string; cashIn: number; cashOut: number; net: number };
+type Slice = { label: string; value: number; color: string };
+
+const MON_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const PALETTE = ["#2563EB", "#0A2A66", "#F5A02D", "#16A34A", "#7C3AED", "#0891B2", "#DC2626"];
+const EMPTY_RANGE = "Tidak ada data pada rentang ini.";
+
+function ymd(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 function today(): string {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd}`;
+  return ymd(new Date());
 }
+
 function firstDayThisMonth(): string {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-01`;
+  const now = new Date();
+  return ymd(new Date(now.getFullYear(), now.getMonth(), 1));
+}
+
+function parseYmd(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function bucketOf(date: string, gran: Gran): { key: string; label: string } {
+  const parsed = parseYmd(date);
+
+  if (gran === "tahunan") {
+    const key = String(parsed.getFullYear());
+    return { key, label: key };
+  }
+
+  if (gran === "bulanan") {
+    return {
+      key: date.slice(0, 7),
+      label: `${MON_SHORT[parsed.getMonth()]} '${String(parsed.getFullYear()).slice(2)}`,
+    };
+  }
+
+  if (gran === "mingguan") {
+    const start = new Date(parsed);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return { key: ymd(start), label: `${start.getDate()} ${MON_SHORT[start.getMonth()]}` };
+  }
+
+  return { key: date, label: `${parsed.getDate()} ${MON_SHORT[parsed.getMonth()]}` };
+}
+
+function toBuckets(points: CashflowPoint[], gran: Gran): Bucket[] {
+  const map = new Map<string, Bucket>();
+
+  points.forEach((point) => {
+    const { key, label } = bucketOf(point.date, gran);
+    const current = map.get(key) ?? { key, label, cashIn: 0, cashOut: 0, net: 0 };
+
+    current.cashIn += Number(point.cash_in);
+    current.cashOut += Number(point.cash_out);
+    current.net = current.cashIn - current.cashOut;
+    map.set(key, current);
+  });
+
+  return [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
+function decimal(value: number): string {
+  return Number(value).toLocaleString("id-ID", { maximumFractionDigits: 2 });
 }
 
 export default function DashboardHome() {
   const me = useAuth.user;
-  const isSuperadmin = (me?.branches.length ?? 0) > 1;
+  const canPickBranch = (me?.branches.length ?? 0) > 1;
 
-  // filter
   const [branchList, setBranchList] = useState<Branch[]>([]);
-  const [branchId, setBranchId] = useState<string>(() => {
-    if (!isSuperadmin && me?.branch_id) return String(me.branch_id);
-    return "";
-  });
+  const [branchId, setBranchId] = useState<string>(() =>
+    !canPickBranch && me?.branch_id ? String(me.branch_id) : "",
+  );
   const [from, setFrom] = useState<string>(firstDayThisMonth());
   const [to, setTo] = useState<string>(today());
+  const [gran, setGran] = useState<Gran>("harian");
 
-  // data
   const [data, setData] = useState<DashboardSummary | null>(null);
-  const [meta, setMeta] = useState<Meta | null>(null);
+  const [meta, setMeta] = useState<DashboardSummaryMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string>("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const q = useMemo(() => {
-    // Superadmin boleh pilih cabang; role lain pakai cabang login
-    const out: { from: string; to: string; branch_id?: string | null } = { from, to };
-    if (isSuperadmin) {
-      if (branchId) out.branch_id = branchId;
-    } else {
-      if (me?.branch_id) out.branch_id = String(me.branch_id);
-    }
-    return out;
-  }, [from, to, branchId, isSuperadmin, me?.branch_id]);
+  const query = useMemo(() => {
+    const effective = canPickBranch ? branchId : String(me?.branch_id ?? "");
+    return { from, to, branch_id: effective || null };
+  }, [from, to, branchId, canPickBranch, me?.branch_id]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setErr("");
     try {
-      if (isSuperadmin && branchList.length === 0) {
-        const br = await listBranches({ per_page: 100 });
-        setBranchList(br.data ?? []);
+      if (canPickBranch && branchList.length === 0) {
+        const branches = await listBranches({ per_page: 100 });
+        setBranchList(branches.data ?? []);
       }
-      const res = await getDashboardSummary(q);
+      const res = await getDashboardSummary(query);
       setData(res.data ?? null);
-      setMeta((res.meta as Meta) ?? null);
+      setMeta((res.meta as DashboardSummaryMeta) ?? null);
     } catch (e) {
-      setErr("Gagal memuat ringkasan dashboard");
+      setErr("Gagal memuat ringkasan dashboard.");
       if (import.meta.env.DEV) console.error("[DashboardHome] load error", e);
     } finally {
       setLoading(false);
     }
-  }, [q, isSuperadmin, branchList.length]);
+  }, [query, canPickBranch, branchList.length]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const rangeText = `${meta?.from ?? from} — ${meta?.to ?? to}${meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}`;
+  const buckets = useMemo(() => toBuckets(data?.cashflow_daily ?? [], gran), [data, gran]);
+
+  const outletSlices = useMemo<Slice[]>(
+    () =>
+      (data?.revenue_by_branch ?? []).map((row, index) => ({
+        label: `${row.code} \u00B7 ${row.name}`,
+        value: Number(row.amount),
+        color: PALETTE[index % PALETTE.length],
+      })),
+    [data],
+  );
+
+  const repeatSlices = useMemo<Slice[]>(
+    () => [
+      { label: "Baru", value: Number(data?.customers_new ?? 0), color: "#2563EB" },
+      { label: "Kembali", value: Number(data?.customers_returning ?? 0), color: "#F5A02D" },
+    ],
+    [data],
+  );
+
+  const mix = data?.category_mix ?? [];
+  const mixTotal = mix.reduce((sum, row) => sum + Number(row.amount), 0);
+
+  async function runExport(format: "xlsx" | "pdf") {
+    setExporting(true);
+    setErr("");
+    try {
+      const rows = await fetchAllReportRows("orders", query);
+      const live = rows.filter((row) => row.order_status !== "CANCELED");
+
+      if (live.length === 0) {
+        setErr("Tidak ada data untuk diekspor.");
+        return;
+      }
+
+      const aoa: unknown[][] = [
+        ORDER_EXPORT_COLUMNS.map(reportColumnLabel),
+        ...live.map((row) => ORDER_EXPORT_COLUMNS.map((column) => row[column] ?? "")),
+      ];
+      const subtitle = `Periode ${from} s.d. ${to}`;
+      const name = `salve-dashboard-order-${today()}`;
+
+      if (format === "xlsx") {
+        downloadXlsx(`${name}.xlsx`, "Laporan Order", aoa);
+      } else if (!printPdf("Laporan Order", subtitle, aoa)) {
+        setErr("Popup diblokir browser. Izinkan popup untuk export PDF.");
+      }
+    } catch (e) {
+      setErr("Gagal mengunduh file export.");
+      if (import.meta.env.DEV) console.error("[DashboardHome] export error", e);
+    } finally {
+      setExporting(false);
+      setExportOpen(false);
+    }
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="relative overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-elev-1">
-        {/* Decorative gradient (UI only) */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-80"
-          style={{
-            background:
-              "radial-gradient(900px 240px at 10% 0%, rgba(79,70,229,0.16) 0%, rgba(79,70,229,0.00) 60%)," +
-              "radial-gradient(680px 220px at 92% 10%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 55%)",
-          }}
-        />
-        <div className="relative p-3 sm:p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-base sm:text-lg font-semibold tracking-tight text-[color:var(--color-text-default)]">
-                Dashboard
-              </h1>
-              <p className="text-xs text-[color:var(--color-text-muted)]">Ringkasan kinerja & laporan</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="chip border border-[color:var(--color-border)] bg-white/60 dark:bg-white/5 text-[color:var(--color-text-default)]">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-brand-primary)]" />
-                <span className="tabular-nums text-[11px]">{rangeText}</span>
-              </span>
-            </div>
-          </div>
+    <div className="card">
+      <div className="filters">
+        <div className="f">
+          <label htmlFor="dashFrom">Dari Tanggal</label>
+          <input id="dashFrom" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
         </div>
-      </header>
 
-      {/* FilterBar */}
-      <section
-        className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl shadow-elev-1"
-        aria-label="Filter ringkas dashboard"
-      >
-        <div className="p-3 sm:p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {isSuperadmin && (
-              <label className="grid gap-1 text-sm">
-                <span className="text-[color:var(--color-text-default)]">Cabang</span>
-                <select
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  className="input px-3 py-2 bg-[color:var(--color-surface)] text-[color:var(--color-text-default)]"
-                >
-                  <option value="">Semua Cabang</option>
-                  {branchList.map((b) => (
-                    <option key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <label className="grid gap-1 text-sm">
-              <span className="text-[color:var(--color-text-default)]">Dari Tanggal</span>
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="input px-3 py-2 bg-[color:var(--color-surface)]"
-              />
-            </label>
-
-            <label className="grid gap-1 text-sm">
-              <span className="text-[color:var(--color-text-default)]">Sampai Tanggal</span>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="input px-3 py-2 bg-[color:var(--color-surface)]"
-              />
-            </label>
-
-            <div className={`${isSuperadmin ? "lg:col-span-2" : "lg:col-span-3"} flex items-end gap-2`}>
-              <button
-                type="button"
-                onClick={() => load()}
-                className="btn-primary w-full sm:w-auto"
-                aria-label="Terapkan filter"
-              >
-                Terapkan
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFrom(firstDayThisMonth());
-                  setTo(today());
-                }}
-                className="btn-outline w-full sm:w-auto"
-                aria-label="Reset tanggal"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
+        <div className="f">
+          <label htmlFor="dashTo">Sampai Tanggal</label>
+          <input id="dashTo" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
         </div>
-      </section>
 
-      {/* Error */}
+        {canPickBranch ? (
+          <div className="f">
+            <label htmlFor="dashBranch">Outlet</label>
+            <select id="dashBranch" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Semua Outlet</option>
+              {branchList.map((branch) => (
+                <option key={branch.id} value={String(branch.id)}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        <div className="f">
+          <label htmlFor="dashGran">Grafik</label>
+          <select id="dashGran" value={gran} onChange={(e) => setGran(e.target.value as Gran)}>
+            <option value="harian">Harian</option>
+            <option value="mingguan">Mingguan</option>
+            <option value="bulanan">Bulanan</option>
+            <option value="tahunan">Tahunan</option>
+          </select>
+        </div>
+
+        <div className="f auto">
+          <label>{"\u00A0"}</label>
+          <button
+            type="button"
+            className="btn sm hide-mobile"
+            onClick={() => setExportOpen(true)}
+            disabled={loading || exporting}
+          >
+            Export
+          </button>
+        </div>
+      </div>
+
       {err ? (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2 shadow-elev-1"
-        >
-          {err}
+        <div className="login-err" role="alert">
+          {err}{" "}
+          <button type="button" className="btn ghost sm" onClick={() => load()} disabled={loading}>
+            Coba lagi
+          </button>
         </div>
       ) : null}
 
-      {/* KPI Cards (mobile: horizontal scroll) */}
-      <section aria-busy={loading ? "true" : "false"} className="space-y-2">
-        <div className="flex items-end justify-between">
-          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">Ringkasan</h2>
-          <span className="text-xs text-[color:var(--color-text-muted)]">KPI utama pada rentang terpilih</span>
-        </div>
+      {loading ? <div className="empty">Memuat data dashboard...</div> : null}
 
-        <div className="hidden md:grid grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} tone="brand" />
-          <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} tone="neutral" />
-          <KpiCard
-            title="Voucher Terpakai"
-            value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
-            loading={loading}
-            tone="accent"
-          />
-          <KpiCard title="Ongkir" value={toIDR(Number(data?.delivery_shipping_fee ?? 0))} loading={loading} tone="accent2" />
-          <KpiCard
-            title="Piutang Terbuka"
-            value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
-            loading={loading}
-            tone="warning"
-          />
-          <KpiCard
-            title="Outstanding DP"
-            value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
-            loading={loading}
-            tone="warning2"
-          />
-        </div>
+      <div className="stats">
+        <StatCard k="Pendapatan Diakui" v={toIDR(Number(data?.revenue_recognized ?? 0))} s="pekerjaan selesai" />
+        <StatCard k="Diterima di Muka" v={toIDR(Number(data?.unearned_revenue ?? 0))} s="dibayar, belum selesai" />
+        <StatCard k="Pasang" v={decimal(Number(data?.pairs ?? 0))} s="total pasang" />
+        <StatCard k="ATV / Pasang" v={toIDR(Number(data?.atv_per_pair ?? 0))} s="dari yg selesai" />
+        <StatCard k="Outstanding" v={toIDR(Number(data?.outstanding ?? 0))} s="belum tertagih" />
+      </div>
 
-        <div className="md:hidden -mx-4 px-4 overflow-x-auto">
-          <div className="flex gap-3 min-w-max pb-1">
-            <KpiCard title="Omzet" value={toIDR(Number(data?.omzet_total ?? 0))} loading={loading} compact tone="brand" />
-            <KpiCard title="Transaksi" value={String(data?.orders_count ?? 0)} loading={loading} compact tone="neutral" />
-            <KpiCard
-              title="Voucher"
-              value={`${data?.vouchers_used_count ?? 0} (${toIDR(Number(data?.vouchers_used_amount ?? 0))})`}
-              loading={loading}
-              compact
-              tone="accent"
-            />
-            <KpiCard
-              title="Ongkir"
-              value={toIDR(Number(data?.delivery_shipping_fee ?? 0))}
-              loading={loading}
-              compact
-              tone="accent2"
-            />
-            <KpiCard
-              title="Piutang"
-              value={`${data?.receivables_open_count ?? 0} (${toIDR(Number(data?.receivables_open_amount ?? 0))})`}
-              loading={loading}
-              compact
-              tone="warning"
-            />
-            <KpiCard
-              title="DP"
-              value={`${data?.dp_outstanding_count ?? 0} (${toIDR(Number(data?.dp_outstanding_amount ?? 0))})`}
-              loading={loading}
-              compact
-              tone="warning2"
-            />
+      <div style={{ margin: "6px 0 20px" }}>
+        <label style={{ marginBottom: 8 }}>
+          Arus Kas &mdash; Cash In (atas) / Cash Out (bawah) / Net (garis)
+        </label>
+        <CashflowChart buckets={buckets} />
+      </div>
+
+      <div className="grid2" style={{ marginBottom: 20 }}>
+        <div>
+          <label style={{ marginBottom: 8 }}>Pendapatan per Outlet</label>
+          <Pie data={outletSlices} money />
+        </div>
+        <div>
+          <label style={{ marginBottom: 8 }}>Pelanggan Baru vs Kembali</label>
+          <Pie data={repeatSlices} />
+        </div>
+      </div>
+
+      <div>
+        <label style={{ marginBottom: 8 }}>Mix per Kategori</label>
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Kategori</th>
+                <th className="num">Pasang</th>
+                <th className="num">Pendapatan</th>
+                <th className="num">%</th>
+                <th style={{ width: "24%" }} />
+              </tr>
+            </thead>
+            <tbody>
+              {mix.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="empty">
+                    {EMPTY_RANGE}
+                  </td>
+                </tr>
+              ) : (
+                mix.map((row) => {
+                  const percent = mixTotal ? (Number(row.amount) / mixTotal) * 100 : 0;
+
+                  return (
+                    <tr key={row.name}>
+                      <td data-label="Kategori">
+                        <b>{row.name}</b>
+                      </td>
+                      <td className="num" data-label="Pasang">
+                        {decimal(Number(row.qty))}
+                      </td>
+                      <td className="num mono" data-label="Pendapatan">
+                        {toIDR(Number(row.amount))}
+                      </td>
+                      <td className="num" data-label="%">
+                        {percent.toFixed(1)}%
+                      </td>
+                      <td>
+                        <div className="bar">
+                          <span style={{ width: `${percent.toFixed(1)}%` }} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mini" style={{ marginTop: 16 }}>
+        Rentang data: {meta?.from ?? from} s.d. {meta?.to ?? to}
+        {meta?.branch_id ? ` \u00B7 Cabang: ${meta.branch_id}` : ""}
+      </div>
+
+      {exportOpen ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-label="Pilih format export">
+          <div className="box">
+            <div className="modal-head">
+              <h3>Pilih Format Export</h3>
+              <button type="button" className="mclose" onClick={() => setExportOpen(false)}>
+                {"\u2715"}
+              </button>
+            </div>
+            <button type="button" className="txn-choice" onClick={() => runExport("xlsx")} disabled={exporting}>
+              <b>Export ke Excel</b>
+              <span>Berkas .xlsx untuk diolah lebih lanjut</span>
+            </button>
+            <button type="button" className="txn-choice" onClick={() => runExport("pdf")} disabled={exporting}>
+              <b>Export ke PDF</b>
+              <span>Berkas siap cetak / dibagikan</span>
+            </button>
           </div>
         </div>
-      </section>
+      ) : null}
+    </div>
+  );
+}
 
-      {/* Reminder Piutang */}
-      {(Number(data?.receivables_open_count ?? 0) > 0 || Number(data?.dp_outstanding_count ?? 0) > 0) && (
-        <section className="space-y-2">
-          <div className="flex items-end justify-between">
-            <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">
-              Reminder Piutang
-            </h2>
-            <span className="text-xs text-[color:var(--color-text-muted)]">
-              Order yang masih memiliki sisa pembayaran
+function StatCard(props: { k: string; v: string; s: string }) {
+  return (
+    <div className="stat">
+      <div className="k">{props.k}</div>
+      <div className="v mono">{props.v}</div>
+      <div className="s">{props.s}</div>
+    </div>
+  );
+}
+
+function CashflowChart(props: { buckets: Bucket[] }) {
+  if (props.buckets.length === 0) {
+    return <div className="empty">Tidak ada arus kas pada rentang ini.</div>;
+  }
+
+  const width = 760;
+  const height = 300;
+  const padX = 42;
+  const padY = 30;
+  const mid = height / 2;
+  const slot = (width - 2 * padX) / props.buckets.length;
+  const barWidth = Math.min(28, slot * 0.46);
+  const maxAbs = Math.max(
+    1,
+    ...props.buckets.map((b) => Math.max(b.cashIn, b.cashOut, Math.abs(b.net))),
+  );
+  const scale = (value: number) => (value / maxAbs) * (mid - padY);
+  const line = props.buckets
+    .map((b, i) => `${padX + slot * i + slot / 2},${mid - scale(b.net)}`)
+    .join(" ");
+
+  return (
+    <div className="cbo-wrap">
+      <div className="cbo-legend">
+        <span>
+          <i style={{ background: "#2563EB" }} />
+          Cash In
+        </span>
+        <span>
+          <i style={{ background: "#F5A02D" }} />
+          Cash Out
+        </span>
+        <span>
+          <i style={{ background: "#0A2A66" }} />
+          Net
+        </span>
+      </div>
+
+      <svg viewBox={`0 0 ${width} ${height}`} className="cbo-svg" preserveAspectRatio="xMidYMid meet">
+        <line x1={padX} y1={mid} x2={width - padX} y2={mid} stroke="#cbd5e1" strokeWidth="1" />
+
+        {props.buckets.map((bucket, index) => {
+          const cx = padX + slot * index + slot / 2;
+          const inH = scale(bucket.cashIn);
+          const outH = scale(bucket.cashOut);
+
+          return (
+            <g key={bucket.key}>
+              <rect x={cx - barWidth / 2} y={mid - inH} width={barWidth} height={inH} rx="2" fill="#2563EB" />
+              <rect x={cx - barWidth / 2} y={mid} width={barWidth} height={outH} rx="2" fill="#F5A02D" />
+              <circle cx={cx} cy={mid - scale(bucket.net)} r="3.5" fill="#0A2A66" stroke="#fff" strokeWidth="1" />
+              <rect x={padX + slot * index} y={0} width={slot} height={height} fill="transparent">
+                <title>
+                  {`${bucket.label}\nIn: ${toIDR(bucket.cashIn)}\nOut: ${toIDR(bucket.cashOut)}\nNet: ${toIDR(bucket.net)}`}
+                </title>
+              </rect>
+              <text x={cx} y={height - 8} textAnchor="middle" fontSize="9" fill="#64748b">
+                {bucket.label}
+              </text>
+            </g>
+          );
+        })}
+
+        <polyline points={line} fill="none" stroke="#0A2A66" strokeWidth="1.6" />
+      </svg>
+    </div>
+  );
+}
+
+function Pie(props: { data: Slice[]; money?: boolean }) {
+  const total = props.data.reduce((sum, item) => sum + item.value, 0);
+
+  if (total <= 0) {
+    return <div className="empty">{EMPTY_RANGE}</div>;
+  }
+
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  let cursor = 0;
+
+  const slices = props.data.map((item) => {
+    const length = (item.value / total) * circumference;
+    const slice = { ...item, length, offset: cursor };
+    cursor += length;
+    return slice;
+  });
+
+  return (
+    <div className="pie-wrap">
+      <div className="pie-svg-wrap">
+        <svg viewBox="0 0 128 128" className="pie-svg">
+          {slices.map((slice) => (
+            <circle
+              key={slice.label}
+              cx="64"
+              cy="64"
+              r={radius}
+              fill="none"
+              stroke={slice.color}
+              strokeWidth="22"
+              strokeDasharray={`${slice.length} ${circumference - slice.length}`}
+              strokeDashoffset={-slice.offset}
+              transform="rotate(-90 64 64)"
+            >
+              <title>
+                {`${slice.label}: ${props.money ? toIDR(slice.value) : slice.value} (${((slice.value / total) * 100).toFixed(1)}%)`}
+              </title>
+            </circle>
+          ))}
+        </svg>
+      </div>
+
+      <div className="pie-legend">
+        {props.data.map((item) => (
+          <div className="pie-lg" key={item.label}>
+            <i style={{ background: item.color }} />
+            <span className="pie-lg-l">{item.label}</span>
+            <span className="pie-lg-v">
+              {props.money ? toIDR(item.value) : item.value} <b>{Math.round((item.value / total) * 100)}%</b>
             </span>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/20 p-4 shadow-elev-1">
-              <div className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                Piutang Belum Lunas
-              </div>
-              <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
-                {loading ? (
-                  <span className="inline-block h-6 w-36 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-                ) : (
-                  `${data?.receivables_open_count ?? 0} order`
-                )}
-              </div>
-              <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
-                Total sisa pembayaran:{" "}
-                <span className="font-medium text-[color:var(--color-text-default)]">
-                  {toIDR(Number(data?.receivables_open_amount ?? 0))}
-                </span>
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-500/10 dark:border-rose-500/20 p-4 shadow-elev-1">
-              <div className="text-[11px] uppercase tracking-wide text-rose-700 dark:text-rose-300">
-                Piutang Jatuh Tempo
-              </div>
-              <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
-                {loading ? (
-                  <span className="inline-block h-6 w-36 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-                ) : (
-                  `${data?.dp_outstanding_count ?? 0} order`
-                )}
-              </div>
-              <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
-                Total overdue:{" "}
-                <span className="font-medium text-[color:var(--color-text-default)]">
-                  {toIDR(Number(data?.dp_outstanding_amount ?? 0))}
-                </span>
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Top Layanan */}
-      <section className="space-y-2">
-        <div className="flex items-end justify-between">
-          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">Top Layanan</h2>
-          <span className="text-xs text-[color:var(--color-text-muted)]">Top layanan berdasarkan pendapatan</span>
-        </div>
-
-        <CardTable>
-          <table className="min-w-[560px] w-full text-sm">
-            <thead className="sticky top-0 z-10">
-              <tr className="divide-x divide-[color:var(--color-border)] bg-[rgba(79,70,229,0.10)]">
-                <Th>Layanan</Th>
-                <Th className="text-right">Qty</Th>
-                <Th className="text-right">Pendapatan</Th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[color:var(--color-border)]">
-              {loading ? (
-                <RowSkeleton colSpan={3} />
-              ) : (data?.top_services?.length ?? 0) === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-3 py-4 text-center text-[color:var(--color-text-muted)]">
-                    Belum ada data
-                  </td>
-                </tr>
-              ) : (
-                (data?.top_services ?? []).map((r) => (
-                  <tr
-                    key={`${r.service_id}-${r.name}`}
-                    className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
-                  >
-                    <Td className="font-medium">{r.name}</Td>
-                    <Td className="text-right tabular-nums">{r.qty}</Td>
-                    <Td className="text-right tabular-nums">{toIDR(Number(r.amount))}</Td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </CardTable>
-      </section>
-
-      {/* Ringkasan Pembayaran */}
-      <section aria-busy={loading ? "true" : "false"} className="space-y-2">
-        <div className="flex items-end justify-between">
-          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">
-            Ringkasan Pembayaran
-          </h2>
-          <span className="text-xs text-[color:var(--color-text-muted)]">
-            Breakdown metode bayar dan status order
-          </span>
-        </div>
-
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <PaymentCard
-            title="DP Masuk"
-            value={toIDR(Number(data?.payment_method_totals?.dp_amount ?? 0))}
-            subtitle={`Order DP: ${data?.payment_status_totals?.dp_count ?? 0}`}
-            tone="dp"
-            loading={loading}
-          />
-          <PaymentCard
-            title="Cash"
-            value={toIDR(Number(data?.payment_method_totals?.cash_amount ?? 0))}
-            subtitle="Pembayaran tunai"
-            tone="cash"
-            loading={loading}
-          />
-          <PaymentCard
-            title="Transfer"
-            value={toIDR(Number(data?.payment_method_totals?.transfer_amount ?? 0))}
-            subtitle="Pembayaran transfer"
-            tone="transfer"
-            loading={loading}
-          />
-          <PaymentCard
-            title="QRIS"
-            value={toIDR(Number(data?.payment_method_totals?.qris_amount ?? 0))}
-            subtitle="Pembayaran QRIS"
-            tone="qris"
-            loading={loading}
-          />
-          <PaymentCard
-            title="Pending"
-            value={toIDR(Number(data?.payment_status_totals?.pending_amount ?? 0))}
-            subtitle={`Order pending: ${data?.payment_status_totals?.pending_count ?? 0}`}
-            tone="pending"
-            loading={loading}
-          />
-        </div>
-
-        <div className="md:hidden -mx-4 px-4 overflow-x-auto">
-          <div className="flex gap-3 min-w-max pb-1">
-            <PaymentCard
-              title="DP Masuk"
-              value={toIDR(Number(data?.payment_method_totals?.dp_amount ?? 0))}
-              subtitle={`Order DP: ${data?.payment_status_totals?.dp_count ?? 0}`}
-              tone="dp"
-              loading={loading}
-              compact
-            />
-            <PaymentCard
-              title="Cash"
-              value={toIDR(Number(data?.payment_method_totals?.cash_amount ?? 0))}
-              subtitle="Pembayaran tunai"
-              tone="cash"
-              loading={loading}
-              compact
-            />
-            <PaymentCard
-              title="Transfer"
-              value={toIDR(Number(data?.payment_method_totals?.transfer_amount ?? 0))}
-              subtitle="Pembayaran transfer"
-              tone="transfer"
-              loading={loading}
-              compact
-            />
-            <PaymentCard
-              title="QRIS"
-              value={toIDR(Number(data?.payment_method_totals?.qris_amount ?? 0))}
-              subtitle="Pembayaran QRIS"
-              tone="qris"
-              loading={loading}
-              compact
-            />
-            <PaymentCard
-              title="Pending"
-              value={toIDR(Number(data?.payment_status_totals?.pending_amount ?? 0))}
-              subtitle={`Order pending: ${data?.payment_status_totals?.pending_count ?? 0}`}
-              tone="pending"
-              loading={loading}
-              compact
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 p-3">
-            <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
-              Status Order Pembayaran
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-300">Pending</div>
-                <div className="mt-1 text-lg font-semibold text-[color:var(--color-text-default)]">
-                  {loading ? (
-                    <span className="inline-block h-5 w-12 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-                  ) : (
-                    data?.payment_status_totals?.pending_count ?? 0
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-300">DP</div>
-                <div className="mt-1 text-lg font-semibold text-[color:var(--color-text-default)]">
-                  {loading ? (
-                    <span className="inline-block h-5 w-12 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-                  ) : (
-                    data?.payment_status_totals?.dp_count ?? 0
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Paid</div>
-                <div className="mt-1 text-lg font-semibold text-[color:var(--color-text-default)]">
-                  {loading ? (
-                    <span className="inline-block h-5 w-12 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-                  ) : (
-                    data?.payment_status_totals?.paid_count ?? 0
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 p-3">
-            <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
-              Sisa Tagihan DP
-            </div>
-            <div className="mt-2 text-xl font-semibold text-[color:var(--color-text-default)]">
-              {loading ? (
-                <span className="inline-block h-6 w-32 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-              ) : (
-                toIDR(Number(data?.payment_status_totals?.dp_due_amount ?? 0))
-              )}
-            </div>
-            <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-              Total sisa pembayaran dari order yang masih berstatus DP
-            </p>
-          </div>
-
-          {/* <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 p-3">
-            <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
-              Keterangan
-            </div>
-            <div className="mt-2 space-y-1 text-xs text-[color:var(--color-text-muted)] leading-relaxed">
-              <p>DP, Cash, Transfer, dan QRIS diambil dari data pembayaran yang benar-benar masuk.</p>
-              <p>Pending, DP, dan Paid diambil dari status pembayaran order.</p>
-              <p>Pemisahan ini membuat dashboard lebih jelas antara uang masuk dan status transaksi.</p>
-            </div>
-          </div> */}
-        </div>
-      </section>
-
-      {/* Omzet harian & bulanan */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <SimpleTable
-          title="Omzet Harian"
-          subtitle="Ringkasan omzet per tanggal"
-          headTone="brand"
-          cols={[
-            { label: "Tanggal", align: "left" },
-            { label: "Omzet", align: "right" },
-          ]}
-          loading={loading}
-          empty={(data?.omzet_daily?.length ?? 0) === 0}
-        >
-          {(data?.omzet_daily ?? []).map((d) => (
-            <tr
-              key={d.date}
-              className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
-            >
-              <Td className="tabular-nums">{d.date}</Td>
-              <Td className="text-right tabular-nums">{toIDR(Number(d.amount))}</Td>
-            </tr>
-          ))}
-        </SimpleTable>
-
-        <SimpleTable
-          title="Omzet Bulanan"
-          subtitle="Ringkasan omzet per bulan"
-          headTone="accent"
-          cols={[
-            { label: "Bulan", align: "left" },
-            { label: "Omzet", align: "right" },
-          ]}
-          loading={loading}
-          empty={(data?.omzet_monthly?.length ?? 0) === 0}
-        >
-          {(data?.omzet_monthly ?? []).map((m) => (
-            <tr
-              key={m.month}
-              className="transition-colors hover:bg-[rgba(15,23,42,0.04)] dark:hover:bg-white/5"
-            >
-              <Td className="tabular-nums">{m.month}</Td>
-              <Td className="text-right tabular-nums">{toIDR(Number(m.amount))}</Td>
-            </tr>
-          ))}
-        </SimpleTable>
-      </section>
-
-      {/* Meta (bottom) */}
-      <footer className="text-xs text-[color:var(--color-text-muted)]">
-        Rentang data: {meta?.from ?? from} s.d. {meta?.to ?? to}
-        {meta?.branch_id ? ` • Cabang: ${meta.branch_id}` : ""}
-      </footer>
-    </div>
-  );
-}
-
-/* ------------------------
-   Subcomponents (UI only)
------------------------- */
-
-function CardTable(props: { children: React.ReactNode }) {
-  return (
-    <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-      <div className="overflow-auto">{props.children}</div>
-    </div>
-  );
-}
-
-type PaymentTone = "dp" | "cash" | "transfer" | "qris" | "pending";
-
-function PaymentCard(props: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  loading?: boolean;
-  compact?: boolean;
-  tone?: PaymentTone;
-}) {
-  const tone = props.tone ?? "cash";
-
-  const accentStyle: Record<PaymentTone, string> = {
-    dp: "bg-[rgba(245,158,11,0.95)]",
-    cash: "bg-[rgba(16,185,129,0.95)]",
-    transfer: "bg-[rgba(139,92,246,0.95)]",
-    qris: "bg-[rgba(14,165,233,0.95)]",
-    pending: "bg-[rgba(244,63,94,0.90)]",
-  };
-
-  const tintStyle: Record<PaymentTone, string> = {
-    dp: "radial-gradient(420px 220px at 20% 0%, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.00) 60%)",
-    cash: "radial-gradient(420px 220px at 20% 0%, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.00) 60%)",
-    transfer: "radial-gradient(420px 220px at 20% 0%, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.00) 60%)",
-    qris: "radial-gradient(420px 220px at 20% 0%, rgba(14,165,233,0.12) 0%, rgba(14,165,233,0.00) 60%)",
-    pending: "radial-gradient(420px 220px at 20% 0%, rgba(244,63,94,0.12) 0%, rgba(244,63,94,0.00) 60%)",
-  };
-
-  return (
-    <div
-      className={[
-        "relative overflow-hidden bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
-        "transition-transform duration-150 hover:-translate-y-[1px]",
-        props.compact ? "p-3 w-[240px] shrink-0" : "p-3",
-      ].join(" ")}
-    >
-      <div className={`absolute left-0 top-0 h-full w-1 ${accentStyle[tone]}`} aria-hidden="true" />
-
-      <div
-        className="pointer-events-none absolute inset-0 opacity-70"
-        aria-hidden="true"
-        style={{ background: tintStyle[tone] }}
-      />
-
-      <div className="relative">
-        <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">
-          {props.title}
-        </div>
-
-        <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
-          {props.loading ? (
-            <span className="inline-block h-5 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-          ) : (
-            props.value
-          )}
-        </div>
-
-        {props.subtitle ? (
-          <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-            {props.subtitle}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-type KpiTone = "brand" | "neutral" | "accent" | "accent2" | "warning" | "warning2";
-
-function KpiCard(props: { title: string; value: string; loading?: boolean; compact?: boolean; tone?: KpiTone }) {
-  const tone = props.tone ?? "neutral";
-
-  const accentStyle: Record<KpiTone, string> = {
-    brand: "bg-[color:var(--color-brand-primary)]",
-    neutral: "bg-black/10 dark:bg-white/15",
-    accent: "bg-[color:var(--color-accent)]",
-    accent2: "bg-[rgba(59,130,246,0.90)]", // blue-ish
-    warning: "bg-[rgba(245,158,11,0.95)]", // amber-ish
-    warning2: "bg-[rgba(244,63,94,0.90)]", // rose-ish
-  };
-
-  return (
-    <div
-      className={[
-        "relative overflow-hidden bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1",
-        "transition-transform duration-150 hover:-translate-y-[1px]",
-        props.compact ? "p-3 w-[240px] shrink-0" : "p-3",
-      ].join(" ")}
-    >
-      {/* Accent bar */}
-      <div className={`absolute left-0 top-0 h-full w-1 ${accentStyle[tone]}`} aria-hidden="true" />
-      {/* Subtle tint */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-70"
-        aria-hidden="true"
-        style={{
-          background:
-            tone === "brand"
-              ? "radial-gradient(420px 220px at 20% 0%, rgba(79,70,229,0.12) 0%, rgba(79,70,229,0.00) 60%)"
-              : tone === "accent"
-                ? "radial-gradient(420px 220px at 20% 0%, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0.00) 60%)"
-                : "radial-gradient(420px 220px at 20% 0%, rgba(15,23,42,0.05) 0%, rgba(15,23,42,0.00) 60%)",
-        }}
-      />
-
-      <div className="relative">
-        <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-text-muted)]">{props.title}</div>
-        <div className="mt-1 text-lg font-semibold min-h-[28px] text-[color:var(--color-text-default)]">
-          {props.loading ? <span className="inline-block h-5 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" /> : props.value}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <th className={`text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-text-default)] ${className}`}>
-      {children}
-    </th>
-  );
-}
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 text-[color:var(--color-text-default)] ${className}`}>{children}</td>;
-}
-function RowSkeleton({ colSpan }: { colSpan: number }) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="px-3 py-4">
-        <div className="flex items-center justify-center gap-3">
-          <span className="h-4 w-4 rounded-full bg-black/10 dark:bg-white/10 animate-pulse" />
-          <span className="h-4 w-40 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-          <span className="h-4 w-24 rounded bg-black/10 dark:bg-white/10 animate-pulse" />
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function SimpleTable(props: {
-  title: string;
-  subtitle?: string;
-  cols: { label: string; align?: "left" | "right" }[];
-  loading: boolean;
-  empty: boolean;
-  children: React.ReactNode;
-  headTone?: "brand" | "accent" | "neutral";
-}) {
-  const headTone = props.headTone ?? "neutral";
-  const headBg =
-    headTone === "brand"
-      ? "bg-[rgba(79,70,229,0.10)]"
-      : headTone === "accent"
-        ? "bg-[rgba(6,182,212,0.10)]"
-        : "bg-black/5 dark:bg-white/5";
-
-  return (
-    <div>
-      <div className="mb-2 flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-[color:var(--color-text-default)]">{props.title}</h2>
-          {props.subtitle ? <p className="text-xs text-[color:var(--color-text-muted)]">{props.subtitle}</p> : null}
-        </div>
-      </div>
-
-      <div className="bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-border)] shadow-elev-1 overflow-hidden">
-        <div className="overflow-auto">
-          <table className="min-w-[420px] w-full text-sm">
-            <thead className={`sticky top-0 z-10 ${headBg}`}>
-              <tr className="divide-x divide-[color:var(--color-border)]">
-                {props.cols.map((c) => (
-                  <Th key={c.label} className={c.align === "right" ? "text-right" : "text-left"}>
-                    {c.label}
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[color:var(--color-border)]">
-              {props.loading ? (
-                <RowSkeleton colSpan={props.cols.length} />
-              ) : props.empty ? (
-                <tr>
-                  <td colSpan={props.cols.length} className="px-3 py-4 text-center text-[color:var(--color-text-muted)]">
-                    Belum ada data
-                  </td>
-                </tr>
-              ) : (
-                props.children
-              )}
-            </tbody>
-          </table>
-        </div>
+        ))}
       </div>
     </div>
   );

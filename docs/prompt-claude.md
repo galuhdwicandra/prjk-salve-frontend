@@ -1,14 +1,4 @@
-# /ponytail full
-
-Use Serena to explore the code symbolically. Prioritize searching for symbols,
-references, callers, and callees before reading entire files.
-
-Serena must only be used for analysis. Do not use any Serena tools that modify
-files, symbols, memory, or project contents.
-
-Read only the relevant files and code sections. Do not read the entire repository
-if the requirements can already be verified from the discovered symbols and references.
-=======================================================================================
+/ponytail full
 
 Mode: analysis and recommendations only. Do not apply any changes — I will
 apply them myself. Do not run commands that write files or cache
@@ -42,7 +32,9 @@ Project context:
 * Frontend_Docs.md and Backend_Docs.md do not need to be read.
 * Clean Code is mandatory. Do not include any comments in the code.
 * Carefully if want to use `any` in the code because it often causes errors.
-* For every file that needs to be changed, Provide the code snippet that was changed, along with the code before the change so I don't get confused.
+* For every file that needs to be changed, Provide the code snippet that was changed, along with the code before the change so I don't get confused. use - or +
+* Build the module if it is indeed not yet available, and build the page if it is not yet available.
+* Do not include a test folder.
 ==============================
 Response format:
 
@@ -54,12 +46,3 @@ Response format:
 5. What was intentionally not added, and when it would become appropriate to add it.
 6. Verification commands that I can run myself — do not run them.
 ===================================
-LARK STORY [SPRINT 2 Kasir/POS]
-
-Description:
-Contact Database UI for vendors, employees, and other categories
-
-Acceptance Criteria:
-Filters by category and archive function are available.
-
-Help me complete this story. Continue to follow all of the rules above.

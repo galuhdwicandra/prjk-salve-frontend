@@ -9,9 +9,10 @@ import type {
   ProductionCorrectionRequestResponse,
   ProductionCorrectionReviewPayload,
   ProductionMovePayload,
-  ProductionReportQuery,
-  ProductionReportResponse,
   ProductionTaskResponse,
+  WorkRecapQuery,
+  WorkRecapResponse,
+  WorkRecapRow,
 } from '../types/production';
 
 export async function getProductionBoard(params: ProductionBoardQuery = {}) {
@@ -99,11 +100,26 @@ export async function rejectProductionCorrectionRequest(
   return data;
 }
 
-export async function getProductionStaffDailyReport(params: ProductionReportQuery = {}) {
-  const { data } = await api.get<ProductionReportResponse>(
-    '/production-board/reports/staff-daily',
+export async function getWorkRecap(params: WorkRecapQuery = {}) {
+  const { data } = await api.get<WorkRecapResponse>(
+    '/production-board/reports/work-recap',
     { params }
   );
 
   return data;
+}
+
+export async function fetchAllWorkRecapRows(params: WorkRecapQuery): Promise<WorkRecapRow[]> {
+  const rows: WorkRecapRow[] = [];
+  let page = 1;
+  let lastPage = 1;
+
+  do {
+    const res = await getWorkRecap({ ...params, page, per_page: 100 });
+    rows.push(...(res.data ?? []));
+    lastPage = res.meta.last_page;
+    page += 1;
+  } while (page <= lastPage);
+
+  return rows;
 }

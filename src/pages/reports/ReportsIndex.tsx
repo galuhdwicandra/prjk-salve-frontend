@@ -1,7 +1,10 @@
 // src/pages/reports/ReportsIndex.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { getReportPreview, exportReport, type ReportKind, type ReportRow } from '../../api/reports';
+import { getReportPreview, fetchAllReportRows, type ReportKind, type ReportRow } from '../../api/reports';
 import { listBranches } from '../../api/branches';
+import { getErrorMessage, normalizeApiError } from '../../api/client';
+import { aoaToXlsxBlob } from '../../utils/xlsx';
+import { reportColumnLabel } from '../../utils/report-columns';
 
 type Branch = { id: string; name: string };
 type BranchListItem = { id: string; name: string };
@@ -17,6 +20,8 @@ const KINDS: ReportKind[] = [
     'cash',
 ];
 
+const ORDER_STATUSES = ['QUEUE', 'WASHING', 'DRYING', 'IRONING', 'READY', 'DELIVERING', 'PICKED_UP', 'CANCELED'];
+
 function reportKindLabel(kind: ReportKind): string {
     if (kind === 'deep-clean') {
         return 'DEEP CLEAN';
@@ -25,41 +30,11 @@ function reportKindLabel(kind: ReportKind): string {
     return kind.toUpperCase();
 }
 
-function reportColumnLabel(column: string): string {
-    const labels: Record<string, string> = {
-        branch_code: 'Kode Cabang',
-        branch_name: 'Cabang',
-        invoice: 'Invoice',
-        order_number: 'No Order',
-        invoice_no: 'No Invoice',
-        order_created_at: 'Tanggal Order',
-        received_at: 'Tanggal Masuk',
-        ready_at: 'Tanggal Selesai',
-        customer_name: 'Customer',
-        customer_whatsapp: 'WhatsApp',
-        customer_address: 'Alamat',
-        services: 'Service',
-        qty: 'Qty',
-        order_status: 'Status Order',
-        payment_status: 'Status Bayar',
-        payment_method: 'Metode Bayar',
-        payment_amount: 'Nominal Bayar',
-        paid_at: 'Tanggal Bayar',
-        payment_note: 'Catatan Bayar',
-        subtotal: 'Subtotal',
-        discount: 'Diskon',
-        dp_amount: 'DP',
-        grand_total: 'Grand Total',
-        paid_amount: 'Total Dibayar',
-        due_amount: 'Sisa Bayar',
-        cashier: 'Kasir',
-    };
-
-    return labels[column] ?? column;
-}
-
 export default function ReportsIndex() {
-    const [kind, setKind] = useState<ReportKind>('sales');
+    const [kind, setKind] = useState<ReportKind>(() => {
+        const requested = new URLSearchParams(window.location.search).get('kind') as ReportKind | null;
+        return requested && KINDS.includes(requested) ? requested : 'sales';
+    });
     const [from, setFrom] = useState<string>(() => new Date().toISOString().slice(0, 10));
     const [to, setTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
     const [branchId, setBranchId] = useState<string | null>(null);
@@ -115,8 +90,8 @@ export default function ReportsIndex() {
                 per_page: resp.meta.per_page,
                 total: resp.meta.total,
             });
-        } catch {
-            setError('Gagal memuat pratinjau laporan.');
+        } catch (err) {
+            setError(getErrorMessage(err, 'Gagal memuat pratinjau laporan.'));
         } finally {
             setLoading(false);
         }
@@ -128,27 +103,46 @@ export default function ReportsIndex() {
     }, [kind, params]);
 
     async function onExport() {
+        setError(null);
+
+        let data = rows;
+        let offline = false;
+
         try {
-            const blob = await exportReport(kind, {
-                ...params,
-                format: 'csv',
-                delimiter: 'semicolon',
-            });
+            data = await fetchAllReportRows(kind, params);
+        } catch (err) {
+            if (!normalizeApiError(err).isNetworkError) {
+                setError('Gagal mengunduh file laporan.');
+                return;
+            }
+            offline = true;
+        }
 
-            const safeKind = kind === 'deep-clean' ? 'treatment_deep_clean' : kind;
-            const fname = `${safeKind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.csv`;
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+        if (data.length === 0) {
+            setError('Tidak ada data untuk diekspor.');
+            return;
+        }
 
-            a.href = url;
-            a.download = fname;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+        const aoa: unknown[][] = [
+            columns.map(reportColumnLabel),
+            ...data.map((row) => columns.map((col) => row[col])),
+        ];
 
-            URL.revokeObjectURL(url);
-        } catch {
-            setError('Gagal mengunduh file laporan.');
+        const safeKind = kind === 'deep-clean' ? 'treatment_deep_clean' : kind;
+        const fname = `${safeKind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.xlsx`;
+        const url = URL.createObjectURL(aoaToXlsxBlob(aoa, reportKindLabel(kind)));
+        const a = document.createElement('a');
+
+        a.href = url;
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(url);
+
+        if (offline) {
+            setError(`Tidak terhubung ke server. File berisi ${data.length} baris yang sudah termuat saja, bukan seluruh periode.`);
         }
     }
 
@@ -249,7 +243,28 @@ export default function ReportsIndex() {
                         </label>
                     )}
 
-                    {(kind === 'orders' || kind === 'receivables') && (
+                    {kind === 'orders' && (
+                        <label className="grid gap-1 text-sm">
+                            <span>Status</span>
+                            <select
+                                value={status}
+                                onChange={(e) => {
+                                    setStatus(e.target.value);
+                                    setPage(1);
+                                }}
+                                className="input py-2"
+                            >
+                                <option value="">(Semua)</option>
+                                {ORDER_STATUSES.map((s) => (
+                                    <option key={s} value={s}>
+                                        {s}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    )}
+
+                    {kind === 'receivables' && (
                         <label className="grid gap-1 text-sm">
                             <span>Status</span>
                             <input
@@ -275,7 +290,7 @@ export default function ReportsIndex() {
                             Terapkan
                         </button>
                         <button onClick={onExport} className="btn-outline">
-                            Export CSV
+                            Export Excel
                         </button>
                     </div>
                 </div>
@@ -334,7 +349,7 @@ export default function ReportsIndex() {
                 </div>
             </section>
 
-            {!loading && pageInfo.last_page > 1 && (
+            {!loading && (
                 <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
                     <button
                         disabled={page <= 1}

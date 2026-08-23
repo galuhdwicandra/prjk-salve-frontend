@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { previewDocumentNumbers, saveDocumentNumber } from '../../api/invoiceCounters';
-import { listBranches } from '../../api/branches';
 import { getErrorMessage } from '../../api/client';
-import { useAuth } from '../../store/useAuth';
-import type { Branch, CounterResetPolicy, DocumentNumber } from '../../types/branches';
+import { previewDocumentNumbers, saveDocumentNumber } from '../../api/invoiceCounters';
+import { useActiveBranchId } from '../../store/useBranch';
+import type { CounterResetPolicy, DocumentNumber } from '../../types/branches';
 
 const TOKENS: { token: string; label: string }[] = [
   { token: '[YY]', label: 'Tahun 2 digit' },
@@ -15,46 +14,49 @@ const TOKENS: { token: string; label: string }[] = [
   { token: '[NUMBER:6]', label: 'Nomor urut 6 digit' },
 ];
 
-const RESET_LABELS: Record<CounterResetPolicy, string> = {
-  never: 'Tidak pernah reset',
-  monthly: 'Setiap bulan',
-  yearly: 'Setiap tahun',
-};
+const RESET_OPTIONS: { value: CounterResetPolicy; label: string }[] = [
+  { value: 'never', label: 'Tidak pernah reset' },
+  { value: 'monthly', label: 'Setiap bulan' },
+  { value: 'yearly', label: 'Setiap tahun' },
+];
 
-type EditState = {
+const DATE_TOKEN = /\[(YYYY|YY|MM|DD|OUTLET)\]/g;
+const NUMBER_TOKEN = /\[NUMBER(?::(\d+))?\]/g;
+
+interface EditState {
   doc: DocumentNumber;
   format: string;
   seq: number;
   reset_policy: CounterResetPolicy;
-};
+}
+
+function renderFormat(format: string, seq: number, outlet: string): string {
+  const now = new Date();
+  const year = String(now.getFullYear());
+  const values: Record<string, string> = {
+    YYYY: year,
+    YY: year.slice(-2),
+    MM: String(now.getMonth() + 1).padStart(2, '0'),
+    DD: String(now.getDate()).padStart(2, '0'),
+    OUTLET: outlet,
+  };
+
+  return format
+    .replace(DATE_TOKEN, (_match: string, token: string) => values[token])
+    .replace(NUMBER_TOKEN, (_match: string, digits: string | undefined) =>
+      String(seq).padStart(Number(digits ?? 4), '0'));
+}
 
 export default function DocumentNumberingPage() {
-  const me = useAuth.user;
-  const isSuperadmin = useMemo(() => (me?.branches.length ?? 0) > 1, [me?.branches]);
-  const branchIdFromAuth = me?.branch_id != null ? String(me.branch_id) : null;
+  const branchId = useActiveBranchId();
 
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [branchId, setBranchId] = useState<string | null>(branchIdFromAuth);
   const [docs, setDocs] = useState<DocumentNumber[]>([]);
+  const [outlet, setOutlet] = useState('SLV');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
-
-  useEffect(() => {
-    if (!isSuperadmin) return;
-    void (async () => {
-      try {
-        const res = await listBranches({ per_page: 100 });
-        const list = res.data ?? [];
-        setBranches(list);
-        setBranchId((current) => current ?? list[0]?.id ?? null);
-      } catch (err) {
-        setError(getErrorMessage(err, 'Gagal memuat daftar outlet'));
-      }
-    })();
-  }, [isSuperadmin]);
 
   const refresh = useCallback(async () => {
     if (!branchId) return;
@@ -63,6 +65,7 @@ export default function DocumentNumberingPage() {
     try {
       const res = await previewDocumentNumbers(branchId);
       setDocs(res.data ?? []);
+      setOutlet(res.meta?.outlet ?? 'SLV');
     } catch (err) {
       setError(getErrorMessage(err, 'Gagal memuat penomoran otomatis'));
     } finally {
@@ -70,33 +73,36 @@ export default function DocumentNumberingPage() {
     }
   }, [branchId]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const groups = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const filtered = term ? docs.filter((d) => d.label.toLowerCase().includes(term)) : docs;
+    const filtered = term ? docs.filter((doc) => doc.label.toLowerCase().includes(term)) : docs;
     const map = new Map<string, DocumentNumber[]>();
     filtered.forEach((doc) => {
-      const items = map.get(doc.group) ?? [];
-      items.push(doc);
-      map.set(doc.group, items);
+      map.set(doc.group, [...(map.get(doc.group) ?? []), doc]);
     });
     return Array.from(map.entries());
   }, [docs, search]);
 
   async function onSave() {
     if (!edit || !branchId) return;
-    if (!/\[NUMBER(:\d+)?\]/.test(edit.format)) {
+
+    const format = edit.format.trim();
+    if (!format.match(NUMBER_TOKEN)) {
       setError('Format wajib memuat [NUMBER]');
       return;
     }
+
     setSaving(true);
     setError(null);
     try {
       await saveDocumentNumber(edit.doc.id, {
         branch_id: branchId,
         doc_key: edit.doc.key,
-        format: edit.format.trim(),
+        format,
         reset_policy: edit.reset_policy,
         seq: edit.seq,
       });
@@ -110,106 +116,106 @@ export default function DocumentNumberingPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-4xl">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Penomoran Otomatis</h1>
-          <p className="text-xs text-gray-600">Format nomor dokumen · klik kartu untuk mengubah</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isSuperadmin && (
-            <select
-              className="input text-sm"
-              value={branchId ?? ''}
-              onChange={(e) => setBranchId(e.target.value || null)}
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.code} — {b.name}</option>
-              ))}
-            </select>
-          )}
+    <>
+      <div className="card">
+        <div className="card-hd">
+          <div className="card-title">
+            Penomoran Otomatis
+            <span className="ct-note">format nomor dokumen {'\u00B7'} klik kartu untuk mengubah</span>
+          </div>
           <input
-            className="input text-sm"
             type="search"
+            className="hd-search num-search"
             value={search}
             placeholder="cari dokumen"
+            aria-label="Cari dokumen"
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-      </header>
 
-      {error && (
-        <div role="alert" aria-live="polite" className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
-          {error}
-        </div>
-      )}
-
-      {!branchId && !loading && (
-        <div className="text-sm text-gray-500">Pilih outlet terlebih dahulu.</div>
-      )}
-
-      {loading && <div className="text-sm text-gray-500">Memuat…</div>}
-
-      {!loading && branchId && groups.length === 0 && (
-        <div className="text-sm text-gray-500">Tidak ada dokumen cocok.</div>
-      )}
-
-      {groups.map(([group, items]) => (
-        <section key={group} className="space-y-2">
-          <h2 className="font-medium">{group}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {items.map((doc) => (
-              <button
-                key={doc.key}
-                type="button"
-                className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1 p-3 text-left hover:bg-black/5 transition-colors"
-                onClick={() => setEdit({
-                  doc,
-                  format: doc.format,
-                  seq: doc.seq,
-                  reset_policy: doc.reset_policy,
-                })}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{doc.label}</span>
-                  <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                    {doc.status === 'aktif' ? 'Aktif' : 'Rencana'}
-                  </span>
-                </div>
-                <div className="font-mono text-base mt-1">{doc.next}</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {doc.format} · {RESET_LABELS[doc.reset_policy]}
-                </div>
-              </button>
-            ))}
+        {error ? (
+          <div role="alert" style={{ marginBottom: 12, color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}>
+            {error}
           </div>
-        </section>
-      ))}
+        ) : null}
 
-      {edit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div role="dialog" aria-modal="true" className="card bg-white rounded-lg shadow-elev-1 p-4 w-full max-w-md space-y-3">
-            <div className="flex items-start justify-between gap-2">
+        {!branchId ? <div className="mini">Pilih outlet terlebih dahulu.</div> : null}
+        {branchId && loading ? <div className="mini">Memuat{'\u2026'}</div> : null}
+        {branchId && !loading && groups.length === 0 ? (
+          <div className="mini">Tidak ada dokumen cocok.</div>
+        ) : null}
+
+        {groups.map(([group, items]) => (
+          <div key={group} className="num-group">
+            <h4>{group}</h4>
+            <div className="num-grid">
+              {items.map((doc) => (
+                <div
+                  key={doc.key}
+                  role="button"
+                  tabIndex={0}
+                  className="num-card"
+                  onClick={() =>
+                    setEdit({
+                      doc,
+                      format: doc.format,
+                      seq: doc.seq,
+                      reset_policy: doc.reset_policy,
+                    })
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    e.preventDefault();
+                    setEdit({
+                      doc,
+                      format: doc.format,
+                      seq: doc.seq,
+                      reset_policy: doc.reset_policy,
+                    });
+                  }}
+                >
+                  <div className="nc-top">
+                    <span className="nc-name">{doc.label}</span>
+                    <span className={`num-badge ${doc.status}`}>
+                      {doc.status === 'aktif' ? 'Aktif' : 'Rencana'}
+                    </span>
+                  </div>
+                  <div className="nc-eg">{doc.next}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {edit ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-label={edit.doc.label}>
+          <div className="box">
+            <div className="modal-head">
               <div>
-                <h3 className="font-semibold">{edit.doc.label}</h3>
-                <p className="text-xs text-gray-500">
-                  Format penomoran{edit.doc.status === 'aktif' ? ' · aktif dipakai' : ' · rencana'}
-                </p>
+                <h3>{edit.doc.label}</h3>
+                <div className="mini">
+                  Format penomoran {'\u00B7'} {edit.doc.status === 'aktif' ? 'aktif dipakai' : 'rencana'}
+                </div>
               </div>
-              <button type="button" className="btn-outline text-xs" onClick={() => setEdit(null)}>Tutup</button>
+              <button type="button" className="mclose" aria-label="Tutup" onClick={() => setEdit(null)}>
+                {'\u2715'}
+              </button>
             </div>
 
-            <div className="grid gap-1">
-              <label className="text-xs" htmlFor="docFormat">Format Nomor</label>
-              <div className="flex gap-2">
+            <div className="field">
+              <label htmlFor="num-format">Format Nomor</label>
+              <div className="row">
                 <input
-                  id="docFormat"
-                  className="input font-mono flex-1"
+                  id="num-format"
+                  type="text"
+                  maxLength={40}
                   value={edit.format}
                   onChange={(e) => setEdit({ ...edit, format: e.target.value })}
                 />
                 <select
-                  className="input w-40"
+                  aria-label="Sisipkan kode nomor"
+                  style={{ flex: 'none', width: 160 }}
                   value=""
                   onChange={(e) => {
                     if (!e.target.value) return;
@@ -218,62 +224,74 @@ export default function DocumentNumberingPage() {
                 >
                   <option value="">+ Kode nomor</option>
                   {TOKENS.map((t) => (
-                    <option key={t.token} value={t.token}>{t.token} — {t.label}</option>
+                    <option key={t.token} value={t.token}>{`${t.token} — ${t.label}`}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="grid gap-1">
-              <label className="text-xs">Contoh hasil otomatis</label>
-              <div className="font-mono text-base">{edit.doc.next}</div>
-              <p className="text-xs text-gray-500">Contoh dihitung backend, diperbarui setelah disimpan.</p>
+            <div className="field">
+              <label>Contoh hasil otomatis</label>
+              <div className="nc-eg" style={{ fontSize: 17 }}>
+                {renderFormat(edit.format, edit.seq + 1, outlet)}
+              </div>
             </div>
 
-            <div className="grid gap-1">
-              <label className="text-xs" htmlFor="docSeq">Nomor Terakhir</label>
+            <div className="field">
+              <label htmlFor="num-seq">Nomor Terakhir</label>
               <input
-                id="docSeq"
+                id="num-seq"
                 type="number"
                 min={0}
                 max={999999}
                 step={1}
-                className="input font-mono"
                 value={String(edit.seq)}
                 onChange={(e) => {
-                  const n = Number(e.target.value);
-                  if (!Number.isFinite(n)) return;
-                  setEdit({ ...edit, seq: Math.max(0, Math.min(999999, Math.floor(n))) });
+                  const parsed = Number(e.target.value);
+                  if (!Number.isFinite(parsed)) return;
+                  setEdit({ ...edit, seq: Math.max(0, Math.min(999999, Math.floor(parsed))) });
                 }}
               />
-              <p className="text-xs text-gray-500">Dokumen berikutnya = nomor ini + 1.</p>
+              <div className="mini" style={{ marginTop: 6 }}>
+                Dokumen berikutnya = nomor ini + 1.
+              </div>
             </div>
 
-            <fieldset className="grid gap-1">
-              <legend className="text-xs">Reset Nomor Setiap</legend>
-              {(Object.keys(RESET_LABELS) as CounterResetPolicy[]).map((policy) => (
-                <label key={policy} className="flex items-center gap-2 text-sm">
+            <div className="field">
+              <label>Reset Nomor Setiap</label>
+              {RESET_OPTIONS.map((option) => (
+                <label key={option.value} className="modall-lbl" style={{ marginBottom: 6 }}>
                   <input
                     type="radio"
-                    name="docReset"
-                    value={policy}
-                    checked={edit.reset_policy === policy}
-                    onChange={() => setEdit({ ...edit, reset_policy: policy })}
+                    name="num-reset"
+                    value={option.value}
+                    checked={edit.reset_policy === option.value}
+                    onChange={() => setEdit({ ...edit, reset_policy: option.value })}
                   />
-                  {RESET_LABELS[policy]}
+                  {option.label}
                 </label>
               ))}
-            </fieldset>
+              <div className="mini" style={{ marginTop: 6 }}>
+                Reset memakai zona waktu Asia/Jakarta. Nomor urut kembali ke 1 saat periode berganti.
+              </div>
+            </div>
 
-            <div className="flex justify-end gap-2">
-              <button type="button" className="btn-outline" onClick={() => setEdit(null)}>Batal</button>
-              <button type="button" className="btn-primary" onClick={onSave} disabled={saving}>
-                {saving ? 'Menyimpan…' : 'Simpan'}
+            <div className="modal-foot">
+              <button
+                type="button"
+                className="btn ghost"
+                style={{ marginLeft: 'auto' }}
+                onClick={() => setEdit(null)}
+              >
+                Batal
+              </button>
+              <button type="button" className="btn" disabled={saving} onClick={() => void onSave()}>
+                {saving ? `Menyimpan${'\u2026'}` : 'Simpan'}
               </button>
             </div>
           </div>
         </div>
-      )}
-    </div>
+      ) : null}
+    </>
   );
 }

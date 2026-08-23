@@ -162,16 +162,6 @@ export function SidebarIcon(props: { name: SidebarIconName; className?: string }
         </svg>
       );
 
-    case "cashBox":
-      return (
-        <svg {...commonProps}>
-          <path d="M4 7h16v12H4z" />
-          <path d="M4 11h16" />
-          <path d="M8 15h.01" />
-          <path d="M12 15h4" />
-        </svg>
-      );
-
     case "expenses":
       return (
         <svg {...commonProps}>
@@ -180,15 +170,6 @@ export function SidebarIcon(props: { name: SidebarIconName; className?: string }
           <path d="M9 10h6" />
           <path d="M9 14h3" />
           <path d="M15 18h.01" />
-        </svg>
-      );
-
-    case "cashToday":
-      return (
-        <svg {...commonProps}>
-          <path d="M12 8v5l3 2" />
-          <path d="M21 12a9 9 0 1 1-3-6.7" />
-          <path d="M21 3v6h-6" />
         </svg>
       );
 

@@ -1,768 +1,423 @@
-// src/pages/customers/CustomerDetail.tsx
-import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { createCustomer, getCustomer, updateCustomer } from "../../api/customers";
-import {
-  getLoyaltySummary,
-  getLoyaltyHistory,
-  adjustLoyaltyManual,
-} from "../../api/loyalty";
-import { getErrorMessage } from "../../api/client";
-import type { Customer, CustomerUpsertPayload, SingleResponse } from "../../types/customers";
-import type {
-  LoyaltySummary,
-  LoyaltyHistoryItem,
-  LoyaltyManualAdjustType,
-} from "../../types/loyalty";
-import { useAuth } from "../../store/useAuth";
-import { useCustomerLabels } from "../../hooks/useCustomerLabels";
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getErrorMessage } from '../../api/client';
+import { deleteCustomer, getCustomer, updateCustomer } from '../../api/customers';
+import { getLoyaltySummary } from '../../api/loyalty';
+import { listOrders } from '../../api/orders';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
+import type { Customer, CustomerVoucherUsage } from '../../types/customers';
+import type { LoyaltySummary } from '../../types/loyalty';
+import type { Order } from '../../types/orders';
+import { fmtDate } from '../../utils/date';
+import { rp } from '../../utils/money';
+import { IconArchive, IconEdit, IconSort, IconSortDown, IconSortUp, IconTrash, IconUnarchive } from '../users/icons';
+import CustomerEditModal from './CustomerEditModal';
 
-function IconArrowLeft(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
-}
-function IconUser(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <path d="M20 21a8 8 0 1 0-16 0" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-function IconCopy(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <rect x="9" y="9" width="13" height="13" rx="2" />
-      <rect x="2" y="2" width="13" height="13" rx="2" opacity=".5" />
-    </svg>
-  );
-}
-function IconSave(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
-      <path d="M17 21v-8H7v8" />
-      <path d="M7 3v5h8" />
-    </svg>
-  );
-}
-function initials(name?: string) {
-  const n = (name ?? "").trim();
-  if (!n) return "C";
-  const parts = n.split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "C";
-  const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
-  return (a + b).toUpperCase();
-}
+const ORDER_PAGE_SIZES = [5, 10, 25];
 
 export default function CustomerDetail() {
-  const params = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = !params.id || params.id === "new";
-  const isManager = useAuth.isManager();
-  const user = useAuth.user;
-  const canPickAnyBranch = (user?.branches.length ?? 0) > 1;
-  const { labels: customerLabels, chipClass } = useCustomerLabels();
+  const { toast, showSuccess, hideToast } = useToast();
 
-  const canEdit = true;
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [vouchers, setVouchers] = useState<CustomerVoucherUsage[]>([]);
+  const [loyalty, setLoyalty] = useState<LoyaltySummary | null>(null);
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersPerPage, setOrdersPerPage] = useState(5);
+  const [ordersTotal, setOrdersTotal] = useState(0);
+  const [ordersLastPage, setOrdersLastPage] = useState(1);
+  const [ordersDir, setOrdersDir] = useState<'asc' | 'desc'>('desc');
 
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<CustomerUpsertPayload>({
-    name: "",
-    whatsapp: "",
-    address: "",
-    notes: "",
-    tags: [],
-  });
-  const [entity, setEntity] = useState<Customer | null>(null);
-  const canManageLoyaltyManual = isManager;
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const [loyalty, setLoyalty] = useState<LoyaltySummary | null>(null);
-  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyHistoryItem[]>([]);
-  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
-  const [loyaltyHistoryLoading, setLoyaltyHistoryLoading] = useState(false);
+  const load = useCallback(async () => {
+    if (!id) return;
 
-  const [manualType, setManualType] = useState<LoyaltyManualAdjustType>("add");
-  const [manualAmount, setManualAmount] = useState("");
-  const [manualNote, setManualNote] = useState("");
-  const [manualSaving, setManualSaving] = useState(false);
-  const [manualError, setManualError] = useState<string | null>(null);
-  const [manualSuccess, setManualSuccess] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    if (!isNew && params.id) {
-      (async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const res = await getCustomer(params.id!);
-          if (res.data) {
-            setEntity(res.data);
-            setForm({
-              name: res.data.name,
-              whatsapp: res.data.whatsapp,
-              address: res.data.address ?? "",
-              notes: res.data.notes ?? "",
-              tags: Array.isArray(res.data.tags) ? res.data.tags : [],
-            });
-            await loadLoyalty(res.data);
-          }
-        } catch {
-          if (!cancelled) setError("Gagal memuat detail pelanggan.");
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      })();
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [isNew, params.id]);
-
-  function normalizeWa(input: string): string {
-    const s = (input || "").trim();
-    return s.replace(/[^\d]/g, "");
-  }
-
-  // buang key undefined & konversi "" => null
-  function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
-    const out: Partial<T> = {};
-    Object.entries(obj).forEach(([k, v]) => {
-      if (v === undefined) return;
-      if (typeof v === "string") {
-        const t = v.trim();
-        (out as Record<string, unknown>)[k] = t === "" ? null : t;
-      } else {
-        (out as Record<string, unknown>)[k] = v;
-      }
-    });
-    return out;
-  }
-
-  async function loadLoyalty(customerData?: Customer | null) {
-    const currentCustomer = customerData ?? entity;
-    if (!currentCustomer?.id) {
-      setLoyalty(null);
-      setLoyaltyHistory([]);
-      return;
-    }
-
-    setLoyaltyLoading(true);
-    setLoyaltyHistoryLoading(true);
-
-    try {
-      const [summaryRes, historyRes] = await Promise.all([
-        getLoyaltySummary(currentCustomer.id, currentCustomer.branch_id),
-        getLoyaltyHistory(currentCustomer.id, currentCustomer.branch_id, 1),
-      ]);
-
-      setLoyalty(summaryRes.data ?? null);
-      setLoyaltyHistory(historyRes.data ?? []);
-    } catch {
-      setLoyalty(null);
-      setLoyaltyHistory([]);
-    } finally {
-      setLoyaltyLoading(false);
-      setLoyaltyHistoryLoading(false);
-    }
-  }
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canEdit) return;
-    setSaving(true);
+    setLoading(true);
     setError(null);
     try {
-      let res: SingleResponse<Customer>;
+      const res = await getCustomer(id);
+      setCustomer(res.data);
+      setVouchers(res.meta?.vouchers ?? []);
 
-      if (isNew) {
-        const basePayload = {
-          name: form.name,
-          whatsapp: normalizeWa(form.whatsapp),
-          address: form.address,
-          notes: form.notes,
-          tags: form.tags,
-        };
-        const cleanedBase = clean(basePayload);
+      if (res.data) {
+        const summary = await getLoyaltySummary(res.data.id, res.data.branch_id);
+        setLoyalty(summary.data ?? null);
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat detail pelanggan'));
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
-        let finalBranchId: string | undefined;
-        if (canPickAnyBranch) {
-          finalBranchId = form.branch_id && form.branch_id.trim() !== "" ? form.branch_id.trim() : undefined;
-        } else {
-          finalBranchId = user?.branches[0]?.id;
-          if (!finalBranchId) {
-            setError("Akun Anda belum terikat ke cabang. Hubungi admin pusat.");
-            setSaving(false);
-            return;
-          }
-        }
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-        const payloadCreate: CustomerUpsertPayload = {
-          name: String(cleanedBase.name ?? ""),
-          whatsapp: String(cleanedBase.whatsapp ?? ""),
-          address: (cleanedBase.address as string | null | undefined) ?? null,
-          notes: (cleanedBase.notes as string | null | undefined) ?? null,
-          tags: (cleanedBase.tags as string[] | undefined) ?? [],
-          ...(finalBranchId ? { branch_id: finalBranchId } : {}),
-        };
-        res = await createCustomer(payloadCreate);
-      } else {
-        if (!params.id) {
-          setError("ID pelanggan tidak valid.");
-          setSaving(false);
-          return;
-        }
-        const cleanedUpdate = clean({
-          name: form.name,
-          whatsapp: normalizeWa(form.whatsapp),
-          address: form.address,
-          notes: form.notes,
-          tags: form.tags,
-          ...(canPickAnyBranch && form.branch_id && String(form.branch_id).trim() !== ""
-            ? { branch_id: String(form.branch_id).trim() }
-            : {}),
+  useEffect(() => {
+    if (!customer?.id) return;
+    let alive = true;
+
+    (async () => {
+      try {
+        const res = await listOrders({
+          customer_id: customer.id,
+          page: ordersPage,
+          per_page: ordersPerPage,
+          sort_by: 'created_at',
+          sort_dir: ordersDir,
         });
-        const payloadUpdate: Partial<CustomerUpsertPayload> = {
-          ...(cleanedUpdate.name !== undefined ? { name: String(cleanedUpdate.name) } : {}),
-          ...(cleanedUpdate.whatsapp !== undefined ? { whatsapp: String(cleanedUpdate.whatsapp) } : {}),
-          ...(cleanedUpdate.address !== undefined ? { address: cleanedUpdate.address as string | null } : {}),
-          ...(cleanedUpdate.notes !== undefined ? { notes: cleanedUpdate.notes as string | null } : {}),
-          ...(cleanedUpdate.tags !== undefined ? { tags: cleanedUpdate.tags as string[] } : {}),
-          ...(canPickAnyBranch && cleanedUpdate.branch_id !== undefined ? { branch_id: String(cleanedUpdate.branch_id) } : {}),
-        };
-        res = await updateCustomer(params.id, payloadUpdate);
+
+        if (!alive) return;
+        setOrders(res.data ?? []);
+        setOrdersTotal(res.meta?.total ?? 0);
+        setOrdersLastPage(res.meta?.last_page ?? 1);
+      } catch {
+        if (alive) setOrders([]);
       }
+    })();
 
-      if (res?.data?.id) {
-        navigate(`/customers/${String(res.data.id)}`);
-      } else {
-        setError("Gagal menyimpan data pelanggan.");
-      }
-    } catch (err) {
-      const anyErr = err as { response?: { data?: unknown }; message?: string };
-      const srv = (anyErr.response?.data as { message?: string; errors?: unknown } | undefined) || undefined;
-      const msg = srv?.message ?? (srv?.errors ? JSON.stringify(srv.errors) : undefined) ?? anyErr.message;
-      setError(msg ?? "Gagal menyimpan data pelanggan.");
-    } finally {
-      setSaving(false);
-    }
-  }
+    return () => {
+      alive = false;
+    };
+  }, [customer?.id, ordersPage, ordersPerPage, ordersDir]);
 
-  async function onSubmitManualLoyalty(e: React.FormEvent) {
-    e.preventDefault();
-    if (!entity?.id || !canManageLoyaltyManual) return;
+  async function setActive(next: boolean) {
+    if (!customer) return;
 
-    setManualError(null);
-    setManualSuccess(null);
-
-    const parsedAmount = Number(manualAmount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount < 1) {
-      setManualError("Jumlah stamp minimal 1.");
-      return;
-    }
-
+    setBusy(true);
+    setError(null);
     try {
-      setManualSaving(true);
-
-      await adjustLoyaltyManual(entity.id, {
-        type: manualType,
-        amount: Math.floor(parsedAmount),
-        note: manualNote.trim() || null,
-        branch_id: entity.branch_id,
-      });
-
-      setManualSuccess("Stamp loyalty berhasil diperbarui.");
-      setManualAmount("");
-      setManualNote("");
-
-      await loadLoyalty(entity);
+      await updateCustomer(customer.id, { is_active: next });
+      showSuccess(next ? 'Pelanggan dipulihkan.' : 'Pelanggan diarsipkan.');
+      await load();
     } catch (err) {
-      setManualError(getErrorMessage(err, "Gagal memperbarui stamp loyalty."));
+      setError(getErrorMessage(err, 'Gagal mengubah status pelanggan'));
     } finally {
-      setManualSaving(false);
+      setBusy(false);
     }
   }
 
-  if (loading) {
+  async function remove() {
+    if (!customer) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteCustomer(customer.id);
+      navigate('/customers');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal menghapus pelanggan'));
+      setBusy(false);
+      setDeleteOpen(false);
+    }
+  }
+
+  if (loading && !customer) {
+    return <div className="card empty">Memuat{'\u2026'}</div>;
+  }
+
+  if (!customer) {
     return (
-      <div className="space-y-4">
-        <div className="h-7 w-56 rounded bg-black/10 animate-pulse" />
-        <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)] space-y-4">
-          <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
-          <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
-          <div className="h-10 w-full rounded bg-black/10 animate-pulse" />
-          <div className="h-24 w-full rounded bg-black/10 animate-pulse" />
-          <div className="flex gap-2">
-            <div className="h-10 w-32 rounded bg-black/10 animate-pulse" />
-            <div className="h-10 w-28 rounded bg-black/10 animate-pulse" />
-          </div>
-        </div>
+      <div className="card">
+        <div className="empty">{error ?? 'Pelanggan tidak ditemukan.'}</div>
+        <Link className="btn ghost sm" to="/customers">
+          {'\u2190'} Database Customer
+        </Link>
       </div>
     );
   }
 
-  const title = isNew ? "Buat Customer" : "Detail Customer";
-  const subtitle = "Data identitas pelanggan untuk transaksi, penjemputan, dan histori.";
+  const cycle = loyalty?.cycle ?? 10;
+  const stamps = loyalty?.stamps ?? 0;
+  const cycleNo = Math.floor((loyalty?.lifetime ?? 0) / cycle) + 1;
+  const ordersFrom = ordersTotal === 0 ? 0 : (ordersPage - 1) * ordersPerPage + 1;
+  const ordersTo = Math.min(ordersPage * ordersPerPage, ordersTotal);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-            <IconUser />
-          </div>
-          <div>
-            <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-              <Link to="/customers" className="hover:underline">
-                Customers
-              </Link>
-              <span className="text-slate-300">/</span>
-              <span className="text-slate-700">{isNew ? "New" : "Detail"}</span>
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-            <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-          </div>
-        </div>
+    <>
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/customers"
-            className="
-              inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
-              text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
-            "
-            aria-label="Kembali ke daftar pelanggan"
-          >
-            <IconArrowLeft />
-            Back
-          </Link>
+      <div style={{ marginBottom: 16 }}>
+        <Link className="btn ghost sm" to="/customers">
+          {'\u2190'} Database Customer
+        </Link>
+      </div>
 
-          {!isNew && entity && (
-            <button
-              type="button"
-              className="
-                inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2
-                text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
-              "
-              onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
-              aria-label="Salin nomor WhatsApp"
-            >
-              <IconCopy />
-              Copy WA
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* Error global */}
-      {error && (
-        <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {error ? (
+        <div role="alert" style={{ marginBottom: 12, color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}>
           {error}
         </div>
-      )}
+      ) : null}
 
-      {/* Card + Form */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-        <form
-          onSubmit={onSubmit}
-          aria-busy={saving ? "true" : "false"}
-          className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]"
-        >
-          {/* top strip */}
-          <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
+      <div className="rcd">
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <div className="text-sm font-semibold text-slate-900">Informasi Customer</div>
-              <div className="mt-1 text-xs text-slate-500">Lengkapi data agar transaksi dan pengiriman lebih cepat.</div>
-            </div>
-
-            <button
-              disabled={saving || !canEdit}
-              className="
-                inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5
-                text-sm font-semibold text-white shadow-sm
-                hover:bg-slate-800 active:bg-slate-950
-                disabled:cursor-not-allowed disabled:opacity-70
-              "
-              type="submit"
-              aria-label="Simpan pelanggan"
-            >
-              <IconSave />
-              {saving ? "Menyimpan…" : "Simpan"}
-            </button>
-          </div>
-
-          {/* Cabang */}
-          <div className="mt-5">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-              Cabang: <span className="font-semibold text-slate-900">{entity?.branch?.name ?? user?.branches[0]?.name ?? "-"}</span>
-            </div>
-          </div>
-
-          {/* Fields */}
-          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <label className="grid gap-1">
-              <span className="text-sm font-medium text-slate-700">Nama</span>
-              <input
-                placeholder="Nama pelanggan"
-                className="
-                  w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
-                  text-slate-900 placeholder:text-slate-400
-                  focus:border-slate-900 focus:outline-none
-                "
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                required
-                autoComplete="name"
-              />
-            </label>
-
-            <label className="grid gap-1">
-              <span className="text-sm font-medium text-slate-700">WhatsApp</span>
-              <input
-                placeholder="08xxxxxxxxxx"
-                className="
-                  w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
-                  text-slate-900 placeholder:text-slate-400
-                  focus:border-slate-900 focus:outline-none
-                "
-                value={form.whatsapp}
-                onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                required
-                inputMode="tel"
-                autoComplete="tel"
-              />
-              <span className="text-xs text-slate-500">Hanya angka. Akan dinormalisasi saat simpan.</span>
-            </label>
-
-            {/* Tags */}
-            <label className="grid gap-1 md:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Tags / Label</span>
-
-              <select
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                value=""
-                disabled={!canEdit}
-                onChange={(e) => {
-                  const selected = e.target.value;
-                  if (!selected) return;
-
-                  setForm((prev) => {
-                    const current = Array.isArray(prev.tags) ? prev.tags : [];
-                    if (current.includes(selected)) return prev;
-
-                    return {
-                      ...prev,
-                      tags: [...current, selected].slice(0, 10),
-                    };
-                  });
-
-                  e.currentTarget.value = "";
-                }}
-              >
-                <option value="">Pilih tag customer</option>
-                {customerLabels.map((label) => (
-                  <option
-                    key={label.id}
-                    value={label.name}
-                    disabled={(form.tags ?? []).includes(label.name)}
-                  >
-                    {label.name}
-                  </option>
-                ))}
-              </select>
-
-              <span className="text-xs text-slate-500">
-                Pilih dari daftar agar label customer konsisten.
-              </span>
-
-              <div className="flex flex-wrap gap-2 pt-2">
-                {(form.tags ?? []).length > 0 ? (
-                  (form.tags ?? []).map((tag) => (
-                    <span
-                      key={tag}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${chipClass(tag)}`}
-                    >
-                      {tag}
-                      {canEdit && (
-                        <button
-                          type="button"
-                          className="text-current/80 hover:text-current"
-                          onClick={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              tags: (prev.tags ?? []).filter((t) => t !== tag),
-                            }))
-                          }
-                        >
-                          ×
-                        </button>
-                      )}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-slate-400">Belum ada tag dipilih.</span>
-                )}
-              </div>
-            </label>
-
-            <label className="grid gap-1 md:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Alamat</span>
-              <input
-                placeholder="Alamat lengkap (opsional)"
-                className="
-                  w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
-                  text-slate-900 placeholder:text-slate-400
-                  focus:border-slate-900 focus:outline-none
-                "
-                value={form.address ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                autoComplete="street-address"
-              />
-            </label>
-
-            <label className="grid gap-1 md:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Catatan</span>
-              <textarea
-                placeholder="Instruksi khusus, preferensi, atau catatan lain"
-                className="
-                  min-h-[110px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm
-                  text-slate-900 placeholder:text-slate-400
-                  focus:border-slate-900 focus:outline-none
-                "
-                value={form.notes ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              />
-            </label>
-          </div>
-
-          {/* bottom actions (secondary, for consistency) */}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <button
-              disabled={saving || !canEdit}
-              className="
-                inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5
-                text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
-                disabled:cursor-not-allowed disabled:opacity-70
-              "
-              type="submit"
-            >
-              {saving ? "Menyimpan…" : "Simpan"}
-            </button>
-
-            {!isNew && entity && (
-              <button
-                type="button"
-                className="
-                  inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5
-                  text-sm font-semibold text-slate-900 hover:bg-slate-50 active:bg-slate-100
-                "
-                onClick={() => navigator.clipboard.writeText(entity.whatsapp)}
-                aria-label="Salin nomor WhatsApp"
-              >
-                <IconCopy />
-                Salin WA
-              </button>
-            )}
-          </div>
-        </form>
-
-        {/* Side cards */}
-        <div className="space-y-4">
-          <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-                {initials(form.name)}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-slate-900">{form.name?.trim() || "Customer"}</div>
-                <div className="truncate text-xs text-slate-500">{isNew ? "Draft (belum tersimpan)" : `ID: ${String(entity?.id ?? "-")}`}</div>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--navy)' }}>{customer.name}</h2>
+              <div className="mini" style={{ marginTop: 4 }}>
+                {customer.whatsapp}
+                {customer.branch ? ` \u00b7 asal ${customer.branch.code ?? customer.branch.name}` : ''}
+                {customer.is_active ? '' : ' \u00b7 arsip'}
               </div>
             </div>
 
-            <div className="mt-4 space-y-3 text-sm">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <div className="text-xs text-slate-500">WhatsApp</div>
-                <div className="mt-0.5 font-semibold tabular-nums text-slate-900">{form.whatsapp || "-"}</div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <div className="text-xs text-slate-500">Cabang</div>
-                <div className="mt-0.5 font-semibold text-slate-900">
-                  {entity?.branch?.name ?? "-"}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <div className="text-xs text-slate-500">Alamat</div>
-                <div className="mt-0.5 text-slate-700">{form.address?.trim() ? form.address : "-"}</div>
-              </div>
+            <div className="right">
+              <div className="mini">Total Belanja</div>
+              <div style={{ fontSize: 22, fontWeight: 900 }}>{rp(Number(customer.spend_total ?? 0))}</div>
             </div>
+          </div>
 
-            {!canEdit && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Anda tidak memiliki izin untuk mengubah data customer.
+          <div className="kv" style={{ marginTop: 18 }}>
+            <span>Kunjungan</span>
+            <b>{customer.visits_count ?? 0}</b>
+          </div>
+          <div className="kv">
+            <span>Terakhir order</span>
+            <b>{customer.last_order_at ? fmtDate(customer.last_order_at) : '\u2014'}</b>
+          </div>
+
+          <div className="card-title" style={{ marginTop: 20, marginBottom: 10 }}>
+            <span>Loyalty Stamp</span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+            <b>Siklus ke-{cycleNo}</b>
+            <b style={{ color: 'var(--orange)' }}>
+              {stamps}/{cycle}
+            </b>
+          </div>
+
+          <div className="stamp-bar" aria-label="Loyalty stamp">
+            {Array.from({ length: cycle }, (_, index) => index + 1).map((no) => (
+              <div key={no} className={no <= stamps ? 'stamp on' : 'stamp'}>
+                {no}
               </div>
-            )}
-          </aside>
+            ))}
+          </div>
 
-          {!isNew && entity && (
-            <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">Stamp Loyalty</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    Ringkasan stamp loyalty dan riwayat adjustment customer.
-                  </div>
-                </div>
-                <div className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                  {loyaltyLoading ? "Loading..." : `Stamp ${loyalty?.stamps ?? 0}/10`}
-                </div>
-              </div>
+          <div className="mini" style={{ marginTop: 8 }}>
+            Aturan stamp menyusul (sementara mengikuti jumlah kunjungan)
+          </div>
 
-              <div className="mt-4 grid grid-cols-10 gap-1" aria-label="Loyalty stamps">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-2.5 rounded-full ${loyalty && i < loyalty.stamps ? "bg-slate-900" : "bg-slate-200"}`}
-                    title={`Stamp ke-${i}`}
-                  />
-                ))}
-              </div>
+          <div className="card-title" style={{ marginTop: 20, marginBottom: 10 }}>
+            <span>Riwayat Voucher</span>
+          </div>
 
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Stamp saat ini</span>
-                  <span className="font-semibold text-slate-900">{loyalty?.stamps ?? 0}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-slate-500">Next</span>
-                  <span className="font-semibold text-slate-900">{loyalty?.next ?? 0}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-slate-500">Cycle</span>
-                  <span className="font-semibold text-slate-900">{loyalty?.cycle ?? 10}</span>
-                </div>
-              </div>
-
-              {canManageLoyaltyManual && (
-                <form onSubmit={onSubmitManualLoyalty} className="mt-4 space-y-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Adjustment Manual
-                  </div>
-
-                  <label className="grid gap-1">
-                    <span className="text-sm font-medium text-slate-700">Tipe</span>
-                    <select
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                      value={manualType}
-                      onChange={(e) => setManualType(e.target.value as LoyaltyManualAdjustType)}
-                    >
-                      <option value="add">Tambah Stamp</option>
-                      <option value="subtract">Kurangi Stamp</option>
-                      <option value="set">Set Stamp</option>
-                    </select>
-                  </label>
-
-                  <label className="grid gap-1">
-                    <span className="text-sm font-medium text-slate-700">Jumlah</span>
-                    <input
-                      type="number"
-                      min={manualType === "set" ? 0 : 1}
-                      placeholder="Masukkan jumlah stamp"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                      value={manualAmount}
-                      onChange={(e) => setManualAmount(e.target.value)}
-                    />
-                  </label>
-
-                  <label className="grid gap-1">
-                    <span className="text-sm font-medium text-slate-700">Catatan</span>
-                    <textarea
-                      className="min-h-[88px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                      placeholder="Alasan adjustment manual"
-                      value={manualNote}
-                      onChange={(e) => setManualNote(e.target.value)}
-                    />
-                  </label>
-
-                  {manualError && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                      {manualError}
-                    </div>
-                  )}
-
-                  {manualSuccess && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                      {manualSuccess}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={manualSaving}
-                    className="
-                      inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5
-                      text-sm font-semibold text-white shadow-sm
-                      hover:bg-slate-800 active:bg-slate-950
-                      disabled:cursor-not-allowed disabled:opacity-70
-                    "
-                  >
-                    {manualSaving ? "Menyimpan..." : "Simpan Adjustment"}
-                  </button>
-                </form>
-              )}
-
-              <div className="mt-4">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Riwayat Loyalty
-                </div>
-
-                <div className="space-y-2">
-                  {loyaltyHistoryLoading ? (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                      Memuat riwayat loyalty...
-                    </div>
-                  ) : loyaltyHistory.length === 0 ? (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                      Belum ada riwayat loyalty.
-                    </div>
-                  ) : (
-                    loyaltyHistory.slice(0, 5).map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs font-semibold text-slate-900">{item.action}</div>
-                          <div className="text-[11px] text-slate-500">
-                            {item.created_at ? String(item.created_at).replace("T", " ").slice(0, 19) : "-"}
-                          </div>
-                        </div>
-
-                        <div className="mt-1 text-xs text-slate-600">
-                          Before <span className="font-semibold text-slate-900">{item.before}</span>
-                          {" → "}
-                          After <span className="font-semibold text-slate-900">{item.after}</span>
-                        </div>
-
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.note?.trim() ? item.note : "Tanpa catatan"}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </aside>
+          {vouchers.length === 0 ? (
+            <div className="mini">Belum pernah pakai voucher.</div>
+          ) : (
+            <div className="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Kode</th>
+                    <th>No. Receipt</th>
+                    <th className="num">Nominal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vouchers.map((voucher) => (
+                    <tr key={`${voucher.code}-${voucher.number}`}>
+                      <td data-label="Kode">
+                        <b>{voucher.code}</b>
+                      </td>
+                      <td data-label="No. Receipt">{voucher.number}</td>
+                      <td className="num" data-label="Nominal">
+                        {rp(Number(voucher.applied_amount ?? 0))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
+
+          <div className="mini" style={{ marginTop: 8 }}>
+            Kode yang sudah dipakai tidak bisa dipakai lagi oleh nomor WA yang sama.
+          </div>
+
+          <div className="card-title" style={{ marginTop: 20, marginBottom: 10 }}>
+            <span>Riwayat Belanja</span>
+          </div>
+
+          <div className="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th
+                    className="sortable"
+                    onClick={() => {
+                      setOrdersDir((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                      setOrdersPage(1);
+                    }}
+                  >
+                    Tanggal
+                    <span className="sort-ic on">{ordersDir === 'asc' ? <IconSortUp /> : <IconSortDown />}</span>
+                  </th>
+                  <th>
+                    No. Receipt
+                    <span className="sort-ic">
+                      <IconSort />
+                    </span>
+                  </th>
+                  <th className="num">
+                    Nominal
+                    <span className="sort-ic">
+                      <IconSort />
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="empty">
+                      Belum ada transaksi.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map((order) => (
+                    <tr key={order.id}>
+                      <td data-label="Tanggal">{fmtDate(order.created_at)}</td>
+                      <td data-label="No. Receipt">
+                        <Link className="lnk" to={`/orders/${order.id}`}>
+                          {order.invoice_no ?? order.number}
+                        </Link>
+                        {order.status === 'CANCELED' ? <span className="chip c-belum">VOID</span> : null}
+                      </td>
+                      <td className="num" data-label="Nominal">
+                        {rp(Number(order.grand_total ?? 0))}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {ordersTotal > 0 ? (
+            <div className="dt-pager">
+              <div className="dt-pager-size">
+                Tampilkan{' '}
+                <select
+                  value={ordersPerPage}
+                  aria-label="Jumlah transaksi per halaman"
+                  onChange={(e) => {
+                    setOrdersPerPage(Number(e.target.value));
+                    setOrdersPage(1);
+                  }}
+                >
+                  {ORDER_PAGE_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>{' '}
+                per halaman
+              </div>
+              <div className="dt-pager-nav">
+                <span className="mini">
+                  {ordersFrom}
+                  {'\u2013'}
+                  {ordersTo} dari {ordersTotal}
+                </span>
+                <button
+                  type="button"
+                  className="pg-btn"
+                  aria-label="Halaman sebelumnya"
+                  disabled={ordersPage <= 1}
+                  onClick={() => setOrdersPage((prev) => prev - 1)}
+                >
+                  {'\u2039'}
+                </button>
+                <span className="mini">
+                  {ordersPage}/{ordersLastPage}
+                </span>
+                <button
+                  type="button"
+                  className="pg-btn"
+                  aria-label="Halaman berikutnya"
+                  disabled={ordersPage >= ordersLastPage}
+                  onClick={() => setOrdersPage((prev) => prev + 1)}
+                >
+                  {'\u203a'}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="card">
+          <div className="card-title">
+            <span>Aksi</span>
+          </div>
+
+          <button
+            type="button"
+            className="btn block"
+            style={{ marginBottom: 10 }}
+            disabled={busy}
+            onClick={() => setEditOpen(true)}
+          >
+            <IconEdit />
+            <span>Edit</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn block"
+            style={{ marginBottom: 10 }}
+            disabled={busy}
+            onClick={() => void setActive(!customer.is_active)}
+          >
+            {customer.is_active ? <IconArchive /> : <IconUnarchive />}
+            <span>{customer.is_active ? 'Arsipkan' : 'Pulihkan'}</span>
+          </button>
+
+          <button type="button" className="btn danger block" disabled={busy} onClick={() => setDeleteOpen(true)}>
+            <IconTrash />
+            <span>Hapus</span>
+          </button>
         </div>
       </div>
-    </div>
+
+      {editOpen ? (
+        <CustomerEditModal
+          customer={customer}
+          onClose={() => setEditOpen(false)}
+          onDone={(updated) => {
+            setEditOpen(false);
+            setCustomer(updated);
+            showSuccess('Pelanggan diperbarui.');
+          }}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Hapus pelanggan?"
+        message={`Pelanggan "${customer.name}" akan dihapus. Struk lama tetap tersimpan, tetapi tidak lagi tertaut ke profil ini.`}
+        confirmText={busy ? 'Menghapus\u2026' : 'Ya, hapus'}
+        cancelText="Batal"
+        confirmVariant="danger"
+        loading={busy}
+        onClose={() => {
+          if (busy) return;
+          setDeleteOpen(false);
+        }}
+        onConfirm={() => void remove()}
+      />
+    </>
   );
 }

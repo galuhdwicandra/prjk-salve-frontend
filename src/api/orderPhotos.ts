@@ -18,3 +18,9 @@ export async function uploadOrderPhotos(
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
+
+export async function deleteOrderPhoto(orderId: string, photoId: string): Promise<void> {
+  await api.delete(
+    `/orders/${encodeURIComponent(orderId)}/photos/${encodeURIComponent(photoId)}`
+  );
+}

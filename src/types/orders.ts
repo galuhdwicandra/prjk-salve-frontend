@@ -1,6 +1,7 @@
 // src/types/orders.ts
 import type { Service } from './services';
 import type { Customer } from './customers';
+import type { Payment } from './payments';
 
 export type OrderBackendStatus =
     | 'QUEUE' | 'WASHING' | 'DRYING' | 'IRONING' | 'READY' | 'DELIVERING' | 'PICKED_UP' | 'CANCELED';
@@ -34,6 +35,7 @@ export interface OrderItemInput {
     service_id: string;
     qty: number;
     note?: string | null;
+    price?: number | null;
 }
 
 export interface OrderItem {
@@ -49,12 +51,16 @@ export interface OrderItem {
 
 export type LoyaltyReward = 'NONE' | 'DISC25' | 'FREE100';
 
+export type ProcessingDestination = 'workshop' | 'vendor';
+
 export interface Order {
     id: string;
     branch_id: string;
     customer_id: string | null;
+    customer_name: string | null;
     number: string;
     status: OrderBackendStatus;
+    processing_destination: ProcessingDestination | null;
     subtotal: number;
     discount: number;
     grand_total: number;
@@ -76,9 +82,11 @@ export interface Order {
     customer?: Customer | null;
     items?: OrderItem[];
     photos?: OrderPhoto[];
+    payments?: Payment[];
+    production_task?: OrderProductionTask | null;
 }
 
-export type OrderPhotoKind = 'BEFORE' | 'AFTER';
+export type OrderPhotoKind = 'before' | 'after';
 
 export interface OrderPhoto {
     id: string;
@@ -87,21 +95,42 @@ export interface OrderPhoto {
     path: string;
 }
 
+export interface OrderProductionLog {
+    id: string;
+    to_status: OrderBackendStatus;
+    note: string | null;
+    started_date: string | null;
+    finished_date: string | null;
+    created_at: string | null;
+    user?: { id: number; name: string } | null;
+}
+
+export interface OrderProductionTask {
+    id: string;
+    current_status: OrderBackendStatus;
+    started_date: string | null;
+    finished_date: string | null;
+    logs?: OrderProductionLog[];
+}
+
 export interface OrderCreatePayload {
     branch_id?: string;
     customer_id?: string | null;
     items: OrderItemInput[];
-    discount?: number;
+    discount_type?: 'NOMINAL' | 'PERCENT';
+    discount_value?: number;
     notes?: string | null;
     received_at?: string | null;
     ready_at?: string | null;
+    client_ref?: string;
 }
 
 export interface OrderUpdatePayload {
     invoice_no?: string;
     customer_id?: string | null;
     items?: OrderItemInput[];
-    discount?: number;
+    discount_type?: 'NOMINAL' | 'PERCENT';
+    discount_value?: number;
     notes?: string | null;
     received_at?: string | null;
     ready_at?: string | null;
@@ -121,6 +150,7 @@ export interface OrderPaymentCorrectionResult {
 export interface OrderQuery {
     q?: string;
     status?: OrderBackendStatus;
+    customer_id?: string;
     payment_status?: PaymentStatus;
     payment_method?: PaymentMethod;
     date_from?: string;
@@ -146,20 +176,6 @@ export interface Paginated<T> {
     meta: PaginationMeta;
     message: string;
     errors: Record<string, string[] | string> | null;
-}
-
-export interface OrderTrackItem {
-    service: string | null;
-    qty: number;
-}
-
-export interface OrderTrackResult {
-    number: string;
-    status: OrderBackendStatus;
-    branch: string | null;
-    received_at: string | null;
-    ready_at: string | null;
-    items: OrderTrackItem[];
 }
 
 export interface SingleResponse<T> {

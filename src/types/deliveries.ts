@@ -13,10 +13,12 @@ export type DeliveryStatus =
 
 export interface Delivery {
     id: string;
+    number: string | null;
     order_id: string;
     type: string;
     zone_id: string | null;
     fee: number;
+    qty: number;
     assigned_to: string | number | null;
     auto_assigned: boolean;
     status: DeliveryStatus;
@@ -26,6 +28,12 @@ export interface Delivery {
 
     order_invoice_no?: string | null;
     order_number?: string | null;
+
+    branch?: {
+        id: string;
+        name: string;
+        code: string;
+    } | null;
 
     courier?: {
         id: string | number;

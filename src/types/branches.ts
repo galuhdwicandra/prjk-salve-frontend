@@ -1,6 +1,13 @@
 // src/types/branches.ts
 export type ResetPolicy = 'monthly' | 'never';
-export type BranchType = 'workshop' | 'droppoint';
+export type BranchType = string;
+
+export interface OutletType {
+  id: string;
+  code: string;
+  name: string;
+  branches_count?: number;
+}
 
 export interface Branch {
   id: string;
@@ -11,22 +18,27 @@ export interface Branch {
   hours?: string | null;
   invoice_prefix: string;
   reset_policy: ResetPolicy;
+  is_active: boolean;
+  orders_count?: number;
   created_at?: string | null;
   updated_at?: string | null;
 }
 
 export interface BranchUpsertPayload {
-  code: string;
+  code?: string | null;
   name: string;
   type: BranchType;
   address?: string | null;
   hours?: string | null;
-  invoice_prefix: string;
-  reset_policy: ResetPolicy;
+  invoice_prefix?: string;
+  reset_policy?: ResetPolicy;
+  is_active?: boolean;
 }
 
 export interface BranchQuery {
   q?: string;
+  type?: string;
+  is_active?: number;
   page?: number;
   per_page?: number;
 }
@@ -63,6 +75,10 @@ export interface DocumentNumber {
   reset_policy: CounterResetPolicy;
   seq: number;
   next: string;
+}
+
+export interface DocumentNumberPreviewMeta {
+  outlet: string;
 }
 
 export interface DocumentNumberSavePayload {

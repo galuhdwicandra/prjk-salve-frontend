@@ -2,11 +2,11 @@ import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { route } from '../route';
 
-const ExpensesIndex = lazy(() => import('../../pages/expenses/ExpensesIndex'));
-const ExpenseForm = lazy(() => import('../../pages/expenses/ExpenseForm'));
+const TransactionsIndex = lazy(() => import('../../pages/transactions/TransactionsIndex'));
+const CashTransactionForm = lazy(() => import('../../pages/transactions/CashTransactionForm'));
 
 export const finTransaksiRoutes: RouteObject[] = [
-  route('/expenses', 'fin-transaksi', ExpensesIndex),
-  route('/expenses/new', 'fin-transaksi', ExpenseForm),
-  route('/expenses/:id/edit', 'fin-transaksi', ExpenseForm),
+  route('/transactions', 'fin-transaksi', TransactionsIndex),
+  route('/transactions/new/:kind', 'fin-transaksi', CashTransactionForm),
+  route('/transactions/:id/edit', 'fin-transaksi', CashTransactionForm),
 ];

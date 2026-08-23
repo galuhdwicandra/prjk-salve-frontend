@@ -1,253 +1,618 @@
-// src/pages/vouchers/VouchersIndex.tsx
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { listVouchers, deleteVoucher } from '../../api/vouchers';
-import type { Voucher, PaginationMeta } from '../../types/vouchers';
-import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { getErrorMessage } from '../../api/client';
+import { createVoucher, deleteVoucher, listVouchers, updateVoucher } from '../../api/vouchers';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
 import { useIsManager } from '../../store/useAuth';
+import type { PaginationMeta, Voucher, VoucherStatus, VoucherType } from '../../types/vouchers';
+import { fmtDate } from '../../utils/date';
+import { downloadXlsx } from '../../utils/export-table';
+import { num, rp } from '../../utils/money';
+import {
+  IconArchive,
+  IconDownload,
+  IconKebab,
+  IconPlus,
+  IconSort,
+  IconSortDown,
+  IconSortUp,
+  IconTag,
+  IconUnarchive,
+  IconUpload,
+} from '../users/icons';
+import LoyaltyStampModal from './LoyaltyStampModal';
+import VoucherModal from './VoucherModal';
+
+type SortState = { key: string; dir: 1 | -1 };
+
+const PAGE_SIZE = 25;
+
+const STATUS_LABEL: Record<VoucherStatus, string> = {
+  aktif: 'Aktif',
+  belum: 'Belum Mulai',
+  kadaluwarsa: 'Kadaluwarsa',
+  nonaktif: 'Nonaktif',
+};
+
+const STATUS_STYLE: Record<VoucherStatus, { color: string; background: string }> = {
+  aktif: { color: '#16803c', background: '#e7f6ec' },
+  belum: { color: '#9a6a00', background: '#fdf3e0' },
+  kadaluwarsa: { color: '#fff', background: '#DC2626' },
+  nonaktif: { color: '#667085', background: '#f2f4f7' },
+};
+
+function statusOf(voucher: Voucher): VoucherStatus {
+  if (!voucher.active) return 'nonaktif';
+
+  const now = Date.now();
+  if (voucher.start_at && now < new Date(voucher.start_at).getTime()) return 'belum';
+  if (voucher.end_at && now > new Date(voucher.end_at).getTime()) return 'kadaluwarsa';
+
+  return 'aktif';
+}
+
+function valueText(voucher: Voucher): string {
+  return voucher.type === 'PERCENT' ? `${num(voucher.value)}%` : rp(Number(voucher.value));
+}
+
+function sortValue(voucher: Voucher, key: string): number | string {
+  if (key === 'code') return voucher.code.toLowerCase();
+  if (key === 'name') return (voucher.name ?? '').toLowerCase();
+  if (key === 'status') return statusOf(voucher);
+  if (key === 'value') return Number(voucher.value);
+  if (key === 'period') return voucher.start_at ?? '';
+  return voucher.usage_limit ?? Number.MAX_SAFE_INTEGER;
+}
 
 export default function VouchersIndex() {
-  const canManage = useIsManager()
-  const nav = useNavigate();
+  const canManage = useIsManager();
+
   const [rows, setRows] = useState<Voucher[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [q, setQ] = useState('');
-  const [active, setActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [keyword, setKeyword] = useState('');
+  const [type, setType] = useState<'' | VoucherType>('');
+  const [status, setStatus] = useState<'' | VoucherStatus>('');
   const [page, setPage] = useState(1);
+  const [archived, setArchived] = useState(false);
+  const [sort, setSort] = useState<SortState>({ key: 'name', dir: 1 });
+  const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const perPage = 10;
+  const [kebabOpen, setKebabOpen] = useState(false);
+  const [modal, setModal] = useState<{ open: boolean; voucher: Voucher | null }>({ open: false, voucher: null });
+  const [loyaltyOpen, setLoyaltyOpen] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
-  const queryActive = useMemo(
-    () => (active === 'all' ? undefined : active === 'active'),
-    [active]
-  );
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
-  const fetchPage = useCallback(
-    async (p = 1) => {
-      setLoading(true); setError(null);
-      try {
-        const res = await listVouchers({ q, page: p, per_page: perPage, active: queryActive });
-        setRows(res.data ?? []);
-        setMeta(res.meta ?? null);
-      } catch (ex: unknown) {
-        const err = ex as { response?: { status?: number } };
-        if (err?.response?.status === 403) setError('Tidak berwenang mengakses vouchers');
-        else setError('Gagal memuat data voucher');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [q, queryActive]
-  );
-
-  useEffect(() => { void fetchPage(page); }, [fetchPage, page]);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await listVouchers({
+        q: keyword || undefined,
+        type: type || undefined,
+        status: status || undefined,
+        archived,
+        page,
+        per_page: PAGE_SIZE,
+      });
+      setRows(res.data ?? []);
+      setMeta(res.meta ?? null);
+      setSelected([]);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat data voucher'));
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, type, status, archived, page]);
 
   useEffect(() => {
-    const t = setTimeout(() => { void fetchPage(1); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [fetchPage, q, active]);
+    setSlot(document.getElementById('pageActions'));
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setKeyword(q.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
+  useEffect(() => {
+    if (!kebabOpen) return;
+    const close = () => setKebabOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [kebabOpen]);
+
+  const ordered = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const left = sortValue(a, sort.key);
+      const right = sortValue(b, sort.key);
+      if (typeof left === 'number' && typeof right === 'number') return (left - right) * sort.dir;
+      return String(left).localeCompare(String(right), 'id') * sort.dir;
+    });
+  }, [rows, sort]);
+
+  const total = meta?.total ?? rows.length;
+  const lastPage = meta?.last_page ?? 1;
+  const allChecked = ordered.length > 0 && ordered.every((row) => selected.includes(row.id));
+
+  async function applyArchive(ids: string[], value: boolean) {
+    if (ids.length === 0) return;
+
+    setBusy(true);
+    try {
+      await Promise.all(ids.map((id) => updateVoucher(id, { is_archived: value } as never)));
+      showSuccess(`${ids.length} voucher ${value ? 'diarsipkan' : 'dipulihkan'}.`);
+      await refresh();
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal mengubah status voucher'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeSelected(ids: string[]) {
+    if (ids.length === 0) return;
+    if (!window.confirm(`Hapus ${ids.length} voucher?`)) return;
+
+    setBusy(true);
+    try {
+      await Promise.all(ids.map((id) => deleteVoucher(id)));
+      showSuccess(`${ids.length} voucher dihapus.`);
+      await refresh();
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal menghapus voucher'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onExport() {
+    setBusy(true);
+    try {
+      const items = selected.length
+        ? rows.filter((row) => selected.includes(row.id))
+        : (await listVouchers({ archived, per_page: 500 })).data ?? [];
+
+      if (items.length === 0) {
+        showSuccess('Tidak ada data untuk diekspor.');
+        return;
+      }
+
+      downloadXlsx(`master-promo-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Voucher', [
+        ['kode', 'nama', 'tipe', 'nilai', 'masa_dari', 'masa_ke', 'kuota_maks', 'gabung_voucher', 'gabung_diskon', 'hitung_setelah_diskon'],
+        ...items.map((item) => [
+          item.code,
+          item.name,
+          item.type === 'PERCENT' ? 'pct' : 'rp',
+          Number(item.value),
+          item.start_at?.slice(0, 10) ?? '',
+          item.end_at?.slice(0, 10) ?? '',
+          item.usage_limit ?? '',
+          item.stack_voucher ? 'ya' : 'tidak',
+          item.stack_discount ? 'ya' : 'tidak',
+          item.percent_after_discount ? 'ya' : 'tidak',
+        ]),
+      ]);
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal mengekspor data'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onSort(key: string) {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
+  }
+
+  function sortIcon(key: string) {
+    const active = sort.key === key;
+    return (
+      <span className={active ? 'sort-ic on' : 'sort-ic'}>
+        {active ? sort.dir > 0 ? <IconSortUp /> : <IconSortDown /> : <IconSort />}
+      </span>
+    );
+  }
+
+  const pageActions = (
+    <>
+      {canManage ? (
+        <button type="button" className="btn ghost sm" onClick={() => setLoyaltyOpen(true)}>
+          <IconTag />
+          <span>Atur Loyalty Stamp</span>
+        </button>
+      ) : null}
+
+      {canManage ? (
+        <button type="button" className="btn sm" onClick={() => setModal({ open: true, voucher: null })}>
+          <IconPlus />
+          <span>Tambah Voucher</span>
+        </button>
+      ) : null}
+
+      {archived ? (
+        <button
+          type="button"
+          className="btn sm arc-pill"
+          onClick={() => {
+            setArchived(false);
+            setPage(1);
+          }}
+        >
+          {'\u2715'} <span>Tutup Arsip</span>
+        </button>
+      ) : null}
+
+      <div className={kebabOpen ? 'kebab open' : 'kebab'}>
+        <button
+          type="button"
+          className="kebab-btn"
+          aria-label="Menu"
+          aria-expanded={kebabOpen}
+          onClick={(e) => {
+            e.stopPropagation();
+            setKebabOpen((prev) => !prev);
+          }}
+        >
+          <IconKebab />
+        </button>
+
+        <div className="kebab-menu">
+          <label className="kebab-item">
+            <IconUpload />
+            <span>Import</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void onImport(file);
+              }}
+            />
+          </label>
+
+          <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
+            <IconDownload />
+            <span>{selected.length > 0 ? `Export ${selected.length} terpilih` : 'Export'}</span>
+          </button>
+
+          <div className="kebab-sep" />
+
+          <button
+            type="button"
+            className="kebab-item"
+            onClick={() => {
+              setArchived((prev) => !prev);
+              setPage(1);
+              setKebabOpen(false);
+            }}
+          >
+            <IconArchive />
+            <span>Tampilkan arsip</span>
+            <span className="chk">{archived ? '\u2713' : ''}</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  async function onImport(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
+      const head = (lines.shift() ?? '').split(',').map((cell) => cell.trim().toLowerCase());
+      const at = (name: string) => head.indexOf(name);
+
+      if (at('kode') < 0 || at('nama') < 0 || at('nilai') < 0) {
+        setError('Header CSV wajib memuat kolom "kode", "nama", dan "nilai".');
+        return;
+      }
+
+      const yes = (value: string) => /^(ya|yes|true|1)$/i.test(value.trim());
+      let ok = 0;
+      let skipped = 0;
+
+      for (const line of lines) {
+        const cols = line.split(',').map((cell) => cell.trim());
+        const code = (cols[at('kode')] ?? '').toUpperCase();
+        const amount = Number((cols[at('nilai')] ?? '').replace(/\D/g, ''));
+
+        if (!/^[A-Z0-9]{4,10}$/.test(code) || amount <= 0) {
+          skipped += 1;
+          continue;
+        }
+
+        const isPercent = at('tipe') >= 0 && /pct|persen|%/i.test(cols[at('tipe')] ?? '');
+        const from = at('masa_dari') >= 0 ? cols[at('masa_dari')] : '';
+        const to = at('masa_ke') >= 0 ? cols[at('masa_ke')] : '';
+        const quota = at('kuota_maks') >= 0 ? Number((cols[at('kuota_maks')] ?? '').replace(/\D/g, '')) : 0;
+
+        try {
+          await createVoucher({
+            code,
+            name: cols[at('nama')] || code,
+            type: isPercent ? 'PERCENT' : 'NOMINAL',
+            value: isPercent ? Math.min(amount, 100) : amount,
+            start_at: from || null,
+            end_at: to ? `${to} 23:59:59` : null,
+            usage_limit: quota > 0 ? quota : null,
+            active: true,
+            stack_voucher: at('gabung_voucher') >= 0 && yes(cols[at('gabung_voucher')] ?? ''),
+            stack_discount: at('gabung_diskon') < 0 || yes(cols[at('gabung_diskon')] ?? ''),
+            percent_after_discount: at('hitung_setelah_diskon') < 0 || yes(cols[at('hitung_setelah_diskon')] ?? ''),
+          });
+          ok += 1;
+        } catch {
+          skipped += 1;
+        }
+      }
+
+      showSuccess(`Import selesai: ${ok} ditambahkan, ${skipped} dilewati.`);
+      await refresh();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal membaca berkas CSV'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Vouchers</h1>
-          <p className="text-xs text-gray-500">Kelola kode promo dan periode aktif.</p>
-        </div>
-        {canManage && (
-          <button
-            className="btn-primary"
-            onClick={() => nav('/vouchers/new')}
-            aria-label="Tambah voucher baru"
-          >
-            New Voucher
-          </button>
-        )}
-      </header>
+    <>
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
-      {/* Toolbar */}
-      <section
-        className="card border border-[color:var(--color-border)] rounded-lg shadow-elev-1"
-        aria-label="Toolbar pencarian voucher"
-      >
-        <div className="p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-          <div className="relative">
-            <input
-              className="input w-full pl-9 py-2"
-              placeholder="Cari kode…"
-              value={q}
-              onChange={(e) => { setQ(e.target.value); }}
-              aria-label="Cari voucher"
-            />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
+      {slot ? createPortal(pageActions, slot) : null}
+
+      <div className="card">
+        <div className="card-hd">
+          <div className="card-title">
+            Master Promo <span className="ct-note">kelola kode voucher &amp; aturan loyalty</span>
+          </div>
+          <input
+            className="hd-search"
+            placeholder="nama / kode voucher"
+            aria-label="Cari nama atau kode voucher"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+
+        <div className="filters">
+          <div className="f">
+            <label htmlFor="flt-type">Jenis Nilai</label>
+            <select
+              id="flt-type"
+              value={type}
+              onChange={(e) => {
+                setType(e.target.value as '' | VoucherType);
+                setPage(1);
+              }}
+            >
+              <option value="">Semua</option>
+              <option value="NOMINAL">Nominal (Rp)</option>
+              <option value="PERCENT">Persentase (%)</option>
+            </select>
           </div>
 
-          <div className="flex items-center justify-end gap-2">
-            <label htmlFor="filter-active" className="text-sm text-gray-600">Status</label>
+          <div className="f">
+            <label htmlFor="flt-status">Status Aktif</label>
             <select
-              id="filter-active"
-              className="input py-2"
-              value={active}
-              onChange={(e) => setActive(e.target.value as 'all' | 'active' | 'inactive')}
-              aria-label="Filter status voucher"
+              id="flt-status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value as '' | VoucherStatus);
+                setPage(1);
+              }}
             >
-              <option value="all">Semua</option>
-              <option value="active">Aktif</option>
-              <option value="inactive">Nonaktif</option>
+              <option value="">Semua</option>
+              <option value="aktif">Aktif</option>
+              <option value="belum">Belum Mulai</option>
+              <option value="kadaluwarsa">Kadaluwarsa</option>
+              <option value="nonaktif">Nonaktif</option>
             </select>
           </div>
         </div>
-      </section>
 
-      {/* Error */}
-      {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2"
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Table */}
-      <section aria-busy={loading ? 'true' : 'false'}>
-        <div className="card overflow-hidden border border-[color:var(--color-border)] rounded-lg shadow-elev-1">
-          <div className="overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#E6EDFF] sticky top-0 z-10">
-                <tr className="divide-x divide-[color:var(--color-border)] text-left">
-                  <Th>Kode</Th>
-                  <Th>Tipe</Th>
-                  <Th className="text-right">Nilai</Th>
-                  <Th className="text-right">Min Total</Th>
-                  <Th>Periode</Th>
-                  <Th className="text-right">Limit</Th>
-                  <Th>Status</Th>
-                  <Th className="text-right pr-4">Aksi</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
-                {loading ? (
-                  <>
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                  </>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
-                      Belum ada voucher
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((v) => (
-                    <tr key={v.id} className="hover:bg-black/5 transition-colors">
-                      <Td><span className="font-mono">{v.code}</span></Td>
-                      <Td>{v.type}</Td>
-                      <Td className="text-right">
-                        {v.type === 'PERCENT'
-                          ? `${v.value}%`
-                          : new Intl.NumberFormat('id-ID').format(v.value)}
-                      </Td>
-                      <Td className="text-right">
-                        {new Intl.NumberFormat('id-ID').format(v.min_total ?? 0)}
-                      </Td>
-                      <Td>
-                        {(v.start_at && v.end_at)
-                          ? `${v.start_at?.slice(0, 16)} — ${v.end_at?.slice(0, 16)}`
-                          : '—'}
-                      </Td>
-                      <Td className="text-right">{v.usage_limit ?? '—'}</Td>
-                      <Td>{v.active ? 'Aktif' : 'Nonaktif'}</Td>
-                      <Td className="text-right">
-                        <div className="inline-flex gap-2">
-                          <button
-                            className="btn-outline"
-                            onClick={() => nav(`/vouchers/${v.id}/edit`)}
-                            aria-label={`Edit voucher ${v.code}`}
-                          >
-                            Edit
-                          </button>
-                          {canManage && (
-                            <button
-                              className="btn-outline text-red-600"
-                              onClick={async () => {
-                                if (!confirm(`Hapus voucher ${v.code}?`)) return;
-                                try {
-                                  await deleteVoucher(v.id);
-                                  await fetchPage(page);
-                                } catch {
-                                  alert('Gagal menghapus');
-                                }
-                              }}
-                              aria-label={`Hapus voucher ${v.code}`}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {error ? (
+          <div role="alert" style={{ marginBottom: 12, color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}>
+            {error}
           </div>
+        ) : null}
+
+        {canManage ? (
+          <div className={selected.length ? 'bulkbar show' : 'bulkbar'}>
+            <span className="bb-count">{selected.length} dipilih</span>
+            <div className="toolbar">
+              <button
+                type="button"
+                className="btn ghost sm"
+                disabled={busy}
+                onClick={() => void applyArchive(selected, !archived)}
+              >
+                {archived ? <IconUnarchive /> : <IconArchive />}
+                {archived ? 'Pulihkan terpilih' : 'Arsipkan terpilih'}
+              </button>
+              <button
+                type="button"
+                className="btn danger sm"
+                disabled={busy}
+                onClick={() => void removeSelected(selected)}
+              >
+                Hapus terpilih
+              </button>
+            </div>
+            <button type="button" className="link" onClick={() => setSelected([])}>
+              bersihkan
+            </button>
+          </div>
+        ) : null}
+
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '1%' }}>
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    aria-label="Pilih semua voucher"
+                    onChange={(e) => setSelected(e.target.checked ? ordered.map((row) => row.id) : [])}
+                  />
+                </th>
+                <th className="sortable" onClick={() => onSort('code')}>
+                  Kode
+                  {sortIcon('code')}
+                </th>
+                <th className="sortable" onClick={() => onSort('name')}>
+                  Nama
+                  {sortIcon('name')}
+                </th>
+                <th className="sortable" onClick={() => onSort('status')}>
+                  Status Aktif
+                  {sortIcon('status')}
+                </th>
+                <th className="sortable num" onClick={() => onSort('value')}>
+                  Nilai
+                  {sortIcon('value')}
+                </th>
+                <th className="sortable" onClick={() => onSort('period')}>
+                  Masa Berlaku
+                  {sortIcon('period')}
+                </th>
+                <th className="sortable num" onClick={() => onSort('quota')}>
+                  Kuota
+                  {sortIcon('quota')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="empty">
+                    Memuat{'\u2026'}
+                  </td>
+                </tr>
+              ) : ordered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="empty">
+                    {archived ? 'Tidak ada voucher di arsip.' : 'Belum ada voucher. Klik "Tambah Voucher".'}
+                  </td>
+                </tr>
+              ) : (
+                ordered.map((row) => {
+                  const state = statusOf(row);
+                  const used = row.orders_count ?? 0;
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className={row.is_archived ? 'rowc dt-arc' : 'rowc'}
+                      onClick={() => setModal({ open: true, voucher: row })}
+                    >
+                      <td className="dt-check" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(row.id)}
+                          aria-label={`Pilih voucher ${row.code}`}
+                          onChange={(e) =>
+                            setSelected((prev) =>
+                              e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id),
+                            )
+                          }
+                        />
+                      </td>
+                      <td data-label="Kode">
+                        <span className="vcode">{row.code}</span>
+                        {row.is_archived ? <span className="tag"> arsip</span> : null}
+                      </td>
+                      <td data-label="Nama">
+                        <span className="lnk">{row.name || '-'}</span>
+                      </td>
+                      <td data-label="Status Aktif">
+                        <span className="chip" style={STATUS_STYLE[state]}>
+                          {STATUS_LABEL[state]}
+                        </span>
+                      </td>
+                      <td data-label="Nilai" className="num">
+                        <b>{valueText(row)}</b>
+                      </td>
+                      <td data-label="Masa Berlaku">
+                        {row.start_at || row.end_at ? (
+                          <span className="mini">
+                            {fmtDate(row.start_at)} {'\u2192'} {fmtDate(row.end_at)}
+                          </span>
+                        ) : (
+                          <span className="mini">Tanpa batas</span>
+                        )}
+                      </td>
+                      <td data-label="Kuota" className="num">
+                        {row.usage_limit == null ? (
+                          <span className="mini">Tak terbatas</span>
+                        ) : (
+                          <span className="mono">
+                            {used} / {row.usage_limit}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      </section>
 
-      {/* Pagination */}
-      {meta && meta.last_page > 1 && (
-        <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman voucher">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="btn-outline disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span className="text-sm">Hal {meta.current_page} / {meta.last_page}</span>
-          <button
-            disabled={page >= meta.last_page}
-            onClick={() => setPage((p) => p + 1)}
-            className="btn-outline disabled:opacity-50"
-          >
-            Next
-          </button>
-        </nav>
-      )}
-    </div>
-  );
-}
+        {lastPage > 1 ? (
+          <div className="pager">
+            <button type="button" className="btn ghost sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Sebelumnya
+            </button>
+            <span className="mini">
+              Hal {page} / {lastPage} {'\u00b7'} {total} voucher
+            </span>
+            <button
+              type="button"
+              className="btn ghost sm"
+              disabled={page >= lastPage}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Berikutnya
+            </button>
+          </div>
+        ) : null}
+      </div>
 
-/* ---------- Subcomponents (konsisten dgn Customers) ---------- */
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <th className={`px-3 py-2 text-xs font-medium uppercase tracking-wide ${className}`}>
-      {children}
-    </th>
-  );
-}
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
-}
-function RowSkeleton() {
-  return (
-    <tr>
-      <td className="px-3 py-3"><div className="h-4 w-24 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-40 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-14 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3"><div className="h-4 w-16 rounded bg-black/10 animate-pulse" /></td>
-      <td className="px-3 py-3 text-right">
-        <div className="inline-block h-8 w-28 rounded bg-black/10 animate-pulse" />
-      </td>
-    </tr>
+      {modal.open ? (
+        <VoucherModal
+          voucher={modal.voucher}
+          onClose={() => setModal({ open: false, voucher: null })}
+          onDone={(message) => {
+            setModal({ open: false, voucher: null });
+            showSuccess(message);
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {loyaltyOpen ? (
+        <LoyaltyStampModal onClose={() => setLoyaltyOpen(false)} onDone={(message) => {
+          setLoyaltyOpen(false);
+          showSuccess(message);
+        }} />
+      ) : null}
+    </>
   );
 }

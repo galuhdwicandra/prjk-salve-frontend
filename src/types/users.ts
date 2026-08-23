@@ -37,6 +37,7 @@ export interface UserUpsertPayload {
     role_label?: string | null;
     modules?: ModuleKey[];
     manager?: boolean;
+    all_branches?: boolean;
     show_balance?: boolean;
     custom_price?: boolean;
     branch_ids?: string[];
@@ -46,6 +47,7 @@ export interface UserQuery {
     q?: string;
     role?: string;
     branch_id?: string;
+    is_active?: boolean;
     page?: number;
     per_page?: number;
 }

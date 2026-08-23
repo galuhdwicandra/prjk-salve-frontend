@@ -10,7 +10,7 @@ import type {
 import type { Branch } from '../../types/branches';
 import { todayLocalYMD } from '../../utils/date';
 import { toIDR } from '../../utils/money';
-import { useAuth } from '../../store/useAuth';
+import { useAuth, useShowBalance } from '../../store/useAuth';
 
 function firstDateOfMonth(): string {
   const d = new Date();
@@ -32,6 +32,7 @@ function formatDate(value?: string | null): string {
 
 export default function LedgerPage() {
   const canAccessAllBranches = (useAuth.user?.branches.length ?? 0) > 1;
+  const showBalance = useShowBalance();
 
   const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -52,6 +53,15 @@ export default function LedgerPage() {
     () => accounts.find((account) => account.id === accountId) ?? null,
     [accounts, accountId],
   );
+
+  const netMovement = useMemo(() => {
+    if (!meta) return 0;
+
+    const debit = num(meta.total_debit);
+    const credit = num(meta.total_credit);
+
+    return meta.account.normal_balance === 'DEBIT' ? debit - credit : credit - debit;
+  }, [meta]);
 
   async function loadMaster() {
     setLoadingMaster(true);
@@ -226,11 +236,13 @@ export default function LedgerPage() {
         ) : null}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
-          <div className="text-sm text-[color:var(--color-text-muted)]">Saldo Awal</div>
-          <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.opening_balance))}</div>
-        </div>
+      <div className={showBalance ? 'grid gap-3 md:grid-cols-4' : 'grid gap-3 md:grid-cols-2'}>
+        {showBalance ? (
+          <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+            <div className="text-sm text-[color:var(--color-text-muted)]">Saldo Awal</div>
+            <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.opening_balance))}</div>
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
           <div className="text-sm text-[color:var(--color-text-muted)]">Total Debit</div>
@@ -242,11 +254,24 @@ export default function LedgerPage() {
           <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.total_credit))}</div>
         </div>
 
-        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
-          <div className="text-sm text-[color:var(--color-text-muted)]">Saldo Akhir</div>
-          <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.ending_balance))}</div>
-        </div>
+        {showBalance ? (
+          <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+            <div className="text-sm text-[color:var(--color-text-muted)]">Saldo Akhir</div>
+            <div className="mt-1 text-lg font-semibold">{toIDR(num(meta?.ending_balance))}</div>
+          </div>
+        ) : null}
       </div>
+
+      {showBalance && meta ? (
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 text-sm">
+          <span className="text-[color:var(--color-text-muted)]">
+            Saldo Awal + Mutasi ({meta.account.normal_balance === 'DEBIT' ? 'Debit - Kredit' : 'Kredit - Debit'}) = Saldo Akhir
+          </span>
+          <span className="ml-2 font-semibold">
+            {toIDR(num(meta.opening_balance))} + {toIDR(netMovement)} = {toIDR(num(meta.ending_balance))}
+          </span>
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[var(--shadow-1)]">
         <div className="overflow-x-auto">
@@ -258,20 +283,20 @@ export default function LedgerPage() {
                 <th className="px-3 py-3 text-left font-semibold">Keterangan</th>
                 <th className="px-3 py-3 text-right font-semibold">Debit</th>
                 <th className="px-3 py-3 text-right font-semibold">Kredit</th>
-                <th className="px-3 py-3 text-right font-semibold">Saldo</th>
+                {showBalance ? <th className="px-3 py-3 text-right font-semibold">Saldo</th> : null}
               </tr>
             </thead>
 
             <tbody>
               {loadingLedger ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                  <td colSpan={showBalance ? 6 : 5} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
                     Memuat buku besar...
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
+                  <td colSpan={showBalance ? 6 : 5} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
                     Belum ada mutasi untuk filter ini.
                   </td>
                 </tr>
@@ -293,7 +318,9 @@ export default function LedgerPage() {
                     </td>
                     <td className="px-3 py-3 text-right">{toIDR(num(row.debit))}</td>
                     <td className="px-3 py-3 text-right">{toIDR(num(row.credit))}</td>
-                    <td className="px-3 py-3 text-right font-semibold">{toIDR(num(row.balance))}</td>
+                    {showBalance ? (
+                      <td className="px-3 py-3 text-right font-semibold">{toIDR(num(row.balance))}</td>
+                    ) : null}
                   </tr>
                 ))
               )}

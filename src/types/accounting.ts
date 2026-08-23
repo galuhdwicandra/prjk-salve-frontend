@@ -33,6 +33,7 @@ export type AccountingAccount = {
   parent_id: string | null;
   code: string;
   name: string;
+  description: string | null;
   type: AccountingAccountType;
   normal_balance: AccountingNormalBalance;
   is_cash_account: boolean;
@@ -82,6 +83,7 @@ export type AccountingAccountQuery = {
   branch_id?: string | null;
   type?: AccountingAccountType | '';
   is_active?: boolean | string;
+  is_cash_account?: boolean | string;
   page?: number;
   per_page?: number;
 };
@@ -89,13 +91,20 @@ export type AccountingAccountQuery = {
 export type AccountingAccountPayload = {
   branch_id?: string | null;
   parent_id?: string | null;
-  code: string;
-  name: string;
-  type: AccountingAccountType;
-  normal_balance: AccountingNormalBalance;
-  is_cash_account: boolean;
-  is_active: boolean;
-  sort_order: number;
+  code?: string;
+  name?: string;
+  description?: string | null;
+  type?: AccountingAccountType;
+  normal_balance?: AccountingNormalBalance;
+  is_cash_account?: boolean;
+  is_active?: boolean;
+  sort_order?: number;
+};
+
+export type AccountingAccountBulkDeleteMeta = {
+  deleted: number;
+  skipped: number;
+  skipped_ids: string[];
 };
 
 export type AccountingAccountMappingQuery = {
@@ -199,12 +208,13 @@ export type AccountingLedgerRow = {
   journal_date: string | null;
   journal_no: string | null;
   source_type: string | null;
+  source_id: string | null;
   source_no: string | null;
   branch?: BranchMini | null;
   description: string | null;
   debit: string | number;
   credit: string | number;
-  balance: string | number;
+  balance?: string | number;
 };
 
 export type AccountingLedgerMeta = PaginationMeta & {
@@ -212,10 +222,10 @@ export type AccountingLedgerMeta = PaginationMeta & {
   branch_id: string | null;
   date_from: string;
   date_to: string;
-  opening_balance: string | number;
+  opening_balance?: string | number;
   total_debit: string | number;
   total_credit: string | number;
-  ending_balance: string | number;
+  ending_balance?: string | number;
 };
 
 export type AccountingProfitLossQuery = {
@@ -260,12 +270,46 @@ export type AccountingProfitLossMeta = {
 };
 
 export type AccountingLedgerQuery = {
-  account_id: string;
+  account_id?: string;
   branch_id?: string | null;
   date_from: string;
   date_to: string;
   page?: number;
   per_page?: number;
+};
+
+export type AccountingLedgerCashKind = 'IN' | 'OUT' | 'TRANSFER';
+
+export type AccountingLedgerGroupRow = {
+  id: string;
+  journal_entry_id: string;
+  journal_date: string | null;
+  journal_no: string | null;
+  source_type: string | null;
+  source_no: string | null;
+  cash_kind: AccountingLedgerCashKind | null;
+  description: string | null;
+  debit: number;
+  credit: number;
+  balance?: number;
+};
+
+export type AccountingLedgerGroup = {
+  account: Pick<AccountingAccount, 'id' | 'code' | 'name' | 'type' | 'normal_balance'>;
+  opening_balance?: number;
+  total_debit: number;
+  total_credit: number;
+  ending_balance?: number;
+  rows: AccountingLedgerGroupRow[];
+};
+
+export type AccountingLedgerGroupedMeta = {
+  grouped: true;
+  branch_id: string | null;
+  date_from: string;
+  date_to: string;
+  total_rows: number;
+  total_accounts: number;
 };
 
 export type AccountingBalanceSheetQuery = {
@@ -315,56 +359,52 @@ export type AccountingCashFlowQuery = {
   date_from: string;
   date_to: string;
   branch_id?: string | null;
-  basis?: 'posted' | 'journal_posted';
 };
 
-export type AccountingCashFlowAccount = {
-  id: string;
-  code: string | null;
-  name: string | null;
-  normal_balance: AccountingNormalBalance;
-};
+export type AccountingCashFlowLinkType = 'order' | 'cash_transaction' | 'journal';
 
-export type AccountingCashFlowBranch = {
+export type AccountingCashFlowLink = {
+  type: AccountingCashFlowLinkType;
   id: string;
-  code?: string | null;
-  name?: string | null;
 };
 
 export type AccountingCashFlowItem = {
   id: string;
-  journal_entry_id: string;
-  journal_date: string | null;
-  journal_no: string | null;
-  source_type: string | null;
-  source_no: string | null;
-  event_key: AccountingEventKey | string | null;
   description: string | null;
-  cash_account: AccountingCashFlowAccount;
-  branch: AccountingCashFlowBranch;
-  cash_in: number;
-  cash_out: number;
-  net_amount: number;
+  no: string | null;
+  date: string | null;
+  account: string | null;
+  amount: number;
+  link: AccountingCashFlowLink | null;
 };
 
-export type AccountingCashFlowActivity = {
+export type AccountingCashFlowGroup = {
+  key: string;
   label: string;
+  amount: number;
   items: AccountingCashFlowItem[];
-  total: number;
+};
+
+export type AccountingCashFlowSectionKey = 'OPERATING' | 'INVESTING' | 'FINANCING';
+
+export type AccountingCashFlowSection = {
+  key: AccountingCashFlowSectionKey;
+  label: string;
+  inflows: AccountingCashFlowGroup[];
+  outflows: AccountingCashFlowGroup[];
+  net: number;
 };
 
 export type AccountingCashFlowSummary = {
   opening_balance: number;
-  total_cash_in: number;
-  total_cash_out: number;
-  net_cash_flow: number;
+  net_change: number;
   ending_balance: number;
+  balance_change: number;
+  is_balanced: boolean;
 };
 
 export type AccountingCashFlowData = {
-  operating_activities: AccountingCashFlowActivity;
-  investing_activities: AccountingCashFlowActivity;
-  financing_activities: AccountingCashFlowActivity;
+  sections: AccountingCashFlowSection[];
   summary: AccountingCashFlowSummary;
 };
 
@@ -373,7 +413,7 @@ export type AccountingCashFlowMeta = {
   date_to: string;
   branch_id: string | null;
   basis: 'POSTED';
-  source: 'accounting_journal_lines';
+  row_count: number;
 };
 
 export type AccountingDashboardQuery = {
@@ -432,11 +472,11 @@ export type AccountingDashboardWarningSeverity = 'info' | 'warning' | 'danger';
 
 export type AccountingDashboardWarningItem = {
   key:
-    | 'MAPPING_INCOMPLETE'
-    | 'UNBALANCED_JOURNALS'
-    | 'DRAFT_JOURNALS'
-    | 'BALANCE_SHEET_NOT_BALANCED'
-    | string;
+  | 'MAPPING_INCOMPLETE'
+  | 'UNBALANCED_JOURNALS'
+  | 'DRAFT_JOURNALS'
+  | 'BALANCE_SHEET_NOT_BALANCED'
+  | string;
   label: string;
   message: string;
   count: number;

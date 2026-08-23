@@ -1,344 +1,185 @@
-// src/pages/pos/POSPage.tsx
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import ProductSearch from '../../components/pos/ProductSearch';
+import { useNavigate } from 'react-router-dom';
+import ProductGallery from '../../components/pos/ProductGallery';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
-import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
-import type { OrderCreatePayload } from '../../types/orders';
-import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
-import { useActivePaymentMethods } from '../../hooks/useActivePaymentMethods';
-import { useCustomerLabels } from '../../hooks/useCustomerLabels';
-import {
-  normalizeApiError,
-  type FieldErrors,
-  type MeUser,
-  type ApiEnvelope,
-} from '../../api/client';
 import CustomerPicker from '../../components/customers/CustomerPicker';
+import Toast from '../../components/Toast';
+import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
 import { createCustomer } from '../../api/customers';
-import type { Customer, SingleResponse as CustomerSingleResponse } from '../../types/customers';
 import { uploadOrderPhotos } from '../../api/orderPhotos';
 import { applyVoucherToOrder } from '../../api/vouchers';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../store/useAuth';
-import { toIDR } from '../../utils/money';
 import { getLoyaltySummary } from '../../api/loyalty';
-import type { LoyaltySummary } from '../../types/loyalty';
-import { getBranch } from '../../api/branches';
-import type { Branch } from '../../types/branches';
-import Toast from '../../components/Toast';
+import { normalizeApiError, type FieldErrors, type ApiEnvelope } from '../../api/client';
+import { useActivePaymentMethods } from '../../hooks/useActivePaymentMethods';
+import { useCustomerLabels } from '../../hooks/useCustomerLabels';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../store/useAuth';
+import { useActiveBranchId } from '../../store/useBranch';
+import {
+  enqueueOrder,
+  getPendingCount,
+  getFailedCount,
+  subscribeQueue,
+} from '../../utils/offline-queue';
+import { toIDR } from '../../utils/money';
+import { fmtDate, todayLocalYMD } from '../../utils/date';
+import type { OrderCreatePayload } from '../../types/orders';
+import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
+import type { Customer, SingleResponse as CustomerSingleResponse } from '../../types/customers';
+import type { LoyaltySummary } from '../../types/loyalty';
 
-function getDefaultBranchId(user: MeUser | null): string {
-  if (user?.branch_id) return String(user.branch_id);
-  return user?.branches[0]?.id ?? '';
-}
+type PayMode = 'PENDING' | 'DP' | 'FULL';
+
+const PAY_MODE_LABEL: Record<PayMode, string> = {
+  PENDING: 'PENDING — bayar nanti',
+  DP: 'DP — bayar sebagian di depan',
+  FULL: 'FULL — dibayar lunas di depan',
+};
+
+const PAY_MODE_SHORT: Record<PayMode, string> = {
+  PENDING: 'PENDING (bayar nanti)',
+  DP: 'DP (sebagian di depan)',
+  FULL: 'FULL (lunas di depan)',
+};
+
+const ERROR_FIELD_ID: Record<string, string> = {
+  customer_id: 'customer_id',
+  received_at: 'order_date_button',
+  dp_amount: 'cash_received',
+  payment: 'payment_mode',
+  items: 'pos_cart',
+  voucher_code: 'voucher_code',
+};
 
 function focusFirstErrorField(errors: FieldErrors) {
   const firstKey = Object.keys(errors)[0];
   if (!firstKey) return;
 
-  const idMap: Record<string, string> = {
-    customer_id: 'customer_id',
-    received_at: 'received_at',
-    ready_at: 'ready_at',
-    dp_amount: 'dp_amount',
-    payment: 'payment_method',
-    order_photo_before: 'order-photo-before-button',
-    items: 'product-search-anchor',
-    voucher_code: 'voucher_code',
-    notes: 'consumer_goods_notes_0',
-  };
-
-  const targetId = idMap[firstKey] ?? firstKey;
-  const el = document.getElementById(targetId);
-
+  const el = document.getElementById(ERROR_FIELD_ID[firstKey] ?? firstKey);
   if (!el) return;
 
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   window.setTimeout(() => {
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+    if (
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLTextAreaElement ||
+      el instanceof HTMLSelectElement
+    ) {
       el.focus();
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-        el.select?.();
-      }
       return;
     }
 
     const focusable = el.querySelector(
-      'input, button, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'input, button, select, textarea, [tabindex]:not([tabindex="-1"])',
     ) as HTMLElement | null;
 
     focusable?.focus();
   }, 150);
 }
 
-const dlog = (...args: unknown[]) => {
-  if (import.meta.env?.DEV) console.log('[POSPage]', ...args);
-};
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
 
-/* ------------------------
-   Small UI helpers
------------------------- */
+function nowLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
 
-function Card({
+function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function parseMoneyInput(value: string): number {
+  const normalized = value.replace(/[^\d]/g, '');
+  if (normalized === '') return 0;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeWa(input: string): string {
+  return (input || '').replace(/[^\d]/g, '');
+}
+
+function PosSection({
+  id,
   title,
-  subtitle,
-  right,
+  openId,
+  onToggle,
   children,
-  className = '',
 }: {
-  title?: React.ReactNode;
-  subtitle?: React.ReactNode;
-  right?: React.ReactNode;
+  id: string;
+  title: string;
+  openId: string;
+  onToggle: (id: string) => void;
   children: React.ReactNode;
-  className?: string;
 }) {
-  return (
-    <section
-      className={[
-        'rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_-35px_rgba(0,0,0,.35)]',
-        className,
-      ].join(' ')}
-    >
-      {(title || subtitle || right) && (
-        <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
-          <div className="min-w-0">
-            {title && <div className="text-sm font-semibold text-slate-900">{title}</div>}
-            {subtitle && <div className="mt-0.5 text-xs text-slate-500">{subtitle}</div>}
-          </div>
-          {right && <div className="shrink-0">{right}</div>}
-        </header>
-      )}
-      <div className="px-4 py-4">{children}</div>
-    </section>
-  );
-}
+  const open = openId === id;
 
-function Badge({
-  children,
-  tone = 'neutral',
-}: {
-  children: React.ReactNode;
-  tone?: 'neutral' | 'good' | 'warn' | 'bad' | 'brand';
-}) {
-  const cls =
-    tone === 'good'
-      ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-      : tone === 'warn'
-        ? 'bg-amber-50 text-amber-700 ring-amber-100'
-        : tone === 'bad'
-          ? 'bg-red-50 text-red-700 ring-red-100'
-          : tone === 'brand'
-            ? 'bg-slate-900 text-white ring-slate-900/10'
-            : 'bg-slate-50 text-slate-700 ring-slate-100';
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium ring-1 ${cls}`}>
-      {children}
-    </span>
-  );
-}
-
-function PrimaryButton({
-  children,
-  disabled,
-  onClick,
-  className = '',
-  type = 'button',
-  id,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick?: () => void;
-  className?: string;
-  type?: 'button' | 'submit';
-  id?: string;
-}) {
-  return (
-    <button
-      id={id}
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        'inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white',
-        'hover:bg-slate-800 active:bg-slate-950',
-        'disabled:cursor-not-allowed disabled:opacity-60',
-        className,
-      ].join(' ')}
-    >
-      {children}
-    </button>
-  );
-}
-
-function OutlineButton({
-  children,
-  disabled,
-  onClick,
-  className = '',
-  type = 'button',
-  id,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick?: () => void;
-  className?: string;
-  type?: 'button' | 'submit';
-  id?: string;
-}) {
-  return (
-    <button
-      id={id}
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        'inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900',
-        'hover:bg-slate-50 active:bg-slate-100',
-        'disabled:cursor-not-allowed disabled:opacity-60',
-        className,
-      ].join(' ')}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Input({
-  className = '',
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={[
-        'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900',
-        'placeholder:text-slate-400',
-        'focus:border-slate-900 focus:outline-none',
-        'disabled:opacity-70',
-        className,
-      ].join(' ')}
-    />
-  );
-}
-
-function Textarea({
-  className = '',
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      {...props}
-      className={[
-        'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900',
-        'placeholder:text-slate-400',
-        'focus:border-slate-900 focus:outline-none',
-        'disabled:opacity-70',
-        className,
-      ].join(' ')}
-    />
+    <div className={open ? 'posec open' : 'posec'} data-sec={id}>
+      <button type="button" className="posec-head" aria-expanded={open} onClick={() => onToggle(id)}>
+        <span>{title}</span>
+        <span className="posec-chev">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </button>
+      <div className="posec-body">{children}</div>
+    </div>
   );
 }
 
 export default function POSPage() {
   const nav = useNavigate();
-  const user = useSyncExternalStore(
-    useAuth.subscribe,
-    () => useAuth.user as MeUser | null,
-    () => useAuth.user as MeUser | null
-  );
+  const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
+  const branchId = useActiveBranchId();
+  const branchCode = (user?.branches ?? []).find((b) => b.id === branchId)?.code ?? '';
+  const canEditPrice = user?.custom_price === true;
 
-  const [branchId, setBranchId] = useState<string>('');
-  useEffect(() => {
-    setBranchId((prev) => prev || getDefaultBranchId(user));
-  }, [user]);
+  const pendingSync = useSyncExternalStore(subscribeQueue, getPendingCount, getPendingCount);
+  const failedSync = useSyncExternalStore(subscribeQueue, getFailedCount, getFailedCount);
 
-  const branchOptions = user?.branches ?? [];
-  const showBranchPicker = branchOptions.length > 1;
+  const [openSec, setOpenSec] = useState('cust');
+  const toggleSec = (id: string) => setOpenSec((current) => (current === id ? '' : id));
 
-  useEffect(() => {
-    if (import.meta.env?.DEV) console.log('[POSPage] user:', user, 'branchId:', branchId);
-  }, [user, branchId]);
-
-  const [branchCode, setBranchCode] = useState<string | null>(null);
-  const branchCodeFromUser = branchOptions.find((b) => b.id === branchId)?.code ?? null;
-
-  // cart & form states
   const [items, setItems] = useState<CartItem[]>([]);
-  useEffect(() => {
-    setItems([]);
-  }, [branchId]);
+  const [customerId, setCustomerId] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [orderDate, setOrderDate] = useState<string>(todayLocalYMD);
+  const [note, setNote] = useState('');
+  const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
 
-  const [customerId, setCustomerId] = useState<string>('');
-  const [discount, setDiscount] = useState<string>('');
-  const [noteRows, setNoteRows] = useState<string[]>(['']);
+  const [mode, setMode] = useState<PayMode>('FULL');
+  const [method, setMethod] = useState<PaymentMethod>('CASH');
+  const [cashReceived, setCashReceived] = useState('');
+
+  const [useDiscount, setUseDiscount] = useState(false);
+  const [discount, setDiscount] = useState('');
+  const [useVoucher, setUseVoucher] = useState(false);
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
+
+  const [dateOpen, setDateOpen] = useState(false);
+  const [dateDraft, setDateDraft] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const submitLockRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const submitLockRef = useRef(false);
+  const clientRefRef = useRef<string>(crypto.randomUUID());
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const { toast, showSuccess, showError, hideToast } = useToast();
 
-  const canPay = true;
-
-  // photos
-  const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
-  const [afterFiles] = useState<File[]>([]);
-  const beforeRef = useRef<HTMLInputElement>(null);
-
-  // device / UI
-  const isMobile = useMemo(() => /android|iphone|ipad|ipod/i.test(navigator.userAgent), []);
-  const [mobileCartOpen, setMobileCartOpen] = useState(false);
-
-  // payment
-  type PayMode = 'PENDING' | 'DP' | 'FULL';
-  const [mode, setMode] = useState<PayMode>('PENDING');
-  const [method, setMethod] = useState<PaymentMethod>('CASH');
   const paymentMethods = useActivePaymentMethods();
   const { labels: customerLabels, chipClass: customerTagClass } = useCustomerLabels();
 
-  useEffect(() => {
-    if (paymentMethods.length === 0) return;
-    if (paymentMethods.some((pm) => pm.code === method)) return;
-    setMethod(paymentMethods[0].code);
-  }, [paymentMethods, method]);
-
-  const [dpAmount, setDpAmount] = useState<string>('');
-  const [modePickerOpen, setModePickerOpen] = useState(false);
-
-  // voucher
-  const [voucherCode, setVoucherCode] = useState<string>('');
-  const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
-
-  // branch name (display)
-  useEffect(() => {
-    if (!branchId) {
-      setBranchCode(null);
-      return;
-    }
-
-    // isi dulu dari payload user jika ada (lebih cepat & tidak tergantung permission getBranch)
-    setBranchCode(branchCodeFromUser);
-
-    let alive = true;
-    (async () => {
-      try {
-        const res = await getBranch(branchId);
-        const branch: Branch | null = res.data ?? null;
-        const code = branch?.code ?? null;
-        if (alive) setBranchCode(code ?? branchCodeFromUser ?? null);
-      } catch {
-        if (alive) setBranchCode(branchCodeFromUser ?? null);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [branchId, branchCodeFromUser]);
-
-  // quick add customer (POS)
   const [openCustomerCreate, setOpenCustomerCreate] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerWa, setNewCustomerWa] = useState('');
@@ -347,247 +188,214 @@ export default function POSPage() {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [customerError, setCustomerError] = useState<string | null>(null);
 
-  // Loyalty (preview stamp)
-  const [loyRefreshKey, setLoyRefreshKey] = useState(0);
   const [loy, setLoy] = useState<LoyaltySummary | null>(null);
+
+  useEffect(() => {
+    setItems([]);
+  }, [branchId]);
+
+  useEffect(() => {
+    if (paymentMethods.length === 0) return;
+    if (paymentMethods.some((pm) => pm.code === method)) return;
+    setMethod(paymentMethods[0].code);
+  }, [paymentMethods, method]);
+
   useEffect(() => {
     if (!customerId) {
       setLoy(null);
       return;
     }
 
+    let alive = true;
+
     getLoyaltySummary(customerId, branchId)
       .then((res: ApiEnvelope<LoyaltySummary, null>) => {
-        setLoy(res.data);
+        if (alive) setLoy(res.data);
       })
-      .catch(() => setLoy(null));
-  }, [customerId, branchId, loyRefreshKey]);
+      .catch(() => {
+        if (alive) setLoy(null);
+      });
 
-  // Tanggal masuk & selesai
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const nowLocal = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
-  };
-  const [receivedAt, setReceivedAt] = useState<string>(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  });
-  const [readyAt, setReadyAt] = useState<string>('');
+    return () => {
+      alive = false;
+    };
+  }, [customerId, branchId]);
 
-  function toDateInputValue(v?: string | null): string {
-    if (!v) return '';
-    return String(v).slice(0, 10);
-  }
-
-  function fromDateInputValue(v: string): string {
-    return v.trim();
-  }
-
-  const normalizeWa = (input: string) => (input || '').replace(/[^\d]/g, '');
-
-  function parseMoneyInput(value: string): number {
-    const normalized = value.replace(/[^\d]/g, '');
-    if (normalized === '') return 0;
-
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  // totals
   const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
+  const discountValue = useMemo(() => (useDiscount ? parseMoneyInput(discount) : 0), [useDiscount, discount]);
+  const receivedValue = useMemo(() => parseMoneyInput(cashReceived), [cashReceived]);
 
-  const discountValue = useMemo(() => parseMoneyInput(discount), [discount]);
-  const dpAmountValue = useMemo(() => parseMoneyInput(dpAmount), [dpAmount]);
+  const loyaltyDiscount = useMemo(() => {
+    if (!loy || subtotal <= 0) return 0;
+    if (loy.next === 5) return subtotal * 0.25;
+    if (loy.next === 10) return subtotal;
+    return 0;
+  }, [loy, subtotal]);
 
-  const total = useMemo(() => Math.max(0, subtotal - discountValue), [subtotal, discountValue]);
+  const total = useMemo(
+    () => Math.max(0, subtotal - discountValue - loyaltyDiscount),
+    [subtotal, discountValue, loyaltyDiscount],
+  );
 
   const payableNow = useMemo(() => {
     if (mode === 'PENDING') return 0;
-    if (mode === 'DP') return Math.max(0, Math.min(dpAmountValue, total));
+    if (mode === 'DP') return Math.max(0, Math.min(receivedValue, total));
     return total;
-  }, [mode, dpAmountValue, total]);
+  }, [mode, receivedValue, total]);
 
-  const grand = useMemo(() => Math.max(0, subtotal - discountValue), [subtotal, discountValue]);
-
-  const loyaltyPreview = useMemo(() => {
-    if (!loy || subtotal <= 0) return { reward: 'NONE' as 'NONE' | 'DISC25' | 'FREE100', discount: 0, next: 1, stamps: 0 };
-    const next = loy.next;
-    let disc = 0;
-    if (next === 5) disc = subtotal * 0.25;
-    if (next === 10) disc = subtotal;
-    return { reward: next === 5 ? 'DISC25' : next === 10 ? 'FREE100' : 'NONE', discount: disc, next, stamps: loy.stamps };
-  }, [loy, subtotal]);
-
-  const predictedGrand = useMemo(
-    () => Math.max(0, subtotal - discountValue - (loyaltyPreview.discount || 0)),
-    [subtotal, discountValue, loyaltyPreview.discount]
+  const change = useMemo(
+    () => (mode === 'FULL' ? Math.max(0, receivedValue - total) : 0),
+    [mode, receivedValue, total],
   );
 
-  const canSubmit = useMemo(() => items.length > 0 && !!customerId && !loading, [items.length, customerId, loading]);
+  const dueNow = useMemo(() => Math.max(0, total - payableNow), [total, payableNow]);
 
-  const parseForCompare = (s?: string | null) => {
-    if (!s) return NaN;
-    return Date.parse(`${s}T00:00:00`);
-  };
+  const maxSla = useMemo(() => items.reduce((max, it) => Math.max(max, it.sla_days ?? 0), 0), [items]);
+  const readyAt = useMemo(() => addDays(orderDate, maxSla), [orderDate, maxSla]);
 
-  const dateErr = useMemo(() => {
-    if (!receivedAt || !readyAt) return null;
-    return parseForCompare(readyAt) >= parseForCompare(receivedAt)
-      ? null
-      : 'Tanggal selesai harus ≥ tanggal masuk.';
-  }, [receivedAt, readyAt]);
+  const canSubmit = items.length > 0 && !!customerId && !loading;
 
-  // logs
-  useEffect(() => {
-    dlog('mount');
-    return () => dlog('unmount');
-  }, []);
-  useEffect(() => { dlog('items changed', items); }, [items]);
-  useEffect(() => { dlog('discount changed', discount); }, [discount]);
-  useEffect(() => { dlog('noteRows changed', noteRows); }, [noteRows]);
-  useEffect(() => { dlog('totals', { subtotal, grand }); }, [subtotal, grand]);
-
-  // cart ops
-  function addItem(svc: { id: string; name: string; unit: string; price_effective: number }) {
-    dlog('addItem clicked', svc);
+  function addItem(svc: { id: string; name: string; unit: string; price_effective: number; sla_days: number }) {
     setItems((prev) => {
       const found = prev.find((p) => p.service_id === svc.id);
+
       if (found) {
-        const next = prev.map((p) => (p.service_id === svc.id ? { ...p, qty: p.qty + 1 } : p));
-        dlog('increment qty', { service_id: svc.id, nextQty: found.qty + 1 });
-        return next;
+        return prev.map((p) => (p.service_id === svc.id ? { ...p, qty: p.qty + 1 } : p));
       }
-      const next = [...prev, { service_id: svc.id, name: svc.name, unit: svc.unit, price: svc.price_effective, qty: 1 }];
-      dlog('push new cart item', next[next.length - 1]);
-      return next;
+
+      return [
+        ...prev,
+        {
+          service_id: svc.id,
+          name: svc.name,
+          unit: svc.unit,
+          price: svc.price_effective,
+          qty: 1,
+          sla_days: svc.sla_days,
+        },
+      ];
     });
   }
-  const onChangeQty = (id: string, qty: number) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, qty } : p)));
-  const onChangeNote = (id: string, note: string) => setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, note } : p)));
+
+  const onChangeQty = (id: string, qty: number) =>
+    setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, qty } : p)));
+
+  const onChangePrice = (id: string, price: number) =>
+    setItems((prev) => prev.map((p) => (p.service_id === id ? { ...p, price } : p)));
+
   const onRemove = (id: string) => setItems((prev) => prev.filter((p) => p.service_id !== id));
 
-  const onChangeNoteRow = (index: number, value: string) => {
-    setNoteRows((prev) => prev.map((row, i) => (i === index ? value : row)));
-  };
+  function resetForm() {
+    setItems([]);
+    setCustomerId('');
+    setCustomerName('');
+    setNote('');
+    setBeforeFiles([]);
+    setUseDiscount(false);
+    setDiscount('');
+    setUseVoucher(false);
+    setVoucherCode('');
+    setVoucherMsg(null);
+    setCashReceived('');
+    setOrderDate(todayLocalYMD());
+    clientRefRef.current = crypto.randomUUID();
+  }
 
-  const onAddNoteRow = () => {
-    setNoteRows((prev) => [...prev, '']);
-  };
+  function acceptPhotos(list: File[]) {
+    const good = list.filter((f) => f.type.startsWith('image/') && f.size <= 4 * 1024 * 1024);
+    const rejected = list.length - good.length;
 
-  const onRemoveNoteRow = (index: number) => {
-    setNoteRows((prev) => {
-      if (prev.length === 1) return [''];
-      return prev.filter((_, i) => i !== index);
-    });
-  };
-
-  function buildConsumerGoodsNotes(rows: string[]): string | null {
-    const cleaned = rows
-      .map((row) => row.trim())
-      .filter((row) => row.length > 0);
-
-    if (cleaned.length === 0) return null;
-
-    return cleaned.map((row, index) => `${index + 1}. ${row}`).join('\n');
+    if (good.length > 0) setBeforeFiles((prev) => [...prev, ...good]);
+    if (rejected > 0) showError(`${rejected} file ditolak (bukan gambar atau lebih dari 4 MB).`);
   }
 
   function validatePosForm(): FieldErrors {
     const errors: FieldErrors = {};
 
-    if (items.length === 0) {
-      errors.items = ['Keranjang kosong. Tambahkan minimal satu layanan.'];
+    if (items.length === 0) errors.items = ['Keranjang kosong. Tambahkan minimal satu produk.'];
+    if (!branchId) errors.branch_id = ['Akun Anda belum terikat ke outlet.'];
+    if (!customerId) errors.customer_id = ['Pelanggan wajib dipilih.'];
+    if (!orderDate) errors.received_at = ['Tanggal order wajib diisi.'];
+
+    if (mode === 'DP' && payableNow <= 0) {
+      errors.dp_amount = ['Uang diterima wajib diisi dan lebih dari 0.'];
     }
 
-    if (!branchId) {
-      errors.branch_id = ['Akun Anda belum terikat ke cabang.'];
-    }
-
-    if (!customerId) {
-      errors.customer_id = ['Pelanggan wajib dipilih.'];
-    }
-
-    if (!receivedAt) {
-      errors.received_at = ['Tanggal masuk wajib diisi.'];
-    }
-
-    if (!readyAt) {
-      errors.ready_at = ['Tanggal selesai wajib diisi.'];
-    }
-
-    if (beforeFiles.length === 0) {
-      errors.order_photo_before = ['Foto before wajib diisi.'];
-    }
-
-    const consumerGoodsNotes = buildConsumerGoodsNotes(noteRows);
-
-    if (!consumerGoodsNotes) {
-      errors.notes = ['Catatan barang konsumen wajib diisi minimal 1 item.'];
-    }
-
-    if (receivedAt && readyAt && dateErr) {
-      errors.ready_at = [dateErr];
-    }
-
-    if (mode === 'DP') {
-      if (dpAmount.trim() === '') {
-        errors.dp_amount = ['Nominal DP wajib diisi.'];
-      } else if (payableNow <= 0 || payableNow > total) {
-        errors.dp_amount = ['Nominal DP tidak valid.'];
-      }
-    }
-
-    if (mode === 'FULL' && payableNow <= 0) {
-      errors.payment = ['Nominal pembayaran harus lebih dari 0 untuk mode FULL.'];
+    if (mode === 'FULL' && total <= 0) {
+      errors.payment = ['Total harus lebih dari 0 untuk pembayaran lunas.'];
     }
 
     return errors;
   }
 
-  // submit (LOGIC UNCHANGED)
+  function buildPayload(): OrderCreatePayload {
+    return {
+      branch_id: branchId || undefined,
+      customer_id: customerId,
+      items: items.map((it) => ({
+        service_id: it.service_id,
+        qty: it.qty,
+        note: null,
+        ...(canEditPrice ? { price: it.price } : {}),
+      })),
+      discount_type: 'NOMINAL',
+      discount_value: discountValue,
+      notes: note.trim() ? note.trim() : null,
+      received_at: orderDate,
+      ready_at: readyAt,
+      client_ref: clientRefRef.current,
+    };
+  }
+
+  async function saveOffline(payload: OrderCreatePayload, payment: PaymentCreatePayload | null) {
+    await enqueueOrder({
+      payload,
+      payment,
+      voucherCode: useVoucher && voucherCode.trim() ? voucherCode.trim().toUpperCase() : null,
+      beforeFiles,
+    });
+
+    resetForm();
+    showSuccess('Jaringan offline. Order masuk antrean dan terkirim otomatis saat online.');
+  }
+
   async function onSubmit() {
-    if (submitLockRef.current || loading) {
-      dlog('onSubmit blocked: already submitting');
-      return;
-    }
+    if (submitLockRef.current || loading) return;
 
     submitLockRef.current = true;
-
-    dlog('onSubmit start');
-
     setLoading(true);
     setFieldErrors({});
     setError(null);
 
     const clientErrors = validatePosForm();
+
     if (Object.keys(clientErrors).length > 0) {
       setFieldErrors(clientErrors);
-      setError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
-      showError('Masih ada data POS yang belum benar. Silakan periksa kembali.');
+      setError('Masih ada data order yang belum benar. Silakan periksa kembali.');
+      showError('Masih ada data order yang belum benar. Silakan periksa kembali.');
       focusFirstErrorField(clientErrors);
       submitLockRef.current = false;
       setLoading(false);
       return;
     }
+
+    const payload = buildPayload();
+
+    const offlinePayment: PaymentCreatePayload | null =
+      mode !== 'PENDING'
+        ? { method: mode === 'DP' ? 'DP' : method, amount: payableNow, paid_at: nowLocal() }
+        : null;
+
     try {
-      const payload: OrderCreatePayload = {
-        branch_id: branchId || undefined,
-        customer_id: customerId,
-        items: items.map((it) => ({
-          service_id: it.service_id,
-          qty: it.qty,
-          note: it.note ?? null,
-        })),
-        discount: discountValue,
-        notes: buildConsumerGoodsNotes(noteRows),
-        received_at: receivedAt,
-        ready_at: readyAt,
-      };
-      dlog('createOrder payload', payload);
+      if (!navigator.onLine) {
+        await saveOffline(payload, offlinePayment);
+        return;
+      }
+
       const res = await createOrder(payload);
       let order = res.data!;
 
-      if (voucherCode.trim()) {
+      if (useVoucher && voucherCode.trim()) {
         try {
           setVoucherMsg(null);
           await applyVoucherToOrder(String(order.id), { code: voucherCode.trim().toUpperCase() });
@@ -596,929 +404,654 @@ export default function POSPage() {
           setVoucherMsg('Voucher berhasil diterapkan.');
         } catch (ex: unknown) {
           const e = normalizeApiError(ex);
-          const voucherErrors = e.errors ?? {};
-
           setVoucherMsg(e.message || 'Gagal menerapkan voucher');
-
-          if (Object.keys(voucherErrors).length > 0) {
-            setFieldErrors((prev) => ({ ...prev, ...voucherErrors }));
-          } else {
-            setFieldErrors((prev) => ({
-              ...prev,
-              voucher_code: [e.message || 'Gagal menerapkan voucher'],
-            }));
-          }
+          setFieldErrors((prev) => ({
+            ...prev,
+            ...(e.errors ?? { voucher_code: [e.message || 'Gagal menerapkan voucher'] }),
+          }));
         }
       }
 
-      const adjustedPayNow = Math.min(payableNow, Number(order?.grand_total ?? payableNow));
-      if (canPay && mode !== 'PENDING') {
-        const payPayload: PaymentCreatePayload =
-          mode === 'DP'
-            ? { method: 'DP', amount: adjustedPayNow, paid_at: nowLocal() }
-            : { method, amount: adjustedPayNow, paid_at: nowLocal() };
+      if (mode !== 'PENDING') {
+        const amount = Math.min(payableNow, Number(order?.grand_total ?? payableNow));
 
-        dlog('createOrderPayment payload', payPayload);
+        const payPayload: PaymentCreatePayload = {
+          method: mode === 'DP' ? 'DP' : method,
+          amount,
+          paid_at: nowLocal(),
+        };
+
         const payRes = await createOrderPayment(order.id, payPayload);
         order = payRes.order;
       }
 
-      try {
-        if (beforeFiles.length || afterFiles.length) {
-          dlog('uploadOrderPhotos start', { before: beforeFiles.length, after: afterFiles.length });
-          await uploadOrderPhotos(order.id, beforeFiles, afterFiles);
-          dlog('uploadOrderPhotos done');
+      if (beforeFiles.length > 0) {
+        try {
+          await uploadOrderPhotos(order.id, beforeFiles, []);
+        } catch (e) {
+          const photoErr = normalizeApiError(e);
+          showError(
+            `Order ${order.number ?? ''} tersimpan, tetapi foto gagal diunggah: ${photoErr.message}. Ulangi upload dari Receipt List.`,
+          );
         }
-      } catch (e) {
-        console.warn('[POSPage] upload photos failed', e);
       }
 
-      setLoyRefreshKey((v) => v + 1);
-      showSuccess('Transaksi berhasil disimpan.');
+      clientRefRef.current = crypto.randomUUID();
+      showSuccess('Order berhasil disimpan.');
+
       window.setTimeout(() => {
         nav(`/orders/${order.id}/receipt`, { replace: true });
       }, 400);
     } catch (err: unknown) {
-      dlog('createOrder error', err);
-
       const e = normalizeApiError(err);
+
+      if (e.isNetworkError) {
+        await saveOffline(payload, offlinePayment);
+        return;
+      }
+
       const serverErrors = e.errors ?? {};
 
       setFieldErrors(serverErrors);
-      setError(e.message || 'Gagal menyimpan transaksi');
-      showError(e.message || 'Gagal menyimpan transaksi');
+      setError(e.message || 'Gagal menyimpan order');
+      showError(e.message || 'Gagal menyimpan order');
 
-      if (Object.keys(serverErrors).length > 0) {
-        focusFirstErrorField(serverErrors);
-      }
+      if (Object.keys(serverErrors).length > 0) focusFirstErrorField(serverErrors);
     } finally {
       submitLockRef.current = false;
       setLoading(false);
     }
   }
 
-  const itemsCount = useMemo(() => items.reduce((n, it) => n + it.qty, 0), [items]);
+  function closeCustomerModal() {
+    setOpenCustomerCreate(false);
+    setCustomerError(null);
+    setNewCustomerName('');
+    setNewCustomerWa('');
+    setNewCustomerAddress('');
+    setNewCustomerTags([]);
+  }
+
+  async function saveCustomer() {
+    if (!newCustomerName.trim() || !newCustomerWa.trim()) {
+      setCustomerError('Nama dan Nomor WA wajib diisi.');
+      return;
+    }
+
+    if (!branchId) {
+      setCustomerError('Akun Anda belum terikat ke outlet. Hubungi admin pusat.');
+      return;
+    }
+
+    try {
+      setSavingCustomer(true);
+      setCustomerError(null);
+
+      const res: CustomerSingleResponse<Customer> = await createCustomer({
+        branch_id: branchId,
+        name: newCustomerName.trim(),
+        whatsapp: normalizeWa(newCustomerWa),
+        address: newCustomerAddress.trim() ? newCustomerAddress.trim() : null,
+        notes: null,
+        tags: newCustomerTags,
+      });
+
+      const created = res.data;
+
+      if (!created?.id) {
+        setCustomerError('Gagal: server tidak mengembalikan data pelanggan.');
+        return;
+      }
+
+      setCustomerId(String(created.id));
+      setCustomerName(created.name);
+      closeCustomerModal();
+    } catch (err: unknown) {
+      const e = normalizeApiError(err);
+      setCustomerError(e.message || 'Gagal menambahkan pelanggan.');
+    } finally {
+      setSavingCustomer(false);
+    }
+  }
 
   return (
     <>
-      <Toast
-        show={toast.open}
-        kind={toast.kind}
-        message={toast.message}
-        onClose={hideToast}
-      />
-      <div className="min-h-dvh bg-slate-100 text-slate-900">
-        <div className="mx-auto max-w-[1280px] px-3 py-4 sm:px-6 sm:py-6">
-          {/* Header */}
-          <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-lg font-semibold">Point of Sale</h1>
-                {showBranchPicker ? (
-                  <select
-                    id="active_branch"
-                    value={branchId}
-                    onChange={(e) => setBranchId(e.target.value)}
-                    className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-900"
-                  >
-                    {branchOptions.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        Cabang: {b.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Badge tone={branchId ? 'brand' : 'warn'}>
-                    {branchId
-                      ? `Cabang: ${branchCode ?? branchCodeFromUser ?? `#${branchId}`}`
-                      : 'Cabang belum terikat'}
-                  </Badge>
-                )}
-              </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Alur cepat: pilih customer → cari layanan → set pembayaran → simpan & cetak.
-              </div>
-              {fieldErrors.branch_id?.[0] && (
-                <div className="mt-1 text-xs text-red-600">
-                  {fieldErrors.branch_id[0]}
-                </div>
-              )}
-            </div>
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
-            <div className="flex flex-wrap items-center gap-2">
-              <OutlineButton
-                onClick={() => {
-                  dlog('cancel/back clicked');
-                  history.back();
-                }}
-              >
-                Kembali
-              </OutlineButton>
-            </div>
+      {pendingSync > 0 || failedSync > 0 ? (
+        <div className="toolbar" style={{ marginBottom: 12 }}>
+          {pendingSync > 0 ? <span className="chip c-dp">{pendingSync} order menunggu sinkron</span> : null}
+          {failedSync > 0 ? <span className="chip c-belum">{failedSync} order gagal sinkron</span> : null}
+        </div>
+      ) : null}
+
+      {fieldErrors.branch_id?.[0] ? <div className="login-err">{fieldErrors.branch_id[0]}</div> : null}
+
+      <div className="pos-wrap">
+        <div className="pos-main">
+          <ProductGallery onPick={addItem} branchId={branchId} />
+        </div>
+
+        <aside className="pos-order">
+          <div className="po-head">
+            <span>Order Saat Ini</span>
           </div>
 
-          {/* Main grid */}
-          <div className="grid gap-4 lg:grid-cols-[1fr_440px]">
-            {/* LEFT */}
-            <section className="space-y-4">
-              {/* 1) DETAIL ORDER (dipindah ke atas) */}
-              <Card
-                title="Detail Order"
-                subtitle="Customer wajib dipilih. Voucher diterapkan saat simpan."
-                right={
-                  <PrimaryButton
-                    onClick={() => {
+          <div className="po-body">
+            <PosSection id="cust" title="Data Pelanggan" openId={openSec} onToggle={toggleSec}>
+              <div className="field">
+                <label htmlFor="customer_id">Pelanggan</label>
+                <div id="customer_id">
+                  <CustomerPicker
+                    value={customerId}
+                    onChange={setCustomerId}
+                    onPicked={setCustomerName}
+                    onCreateNew={(name) => {
+                      setNewCustomerName(name);
                       setCustomerError(null);
                       setOpenCustomerCreate(true);
                     }}
-                  >
-                    + Customer
-                  </PrimaryButton>
-                }
-              >
-                <div className="space-y-4">
-                  {/* Customer */}
-                  <div className="grid gap-1">
-                    <label className="text-xs font-medium text-slate-700">
-                      Pelanggan <span className="text-red-600">*</span>
-                    </label>
-                    <div id="customer_id">
-                      <CustomerPicker
-                        value={customerId}
-                        onChange={setCustomerId}
-                        placeholder="Ketik nama/WA/alamat pelanggan…"
-                        requiredText="Pelanggan wajib dipilih dari data terdaftar."
-                      />
-                    </div>
-                    {fieldErrors.customer_id?.[0] && (
-                      <div className="text-xs text-red-600 mt-1">
-                        {fieldErrors.customer_id[0]}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Dates */}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">
-                        Tanggal Masuk <span className="text-red-600">*</span>
-                      </label>
-                      <Input
-                        id="received_at"
-                        type="date"
-                        value={toDateInputValue(receivedAt)}
-                        onChange={(e) => setReceivedAt(fromDateInputValue(e.target.value))}
-                        required
-                      />
-                      {fieldErrors.received_at?.[0] && (
-                        <div className="text-[11px] text-red-600">{fieldErrors.received_at[0]}</div>
-                      )}
-                    </div>
-
-                    <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">
-                        Tanggal Selesai <span className="text-red-600">*</span>
-                      </label>
-                      <Input
-                        id="ready_at"
-                        type="date"
-                        value={toDateInputValue(readyAt)}
-                        onChange={(e) => setReadyAt(fromDateInputValue(e.target.value))}
-                        required
-                      />
-                      {dateErr && <div className="text-[11px] text-red-600">{dateErr}</div>}
-                      {fieldErrors.ready_at?.[0] && !dateErr && (
-                        <div className="text-[11px] text-red-600">{fieldErrors.ready_at[0]}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Voucher */}
-                  <div className="grid gap-1">
-                    <label className="text-xs font-medium text-slate-700">Kode Voucher</label>
-                    <Input
-                      id="voucher_code"
-                      placeholder="MASUKKAN-KODE"
-                      value={voucherCode}
-                      onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                    />
-                    <div className="text-[11px] text-slate-500">Voucher diproses saat “Simpan & Cetak”.</div>
-                    {fieldErrors.voucher_code?.[0] && (
-                      <div className="text-xs text-red-600 mt-1">
-                        {fieldErrors.voucher_code[0]}
-                      </div>
-                    )}
-                    {voucherMsg && (
-                      <div className="text-xs text-slate-700">
-                        <Badge tone={voucherMsg.toLowerCase().includes('berhasil') ? 'good' : 'warn'}>{voucherMsg}</Badge>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Discount */}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="grid gap-1">
-                      <label className="text-xs font-medium text-slate-700">Diskon (Rp)</label>
-                      <Input
-                        id="discount"
-                        type="text"
-                        inputMode="numeric"
-                        value={discount}
-                        onChange={(e) => setDiscount(e.target.value.replace(/[^\d.]/g, ''))}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="text-xs font-medium text-slate-700">
-                        Catatan Barang Konsumen
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={onAddNoteRow}
-                        className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        + Tambah Catatan
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {noteRows.map((row, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
-                            {index + 1}
-                          </div>
-
-                          <Input
-                            id={`consumer_goods_notes_${index}`}
-                            value={row}
-                            onChange={(e) => onChangeNoteRow(index, e.target.value)}
-                            placeholder={`Isi catatan barang #${index + 1}`}
-                            className="flex-1"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => onRemoveNoteRow(index)}
-                            className="inline-flex h-10 shrink-0 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100"
-                            disabled={noteRows.length === 1 && !noteRows[0].trim()}
-                            title="Hapus catatan"
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="text-[11px] text-slate-500">
-                      Setiap catatan akan otomatis diberi nomor saat transaksi disimpan.
-                    </div>
-
-                    {fieldErrors.notes?.[0] && (
-                      <div className="text-xs text-red-600">
-                        {fieldErrors.notes[0]}
-                      </div>
-                    )}
-                  </div>
+                    branchId={branchId}
+                    placeholder="Cari nama/WA/alamat pelanggan…"
+                  />
                 </div>
-              </Card>
-
-              {/* 2) CARI LAYANAN (dipindah ke tengah) + icon keranjang di kanan */}
-              <Card
-                title={
-                  <div className="flex items-center gap-2">
-                    <span>Cari Layanan</span>
-                    <Badge tone="neutral">{itemsCount} item</Badge>
+                {fieldErrors.customer_id?.[0] ? (
+                  <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                    {fieldErrors.customer_id[0]}
                   </div>
-                }
-                subtitle="Gunakan pencarian untuk menambah item ke keranjang."
-                right={
-                  <button
-                    type="button"
-                    onClick={() => setMobileCartOpen(true)}
-                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100"
-                    aria-label="Buka keranjang"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path d="M6 6H21L20 13H7L6 6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                      <path d="M6 6L5 3H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M7 13L6.5 16H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M9 20a1 1 0 100-2 1 1 0 000 2Z" fill="currentColor" />
-                      <path d="M18 20a1 1 0 100-2 1 1 0 000 2Z" fill="currentColor" />
-                    </svg>
-
-                    {itemsCount > 0 && (
-                      <span className="absolute -right-1 -top-1 inline-flex min-w-[20px] items-center justify-center rounded-full bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
-                        {itemsCount}
-                      </span>
-                    )}
-                  </button>
-                }
-              >
-                <ProductSearch onPick={addItem} branchId={branchId} />
-                {fieldErrors.items?.[0] && (
-                  <div className="mt-2 text-xs text-red-600">
-                    {fieldErrors.items[0]}
-                  </div>
-                )}
-              </Card>
-
-              {/* 3) FOTO PESANAN (dipindah ke bawah Cari Layanan) */}
-              <Card
-                title="Foto Pesanan"
-                subtitle="Wajib. Upload minimal 1 foto before sebelum transaksi disimpan."
-              >
-                <div id="order-photo-before-anchor" tabIndex={-1} className="outline-none">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <UploadBox
-                      title="Before"
-                      isMobile={isMobile}
-                      inputRef={beforeRef}
-                      files={beforeFiles}
-                      onFiles={(f) => setBeforeFiles((prev) => [...prev, ...f])}
-                    />
-                    {/* kalau nanti ingin After diaktifkan lagi, letakkan di sini */}
-                  </div>
-
-                  {fieldErrors.order_photo_before?.[0] && (
-                    <div className="mt-2 text-xs text-red-600">
-                      {fieldErrors.order_photo_before[0]}
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Customer modal */}
-              {openCustomerCreate && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3"
-                  role="dialog"
-                  aria-modal="true"
-                  onClick={() => {
-                    if (!savingCustomer) {
-                      setOpenCustomerCreate(false);
-                      setCustomerError(null);
-                      setNewCustomerName('');
-                      setNewCustomerWa('');
-                      setNewCustomerAddress('');
-                      setNewCustomerTags([]);
-                    }
-                  }}
-                >
-                  <div
-                    className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-[0_28px_70px_-40px_rgba(0,0,0,.5)]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
-                      <div>
-                        <div className="text-base font-semibold">Tambah Customer</div>
-                        <div className="text-xs text-slate-500">Tanpa keluar dari POS</div>
-                      </div>
-                      <OutlineButton
-                        disabled={savingCustomer}
-                        onClick={() => {
-                          setOpenCustomerCreate(false);
-                          setCustomerError(null);
-                          setNewCustomerName('');
-                          setNewCustomerWa('');
-                          setNewCustomerAddress('');
-                          setNewCustomerTags([]);
-                        }}
-                        className="px-3 py-2"
-                      >
-                        Tutup
-                      </OutlineButton>
-                    </div>
-
-                    <div className="px-4 py-4">
-                      {customerError && (
-                        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                          {customerError}
-                        </div>
-                      )}
-
-                      <div className="space-y-3">
-                        <div className="grid gap-1">
-                          <label className="text-xs font-medium text-slate-700">
-                            Nama <span className="text-red-600">*</span>
-                          </label>
-                          <Input
-                            value={newCustomerName}
-                            onChange={(e) => setNewCustomerName(e.target.value)}
-                            placeholder="Nama pelanggan"
-                            disabled={savingCustomer}
-                          />
-                        </div>
-
-                        <div className="grid gap-1">
-                          <label className="text-xs font-medium text-slate-700">
-                            WhatsApp <span className="text-red-600">*</span>
-                          </label>
-                          <Input
-                            value={newCustomerWa}
-                            onChange={(e) => setNewCustomerWa(e.target.value)}
-                            placeholder="08123456789"
-                            inputMode="numeric"
-                            disabled={savingCustomer}
-                          />
-                        </div>
-
-                        <div className="grid gap-1">
-                          <label className="text-xs font-medium text-slate-700">Alamat (opsional)</label>
-                          <Textarea
-                            className="min-h-[84px]"
-                            value={newCustomerAddress}
-                            onChange={(e) => setNewCustomerAddress(e.target.value)}
-                            placeholder="Alamat pelanggan"
-                            disabled={savingCustomer}
-                          />
-                        </div>
-                        <div className="grid gap-1">
-                          <label className="text-xs font-medium text-slate-700">Tags / Label</label>
-
-                          <select
-                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                            value=""
-                            disabled={savingCustomer}
-                            onChange={(e) => {
-                              const selected = e.target.value;
-                              if (!selected) return;
-
-                              setNewCustomerTags((prev) => {
-                                if (prev.includes(selected)) return prev;
-                                return [...prev, selected].slice(0, 10);
-                              });
-
-                              e.currentTarget.value = "";
-                            }}
-                          >
-                            <option value="">Pilih tag customer</option>
-                            {customerLabels.map((label) => (
-                              <option
-                                key={label.id}
-                                value={label.name}
-                                disabled={newCustomerTags.includes(label.name)}
-                              >
-                                {label.name}
-                              </option>
-                            ))}
-                          </select>
-
-                          <span className="text-[11px] text-slate-500">
-                            Pilih dari daftar agar label customer konsisten.
-                          </span>
-
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {newCustomerTags.length > 0 ? (
-                              newCustomerTags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium ${customerTagClass(tag)}`}
-                                >
-                                  {tag}
-                                  <button
-                                    type="button"
-                                    className="text-current/80 hover:text-current"
-                                    onClick={() =>
-                                      setNewCustomerTags((prev) => prev.filter((t) => t !== tag))
-                                    }
-                                    disabled={savingCustomer}
-                                  >
-                                    ×
-                                  </button>
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-[11px] text-slate-400">Belum ada tag dipilih.</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex justify-end gap-2">
-                        <OutlineButton
-                          disabled={savingCustomer}
-                          onClick={() => {
-                            setOpenCustomerCreate(false);
-                            setCustomerError(null);
-                            setNewCustomerName('');
-                            setNewCustomerWa('');
-                            setNewCustomerAddress('');
-                            setNewCustomerTags([]);
-                          }}
-                        >
-                          Batal
-                        </OutlineButton>
-                        <PrimaryButton
-                          disabled={savingCustomer}
-                          onClick={async () => {
-                            if (!newCustomerName.trim() || !newCustomerWa.trim()) {
-                              setCustomerError('Nama dan WhatsApp wajib diisi.');
-                              return;
-                            }
-                            if (!branchId) {
-                              setCustomerError('Akun Anda belum terikat ke cabang. Hubungi admin pusat.');
-                              return;
-                            }
-
-                            try {
-                              setSavingCustomer(true);
-                              setCustomerError(null);
-
-                              const res: CustomerSingleResponse<Customer> = await createCustomer({
-                                name: newCustomerName.trim(),
-                                whatsapp: normalizeWa(newCustomerWa),
-                                address: newCustomerAddress.trim() ? newCustomerAddress.trim() : null,
-                                notes: null,
-                                tags: newCustomerTags,
-                              });
-
-                              const created = res.data;
-                              if (!created?.id) {
-                                setCustomerError('Gagal: server tidak mengembalikan data customer (id kosong).');
-                                return;
-                              }
-                              setCustomerId(String(created.id));
-
-                              setNewCustomerName('');
-                              setNewCustomerWa('');
-                              setNewCustomerAddress('');
-                              setNewCustomerTags([]);
-
-                              setOpenCustomerCreate(false);
-                            } catch (err: unknown) {
-                              const e = normalizeApiError(err);
-                              setCustomerError(e.message || 'Gagal menambahkan customer.');
-                            } finally {
-                              setSavingCustomer(false);
-                            }
-                          }}
-                        >
-                          {savingCustomer ? 'Menyimpan…' : 'Simpan'}
-                        </PrimaryButton>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* RIGHT */}
-            <aside className="space-y-4 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:overflow-auto">
-              <Card
-                title="Checkout"
-                subtitle="Ringkasan total dan pembayaran."
-                right={<Badge tone={canPay ? 'good' : 'warn'}>{canPay ? 'Bisa bayar' : 'Tidak bisa bayar'}</Badge>}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-slate-500">Subtotal</div>
-                    <div className="text-sm font-semibold">{toIDR(subtotal)}</div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-slate-500">Diskon</div>
-                    <div className="text-sm font-semibold">{toIDR(discountValue)}</div>
-                  </div>
-                  <div className="h-px bg-slate-200" />
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold">Grand Total</div>
-                    <div className="text-lg font-extrabold tracking-tight">{toIDR(grand)}</div>
-                  </div>
-
-                  {!!(loyaltyPreview.discount > 0) && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-600">Perkiraan setelah loyalti</span>
-                        <span className="font-semibold text-slate-900">{toIDR(predictedGrand)}</span>
-                      </div>
-                      <div className="mt-1 text-[11px] text-slate-500">
-                        {loyaltyPreview.reward === 'DISC25' && 'Reward next: diskon 25%'}
-                        {loyaltyPreview.reward === 'FREE100' && 'Reward next: gratis 100%'}
-                        {loyaltyPreview.reward === 'NONE' && 'Reward next: -'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              <Card
-                title="Stamp Loyalty"
-                subtitle={loy ? `Stamp ${loy.stamps}/10 · Next ${loy.next ?? 0}` : 'Pilih customer untuk melihat stamp.'}
-                right={<Badge tone={loy ? 'neutral' : 'warn'}>{loy ? 'Aktif' : 'Belum dipilih'}</Badge>}
-              >
-                <div className="grid grid-cols-10 gap-1" aria-label="Loyalty stamps">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-2.5 rounded-full ${loy && i < loy.stamps ? 'bg-slate-900' : 'bg-slate-200'}`}
-                      title={`Stamp ${i}`}
-                    />
-                  ))}
-                </div>
-                <div className="mt-2 text-[11px] text-slate-600">
-                  {loyaltyPreview.reward === 'DISC25' && 'Transaksi berikutnya mendapat diskon 25%.'}
-                  {loyaltyPreview.reward === 'FREE100' && 'Transaksi berikutnya GRATIS (100%).'}
-                  {loyaltyPreview.reward === 'NONE' && 'Belum ada benefit pada transaksi berikutnya.'}
-                </div>
-              </Card>
-
-              <Card title="Pembayaran" subtitle="Pilih mode pembayaran (Pending/DP/Full).">
-                <div className="space-y-3">
-                  {/* Mode (ringkas -> buka popup) */}
-                  <div>
-                    <div className="mb-1 text-xs font-semibold text-slate-700">Mode Pembayaran</div>
-                    <button
-                      id="payment_mode"
-                      type="button"
-                      onClick={() => setModePickerOpen(true)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{mode}</span>
-                        <span className="text-xs text-slate-500">Ubah</span>
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-slate-500">
-                        {mode === 'PENDING' && 'Order disimpan tanpa pembayaran.'}
-                        {mode === 'DP' && 'Bayar sebagian (DP) sekarang.'}
-                        {mode === 'FULL' && 'Bayar lunas dengan metode Cash/QRIS/Transfer.'}
-                      </div>
-                    </button>
-                    {fieldErrors.payment?.[0] && (
-                      <div className="mt-1 text-xs text-red-600">
-                        {fieldErrors.payment[0]}
-                      </div>
-                    )}
-                  </div>
-
-                  {mode === 'FULL' && (
-                    <div>
-                      <div className="mb-1 text-xs font-semibold text-slate-700">Metode</div>
-                      <div className="flex flex-wrap gap-2">
-                        {paymentMethods.map((pm) => {
-                          const active = method === pm.code;
-                          return (
-                            <button
-                              key={pm.id}
-                              onClick={() => setMethod(pm.code)}
-                              className={[
-                                'rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
-                                active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white hover:bg-slate-50',
-                              ].join(' ')}
-                              aria-pressed={active}
-                            >
-                              {pm.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {mode === 'DP' && (
-                    <div>
-                      <div className="mb-1 text-xs font-semibold text-slate-700">Nominal DP</div>
-                      <Input
-                        id="dp_amount"
-                        type="number"
-                        min={0}
-                        max={total}
-                        value={dpAmount}
-                        onChange={(e) => setDpAmount(e.target.value)}
-                        placeholder="0"
-                      />
-                      <div className="mt-1 text-xs text-slate-600">
-                        Dibayar sekarang: <span className="font-semibold text-slate-900">{toIDR(payableNow)}</span>
-                      </div>
-                      {fieldErrors.dp_amount?.[0] && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {fieldErrors.dp_amount[0]}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {error && (
-                    <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                      {error}
-                    </div>
-                  )}
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <PrimaryButton disabled={loading || !canSubmit} onClick={() => void onSubmit()}>
-                      {loading ? 'Menyimpan…' : 'Simpan & Cetak'}
-                    </PrimaryButton>
-                    <OutlineButton
-                      disabled={loading}
-                      onClick={() => {
-                        dlog('cancel/back clicked');
-                        history.back();
-                      }}
-                    >
-                      Batal
-                    </OutlineButton>
-                  </div>
-                </div>
-              </Card>
-            </aside>
-          </div>
-        </div>
-
-        {/* Popup Keranjang (via icon) */}
-        {mobileCartOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3"
-            onClick={() => setMobileCartOpen(false)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">Keranjang</div>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {itemsCount} item · Subtotal {toIDR(subtotal)} · Grand {toIDR(grand)}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"
-                  onClick={() => setMobileCartOpen(false)}
-                >
-                  Tutup
-                </button>
+                ) : null}
               </div>
 
-              <div className="max-h-[70dvh] overflow-auto p-4">
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Tanggal Order</label>
+                <button
+                  type="button"
+                  id="order_date_button"
+                  className="drp-btn"
+                  onClick={() => {
+                    setDateDraft(orderDate);
+                    setDateOpen(true);
+                  }}
+                >
+                  <span className="drp-ic">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <path d="M16 2v4M8 2v4M3 10h18" />
+                    </svg>
+                  </span>
+                  {fmtDate(orderDate)}
+                </button>
+                {fieldErrors.received_at?.[0] ? (
+                  <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                    {fieldErrors.received_at[0]}
+                  </div>
+                ) : null}
+              </div>
+            </PosSection>
+
+            <PosSection id="cart" title="Keranjang" openId={openSec} onToggle={toggleSec}>
+              <div id="pos_cart">
                 <CartPanel
                   items={items}
+                  editablePrice={canEditPrice}
                   onChangeQty={onChangeQty}
-                  onChangeNote={onChangeNote}
+                  onChangePrice={onChangePrice}
                   onRemove={onRemove}
+                  onClear={() => setItems([])}
+                />
+              </div>
+              {fieldErrors.items?.[0] ? (
+                <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                  {fieldErrors.items[0]}
+                </div>
+              ) : null}
+            </PosSection>
+
+            <PosSection id="pay" title="Check Out" openId={openSec} onToggle={toggleSec}>
+              <div className="field">
+                <label htmlFor="payment_mode">Ketentuan Pembayaran</label>
+                <select
+                  id="payment_mode"
+                  value={mode}
+                  onChange={(e) => {
+                    const next = e.target.value as PayMode;
+                    setMode(next);
+                    if (next === 'PENDING') setCashReceived('');
+                  }}
+                >
+                  {(['FULL', 'DP', 'PENDING'] as const).map((item) => (
+                    <option key={item} value={item}>
+                      {PAY_MODE_LABEL[item]}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.payment?.[0] ? (
+                  <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                    {fieldErrors.payment[0]}
+                  </div>
+                ) : null}
+              </div>
+
+              {mode !== 'PENDING' ? (
+                <>
+                  <div className="field">
+                    <label htmlFor="payment_method">Metode</label>
+                    <select id="payment_method" value={method} onChange={(e) => setMethod(e.target.value)}>
+                      {paymentMethods.map((pm) => (
+                        <option key={pm.id} value={pm.code}>
+                          {pm.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="cash_received">Uang Diterima (Rp)</label>
+                    <input
+                      id="cash_received"
+                      type="text"
+                      inputMode="numeric"
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(e.target.value.replace(/[^\d]/g, ''))}
+                      placeholder="0"
+                    />
+                    {change > 0 ? (
+                      <div className="mini" style={{ marginTop: 6 }}>
+                        Kembalian: <b>{toIDR(change)}</b>
+                      </div>
+                    ) : null}
+                    {fieldErrors.dp_amount?.[0] ? (
+                      <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                        {fieldErrors.dp_amount[0]}
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
+              <div className="row" style={{ marginBottom: 14 }}>
+                <label className="switch-row">
+                  <span className="switch">
+                    <input
+                      type="checkbox"
+                      checked={useDiscount}
+                      onChange={(e) => {
+                        setUseDiscount(e.target.checked);
+                        if (!e.target.checked) setDiscount('');
+                      }}
+                    />
+                    <span className="slider" />
+                  </span>
+                  Diskon
+                </label>
+
+                <label className="switch-row">
+                  <span className="switch">
+                    <input
+                      type="checkbox"
+                      checked={useVoucher}
+                      onChange={(e) => {
+                        setUseVoucher(e.target.checked);
+                        if (!e.target.checked) {
+                          setVoucherCode('');
+                          setVoucherMsg(null);
+                        }
+                      }}
+                    />
+                    <span className="slider" />
+                  </span>
+                  Voucher
+                </label>
+              </div>
+
+              {useDiscount ? (
+                <div className="field">
+                  <label htmlFor="discount">Nominal Diskon (Rp)</label>
+                  <input
+                    id="discount"
+                    type="text"
+                    inputMode="numeric"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value.replace(/[^\d]/g, ''))}
+                    placeholder="0"
+                  />
+                </div>
+              ) : null}
+
+              {useVoucher ? (
+                <div className="field">
+                  <label htmlFor="voucher_code">Kode Voucher</label>
+                  <input
+                    id="voucher_code"
+                    value={voucherCode}
+                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                    placeholder="masukkan kode"
+                  />
+                  {fieldErrors.voucher_code?.[0] ? (
+                    <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                      {fieldErrors.voucher_code[0]}
+                    </div>
+                  ) : null}
+                  {voucherMsg ? (
+                    <div className="mini" style={{ marginTop: 6 }}>
+                      {voucherMsg}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {error ? <div className="login-err">{error}</div> : null}
+
+              <div className="totals" style={{ marginBottom: 0 }}>
+                <div className="l">
+                  <span>Subtotal</span>
+                  <span className="mono">{toIDR(subtotal)}</span>
+                </div>
+                <div className="l">
+                  <span>Diskon</span>
+                  <span className="mono">{toIDR(discountValue)}</span>
+                </div>
+                {loyaltyDiscount > 0 ? (
+                  <div className="l">
+                    <span>Loyalti</span>
+                    <span className="mono">{toIDR(loyaltyDiscount)}</span>
+                  </div>
+                ) : null}
+                <div className="l grand">
+                  <span>Total</span>
+                  <span className="mono">{toIDR(total)}</span>
+                </div>
+              </div>
+            </PosSection>
+
+            <PosSection id="memo" title="Foto & Memo" openId={openSec} onToggle={toggleSec}>
+              <div className="field">
+                <label>
+                  Foto Before <span className="mini">(opsional)</span>
+                </label>
+
+                <div className="photo-btns">
+                  <button type="button" className="btn ghost sm" onClick={() => cameraRef.current?.click()}>
+                    Kamera
+                  </button>
+                  <button type="button" className="btn ghost sm" onClick={() => galleryRef.current?.click()}>
+                    Galeri
+                  </button>
+                </div>
+
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={(e) => acceptPhotos(e.target.files ? Array.from(e.target.files) : [])}
+                />
+                <input
+                  ref={galleryRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={(e) => acceptPhotos(e.target.files ? Array.from(e.target.files) : [])}
+                />
+
+                <div className="mini">
+                  Foto kondisi awal sepatu. Bisa juga ditambahkan nanti lewat menu Receipt List.
+                </div>
+
+                {beforeFiles.length > 0 ? (
+                  <div className="mini" style={{ marginTop: 6 }}>
+                    {beforeFiles.length} file dipilih.
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="order_note">
+                  Catatan <span className="mini">(opsional)</span>
+                </label>
+                <textarea
+                  id="order_note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="mis. sol lepas kiri, warna kusam…"
+                />
+              </div>
+            </PosSection>
+
+            <PosSection id="prev" title="Preview" openId={openSec} onToggle={toggleSec}>
+              <div className="mini" style={{ marginBottom: 10 }}>
+                Cek pesanan &amp; pembayaran sebelum simpan.
+              </div>
+
+              <div className="po-prev">
+                <div style={{ fontWeight: 800 }}>{customerName || '(pelanggan belum dipilih)'}</div>
+                <div className="mini" style={{ marginBottom: 8 }}>
+                  {fmtDate(orderDate)}
+                  {branchCode ? ` · ${branchCode}` : ''}
+                </div>
+
+                {items.map((item) => (
+                  <div className="kv" key={item.service_id}>
+                    <span>{`${item.name} ×${item.qty}`}</span>
+                    <span className="mono">{toIDR(item.price * item.qty)}</span>
+                  </div>
+                ))}
+
+                <div className="kv">
+                  <span className="muted">Subtotal</span>
+                  <span className="mono">{toIDR(subtotal)}</span>
+                </div>
+                <div className="kv">
+                  <b>Total</b>
+                  <b className="mono">{toIDR(total)}</b>
+                </div>
+                <div className="kv">
+                  <span className="muted">Ketentuan</span>
+                  <span>{PAY_MODE_SHORT[mode]}</span>
+                </div>
+                {mode !== 'PENDING' ? (
+                  <div className="kv">
+                    <span className="muted">Metode</span>
+                    <span>{paymentMethods.find((pm) => pm.code === method)?.name ?? method}</span>
+                  </div>
+                ) : null}
+                <div className="kv">
+                  <span className="muted">Dibayar</span>
+                  <span className="mono">{toIDR(payableNow)}</span>
+                </div>
+                {dueNow > 0 ? (
+                  <div className="kv">
+                    <span className="muted">Sisa Tagihan</span>
+                    <span className="mono">{toIDR(dueNow)}</span>
+                  </div>
+                ) : null}
+                <div className="kv">
+                  <span className="muted">Estimasi Selesai</span>
+                  <span>{fmtDate(readyAt)}</span>
+                </div>
+              </div>
+            </PosSection>
+          </div>
+
+          <button
+            type="button"
+            id="save_order"
+            className="btn dark block po-save"
+            disabled={!canSubmit}
+            onClick={() => void onSubmit()}
+            style={!canSubmit ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+          >
+            {loading ? 'Menyimpan…' : 'Simpan Order'}
+          </button>
+        </aside>
+      </div>
+
+      {dateOpen ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-labelledby="date_title">
+          <div className="box">
+            <div className="modal-head">
+              <h3 id="date_title">Ubah Tanggal Order</h3>
+              <button type="button" className="mclose" onClick={() => setDateOpen(false)} aria-label="Tutup">
+                {'\u2715'}
+              </button>
+            </div>
+
+            <div className="mini" style={{ marginBottom: 14 }}>
+              Default tanggal order adalah hari ini. Ubah hanya bila perlu (mis. input order yang terlewat / backdate).
+            </div>
+
+            <div className="field">
+              <label htmlFor="order_date">Tanggal Order</label>
+              <input
+                id="order_date"
+                type="date"
+                value={dateDraft}
+                onChange={(e) => setDateDraft(e.target.value)}
+              />
+            </div>
+
+            <div className="modal-foot">
+              <button type="button" className="btn ghost" onClick={() => setDateOpen(false)}>
+                Batal
+              </button>
+              <span style={{ flex: 1 }} />
+              <button
+                type="button"
+                className="btn dark"
+                disabled={!dateDraft}
+                onClick={() => {
+                  setOrderDate(dateDraft);
+                  setDateOpen(false);
+                }}
+              >
+                Konfirmasi
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {openCustomerCreate ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-labelledby="cust_title">
+          <div className="box box-cust">
+            <div className="modal-head">
+              <h3 id="cust_title">Tambah Pelanggan</h3>
+              <button
+                type="button"
+                className="mclose"
+                disabled={savingCustomer}
+                onClick={closeCustomerModal}
+                aria-label="Tutup"
+              >
+                {'\u2715'}
+              </button>
+            </div>
+
+            {customerError ? <div className="login-err">{customerError}</div> : null}
+
+            <div className="row">
+              <div className="field">
+                <label htmlFor="cust_name">
+                  Nama <span className="req">*</span>
+                </label>
+                <input
+                  id="cust_name"
+                  value={newCustomerName}
+                  onChange={(e) => setNewCustomerName(e.target.value)}
+                  disabled={savingCustomer}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="cust_wa">
+                  Nomor WA <span className="req">*</span>
+                </label>
+                <input
+                  id="cust_wa"
+                  value={newCustomerWa}
+                  onChange={(e) => setNewCustomerWa(e.target.value)}
+                  placeholder="08xxxxxxxxxx"
+                  inputMode="numeric"
+                  disabled={savingCustomer}
                 />
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Popup pilih mode pembayaran */}
-        {modePickerOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3"
-            onClick={() => setModePickerOpen(false)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-slate-200">
-                <div className="text-sm font-semibold text-slate-900">Pilih Mode Pembayaran</div>
-                <div className="text-xs text-slate-500 mt-0.5">Mode akan mengatur alur DP/Full saat checkout.</div>
-              </div>
+            <div className="field">
+              <label htmlFor="cust_address">
+                Alamat <span className="mini">(opsional)</span>
+              </label>
+              <textarea
+                id="cust_address"
+                value={newCustomerAddress}
+                onChange={(e) => setNewCustomerAddress(e.target.value)}
+                placeholder="alamat pelanggan"
+                disabled={savingCustomer}
+              />
+            </div>
 
-              <div className="p-3 space-y-2">
-                {(['PENDING', 'DP', 'FULL'] as const).map((m) => {
-                  const active = mode === m;
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        setMode(m);
-                        if (m !== 'DP') setDpAmount('');
-                        if (m === 'FULL') setMethod(paymentMethods[0]?.code ?? 'CASH');
-                        setModePickerOpen(false);
-                      }}
-                      className={[
-                        'w-full rounded-xl border px-3 py-2 text-left transition-colors',
-                        active
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-900',
-                      ].join(' ')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">{m}</span>
-                        {active && <span className="text-xs opacity-90">Aktif</span>}
-                      </div>
-                      <div className={['mt-0.5 text-[11px]', active ? 'text-white/80' : 'text-slate-500'].join(' ')}>
-                        {m === 'PENDING' && 'Simpan order tanpa pembayaran sekarang.'}
-                        {m === 'DP' && 'Bayar sebagian sekarang, sisanya jadi piutang/sisa tagihan.'}
-                        {m === 'FULL' && 'Bayar lunas sekarang (Cash/QRIS/Transfer).'}
-                      </div>
-                    </button>
+            <div className="field">
+              <label htmlFor="cust_labels">
+                Label Customer <span className="mini">(opsional, bisa lebih dari satu)</span>
+              </label>
+              <select
+                id="cust_labels"
+                value=""
+                disabled={savingCustomer}
+                onChange={(e) => {
+                  const selected = e.target.value;
+                  if (!selected) return;
+
+                  setNewCustomerTags((prev) =>
+                    prev.includes(selected) ? prev : [...prev, selected].slice(0, 10),
                   );
-                })}
-              </div>
+                }}
+              >
+                <option value="">pilih label…</option>
+                {customerLabels.map((label) => (
+                  <option key={label.id} value={label.name} disabled={newCustomerTags.includes(label.name)}>
+                    {label.name}
+                  </option>
+                ))}
+              </select>
 
-              <div className="p-3 border-t border-slate-200 flex justify-end">
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"
-                  onClick={() => setModePickerOpen(false)}
-                >
-                  Tutup
-                </button>
-              </div>
+              {newCustomerTags.length > 0 ? (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {newCustomerTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium ${customerTagClass(tag)}`}
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        disabled={savingCustomer}
+                        onClick={() => setNewCustomerTags((prev) => prev.filter((t) => t !== tag))}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="modal-foot">
+              <span style={{ flex: 1 }} />
+              <button
+                type="button"
+                className="btn"
+                disabled={savingCustomer}
+                onClick={() => void saveCustomer()}
+              >
+                {savingCustomer ? 'Menyimpan…' : 'Simpan Pelanggan'}
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
     </>
   );
 }
-
-/* ------------------------
-   Subcomponents (UI) - unchanged logic
------------------------- */
-
-function UploadBox({
-  title,
-  isMobile,
-  inputRef,
-  files,
-  onFiles,
-}: {
-  title: string;
-  isMobile: boolean;
-  inputRef: React.RefObject<HTMLInputElement> | React.MutableRefObject<HTMLInputElement | null>;
-  files: File[];
-  onFiles: (f: File[]) => void;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-xs font-semibold text-slate-800">{title}</div>
-        <Badge tone={files.length ? 'good' : 'neutral'}>{files.length ? `${files.length} file` : 'Kosong'}</Badge>
-      </div>
-
-      <div
-        className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          const dropped = Array.from(e.dataTransfer.files || []);
-          onFiles(dropped);
-        }}
-      >
-        {isMobile ? (
-          <PrimaryButton
-            id={title === 'Before' ? 'order-photo-before-button' : undefined}
-            onClick={() => inputRef.current?.click()}
-            className="w-full"
-          >
-            Buka Kamera
-          </PrimaryButton>
-        ) : (
-          <div className="space-y-2">
-            <div className="text-xs text-slate-600">Drop file ke sini atau pilih file.</div>
-            <OutlineButton
-              id={title === 'Before' ? 'order-photo-before-button' : undefined}
-              onClick={() => inputRef.current?.click()}
-              className="w-full"
-            >
-              Pilih File
-            </OutlineButton>
-          </div>
-        )}
-      </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture={isMobile ? 'environment' : undefined}
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          const list = e.target.files ? Array.from(e.target.files) : [];
-          onFiles(list);
-        }}
-      />
-
-      {files.length > 0 && (
-        <ul className="mt-3 space-y-1 text-xs text-slate-700">
-          {files.slice(0, 4).map((f, i) => (
-            <li key={i} className="truncate">
-              • {f.name}
-            </li>
-          ))}
-          {files.length > 4 && <li className="text-slate-500">+{files.length - 4} file lainnya…</li>}
-        </ul>
-      )}
-    </div>
-  );
-}
-

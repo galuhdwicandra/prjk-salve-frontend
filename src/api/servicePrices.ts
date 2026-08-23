@@ -13,6 +13,13 @@ export async function listServicePricesByService(service_id: string, branch_id?:
   return data;
 }
 
+export async function unsetServicePrice(service_id: string, branch_id: string) {
+  const { data } = await api.delete<ApiEnvelope<null, null>>('/service-prices', {
+    params: { service_id, branch_id },
+  });
+  return data;
+}
+
 /** Helper sinkron (disarankan): hitung harga efektif dari rows yang sudah di-fetch */
 export function computeEffectivePrice(
   rows: ServicePrice[] | undefined,
@@ -23,6 +30,16 @@ export function computeEffectivePrice(
   if (!rows || !rows.length || !branch_id) return fallback;
   const hit = rows.find(p => String(p.branch_id) === String(branch_id));
   return hit ? Number(hit.price) : fallback;
+}
+
+
+export function computeEffectiveSla(
+  rows: ServicePrice[] | undefined,
+  branch_id: string | null | undefined
+): number {
+  if (!rows || !rows.length || !branch_id) return 0;
+  const hit = rows.find(p => String(p.branch_id) === String(branch_id));
+  return Number(hit?.sla_days ?? 0);
 }
 
 /** Helper async (kompatibilitas): tetap ada, tetapi utamakan computeEffectivePrice di loop */

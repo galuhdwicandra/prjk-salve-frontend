@@ -11,7 +11,6 @@ import type {
   OrderPaymentCorrectionPayload,
   OrderPaymentCorrectionResult,
   LoyaltyReward,
-  OrderTrackResult,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
 
@@ -22,13 +21,6 @@ export async function listOrders(params: OrderQuery = {}) {
 
 export async function getOrder(id: string) {
   const { data } = await api.get<SingleResponse<Order>>(`/orders/${encodeURIComponent(id)}`);
-  return data;
-}
-
-export async function trackOrder(number: string) {
-  const { data } = await api.get<SingleResponse<OrderTrackResult>>(
-    `/track/${encodeURIComponent(number)}`
-  );
   return data;
 }
 
@@ -80,6 +72,41 @@ export async function createOrderPayment(
     order: data.data.order,
     payment: data.data.payment,
   };
+}
+
+export async function voidOrder(id: string, reason: string) {
+  const { data } = await api.post<SingleResponse<Order>>(
+    `/orders/${encodeURIComponent(id)}/void`,
+    { reason },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+  return data;
+}
+
+export async function updateOrderPayment(
+  orderId: string,
+  paymentId: string,
+  payload: PaymentCreatePayload
+): Promise<Order> {
+  const { data } = await api.put<SingleResponse<{ order: Order }>>(
+    `/orders/${encodeURIComponent(orderId)}/payments/${encodeURIComponent(paymentId)}`,
+    payload,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  if (!data?.data?.order) throw new Error('Unexpected server response for payment update');
+
+  return data.data.order;
+}
+
+export async function deleteOrderPayment(orderId: string, paymentId: string): Promise<Order> {
+  const { data } = await api.delete<SingleResponse<{ order: Order }>>(
+    `/orders/${encodeURIComponent(orderId)}/payments/${encodeURIComponent(paymentId)}`
+  );
+
+  if (!data?.data?.order) throw new Error('Unexpected server response for payment delete');
+
+  return data.data.order;
 }
 
 export async function resetOrderPaymentToPending(

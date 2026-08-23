@@ -1,570 +1,538 @@
-// src/pages/services/ServiceIndex.tsx
-import { Fragment, useEffect, useState, useCallback } from 'react';
-import type { Service, PaginationMeta, ServiceCategory } from '../../types/services';
-import { listServices, deleteService } from '../../api/services';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { getErrorMessage } from '../../api/client';
+import { listBranches } from '../../api/branches';
 import { listServiceCategories } from '../../api/serviceCategories';
-import { normalizeApiError } from '../../api/client';
-import { useNavigate, Link } from 'react-router-dom';
-import { toIDR } from '../../utils/money';
+import { listServices, updateService } from '../../api/services';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
+import { useIsManager } from '../../store/useAuth';
+import type { Branch } from '../../types/branches';
+import type { PaginationMeta, Service, ServiceCategory } from '../../types/services';
+import { num } from '../../utils/money';
+import { IconArchive, IconKebab, IconPlus, IconSort, IconSortDown, IconSortUp, IconTag, IconUnarchive } from '../users/icons';
+import CategoryModal from './CategoryModal';
+import ServiceModal from './ServiceModal';
+
+type SortState = { key: string; dir: 1 | -1 };
+
+const PAGE_SIZES = [25, 50, 100];
+
+function priceAt(service: Service, branchId: string): number | null {
+  const hit = (service.prices ?? []).find((price) => String(price.branch_id) === branchId);
+  return hit ? Number(hit.price) : null;
+}
+
+function slaOf(service: Service): number | null {
+  const hit = (service.prices ?? []).find((price) => price.sla_days != null);
+  return hit ? Number(hit.sla_days) : null;
+}
+
+function variantSortValue(service: Service, key: string): number | string {
+  if (key === 'name') return service.name.toLowerCase();
+  if (key === 'sla') return slaOf(service) ?? -1;
+  return priceAt(service, key) ?? -1;
+}
 
 export default function ServiceIndex() {
-  const nav = useNavigate();
+  const canManage = useIsManager();
+
   const [rows, setRows] = useState<Service[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
-  const [cats, setCats] = useState<ServiceCategory[]>([]);
+  const [parents, setParents] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+
   const [q, setQ] = useState('');
-  const [category_id, setCategoryId] = useState<string>('');
+  const [keyword, setKeyword] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [archived, setArchived] = useState(false);
+  const [sort, setSort] = useState<SortState>({ key: 'name', dir: 1 });
+  const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const perPage = 10;
+  const [kebabOpen, setKebabOpen] = useState(false);
+  const [modal, setModal] = useState<{ open: boolean; service: Service | null }>({ open: false, service: null });
+  const [catModal, setCatModal] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
-  const loadCats = useCallback(async () => {
+  const { toast, showSuccess, showError, hideToast } = useToast();
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const sc = await listServiceCategories({ per_page: 100 });
-      setCats(sc.data ?? []);
+      const res = await listServices({
+        tree: true,
+        q: keyword || undefined,
+        category_id: categoryId || undefined,
+        page,
+        per_page: perPage,
+      });
+      setRows(res.data ?? []);
+      setMeta(res.meta ?? null);
+      setSelected([]);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat katalog produk'));
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, categoryId, page, perPage]);
+
+  const loadParents = useCallback(async () => {
+    try {
+      const res = await listServices({ root: true, per_page: 200 });
+      setParents(res.data ?? []);
     } catch {
-      // optional: tampilkan toast/log, tapi jangan hentikan flow services
+      setParents([]);
     }
   }, []);
 
-  const refresh = useCallback(
-    async (p = 1) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await listServices({
-          q,
-          category_id: category_id || undefined,
-          tree: true,
-          page: p,
-          per_page: perPage,
-        });
-        setRows(res.data ?? []);
-        setMeta((res.meta as PaginationMeta) ?? null);
-      } catch {
-        setError('Gagal memuat layanan');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [q, category_id, perPage],
-  );
+  const loadCategories = useCallback(async () => {
+    try {
+      const res = await listServiceCategories({ per_page: 100 });
+      setCategories(res.data ?? []);
+    } catch {
+      setCategories([]);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!cats.length) void loadCats();
-  }, [cats.length, loadCats]);
+    setSlot(document.getElementById('pageActions'));
+  }, []);
 
   useEffect(() => {
-    void refresh(page);
-  }, [page, refresh]);
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      void refresh(1);
+    void loadParents();
+  }, [loadParents]);
+
+  useEffect(() => {
+    listBranches({ per_page: 100 })
+      .then((res) => setBranches(res.data ?? []))
+      .catch(() => setBranches([]));
+  }, []);
+
+  useEffect(() => {
+    void loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setKeyword(q.trim());
       setPage(1);
     }, 300);
-    return () => clearTimeout(t);
-  }, [q, category_id, refresh]);
+    return () => window.clearTimeout(timer);
+  }, [q]);
 
-  async function handleDelete(row: Service) {
-    const label = row.parent_id ? 'varian' : 'produk';
-    if (!confirm(`Hapus ${label} ${row.name}?`)) return;
-    try {
-      await deleteService(row.id);
-      await refresh(page);
-    } catch (err) {
-      setError(normalizeApiError(err).message || 'Gagal menghapus');
-    }
+  useEffect(() => {
+    if (!kebabOpen) return;
+    const close = () => setKebabOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [kebabOpen]);
+
+  const groups = useMemo(() => {
+    const visible = rows.filter((parent) => archived || parent.is_active);
+    const ordered =
+      sort.key === 'name'
+        ? [...visible].sort((a, b) => a.name.localeCompare(b.name, 'id') * sort.dir)
+        : visible;
+
+    return ordered.map((parent) => {
+      const variants = (parent.variants ?? []).filter((variant) => archived || variant.is_active);
+      const sorted = [...variants].sort((a, b) => {
+        const left = variantSortValue(a, sort.key);
+        const right = variantSortValue(b, sort.key);
+        if (typeof left === 'number' && typeof right === 'number') return (left - right) * sort.dir;
+        return String(left).localeCompare(String(right), 'id') * sort.dir;
+      });
+      return { parent, variants: sorted };
+    });
+  }, [rows, archived, sort]);
+
+  const allVariants = useMemo(() => groups.flatMap((group) => group.variants), [groups]);
+  const selectedRows = useMemo(
+    () => allVariants.filter((variant) => selected.includes(variant.id)),
+    [allVariants, selected],
+  );
+
+  const total = meta?.total ?? rows.length;
+  const lastPage = meta?.last_page ?? 1;
+  const from = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const to = Math.min(page * perPage, total);
+  const allChecked = allVariants.length > 0 && allVariants.every((variant) => selected.includes(variant.id));
+  const columnCount = 3 + branches.length;
+
+  const applyActive = useCallback(
+    async (targets: Service[], value: boolean) => {
+      if (targets.length === 0) return;
+      try {
+        await Promise.all(
+          targets.map((item) =>
+            updateService(item.id, {
+              category_id: item.category_id,
+              parent_id: item.parent_id,
+              name: item.name,
+              unit: item.unit,
+              price_default: Number(item.price_default),
+              is_active: value,
+            }),
+          ),
+        );
+        showSuccess(value ? 'Varian dipulihkan.' : 'Varian diarsipkan.');
+        await refresh();
+      } catch (err) {
+        showError(getErrorMessage(err, 'Gagal mengubah status varian'));
+      }
+    },
+    [refresh, showError, showSuccess],
+  );
+
+  function onSort(key: string) {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
   }
 
-  const total = (meta?.total ?? rows?.length ?? 0);
+  function toggleRow(id: string, checked: boolean) {
+    setSelected((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
+  }
+
+  function openModal(service: Service | null) {
+    setModal({ open: true, service });
+  }
+
+  function sortIcon(key: string) {
+    const active = sort.key === key;
+    return (
+      <span className={active ? 'sort-ic on' : 'sort-ic'}>
+        {active ? sort.dir > 0 ? <IconSortUp /> : <IconSortDown /> : <IconSort />}
+      </span>
+    );
+  }
+
+  const pageActions = (
+    <>
+      {canManage ? (
+        <button
+          type="button"
+          className="btn sm"
+          disabled={branches.length === 0}
+          onClick={() => openModal(null)}
+        >
+          <IconPlus />
+          <span>Tambah Produk</span>
+        </button>
+      ) : null}
+
+      {archived ? (
+        <button type="button" className="btn sm arc-pill" onClick={() => setArchived(false)}>
+          {'\u2715'} <span>Tutup Arsip</span>
+        </button>
+      ) : null}
+
+      <div className={kebabOpen ? 'kebab open' : 'kebab'}>
+        <button
+          type="button"
+          className="kebab-btn"
+          aria-label="Menu"
+          aria-expanded={kebabOpen}
+          onClick={(e) => {
+            e.stopPropagation();
+            setKebabOpen((prev) => !prev);
+          }}
+        >
+          <IconKebab />
+        </button>
+        <div className="kebab-menu">
+          <button
+            type="button"
+            className="kebab-item"
+            onClick={() => {
+              setArchived((prev) => !prev);
+              setKebabOpen(false);
+            }}
+          >
+            <IconArchive />
+            <span>Tampilkan arsip</span>
+            <span className="chk">{archived ? '\u2713' : ''}</span>
+          </button>
+
+          {canManage ? (
+            <>
+              <div className="kebab-sep" />
+              <button
+                type="button"
+                className="kebab-item"
+                onClick={() => {
+                  setCatModal(true);
+                  setKebabOpen(false);
+                }}
+              >
+                <IconTag />
+                <span>Kelola Kategori</span>
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <div className="text-xs text-slate-500">
-            <span className="font-medium text-slate-700">Master Data</span>
-            <span className="mx-2 text-slate-300">/</span>
-            <span className="text-slate-600">Services</span>
-          </div>
+    <>
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">Services</h1>
-            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600">
-              {loading ? 'Loading…' : `${total} items`}
-            </span>
-          </div>
+      {slot ? createPortal(pageActions, slot) : null}
 
-          <p className="text-sm text-slate-500">
-            Kelola layanan dan harga default. Gunakan filter untuk mempercepat pencarian.
-          </p>
+      <div className="card">
+        <div className="card-title">
+          <span>Produk &amp; Layanan</span>
+          <span className="ct-note">
+            produk induk {'\u2192'} varian {'\u00b7'} centang varian untuk aksi massal
+          </span>
+          <input
+            className="inp"
+            style={{ maxWidth: 380 }}
+            placeholder="nama produk / varian"
+            aria-label="Cari nama produk atau varian"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Link
-            to="/service-categories"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
-            aria-label="Kelola kategori"
-          >
-            <IconTag />
-            Categories
-          </Link>
-
-          <button
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
-            onClick={() => nav('/services/new')}
-            aria-label="Tambah layanan baru"
-          >
-            <IconPlus />
-            New Service
-          </button>
-        </div>
-      </header>
-
-      {/* FilterBar */}
-      <section
-        className="rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]"
-        aria-label="Filter layanan"
-      >
-        <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-[1fr_240px_auto] md:items-center">
-          {/* Search */}
-          <div className="relative">
-            <label htmlFor="q" className="sr-only">
-              Pencarian layanan
-            </label>
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <IconSearch />
-            </span>
-            <input
-              id="q"
-              className="
-                w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm
-                text-slate-900 placeholder:text-slate-400
-                focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200
-              "
-              placeholder="Cari nama layanan…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Cari layanan"
-            />
-          </div>
-
-          {/* Category */}
-          <div>
-            <label htmlFor="cat" className="sr-only">
-              Filter kategori
-            </label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <IconFilter />
-              </span>
-              <select
-                id="cat"
-                className="
-                  w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm
-                  text-slate-900
-                  focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200
-                "
-                value={category_id}
-                onChange={(e) => setCategoryId(e.target.value)}
-                aria-label="Pilih kategori layanan"
-              >
-                <option value="">Semua kategori</option>
-                {cats.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <IconChevronDown />
-              </span>
-            </div>
-          </div>
-
-          {/* Reset */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="
-                inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5
-                text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
-              "
-              onClick={() => {
-                setQ('');
-                setCategoryId('');
+        <div className="filters">
+          <div className="f">
+            <label htmlFor="flt-cat">Kategori</label>
+            <select
+              id="flt-cat"
+              value={categoryId}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setPage(1);
               }}
-              aria-label="Reset filter"
             >
-              <IconRotate />
-              Reset
+              <option value="">Semua</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error ? (
+          <div role="alert" style={{ marginBottom: 12, color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}>
+            {error}
+          </div>
+        ) : null}
+
+        {canManage ? (
+          <div className={selectedRows.length ? 'bulkbar show' : 'bulkbar'}>
+            <span className="bb-count">{selectedRows.length} dipilih</span>
+            <div className="toolbar">
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => void applyActive(selectedRows, archived)}
+              >
+                {archived ? <IconUnarchive /> : <IconArchive />}
+                {archived ? 'Pulihkan terpilih' : 'Arsipkan terpilih'}
+              </button>
+            </div>
+            <button type="button" className="link" onClick={() => setSelected([])}>
+              bersihkan
             </button>
           </div>
-        </div>
-      </section>
+        ) : null}
 
-      {/* Error */}
-      {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && !error && rows && rows.length === 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]">
-          <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600">
-            <IconBox />
-          </div>
-          <div className="text-sm font-semibold text-slate-900">Belum ada layanan</div>
-          <div className="mt-1 text-sm text-slate-500">Klik “New Service” untuk menambahkan layanan baru.</div>
-        </div>
-      )}
-
-      {/* Table */}
-      <section aria-busy={loading ? 'true' : 'false'}>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_-40px_rgba(0,0,0,.45)]">
-          {/* table top hint */}
-          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-            <div className="text-sm font-semibold text-slate-900">Daftar Layanan</div>
-            <div className="text-xs text-slate-500">
-              Hal {meta?.current_page ?? page} / {meta?.last_page ?? 1}
-            </div>
-          </div>
-
-          <div className="overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-white">
-                <tr className="border-b border-slate-100">
-                  <Th>Nama</Th>
-                  <Th>Kategori</Th>
-                  <Th>Unit</Th>
-                  <Th className="text-right">Harga Default</Th>
-                  <Th className="text-right">Status</Th>
-                  <Th className="text-right pr-4">Aksi</Th>
+        <div className="tbl-wrap catalog-tbl">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '1%' }}>
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    aria-label="Pilih semua varian"
+                    onChange={(e) =>
+                      setSelected(e.target.checked ? allVariants.map((variant) => variant.id) : [])
+                    }
+                  />
+                </th>
+                <th className="sortable" onClick={() => onSort('name')}>
+                  Produk
+                  {sortIcon('name')}
+                </th>
+                <th className="sortable num" onClick={() => onSort('sla')}>
+                  SLA
+                  {sortIcon('sla')}
+                </th>
+                {branches.map((branch) => (
+                  <th key={branch.id} className="sortable num" onClick={() => onSort(branch.id)}>
+                    {branch.name}
+                    {sortIcon(branch.id)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={columnCount} className="empty">
+                    Memuat{'\u2026'}
+                  </td>
                 </tr>
-              </thead>
+              ) : groups.length === 0 ? (
+                <tr>
+                  <td colSpan={columnCount} className="empty">
+                    {archived ? 'Tidak ada produk di arsip.' : 'Belum ada produk. Klik Tambah Produk.'}
+                  </td>
+                </tr>
+              ) : (
+                groups.map(({ parent, variants }) => (
+                  <Fragment key={parent.id}>
+                    <tr className={parent.is_active ? 'fam-row' : 'fam-row dt-arc'}>
+                      <td className="dt-check" />
+                      <td colSpan={columnCount - 1}>
+                        <div className="fam-row-in">
+                          <button type="button" className="link fam-name" onClick={() => openModal(parent)}>
+                            {parent.name}
+                          </button>
+                          <span className="tag">{parent.category?.name ?? '-'}</span>
+                          {parent.is_active ? null : <span className="tag">arsip</span>}
+                        </div>
+                      </td>
+                    </tr>
 
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <>
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                    <RowSkeleton />
-                  </>
-                ) : (
-                  rows.map((p) => (
-                    <Fragment key={p.id}>
-                      <tr className="bg-slate-50/80">
-                        <Td>
-                          <div className="min-w-[220px]">
-                            <div className="line-clamp-1 font-semibold text-slate-900">{p.name}</div>
-                            <div className="mt-0.5 text-xs text-slate-500">Produk induk</div>
-                          </div>
-                        </Td>
-                        <Td>
-                          <span className="line-clamp-1 text-slate-700">{p.category?.name ?? '-'}</span>
-                        </Td>
-                        <Td>
-                          <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700">
-                            {p.unit}
-                          </span>
-                        </Td>
-                        <Td className="text-right tabular-nums font-semibold text-slate-900">
-                          {toIDR(Number(p.price_default))}
-                        </Td>
-                        <Td className="text-right">
-                          <StatusPill active={!!p.is_active} />
-                        </Td>
-                        <Td className="text-right pr-4">
-                          <div className="inline-flex items-center justify-end gap-2">
-                            <button
-                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
-                              onClick={() => nav(`/services/new?parent_id=${p.id}`)}
-                              aria-label={`Tambah varian untuk ${p.name}`}
-                            >
-                              <IconPlus />
-                              Varian
-                            </button>
-                            <button
-                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
-                              onClick={() => nav(`/services/${p.id}/edit`)}
-                              aria-label={`Edit produk ${p.name}`}
-                            >
-                              <IconPencil />
-                              Edit
-                            </button>
-                            <button
-                              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100"
-                              onClick={() => void handleDelete(p)}
-                              aria-label={`Hapus produk ${p.name}`}
-                            >
-                              <IconTrash />
-                              Delete
-                            </button>
-                          </div>
-                        </Td>
+                    {variants.length === 0 ? (
+                      <tr>
+                        <td className="dt-check" />
+                        <td className="fam-empty" colSpan={columnCount - 1}>
+                          Belum ada varian di produk ini.
+                        </td>
                       </tr>
-
-                      {(p.variants ?? []).length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-3 pl-10 text-xs text-slate-500">
-                            Belum ada varian di produk ini.
+                    ) : (
+                      variants.map((variant) => (
+                        <tr
+                          key={variant.id}
+                          className={variant.is_active ? 'rowc' : 'rowc dt-arc'}
+                          onClick={() => openModal(variant)}
+                        >
+                          <td className="dt-check" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(variant.id)}
+                              aria-label={`Pilih ${variant.name}`}
+                              onChange={(e) => toggleRow(variant.id, e.target.checked)}
+                            />
                           </td>
+                          <td className="var-cell" data-label="Produk">
+                            <span className="lnk">{variant.name}</span>
+                            {variant.is_active ? null : <span className="tag"> arsip</span>}
+                          </td>
+                          <td className="num" data-label="SLA">
+                            {slaOf(variant) ?? '\u2014'}
+                          </td>
+                          {branches.map((branch) => {
+                            const price = priceAt(variant, branch.id);
+                            return (
+                              <td key={branch.id} className="num" data-label={branch.name}>
+                                {price == null ? '\u2014' : num(price)}
+                              </td>
+                            );
+                          })}
                         </tr>
-                      ) : (
-                        (p.variants ?? []).map((v) => (
-                          <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
-                            <Td>
-                              <div className="min-w-[220px] pl-6">
-                                <div className="line-clamp-1 font-medium text-slate-900">{v.name}</div>
-                                <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                                  ID: <span className="tabular-nums">{v.id}</span>
-                                </div>
-                              </div>
-                            </Td>
-                            <Td>
-                              <span className="text-slate-400">—</span>
-                            </Td>
-                            <Td>
-                              <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
-                                {v.unit}
-                              </span>
-                            </Td>
-                            <Td className="text-right tabular-nums font-semibold text-slate-900">
-                              {toIDR(Number(v.price_default))}
-                            </Td>
-                            <Td className="text-right">
-                              <StatusPill active={!!v.is_active} />
-                            </Td>
-                            <Td className="text-right pr-4">
-                              <div className="inline-flex items-center justify-end gap-2">
-                                <button
-                                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100"
-                                  onClick={() => nav(`/services/${v.id}/edit`)}
-                                  aria-label={`Edit varian ${v.name}`}
-                                >
-                                  <IconPencil />
-                                  Edit
-                                </button>
-                                <button
-                                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100"
-                                  onClick={() => void handleDelete(v)}
-                                  aria-label={`Hapus varian ${v.name}`}
-                                >
-                                  <IconTrash />
-                                  Delete
-                                </button>
-                              </div>
-                            </Td>
-                          </tr>
-                        ))
-                      )}
-                    </Fragment>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      ))
+                    )}
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Pagination bottom */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-            <div className="text-xs text-slate-500">
-              Menampilkan <span className="font-semibold text-slate-700">{rows?.length ?? 0}</span> data / halaman
+        {total > 0 ? (
+          <div className="dt-pager">
+            <div className="dt-pager-size">
+              Tampilkan{' '}
+              <select
+                value={perPage}
+                aria-label="Jumlah produk induk per halaman"
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>{' '}
+              per halaman
             </div>
-
-            <div className="flex items-center gap-2">
+            <div className="dt-pager-nav">
+              <span className="mini">
+                {from}
+                {'\u2013'}
+                {to} dari {total}
+              </span>
               <button
+                type="button"
+                className="pg-btn"
+                aria-label="Halaman sebelumnya"
                 disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="
-                  inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                  font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
-                  disabled:cursor-not-allowed disabled:opacity-50
-                "
+                onClick={() => setPage((prev) => prev - 1)}
               >
-                <IconChevronLeft />
-                Prev
+                {'\u2039'}
               </button>
-
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm tabular-nums text-slate-700">
-                {meta?.current_page ?? page} / {meta?.last_page ?? 1}
-              </div>
-
+              <span className="mini">
+                {page}/{lastPage}
+              </span>
               <button
-                disabled={!!meta && page >= (meta.last_page ?? 1)}
-                onClick={() => setPage((p) => p + 1)}
-                className="
-                  inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
-                  font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100
-                  disabled:cursor-not-allowed disabled:opacity-50
-                "
+                type="button"
+                className="pg-btn"
+                aria-label="Halaman berikutnya"
+                disabled={page >= lastPage}
+                onClick={() => setPage((prev) => prev + 1)}
               >
-                Next
-                <IconChevronRight />
+                {'\u203a'}
               </button>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+        ) : null}
+      </div>
 
-/* ---------- UI Subcomponents (TIDAK ubah logika) ---------- */
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <th
-      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}
-    >
-      {children}
-    </th>
-  );
-}
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
-}
-
-function StatusPill({ active }: { active: boolean }) {
-  return active ? (
-    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-      Active
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-      Inactive
-    </span>
-  );
-}
-
-function RowSkeleton() {
-  return (
-    <tr>
-      <td className="px-4 py-4">
-        <div className="space-y-2">
-          <div className="h-4 w-52 animate-pulse rounded bg-slate-200" />
-          <div className="h-3 w-24 animate-pulse rounded bg-slate-100" />
-        </div>
-      </td>
-      <td className="px-4 py-4">
-        <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
-      </td>
-      <td className="px-4 py-4">
-        <div className="h-7 w-16 animate-pulse rounded bg-slate-200" />
-      </td>
-      <td className="px-4 py-4">
-        <div className="ml-auto h-4 w-28 animate-pulse rounded bg-slate-200" />
-      </td>
-      <td className="px-4 py-4 text-right">
-        <div className="ml-auto h-7 w-24 animate-pulse rounded bg-slate-200" />
-      </td>
-      <td className="px-4 py-4 text-right">
-        <div className="ml-auto h-9 w-40 animate-pulse rounded bg-slate-200" />
-      </td>
-    </tr>
-  );
-}
-
-/* ---------- Small Icons (inline SVG, no dependency) ---------- */
-function IconSearch() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
-    </svg>
-  );
-}
-function IconFilter() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 6h16" />
-      <path d="M7 12h10" />
-      <path d="M10 18h4" />
-    </svg>
-  );
-}
-function IconChevronDown() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-function IconPlus() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  );
-}
-function IconTag() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M20.59 13.41 12 22l-10-10V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" />
-      <circle cx="7" cy="7" r="1.5" />
-    </svg>
-  );
-}
-function IconPencil() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
-    </svg>
-  );
-}
-function IconTrash() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M3 6h18" />
-      <path d="M8 6V4h8v2" />
-      <path d="M19 6l-1 14H6L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-    </svg>
-  );
-}
-function IconRotate() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M21 12a9 9 0 1 1-3-6.7" />
-      <path d="M21 3v6h-6" />
-    </svg>
-  );
-}
-function IconChevronLeft() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
-}
-function IconChevronRight() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
-}
-function IconBox() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
-      <path d="M3 8v10l9 5 9-5V8" />
-      <path d="M12 13v10" />
-    </svg>
+      {modal.open ? (
+        <ServiceModal
+          service={modal.service}
+          parents={parents}
+          categories={categories}
+          branches={branches}
+          onClose={() => setModal({ open: false, service: null })}
+          onDone={(message) => {
+            setModal({ open: false, service: null });
+            showSuccess(message);
+            void refresh();
+            void loadParents();
+          }}
+        />
+      ) : null}
+      
+      {catModal ? (
+        <CategoryModal
+          onClose={() => {
+            setCatModal(false);
+            void loadCategories();
+            void refresh();
+          }}
+        />
+      ) : null}
+    </>
   );
 }

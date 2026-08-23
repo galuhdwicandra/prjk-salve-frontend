@@ -1,532 +1,570 @@
-// src/pages/customers/CustomersIndex.tsx
-import { useEffect, useMemo, useState } from "react";
-import type { Customer, CustomerQuery, Paginated } from "../../types/customers";
-import { deleteCustomer, listCustomers } from "../../api/customers";
-import { getErrorMessage } from "../../api/client";
-import ConfirmDialog from "../../components/ConfirmDialog";
-import { useAuth, useIsManager } from "../../store/useAuth";
-import { Link } from "react-router-dom";
-import { useCustomerLabels } from "../../hooks/useCustomerLabels";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { getErrorMessage } from '../../api/client';
+import { createCustomer, listCustomers, updateCustomer } from '../../api/customers';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../store/useAuth';
+import type { Customer, CustomerQuery, PaginationMeta } from '../../types/customers';
+import { fmtDate } from '../../utils/date';
+import { downloadXlsx } from '../../utils/export-table';
+import { rp } from '../../utils/money';
+import {
+  IconArchive,
+  IconDownload,
+  IconKebab,
+  IconSort,
+  IconSortDown,
+  IconSortUp,
+  IconUnarchive,
+  IconUpload,
+} from '../users/icons';
 
-function IconSearch(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.2-3.2" />
-        </svg>
-    );
-}
-function IconUsers(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-            <path d="M20 21a7 7 0 0 0-14 0" />
-            <circle cx="13" cy="7" r="4" />
-            <path d="M6 21a6 6 0 0 1 7-5.7" opacity=".6" />
-            <path d="M4 21a6 6 0 0 1 6-6" opacity=".35" />
-        </svg>
-    );
-}
-function IconChevron(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-            <path d="M9 6l6 6-6 6" />
-        </svg>
-    );
-}
+type SortKey = NonNullable<CustomerQuery['sort_by']>;
+type SortState = { key: SortKey; dir: 'asc' | 'desc' };
+type VisitsOp = '' | 'gte' | 'lte';
 
-function initials(name?: string) {
-    const n = (name ?? "").trim();
-    if (!n) return "C";
-    const parts = n.split(/\s+/).filter(Boolean);
-    const a = parts[0]?.[0] ?? "C";
-    const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
-    return (a + b).toUpperCase();
-}
-
-function formatWaLink(raw?: string) {
-    if (!raw) return null;
-    const cleaned = raw.replace(/[^\d]/g, "");
-    if (!cleaned) return null;
-
-    // jika mulai dengan 0 → ganti ke 62
-    const normalized =
-        cleaned.startsWith("0")
-            ? "62" + cleaned.slice(1)
-            : cleaned.startsWith("62")
-                ? cleaned
-                : cleaned;
-
-    return `https://wa.me/${normalized}`;
-}
-
-function mapsUrl(address?: string | null) {
-    const a = (address ?? "").trim();
-    if (!a) return null;
-    // Google Maps search query (paling stabil untuk alamat teks bebas)
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
-}
+const PAGE_SIZES = [25, 50, 100];
 
 export default function CustomersIndex() {
-    // Snapshot auth store (sesuai pola Anda)
-    function useAuthSnapshot() {
-        const store = useAuth;
-        const [, force] = useState(0);
-        useEffect(() => {
-            const unsubscribe = store.subscribe(() => force((x) => x + 1));
-            return () => {
-                unsubscribe();
-            };
-        }, [store]);
-        return store;
+  const navigate = useNavigate();
+  const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
+  const branches = useMemo(() => user?.branches ?? [], [user]);
+  const canPickBranch = branches.length > 1;
+
+  const [rows, setRows] = useState<Customer[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+
+  const [q, setQ] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [visitsOp, setVisitsOp] = useState<VisitsOp>('');
+  const [visits, setVisits] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [archived, setArchived] = useState(false);
+  const [sort, setSort] = useState<SortState>({ key: 'visits', dir: 'asc' });
+  const [selected, setSelected] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [kebabOpen, setKebabOpen] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+
+  const { toast, showSuccess, hideToast } = useToast();
+
+  const params = useMemo<CustomerQuery>(
+    () => ({
+      q: keyword || undefined,
+      branch_id: branchId || undefined,
+      is_active: !archived,
+      visits_op: visitsOp || undefined,
+      visits: visitsOp && visits !== '' ? Number(visits) : undefined,
+      sort_by: sort.key,
+      sort_dir: sort.dir,
+      page,
+      per_page: perPage,
+    }),
+    [keyword, branchId, archived, visitsOp, visits, sort, page, perPage],
+  );
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await listCustomers(params);
+      setRows(res.data ?? []);
+      setMeta(res.meta ?? null);
+      setSelected([]);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memuat data pelanggan'));
+    } finally {
+      setLoading(false);
+    }
+  }, [params]);
+
+  useEffect(() => {
+    setSlot(document.getElementById('pageActions'));
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setKeyword(q.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
+  useEffect(() => {
+    if (!kebabOpen) return;
+    const close = () => setKebabOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [kebabOpen]);
+
+  const total = meta?.total ?? rows.length;
+  const lastPage = meta?.last_page ?? 1;
+  const from = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const to = Math.min(page * perPage, total);
+  const allChecked = rows.length > 0 && rows.every((row) => selected.includes(row.id));
+
+  function onSort(key: SortKey) {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+    setPage(1);
+  }
+
+  function sortIcon(key: SortKey) {
+    const active = sort.key === key;
+    return (
+      <span className={active ? 'sort-ic on' : 'sort-ic'}>
+        {active ? sort.dir === 'asc' ? <IconSortUp /> : <IconSortDown /> : <IconSort />}
+      </span>
+    );
+  }
+
+  function toSheet(items: Customer[]): unknown[][] {
+    return [
+      ['nama', 'wa', 'alamat', 'asal_outlet', 'label', 'kunjungan', 'total_belanja', 'terakhir'],
+      ...items.map((item) => [
+        item.name,
+        item.whatsapp,
+        item.address ?? '',
+        item.branch?.name ?? '',
+        (item.tags ?? []).join('; '),
+        item.visits_count ?? 0,
+        Number(item.spend_total ?? 0),
+        item.last_order_at ? item.last_order_at.slice(0, 10) : '',
+      ]),
+    ];
+  }
+
+  async function onExport() {
+    setBusy(true);
+    setError(null);
+    try {
+      const items = selected.length
+        ? rows.filter((row) => selected.includes(row.id))
+        : (await listCustomers({ ...params, page: 1, per_page: 500 })).data ?? [];
+
+      if (items.length === 0) {
+        showSuccess('Tidak ada data untuk diekspor.');
+        return;
+      }
+
+      downloadXlsx(
+        `database-pelanggan-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        'Pelanggan',
+        toSheet(items),
+      );
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal mengekspor data'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onImport(file: File) {
+    if (canPickBranch && !branchId) {
+      setError('Pilih Asal Outlet terlebih dahulu sebelum import.');
+      return;
     }
 
-    const auth = useAuthSnapshot();
-    const user = auth.user;
-    const canDelete = useIsManager();
-    const isSuperadmin = (user?.branches.length ?? 0) > 1;
-    const { chipClass } = useCustomerLabels();
+    setBusy(true);
+    setError(null);
+    try {
+      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
+      const head = (lines.shift() ?? '').split(',').map((cell) => cell.trim().toLowerCase());
+      const iName = head.indexOf('nama');
+      const iWa = head.indexOf('wa');
+      const iAddress = head.indexOf('alamat');
+      const iLabel = head.indexOf('label');
 
-    const [query, setQuery] = useState<CustomerQuery>({ page: 1, per_page: 10 });
-    const [rows, setRows] = useState<Paginated<Customer> | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [search, setSearch] = useState("");
-    const [deleteOpen, setDeleteOpen] = useState(false);
-    const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
-    const [deleting, setDeleting] = useState(false);
+      if (iName < 0 || iWa < 0) {
+        setError('Header CSV wajib memuat kolom "nama" dan "wa".');
+        return;
+      }
 
-    const branchIdForScope = useMemo(() => {
-        return user?.branches[0]?.id;
-    }, [isSuperadmin, query.branch_id, user]);
+      let ok = 0;
+      let skipped = 0;
 
-    async function fetchCustomers() {
-        const data = await listCustomers({
-            ...query,
-            q: search || undefined,
-            branch_id: branchIdForScope,
-        });
-        setRows(data);
-    }
+      for (const line of lines) {
+        const cols = line.split(',').map((cell) => cell.trim());
+        const name = cols[iName] ?? '';
+        const wa = (cols[iWa] ?? '').replace(/\D+/g, '');
 
-    useEffect(() => {
-        let cancelled = false;
-
-        (async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const data = await listCustomers({
-                    ...query,
-                    q: search || undefined,
-                    branch_id: branchIdForScope,
-                });
-                if (!cancelled) setRows(data);
-            } catch (err) {
-                if (!cancelled) setError(getErrorMessage(err, "Gagal memuat data pelanggan."));
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [query, search, branchIdForScope]);
-
-    async function handleConfirmDelete() {
-        if (!deleteTarget?.id) return;
-
-        setDeleting(true);
-        setError(null);
+        if (!name || !wa) {
+          skipped += 1;
+          continue;
+        }
 
         try {
-            await deleteCustomer(String(deleteTarget.id));
-
-            setDeleteOpen(false);
-            setDeleteTarget(null);
-
-            const currentDataCount = rows?.data.length ?? 0;
-            const currentPageValue = Number(query.page ?? 1);
-
-            // Jika item terakhir di halaman ini dihapus dan bukan halaman pertama,
-            // mundurkan halaman agar tidak kosong.
-            if (currentDataCount === 1 && currentPageValue > 1) {
-                setQuery((prev) => ({
-                    ...prev,
-                    page: currentPageValue - 1,
-                }));
-            } else {
-                setLoading(true);
-                try {
-                    await fetchCustomers();
-                } finally {
-                    setLoading(false);
-                }
-            }
-        } catch (err) {
-            setError(getErrorMessage(err, "Gagal menghapus customer."));
-        } finally {
-            setDeleting(false);
+          await createCustomer({
+            name,
+            whatsapp: wa,
+            address: iAddress >= 0 ? cols[iAddress] || null : null,
+            tags:
+              iLabel >= 0 && cols[iLabel]
+                ? cols[iLabel].split(';').map((tag) => tag.trim()).filter(Boolean)
+                : [],
+            ...(branchId ? { branch_id: branchId } : {}),
+          });
+          ok += 1;
+        } catch {
+          skipped += 1;
         }
+      }
+
+      showSuccess(`Import selesai: ${ok} ditambahkan, ${skipped} dilewati.`);
+      await refresh();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal membaca berkas CSV'));
+    } finally {
+      setBusy(false);
     }
+  }
 
-    const currentPage = rows?.meta.current_page ?? 1;
-    const lastPage = rows?.meta.last_page ?? 1;
-    const perPage = query.per_page ?? 10;
-    const total = rows?.meta.total ?? 0;
+  async function applyActive(ids: string[], next: boolean) {
+    if (ids.length === 0) return;
 
-    return (
-        <div className="space-y-4">
-            {/* Header */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-                        <IconUsers />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Customers</h1>
-                        <p className="mt-1 text-sm text-slate-500">Kelola data pelanggan dan akses detail histori.</p>
-                    </div>
-                </div>
+    setBusy(true);
+    setError(null);
+    try {
+      await Promise.all(ids.map((id) => updateCustomer(id, { is_active: next })));
+      showSuccess(`${ids.length} pelanggan ${next ? 'dipulihkan' : 'diarsipkan'}.`);
+      await refresh();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal memperbarui status pelanggan'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
-                {(
-                    <Link
-                        to="/customers/new"
-                        className="
-              inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5
-              text-sm font-semibold text-white shadow-sm
-              hover:bg-slate-800 active:bg-slate-950
-            "
-                        aria-label="Tambah pelanggan baru"
-                    >
-                        New Customer
-                    </Link>
-                )}
-            </div>
+  const pageActions = (
+    <>
+      {archived ? (
+        <button
+          type="button"
+          className="btn sm arc-pill"
+          onClick={() => {
+            setArchived(false);
+            setPage(1);
+          }}
+        >
+          {'\u2715'} <span>Tutup Arsip</span>
+        </button>
+      ) : null}
 
-            {/* Toolbar */}
-            <section
-                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]"
-                aria-label="Toolbar pencarian pelanggan"
-            >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-                    <div className="relative">
-                        <label className="sr-only" htmlFor="cari">
-                            Pencarian
-                        </label>
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                            <IconSearch />
-                        </span>
-                        <input
-                            id="cari"
-                            placeholder="Cari nama / WhatsApp / alamat…"
-                            className="
-                w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-sm
-                text-slate-900 placeholder:text-slate-400
-                focus:border-slate-900 focus:outline-none
-              "
-                            value={search}
-                            onChange={(e) => {
-                                setQuery((q) => ({ ...q, page: 1 }));
-                                setSearch(e.target.value);
-                            }}
-                            aria-label="Cari pelanggan"
-                        />
-                    </div>
+      <div className={kebabOpen ? 'kebab open' : 'kebab'}>
+        <button
+          type="button"
+          className="kebab-btn"
+          aria-label="Menu"
+          aria-expanded={kebabOpen}
+          onClick={(e) => {
+            e.stopPropagation();
+            setKebabOpen((prev) => !prev);
+          }}
+        >
+          <IconKebab />
+        </button>
 
-                    <div className="flex items-center justify-between gap-2 sm:justify-end">
-                        <div className="text-xs text-slate-500">
-                            {loading ? "Memuat…" : total ? `${total} pelanggan` : "0 pelanggan"}
-                        </div>
-
-                        <div className="relative">
-                            <label className="sr-only" htmlFor="perpage">
-                                Per page
-                            </label>
-                            <select
-                                id="perpage"
-                                className="
-                  appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-9 text-sm
-                  text-slate-900 focus:border-slate-900 focus:outline-none
-                "
-                                value={perPage}
-                                onChange={(e) => setQuery((q) => ({ ...q, per_page: Number(e.target.value), page: 1 }))}
-                                aria-label="Jumlah baris per halaman"
-                            >
-                                <option value={10}>10 / page</option>
-                                <option value={25}>25 / page</option>
-                                <option value={50}>50 / page</option>
-                            </select>
-                            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400">
-                                <IconChevron />
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Error */}
-            {error && (
-                <div role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {error}
-                </div>
-            )}
-
-            {/* Empty */}
-            {!loading && !error && rows && rows.data.length === 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-                    Belum ada data pelanggan.
-                </div>
-            )}
-
-            {/* Table */}
-            <section aria-busy={loading ? "true" : "false"}>
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(0,0,0,.35)]">
-                    <div className="overflow-auto">
-                        <table className="min-w-full text-sm">
-                            <thead className="sticky top-0 z-10 bg-white">
-                                <tr className="border-b border-slate-200">
-                                    <Th className="pl-4">Customer</Th>
-                                    <Th>WhatsApp</Th>
-                                    <Th>Alamat</Th>
-                                    <Th>Tags</Th>
-                                    <Th className="pr-4 text-right">Aksi</Th>
-                                </tr>
-                            </thead>
-
-                            <tbody className="divide-y divide-slate-100">
-                                {loading ? (
-                                    <>
-                                        <RowSkeleton />
-                                        <RowSkeleton />
-                                        <RowSkeleton />
-                                        <RowSkeleton />
-                                        <RowSkeleton />
-                                        <RowSkeleton />
-                                    </>
-                                ) : (
-                                    rows?.data.map((c) => (
-                                        <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
-                                            <Td className="pl-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                                                        {initials(c.name)}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="truncate font-medium text-slate-900">{c.name}</div>
-                                                        <div className="truncate text-xs text-slate-500">ID: {String(c.id)}</div>
-                                                    </div>
-                                                </div>
-                                            </Td>
-
-                                            <Td>
-                                                {formatWaLink(c.whatsapp) ? (
-                                                    <a
-                                                        href={formatWaLink(c.whatsapp) ?? "#"}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="
-         tabular-nums font-medium text-emerald-600
-         hover:underline hover:text-emerald-700
-            "
-                                                        aria-label={`Hubungi ${c.name} via WhatsApp`}
-                                                    >
-                                                        {c.whatsapp}
-                                                    </a>
-                                                ) : (
-                                                    <span className="tabular-nums text-slate-800">
-                                                        {c.whatsapp ?? "-"}
-                                                    </span>
-                                                )}
-                                            </Td>
-
-                                            <Td>
-                                                {mapsUrl(c.address) ? (
-                                                    <a
-                                                        href={mapsUrl(c.address)!}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="
-                                                            line-clamp-2 max-w-[56ch] text-blue-600
-                                                            hover:text-blue-700 hover:underline
-                                                            "
-                                                        title="Buka di Google Maps"
-                                                        aria-label={`Buka alamat ${c.name} di Google Maps`}
-                                                    >
-                                                        {c.address}
-                                                    </a>
-                                                ) : (
-                                                    <span className="text-slate-400">-</span>
-                                                )}
-                                            </Td>
-
-                                            <Td>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {Array.isArray(c.tags) && c.tags.length > 0 ? (
-                                                        c.tags.map((tag) => (
-                                                            <span
-                                                                key={`${c.id}-${tag}`}
-                                                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${chipClass(tag)}`}
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-slate-400">-</span>
-                                                    )}
-                                                </div>
-                                            </Td>
-
-                                            <Td className="pr-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Link
-                                                        to={`/customers/${String(c.id)}`}
-                                                        className="
-                                                            inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2
-                                                            text-xs font-semibold text-slate-900
-                                                            hover:bg-slate-50 active:bg-slate-100
-                                                            "
-                                                        aria-label={`Lihat detail pelanggan ${c.name}`}
-                                                    >
-                                                        Detail
-                                                    </Link>
-
-                                                    {canDelete && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setDeleteTarget(c);
-                                                                setDeleteOpen(true);
-                                                            }}
-                                                            className="
-                    inline-flex items-center justify-center rounded-lg bg-rose-600 px-3 py-2
-                    text-xs font-semibold text-white
-                    hover:bg-rose-700 active:bg-rose-800
-                "
-                                                            aria-label={`Hapus pelanggan ${c.name}`}
-                                                        >
-                                                            Hapus
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </Td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* footer summary */}
-                    <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            {total ? (
-                                <>
-                                    Menampilkan{" "}
-                                    <span className="font-semibold text-slate-700">
-                                        {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, total)}
-                                    </span>{" "}
-                                    dari <span className="font-semibold text-slate-700">{total}</span>
-                                </>
-                            ) : (
-                                "Tidak ada data untuk ditampilkan"
-                            )}
-                        </div>
-
-                        {/* Pagination */}
-                        {!loading && rows && rows.meta.last_page > 1 && (
-                            <nav className="flex items-center gap-2 justify-end" aria-label="Navigasi halaman">
-                                <button
-                                    disabled={currentPage <= 1}
-                                    onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) - 1 }))}
-                                    className="
-                    rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
-                    hover:bg-slate-50 active:bg-slate-100
-                    disabled:cursor-not-allowed disabled:opacity-50
-                  "
-                                >
-                                    Prev
-                                </button>
-
-                                <span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                                    Page <span className="font-semibold text-slate-900">{currentPage}</span> / {lastPage}
-                                </span>
-
-                                <button
-                                    disabled={currentPage >= lastPage}
-                                    onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}
-                                    className="
-                    rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
-                    hover:bg-slate-50 active:bg-slate-100
-                    disabled:cursor-not-allowed disabled:opacity-50
-                  "
-                                >
-                                    Next
-                                </button>
-                            </nav>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            <ConfirmDialog
-                open={deleteOpen}
-                title="Hapus customer?"
-                message={
-                    deleteTarget
-                        ? `Customer "${deleteTarget.name}" akan dihapus permanen beserta data terkait. Aksi ini tidak bisa dibatalkan.`
-                        : "Customer akan dihapus permanen beserta data terkait. Aksi ini tidak bisa dibatalkan."
-                }
-                confirmText={deleting ? "Menghapus..." : "Ya, hapus"}
-                cancelText="Batal"
-                confirmVariant="danger"
-                loading={deleting}
-                onClose={() => {
-                    if (deleting) return;
-                    setDeleteOpen(false);
-                    setDeleteTarget(null);
-                }}
-                onConfirm={handleConfirmDelete}
+        <div className="kebab-menu">
+          <label className="kebab-item">
+            <IconUpload />
+            <span>Import</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void onImport(file);
+              }}
             />
-        </div>
-    );
-}
+          </label>
 
-/* ---------- Subcomponents ---------- */
-function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return (
-        <th className={`text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}>
-            {children}
-        </th>
-    );
-}
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <td className={`px-3 py-3 align-top ${className}`}>{children}</td>;
-}
-function RowSkeleton() {
-    return (
-        <tr>
-            <td className="px-3 py-4 pl-4">
-                <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-black/10 animate-pulse" />
-                    <div className="space-y-2">
-                        <div className="h-4 w-40 rounded bg-black/10 animate-pulse" />
-                        <div className="h-3 w-20 rounded bg-black/10 animate-pulse" />
-                    </div>
-                </div>
-            </td>
-            <td className="px-3 py-4">
-                <div className="h-4 w-32 rounded bg-black/10 animate-pulse" />
-            </td>
-            <td className="px-3 py-4">
-                <div className="h-4 w-64 rounded bg-black/10 animate-pulse" />
-            </td>
-            <td className="px-3 py-4">
-                <div className="h-4 w-24 rounded bg-black/10 animate-pulse" />
-            </td>
-            <td className="px-3 py-4 pr-4 text-right">
-                <div className="inline-block h-9 w-20 rounded bg-black/10 animate-pulse" />
-            </td>
-        </tr>
-    );
+          <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
+            <IconDownload />
+            <span>{selected.length > 0 ? `Export ${selected.length} terpilih` : 'Export'}</span>
+          </button>
+
+          <div className="kebab-sep" />
+
+          <button
+            type="button"
+            className="kebab-item"
+            onClick={() => {
+              setArchived((prev) => !prev);
+              setPage(1);
+            }}
+          >
+            <IconArchive />
+            <span>Tampilkan arsip</span>
+            <span className="chk">{archived ? '\u2713' : ''}</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
+
+      {slot ? createPortal(pageActions, slot) : null}
+
+      <div className="card">
+        <div className="card-title">
+          <span>Daftar Pelanggan</span>
+          <span className="ct-note">
+            {loading ? 'Memuat\u2026' : `${meta?.active_total ?? 0} pelanggan aktif`}
+          </span>
+          <input
+            className="inp"
+            style={{ maxWidth: 380 }}
+            placeholder="nama / WA"
+            aria-label="Cari nama atau nomor WhatsApp"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+
+        <div className="row" style={{ marginBottom: 14 }}>
+          {canPickBranch ? (
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="cust-branch">Asal Outlet</label>
+              <select
+                id="cust-branch"
+                value={branchId}
+                onChange={(e) => {
+                  setBranchId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">Semua</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.code} {'\u2014'} {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="cust-visits-op">Jumlah Kunjungan</label>
+            <div className="row">
+              <select
+                id="cust-visits-op"
+                value={visitsOp}
+                onChange={(e) => {
+                  setVisitsOp(e.target.value as VisitsOp);
+                  setPage(1);
+                }}
+              >
+                <option value="">Semua</option>
+                <option value="gte">{'\u2265'}</option>
+                <option value="lte">{'\u2264'}</option>
+              </select>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                placeholder="jml"
+                aria-label="Jumlah kunjungan"
+                value={visits}
+                onChange={(e) => {
+                  setVisits(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className={selected.length ? 'bulkbar show' : 'bulkbar'}>
+          <span className="bb-count">{selected.length} dipilih</span>
+          <div className="toolbar">
+            <button
+              type="button"
+              className="btn ghost sm"
+              disabled={busy}
+              onClick={() => void applyActive(selected, archived)}
+            >
+              {archived ? <IconUnarchive /> : <IconArchive />}
+              {archived ? 'Pulihkan terpilih' : 'Arsipkan terpilih'}
+            </button>
+          </div>
+          <button type="button" className="link" onClick={() => setSelected([])}>
+            bersihkan
+          </button>
+        </div>
+
+        {error ? (
+          <div role="alert" style={{ marginBottom: 12, color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}>
+            {error}
+          </div>
+        ) : null}
+
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '1%' }}>
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    aria-label="Pilih semua pelanggan"
+                    onChange={(e) => setSelected(e.target.checked ? rows.map((row) => row.id) : [])}
+                  />
+                </th>
+                <th className="sortable" onClick={() => onSort('name')}>
+                  Nama
+                  {sortIcon('name')}
+                </th>
+                <th className="sortable" onClick={() => onSort('wa')}>
+                  WA
+                  {sortIcon('wa')}
+                </th>
+                <th className="sortable" onClick={() => onSort('branch')}>
+                  Asal
+                  {sortIcon('branch')}
+                </th>
+                <th className="sortable num" onClick={() => onSort('visits')}>
+                  Kunjungan
+                  {sortIcon('visits')}
+                </th>
+                <th className="sortable num" onClick={() => onSort('spend')}>
+                  Total Belanja
+                  {sortIcon('spend')}
+                </th>
+                <th className="sortable" onClick={() => onSort('last_order')}>
+                  Terakhir
+                  {sortIcon('last_order')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="empty">
+                    Memuat{'\u2026'}
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="empty">
+                    {archived
+                      ? 'Tidak ada pelanggan di arsip.'
+                      : 'Belum ada pelanggan. Data terisi otomatis saat order dibuat di POS.'}
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={row.is_active ? 'rowc' : 'rowc dt-arc'}
+                    onClick={() => navigate(`/customers/${row.id}`)}
+                  >
+                    <td className="dt-check" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(row.id)}
+                        aria-label={`Pilih ${row.name}`}
+                        onChange={(e) =>
+                          setSelected((prev) =>
+                            e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id),
+                          )
+                        }
+                      />
+                    </td>
+                    <td data-label="Nama">
+                      <span className="lnk">{row.name}</span>
+                      {(row.visits_count ?? 0) > 1 ? (
+                        <span className="chip c-lunas" style={{ marginLeft: 8 }}>
+                          Repeat
+                        </span>
+                      ) : null}
+                      {row.is_active ? null : (
+                        <span className="tag" style={{ marginLeft: 8 }}>
+                          arsip
+                        </span>
+                      )}
+                    </td>
+                    <td data-label="WA">{row.whatsapp || '\u2014'}</td>
+                    <td data-label="Asal">{row.branch?.code ?? row.branch?.name ?? '\u2014'}</td>
+                    <td className="num" data-label="Kunjungan">
+                      {row.visits_count ?? 0}
+                    </td>
+                    <td className="num" data-label="Total Belanja">
+                      {rp(Number(row.spend_total ?? 0))}
+                    </td>
+                    <td data-label="Terakhir">{row.last_order_at ? fmtDate(row.last_order_at) : '\u2014'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {total > 0 ? (
+          <div className="dt-pager">
+            <div className="dt-pager-size">
+              Tampilkan{' '}
+              <select
+                value={perPage}
+                aria-label="Jumlah pelanggan per halaman"
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>{' '}
+              per halaman
+            </div>
+            <div className="dt-pager-nav">
+              <span className="mini">
+                {from}
+                {'\u2013'}
+                {to} dari {total}
+              </span>
+              <button
+                type="button"
+                className="pg-btn"
+                aria-label="Halaman sebelumnya"
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => prev - 1)}
+              >
+                {'\u2039'}
+              </button>
+              <span className="mini">
+                {page}/{lastPage}
+              </span>
+              <button
+                type="button"
+                className="pg-btn"
+                aria-label="Halaman berikutnya"
+                disabled={page >= lastPage}
+                onClick={() => setPage((prev) => prev + 1)}
+              >
+                {'\u203a'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </>
+  );
 }

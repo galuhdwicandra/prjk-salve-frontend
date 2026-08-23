@@ -1,352 +1,358 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getAccountingCashFlow } from '../../api/accounting';
-import { listBranches } from '../../api/branches';
 import { getErrorMessage } from '../../api/client';
+import DateRangePicker from '../../components/DateRangePicker';
+import { useCanModule } from '../../store/useAuth';
+import { useActiveBranchId } from '../../store/useBranch';
 import type {
-  AccountingCashFlowActivity,
   AccountingCashFlowData,
-  AccountingCashFlowItem,
-  AccountingCashFlowMeta,
+  AccountingCashFlowGroup,
+  AccountingCashFlowLink,
+  AccountingCashFlowLinkType,
+  AccountingCashFlowSection,
 } from '../../types/accounting';
-import type { Branch } from '../../types/branches';
-import { useAuth } from '../../store/useAuth';
-import { todayLocalYMD } from '../../utils/date';
-import { toIDR } from '../../utils/money';
+import { fmtDate, rangeFor } from '../../utils/date';
+import { downloadXlsx, printPdf } from '../../utils/export-table';
+import { rp } from '../../utils/money';
+import { IconDownload } from '../users/icons';
 
-function firstDateOfMonth(): string {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-
-  return `${year}-${month}-01`;
-}
-
-function num(value: string | number | null | undefined): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatDate(value?: string | null): string {
-  if (!value) return '-';
-  return value.slice(0, 10);
-}
-
-type ReportState = {
-  data: AccountingCashFlowData | null;
-  meta: AccountingCashFlowMeta | null;
+const SECTION_SHORT: Record<string, string> = {
+  OPERATING: 'Operasi',
+  INVESTING: 'Investasi',
+  FINANCING: 'Pendanaan',
 };
 
-function SummaryCard(props: {
-  label: string;
-  value: number;
-  tone?: 'default' | 'positive' | 'negative';
-}) {
-  const toneClass =
-    props.tone === 'positive'
-      ? 'text-emerald-600'
-      : props.tone === 'negative'
-        ? 'text-red-600'
-        : 'text-[color:var(--color-text-default)]';
+const EXPORT_COLUMNS = [
+  'Bagian',
+  'Arus',
+  'Kategori',
+  'No. Transaksi',
+  'Tanggal',
+  'Akun',
+  'Keterangan',
+  'Nominal',
+];
 
-  return (
-    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-1)]">
-      <div className="text-sm text-[color:var(--color-text-muted)]">{props.label}</div>
-      <div className={`mt-2 text-xl font-bold ${toneClass}`}>{toIDR(props.value)}</div>
-    </div>
-  );
+const DEFAULT_RANGE = rangeFor('month');
+
+function linkPath(link: AccountingCashFlowLink): string {
+  if (link.type === 'order') return `/orders/${link.id}`;
+  if (link.type === 'cash_transaction') return `/transactions/${link.id}/edit`;
+
+  return `/accounting/journals/${link.id}`;
 }
 
-function ActivityTable(props: {
-  activity: AccountingCashFlowActivity;
-  emptyText: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] shadow-[var(--shadow-1)]">
-      <div className="flex flex-col gap-1 border-b border-[color:var(--color-border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">{props.activity.label}</h2>
-          <p className="text-sm text-[color:var(--color-text-muted)]">
-            Mutasi akun kas/bank dari jurnal posted.
-          </p>
-        </div>
+type FlowLabel = 'Penerimaan' | 'Pengeluaran';
 
-        <div className="text-right">
-          <div className="text-xs text-[color:var(--color-text-muted)]">Total</div>
-          <div className="text-base font-bold">{toIDR(num(props.activity.total))}</div>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-[color:var(--color-bg-muted)] text-left">
-            <tr>
-              <th className="px-3 py-3 font-semibold">Tanggal</th>
-              <th className="px-3 py-3 font-semibold">Jurnal</th>
-              <th className="px-3 py-3 font-semibold">Keterangan</th>
-              <th className="px-3 py-3 font-semibold">Akun Kas</th>
-              <th className="px-3 py-3 text-right font-semibold">Kas Masuk</th>
-              <th className="px-3 py-3 text-right font-semibold">Kas Keluar</th>
-              <th className="px-3 py-3 text-right font-semibold">Net</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {props.activity.items.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-[color:var(--color-text-muted)]">
-                  {props.emptyText}
-                </td>
-              </tr>
-            ) : (
-              props.activity.items.map((item: AccountingCashFlowItem) => (
-                <tr key={item.id} className="border-b border-[color:var(--color-border)] last:border-0">
-                  <td className="px-3 py-3">{formatDate(item.journal_date)}</td>
-                  <td className="px-3 py-3">
-                    <div className="font-medium">{item.journal_no ?? '-'}</div>
-                    <div className="text-xs text-[color:var(--color-text-muted)]">
-                      {item.source_no ?? item.event_key ?? '-'}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div>{item.description || '-'}</div>
-                    {item.branch?.name ? (
-                      <div className="text-xs text-[color:var(--color-text-muted)]">
-                        {item.branch.code ? `${item.branch.code} - ` : ''}
-                        {item.branch.name}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-3">
-                    {item.cash_account
-                      ? `${item.cash_account.code ?? '-'} - ${item.cash_account.name ?? '-'}`
-                      : '-'}
-                  </td>
-                  <td className="px-3 py-3 text-right">{toIDR(num(item.cash_in))}</td>
-                  <td className="px-3 py-3 text-right">{toIDR(num(item.cash_out))}</td>
-                  <td className="px-3 py-3 text-right font-semibold">{toIDR(num(item.net_amount))}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+type FlowRow = {
+  section: AccountingCashFlowSection;
+  group: AccountingCashFlowGroup;
+  flow: FlowLabel;
+};
 
 export default function CashFlowPage() {
-  const canAccessAllBranches = (useAuth.user?.branches.length ?? 0) > 1;
+  const branchId = useActiveBranchId();
+  const canOrder = useCanModule('kasir-receipt');
+  const canTransaction = useCanModule('fin-transaksi');
+  const canJournal = useCanModule('set-jurnal');
 
-  const [dateFrom, setDateFrom] = useState(firstDateOfMonth());
-  const [dateTo, setDateTo] = useState(todayLocalYMD());
-  const [branchId, setBranchId] = useState('');
-
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [report, setReport] = useState<ReportState>({
-    data: null,
-    meta: null,
-  });
-
-  const [loadingBranches, setLoadingBranches] = useState(false);
-  const [loadingReport, setLoadingReport] = useState(false);
+  const [from, setFrom] = useState(DEFAULT_RANGE[0]);
+  const [to, setTo] = useState(DEFAULT_RANGE[1]);
+  const [report, setReport] = useState<AccountingCashFlowData | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [detail, setDetail] = useState<FlowRow | null>(null);
 
-  const summary = report.data?.summary;
-
-  const netCashFlowTone = useMemo(() => {
-    const value = num(summary?.net_cash_flow);
-    if (value > 0) return 'positive';
-    if (value < 0) return 'negative';
-    return 'default';
-  }, [summary?.net_cash_flow]);
-
-  async function loadBranches() {
-    if (!canAccessAllBranches) return;
-
-    setLoadingBranches(true);
-    setError('');
-
-    try {
-      const res = await listBranches({ per_page: 500 });
-      setBranches(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      setError(getErrorMessage(err, 'Gagal memuat data cabang.'));
-    } finally {
-      setLoadingBranches(false);
-    }
-  }
-
-  async function loadReport() {
-    setLoadingReport(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     setError('');
 
     try {
       const res = await getAccountingCashFlow({
-        date_from: dateFrom,
-        date_to: dateTo,
-        branch_id: canAccessAllBranches && branchId ? branchId : undefined,
-        basis: 'posted',
+        branch_id: branchId || undefined,
+        date_from: from,
+        date_to: to,
       });
 
-      setReport({
-        data: res.data,
-        meta: res.meta,
-      });
+      setReport(res.data);
+      setDetail(null);
     } catch (err) {
-      setReport({
-        data: null,
-        meta: null,
-      });
+      setReport(null);
       setError(getErrorMessage(err, 'Gagal memuat laporan arus kas.'));
     } finally {
-      setLoadingReport(false);
+      setLoading(false);
     }
-  }
-
-  function submitFilter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void loadReport();
-  }
+  }, [branchId, from, to]);
 
   useEffect(() => {
-    void loadBranches();
-    void loadReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void load();
+  }, [load]);
+
+  const sections = useMemo(() => report?.sections ?? [], [report]);
+  const summary = report?.summary ?? null;
+
+  const flowRows = useMemo<FlowRow[]>(
+    () =>
+      sections.flatMap((section) => [
+        ...section.inflows.map((group) => ({ section, group, flow: 'Penerimaan' as const })),
+        ...section.outflows.map((group) => ({ section, group, flow: 'Pengeluaran' as const })),
+      ]),
+    [sections],
+  );
+
+  const totalItems = useMemo(
+    () => flowRows.reduce((sum, row) => sum + row.group.items.length, 0),
+    [flowRows],
+  );
+
+  const linkAllowed = useMemo<Record<AccountingCashFlowLinkType, boolean>>(
+    () => ({
+      order: canOrder,
+      cash_transaction: canTransaction,
+      journal: canJournal,
+    }),
+    [canOrder, canTransaction, canJournal],
+  );
+
+  function buildAoa(): unknown[][] {
+    const aoa: unknown[][] = [EXPORT_COLUMNS];
+
+    flowRows.forEach(({ section, group, flow }) => {
+      group.items.forEach((item) => {
+        aoa.push([
+          SECTION_SHORT[section.key] ?? section.key,
+          flow,
+          group.label,
+          item.no ?? '',
+          item.date ?? '',
+          item.account ?? '',
+          item.description ?? '',
+          item.amount,
+        ]);
+      });
+    });
+
+    return aoa;
+  }
+
+  function runExport(format: 'xlsx' | 'pdf') {
+    const aoa = buildAoa();
+    const subtitle = `Periode ${fmtDate(from)} \u2013 ${fmtDate(to)}`;
+
+    if (format === 'xlsx') {
+      downloadXlsx(`cashflow-${from}-${to}.xlsx`, 'Cashflow', aoa);
+    } else if (!printPdf('Laporan Arus Kas', subtitle, aoa)) {
+      setError('Popup diblokir browser. Izinkan popup untuk export PDF.');
+    }
+
+    setExportOpen(false);
+  }
+
+  function renderGroups(
+    section: AccountingCashFlowSection,
+    groups: AccountingCashFlowGroup[],
+    flow: FlowLabel,
+  ) {
+    if (groups.length === 0) return null;
+
+    return (
+      <Fragment>
+        <tr className="cf-flow">
+          <td colSpan={2}>{flow.toUpperCase()}</td>
+        </tr>
+
+        {groups.map((group) => (
+          <tr key={group.key}>
+            <td>
+              <button
+                type="button"
+                className="cf-lnk"
+                onClick={() => setDetail({ section, group, flow })}
+              >
+                {group.label}
+              </button>
+            </td>
+            <td className="num">{rp(group.amount)}</td>
+          </tr>
+        ))}
+      </Fragment>
+    );
+  }
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-1)]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-xl font-bold">Arus Kas</h1>
-            <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
-              Laporan kas masuk, kas keluar, dan saldo kas berdasarkan jurnal akuntansi posted.
-            </p>
+    <div className="card">
+      <div className="card-hd">
+        <div className="card-title">Laporan Arus Kas</div>
+
+        <div className="bb-hd-r">
+          <span className="ct-note">
+            metode langsung {'\u00B7'} klik tiap baris untuk melihat transaksinya
+          </span>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setExportOpen(true)}
+            disabled={totalItems === 0}
+          >
+            <IconDownload />
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="bb-bar">
+        <div>
+          <span className="bb-lbl">Periode</span>
+          <DateRangePicker
+            from={from}
+            to={to}
+            onChange={(nextFrom, nextTo) => {
+              setFrom(nextFrom);
+              setTo(nextTo);
+            }}
+          />
+        </div>
+      </div>
+
+      {error ? <div className="login-err">{error}</div> : null}
+
+      {loading ? (
+        <div className="empty">Memuat laporan arus kas...</div>
+      ) : (
+        <Fragment>
+          <div className="cf-tbl">
+            <table>
+              <tbody>
+                {sections.map((section) => (
+                  <Fragment key={section.key}>
+                    <tr className="cf-sec">
+                      <td colSpan={2}>{section.label}</td>
+                    </tr>
+
+                    {section.inflows.length === 0 && section.outflows.length === 0 ? (
+                      <tr className="cf-none">
+                        <td colSpan={2}>Tidak ada arus kas.</td>
+                      </tr>
+                    ) : null}
+
+                    {renderGroups(section, section.inflows, 'Penerimaan')}
+                    {renderGroups(section, section.outflows, 'Pengeluaran')}
+
+                    <tr className="cf-net">
+                      <td>
+                        Kas bersih {(SECTION_SHORT[section.key] ?? section.key).toLowerCase()}
+                      </td>
+                      <td className="num">{rp(section.net)}</td>
+                    </tr>
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          <form onSubmit={submitFilter} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                Tanggal awal
-              </span>
-              <input
-                type="date"
-                className="input"
-                value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
-              />
-            </label>
+          {summary ? (
+            <div className="cf-sum">
+              <table>
+                <tbody>
+                  <tr className="cf-total">
+                    <td>KENAIKAN (PENURUNAN) KAS BERSIH</td>
+                    <td className="num">{rp(summary.net_change)}</td>
+                  </tr>
+                  <tr>
+                    <td>Saldo kas awal periode</td>
+                    <td className="num">{rp(summary.opening_balance)}</td>
+                  </tr>
+                  <tr className="cf-end">
+                    <td>Saldo kas akhir periode</td>
+                    <td className="num">{rp(summary.ending_balance)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </Fragment>
+      )}
 
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                Tanggal akhir
-              </span>
-              <input
-                type="date"
-                className="input"
-                value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
-              />
-            </label>
-
-            {canAccessAllBranches ? (
-              <label className="space-y-1">
-                <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                  Cabang
-                </span>
-                <select
-                  className="input"
-                  value={branchId}
-                  disabled={loadingBranches}
-                  onChange={(event) => setBranchId(event.target.value)}
-                >
-                  <option value="">Semua cabang</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.code ? `${branch.code} - ` : ''}
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="btn-primary w-full disabled:opacity-60"
-                disabled={loadingReport}
-              >
-                {loadingReport ? 'Memuat...' : 'Terapkan'}
+      {detail ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-label={detail.group.label}>
+          <div className="box lg">
+            <div className="modal-head">
+              <div>
+                <h3>{detail.group.label}</h3>
+                <div className="mini">
+                  {detail.flow} {'\u00B7'} {SECTION_SHORT[detail.section.key] ?? detail.section.key}{' '}
+                  {'\u00B7'} total {rp(Math.abs(detail.group.amount))}
+                </div>
+              </div>
+              <button type="button" className="mclose" onClick={() => setDetail(null)}>
+                {'\u2715'}
               </button>
             </div>
-          </form>
-        </div>
 
-        {error ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+            <div className="cf-dtl">
+              <table>
+                <thead>
+                  <tr>
+                    <th>No. Transaksi</th>
+                    <th>Tanggal</th>
+                    <th>Akun</th>
+                    <th>Keterangan</th>
+                    <th className="num">Nominal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detail.group.items.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        {item.link && linkAllowed[item.link.type] ? (
+                          <Link className="lnk" to={linkPath(item.link)}>
+                            {item.no ?? '\u2014'}
+                          </Link>
+                        ) : (
+                          item.no ?? '\u2014'
+                        )}
+                      </td>
+                      <td>{fmtDate(item.date)}</td>
+                      <td>{item.account ?? '\u2014'}</td>
+                      <td>{item.description ?? '\u2014'}</td>
+                      <td className="num">{rp(item.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ) : null}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard label="Saldo Awal Kas" value={num(summary?.opening_balance)} />
-        <SummaryCard label="Total Kas Masuk" value={num(summary?.total_cash_in)} tone="positive" />
-        <SummaryCard label="Total Kas Keluar" value={num(summary?.total_cash_out)} tone="negative" />
-        <SummaryCard label="Arus Kas Bersih" value={num(summary?.net_cash_flow)} tone={netCashFlowTone} />
-        <SummaryCard label="Saldo Akhir Kas" value={num(summary?.ending_balance)} />
-      </div>
-
-      <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 text-sm text-[color:var(--color-text-muted)] shadow-[var(--shadow-1)]">
-        Basis laporan: <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.basis ?? 'POSTED'}</span>
-        {' '}· Sumber: <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.source ?? 'accounting_journal_lines'}</span>
-        {' '}· Periode: <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.date_from ?? dateFrom}</span>
-        {' '}s/d <span className="font-semibold text-[color:var(--color-text-default)]">{report.meta?.date_to ?? dateTo}</span>
-      </div>
-
-      {loadingReport ? (
-        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-8 text-center text-sm text-[color:var(--color-text-muted)] shadow-[var(--shadow-1)]">
-          Memuat laporan arus kas...
         </div>
-      ) : (
-        <>
-          <ActivityTable
-            activity={
-              report.data?.operating_activities ?? {
-                label: 'Aktivitas Operasional',
-                items: [],
-                total: 0,
-              }
-            }
-            emptyText="Belum ada aktivitas operasional pada periode ini."
-          />
+      ) : null}
 
-          <ActivityTable
-            activity={
-              report.data?.investing_activities ?? {
-                label: 'Aktivitas Investasi',
-                items: [],
-                total: 0,
-              }
-            }
-            emptyText="Belum ada aktivitas investasi pada periode ini."
-          />
+      {exportOpen ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-label="Pilih format export">
+          <div className="box">
+            <div className="modal-head">
+              <h3>Pilih Format Export</h3>
+              <button type="button" className="mclose" onClick={() => setExportOpen(false)}>
+                {'\u2715'}
+              </button>
+            </div>
 
-          <ActivityTable
-            activity={
-              report.data?.financing_activities ?? {
-                label: 'Aktivitas Pendanaan',
-                items: [],
-                total: 0,
-              }
-            }
-            emptyText="Belum ada aktivitas pendanaan pada periode ini."
-          />
-        </>
-      )}
+            <div className="mini" style={{ marginBottom: 12 }}>
+              {totalItems} baris data. {'\u00B7'} Periode {fmtDate(from)} {'\u2013'} {fmtDate(to)}
+            </div>
+
+            <button type="button" className="txn-choice" onClick={() => runExport('xlsx')}>
+              <b>Export ke Excel</b>
+              <span>Berkas .xlsx untuk diolah lebih lanjut</span>
+            </button>
+
+            <button type="button" className="txn-choice" onClick={() => runExport('pdf')}>
+              <b>Export ke PDF</b>
+              <span>Berkas siap cetak / dibagikan</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

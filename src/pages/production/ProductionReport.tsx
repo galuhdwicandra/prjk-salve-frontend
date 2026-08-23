@@ -31,7 +31,8 @@ export default function ProductionReport() {
     const [rows, setRows] = useState<ProductionStaffReportRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const isSuperadmin = (useAuth.user?.branches.length ?? 0) > 1;
+    const canSelectBranch = (useAuth.user?.branches.length ?? 0) > 1;
+    const canSelectStaff = (useAuth.user?.roles ?? []).includes('Superadmin');
 
     const totals = useMemo(() => {
         return rows.reduce(
@@ -48,25 +49,24 @@ export default function ProductionReport() {
     }, [rows]);
 
     const loadFilterOptions = useCallback(async () => {
-        if (!isSuperadmin) return;
-
         try {
-            const [branchResponse, userResponse] = await Promise.all([
-                listBranches({ per_page: 100 }),
-                listUsers({
+            if (canSelectBranch) {
+                const branchResponse = await listBranches({ per_page: 100 });
+                setBranches(branchResponse.data ?? []);
+            }
+            if (canSelectStaff) {
+                const userResponse = await listUsers({
                     role: 'Petugas Cuci',
                     branch_id: branchId || undefined,
                     per_page: 100,
-                }),
-            ]);
-
-            setBranches(branchResponse.data ?? []);
-            setStaffOptions(userResponse.data ?? []);
+                });
+                setStaffOptions(userResponse.data ?? []);
+            }
         } catch (err) {
             const normalized = normalizeApiError(err);
             setError(normalized.message);
         }
-    }, [isSuperadmin, branchId]);
+    }, [canSelectBranch, canSelectStaff, branchId]);
 
     useEffect(() => {
         void loadFilterOptions();
@@ -84,8 +84,8 @@ export default function ProductionReport() {
             const response = await getProductionStaffDailyReport({
                 date_from: dateFrom,
                 date_to: dateTo,
-                branch_id: isSuperadmin && branchId ? branchId : undefined,
-                user_id: isSuperadmin && userId ? userId : undefined,
+                branch_id: canSelectBranch && branchId ? branchId : undefined,
+                user_id: canSelectStaff && userId ? userId : undefined,
             });
 
             setRows(response.data ?? []);
@@ -95,7 +95,7 @@ export default function ProductionReport() {
         } finally {
             setLoading(false);
         }
-    }, [dateFrom, dateTo, branchId, userId, isSuperadmin]);
+    }, [dateFrom, dateTo, branchId, userId, canSelectBranch, canSelectStaff]);
 
     useEffect(() => {
         void loadReport();
@@ -135,7 +135,7 @@ export default function ProductionReport() {
                     />
                 </label>
 
-                {isSuperadmin ? (
+                {canSelectBranch ? (
                     <label className="block">
                         <span className="text-xs font-medium text-slate-500">Cabang</span>
                         <select
@@ -153,7 +153,7 @@ export default function ProductionReport() {
                     </label>
                 ) : null}
 
-                {isSuperadmin ? (
+                {canSelectStaff ? (
                     <label className="block">
                         <span className="text-xs font-medium text-slate-500">Petugas</span>
                         <select

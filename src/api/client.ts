@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { SidebarIconName } from '../layouts/menu';
 import type { AxiosError } from 'axios';
 
 const api = axios.create({
@@ -19,13 +20,14 @@ export const MODULE_KEYS = [
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 export interface ModuleGroup {
     label: string;
+    icon: SidebarIconName;
     items: { key: ModuleKey; label: string }[];
 }
 
 export const MODULE_GROUPS: ModuleGroup[] = [
-    { label: 'Dashboard', items: [{ key: 'dashboard', label: 'Dashboard' }] },
+    { label: 'Dashboard', icon: 'dashboard', items: [{ key: 'dashboard', label: 'Dashboard' }] },
     {
-        label: 'Kasir', items: [
+        label: 'Kasir', icon: 'pos', items: [
             { key: 'kasir-pos', label: 'POS' },
             { key: 'kasir-receipt', label: 'Receipt List' },
             { key: 'kasir-customer', label: 'Database Customer' },
@@ -33,7 +35,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         ]
     },
     {
-        label: 'Operasional', items: [
+        label: 'Operasional', icon: 'operations', items: [
             { key: 'ops-sorting', label: 'Sorting List' },
             { key: 'ops-proses', label: 'Workshop' },
             { key: 'ops-kirim', label: 'Pengiriman' },
@@ -41,15 +43,15 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         ]
     },
     {
-        label: 'Keuangan', items: [
+        label: 'Keuangan', icon: 'finance', items: [
             { key: 'fin-kas', label: 'Kas & Bank' },
             { key: 'fin-transaksi', label: 'Transaksi' },
             { key: 'fin-kontak', label: 'Database Kontak' },
         ]
     },
-    { label: 'Laporan', items: [{ key: 'laporan', label: 'Laporan' }] },
+    { label: 'Laporan', icon: 'reports', items: [{ key: 'laporan', label: 'Laporan' }] },
     {
-        label: 'Pengaturan', items: [
+        label: 'Pengaturan', icon: 'settings', items: [
             { key: 'set-user', label: 'User & Access' },
             { key: 'set-master', label: 'Master Produk & Layanan' },
             { key: 'set-outlet', label: 'Master Outlet' },
@@ -71,6 +73,7 @@ export interface MeUser {
     branch_id: number | string | null;
     branches: BranchMini[];
     role_label: string | null;
+    roles: string[];
     modules: ModuleKey[];
     manager: boolean;
     show_balance: boolean;

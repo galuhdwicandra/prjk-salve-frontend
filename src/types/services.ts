@@ -10,6 +10,7 @@ export interface ServiceCategory {
   id: string;
   name: string;
   is_active: boolean;
+  services_count?: number;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -36,6 +37,7 @@ export interface Service {
   is_active: boolean;
   category?: ServiceCategory;
   variants?: Service[];
+  prices?: ServicePrice[];
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -52,9 +54,11 @@ export interface ServiceUpsertPayload {
 export interface ServiceQuery {
   q?: string;
   category_id?: string;
+  branch_id?: string;
   is_active?: boolean;
   tree?: boolean;
   leaf?: boolean;
+  root?: boolean;
   page?: number;
   per_page?: number;
 }

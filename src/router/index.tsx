@@ -12,9 +12,11 @@ import { kasirReceiptRoutes } from './modules/kasir-receipt';
 import { kasirCustomerRoutes } from './modules/kasir-customer';
 import { kasirPromoRoutes } from './modules/kasir-promo';
 import { opsProsesRoutes } from './modules/ops-proses';
+import { opsSortingRoutes } from './modules/ops-sorting';
 import { opsKirimRoutes } from './modules/ops-kirim';
-import { finKasRoutes } from './modules/fin-kas';
+import { opsTrackerRoutes } from './modules/ops-tracker';
 import { finTransaksiRoutes } from './modules/fin-transaksi';
+import { finKasRoutes } from './modules/fin-kas';
 import { setUserRoutes } from './modules/set-user';
 import { setMasterRoutes } from './modules/set-master';
 import { setOutletRoutes } from './modules/set-outlet';
@@ -23,9 +25,12 @@ import { setJurnalRoutes } from './modules/set-jurnal';
 import { setNumRoutes } from './modules/set-num';
 import { setPaymethodRoutes } from './modules/set-paymethod';
 import { setLabelsRoutes } from './modules/set-labels';
+import { finKontakRoutes } from './modules/fin-kontak';
+import { setWaRoutes } from './modules/set-wa';
 
 const OrderReceipt = lazy(() => import('../pages/orders/OrderReceipt'));
-const OrderTracker = lazy(() => import('../pages/orders/OrderTracker'));
+const CustomerTracker = lazy(() => import('../pages/tracker/CustomerTracker'));
+const SettingsHub = lazy(() => import('../pages/settings/SettingsHub'));
 const AppLayout = import.meta.env.VITE_CRAFT_SHELL === 'true' ? CraftLayout : ProtectedLayout;
 
 export const router = createBrowserRouter([
@@ -42,10 +47,10 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: '/track/:number',
+        path: '/t/:token',
         element: (
           <LazyBoundary>
-            <OrderTracker />
+            <CustomerTracker />
           </LazyBoundary>
         ),
       },
@@ -55,14 +60,25 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       ...dashboardRoutes,
+      {
+        path: '/settings',
+        element: (
+          <LazyBoundary>
+            <SettingsHub />
+          </LazyBoundary>
+        ),
+      },
       ...kasirPosRoutes,
       ...kasirReceiptRoutes,
       ...kasirCustomerRoutes,
       ...kasirPromoRoutes,
+      ...opsSortingRoutes,
       ...opsProsesRoutes,
       ...opsKirimRoutes,
-      ...finKasRoutes,
+      ...opsTrackerRoutes,
       ...finTransaksiRoutes,
+      ...finKasRoutes,
+      ...finKontakRoutes,
       ...laporanRoutes,
       ...setUserRoutes,
       ...setMasterRoutes,
@@ -72,6 +88,7 @@ export const router = createBrowserRouter([
       ...setNumRoutes,
       ...setPaymethodRoutes,
       ...setLabelsRoutes,
+      ...setWaRoutes,
     ],
   },
 ]);

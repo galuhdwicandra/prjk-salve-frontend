@@ -6,8 +6,9 @@ import { SidebarIcon } from "./SidebarIcon";
 import { getTopbarTitle, isRouteActive, useVisibleMenuGroups } from "./menu";
 import type { MenuGroup, SidebarIconName } from "./menu";
 import { listOrders } from "../api/orders";
-import type { Order } from "../types/orders";
-import { buildWhatsAppLink } from "../utils/wa";
+import { listDeliveries } from "../api/deliveries";
+import type { OrderBackendStatus } from "../types/orders";
+import type { DeliveryStatus } from "../types/deliveries";
 import BranchPicker from "../components/BranchPicker";
 
 type TopbarSearchResult = {
@@ -49,8 +50,9 @@ function buildTopbarSearchResults(groups: MenuGroup[]): TopbarSearchResult[] {
   );
 }
 
-function getTodayDateString(): string {
+function getYesterdayDateString(): string {
   const date = new Date();
+  date.setDate(date.getDate() - 1);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -58,30 +60,15 @@ function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatShortDate(input?: string | null): string {
-  if (!input) return "-";
+const ACTIVE_ORDER_STATUSES: OrderBackendStatus[] = ["QUEUE", "WASHING", "DRYING", "IRONING"];
+const DELIVERY_TERMINAL_STATUSES: DeliveryStatus[] = ["COMPLETED", "FAILED", "CANCELLED"];
 
-  const value = String(input).slice(0, 10);
-  const parts = value.split("-");
-
-  if (parts.length !== 3) return value;
-
-  const [year, month, day] = parts;
-
-  return `${day}/${month}/${year}`;
-}
-
-function getCustomerName(order: Order): string {
-  return order.customer?.name?.trim() || "Tanpa nama";
-}
-
-function getCustomerWhatsapp(order: Order): string {
-  return order.customer?.whatsapp?.trim() || "";
-}
-
-function getOrderNote(order: Order): string {
-  return order.notes?.trim() || "Tidak ada catatan barang.";
-}
+type NotificationBucket = {
+  key: string;
+  dotClassName: string;
+  text: string;
+  to: string;
+};
 
 export default function ProtectedLayout() {
   const me = useAuth.user;
@@ -108,7 +95,7 @@ export default function ProtectedLayout() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notificationError, setNotificationError] = useState<string | null>(null);
-  const [completedTodayOrders, setCompletedTodayOrders] = useState<Order[]>([]);
+  const [notifications, setNotifications] = useState<NotificationBucket[]>([]);
   const notificationRef = useRef<HTMLDivElement | null>(null);
 
   // Close drawer/search/user menu/notification on route change (UX)
@@ -265,30 +252,72 @@ export default function ProtectedLayout() {
     nav("/login", { replace: true });
   }
 
-  async function loadCompletedTodayNotifications() {
-    const today = getTodayDateString();
-
+  async function loadNotifications() {
     setNotificationLoading(true);
     setNotificationError(null);
 
     try {
-      const res = await listOrders({
-        date_to: today,
-        sort_by: "ready_at",
-        sort_dir: "desc",
-        per_page: 100,
-      });
+      const [overdueRes, readyRes, deliveryRes] = await Promise.all([
+        listOrders({
+          date_to: getYesterdayDateString(),
+          sort_by: "ready_at",
+          sort_dir: "asc",
+          per_page: 100,
+        }),
+        listOrders({
+          status: "READY",
+          sort_by: "ready_at",
+          sort_dir: "asc",
+          per_page: 100,
+        }),
+        listDeliveries({ per_page: 100 }),
+      ]);
 
-      const rows = Array.isArray(res.data) ? res.data : [];
+      const overdueRows = Array.isArray(overdueRes.data) ? overdueRes.data : [];
+      const readyRows = Array.isArray(readyRes.data) ? readyRes.data : [];
+      const deliveryRows = Array.isArray(deliveryRes.data) ? deliveryRes.data : [];
 
-      const todayRows = rows.filter((order) => {
-        return String(order.ready_at ?? "").slice(0, 10) === today;
-      });
+      const overdueCount = overdueRows.filter((order) =>
+        ACTIVE_ORDER_STATUSES.includes(order.status),
+      ).length;
 
-      setCompletedTodayOrders(todayRows);
+      const pendingDeliveryCount = deliveryRows.filter(
+        (delivery) => !DELIVERY_TERMINAL_STATUSES.includes(delivery.status),
+      ).length;
+
+      const buckets: NotificationBucket[] = [];
+
+      if (overdueCount > 0) {
+        buckets.push({
+          key: "overdue",
+          dotClassName: "bg-red-600",
+          text: `${overdueCount} order melewati deadline & belum selesai`,
+          to: "/production-board",
+        });
+      }
+
+      if (readyRows.length > 0) {
+        buckets.push({
+          key: "ready",
+          dotClassName: "bg-amber-500",
+          text: `${readyRows.length} order siap diambil`,
+          to: "/orders",
+        });
+      }
+
+      if (pendingDeliveryCount > 0) {
+        buckets.push({
+          key: "surat-jalan",
+          dotClassName: "bg-blue-600",
+          text: `${pendingDeliveryCount} surat jalan belum selesai`,
+          to: "/deliveries",
+        });
+      }
+
+      setNotifications(buckets);
     } catch {
-      setCompletedTodayOrders([]);
-      setNotificationError("Gagal memuat notifikasi pesanan selesai.");
+      setNotifications([]);
+      setNotificationError("Gagal memuat notifikasi.");
     } finally {
       setNotificationLoading(false);
     }
@@ -303,13 +332,13 @@ export default function ProtectedLayout() {
       setUserMenuOpen(false);
       setSearchOpen(false);
       setSearchKeyword("");
-      await loadCompletedTodayNotifications();
+      await loadNotifications();
     }
   }
 
-  function openOrderFromNotification(orderId: string) {
+  function openNotificationBucket(to: string) {
     setNotificationOpen(false);
-    nav(`/orders/${encodeURIComponent(orderId)}`);
+    nav(to);
   }
 
   const roleText = me?.role_label ?? "";
@@ -501,9 +530,9 @@ export default function ProtectedLayout() {
                       </svg>
                     </TopbarCircleButton>
 
-                    {completedTodayOrders.length > 0 ? (
+                    {notifications.length > 0 ? (
                       <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold leading-none text-white ring-2 ring-[color:var(--color-surface)]">
-                        {completedTodayOrders.length > 99 ? "99+" : completedTodayOrders.length}
+                        {notifications.length}
                       </span>
                     ) : null}
                   </div>
@@ -516,16 +545,13 @@ export default function ProtectedLayout() {
                       <div className="flex items-start justify-between gap-3 border-b border-[color:var(--color-border)] px-4 py-3">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-[color:var(--color-text-default)]">
-                            Notif Pesanan Selesai
-                          </div>
-                          <div className="mt-0.5 text-xs text-[color:var(--color-text-muted)]">
-                            Semua pesanan dengan tanggal selesai hari ini
+                            Notifikasi
                           </div>
                         </div>
 
                         <button
                           type="button"
-                          onClick={loadCompletedTodayNotifications}
+                          onClick={loadNotifications}
                           disabled={notificationLoading}
                           className="rounded-lg border border-[color:var(--color-border)] px-2 py-1 text-xs font-medium text-[color:var(--color-text-muted)] transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-white/10"
                         >
@@ -542,95 +568,50 @@ export default function ProtectedLayout() {
                           <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
                             {notificationError}
                           </div>
-                        ) : completedTodayOrders.length > 0 ? (
+                        ) : notifications.length > 0 ? (
                           <div className="space-y-2">
-                            {completedTodayOrders.map((order) => {
-                              const customerName = getCustomerName(order);
-                              const customerWhatsapp = getCustomerWhatsapp(order);
-                              const note = getOrderNote(order);
+                            {notifications.map((item) => (
+                              <button
+                                key={item.key}
+                                type="button"
+                                onClick={() => openNotificationBucket(item.to)}
+                                className="flex w-full items-center gap-3 rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-3 text-left text-sm shadow-[0_14px_34px_-30px_rgba(0,0,0,.7)] transition hover:bg-black/5 dark:bg-white/5 dark:hover:bg-white/10"
+                              >
+                                <span
+                                  className={[
+                                    "h-2.5 w-2.5 shrink-0 rounded-full",
+                                    item.dotClassName,
+                                  ].join(" ")}
+                                />
 
-                              return (
-                                <div
-                                  key={order.id}
-                                  className="rounded-2xl border border-[color:var(--color-border)] bg-white/70 p-3 text-sm shadow-[0_14px_34px_-30px_rgba(0,0,0,.7)] dark:bg-white/5"
+                                <span className="min-w-0 flex-1 text-[color:var(--color-text-default)]">
+                                  {item.text}
+                                </span>
+
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="shrink-0 text-[color:var(--color-text-muted)]"
+                                  aria-hidden="true"
                                 >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => openOrderFromNotification(order.id)}
-                                        className="block max-w-[220px] truncate text-left font-semibold text-[color:var(--color-text-default)] hover:text-[color:var(--color-brand-primary)]"
-                                        title={customerName}
-                                      >
-                                        {customerName}
-                                      </button>
-
-                                      <div className="mt-0.5 truncate text-xs text-[color:var(--color-text-muted)]">
-                                        {order.invoice_no || order.number}
-                                      </div>
-                                    </div>
-
-                                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                                      {order.status}
-                                    </span>
-                                  </div>
-
-                                  <div className="mt-3 space-y-2 text-xs text-[color:var(--color-text-muted)]">
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span>No HP</span>
-                                      {customerWhatsapp ? (
-                                        <a
-                                          href={buildWhatsAppLink(customerWhatsapp, "")}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="max-w-[210px] truncate font-semibold text-emerald-600 hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
-                                          onClick={(e) => e.stopPropagation()}
-                                          title={customerWhatsapp}
-                                        >
-                                          {customerWhatsapp}
-                                        </a>
-                                      ) : (
-                                        <span>-</span>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span>Tgl masuk-selesai</span>
-                                      <span className="text-right font-medium text-[color:var(--color-text-default)]">
-                                        {formatShortDate(order.received_at)} - {formatShortDate(order.ready_at)}
-                                      </span>
-                                    </div>
-
-                                    <div>
-                                      <div className="mb-1">Catatan Barang Konsumen</div>
-                                      <div className="whitespace-pre-line rounded-xl bg-black/5 px-3 py-2 text-[color:var(--color-text-default)] dark:bg-white/10">
-                                        {note}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                  <path d="M9 18l6-6-6-6" />
+                                </svg>
+                              </button>
+                            ))}
                           </div>
                         ) : (
                           <div className="rounded-xl border border-dashed border-[color:var(--color-border)] px-3 py-6 text-center text-sm text-[color:var(--color-text-muted)]">
-                            Belum ada pesanan selesai hari ini.
+                            Tidak ada notifikasi.
                           </div>
                         )}
                       </div>
 
-                      <div className="border-t border-[color:var(--color-border)] p-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNotificationOpen(false);
-                            nav("/orders");
-                          }}
-                          className="flex w-full items-center justify-center rounded-xl px-3 py-2 text-sm font-medium text-[color:var(--color-brand-primary)] transition hover:bg-black/5 dark:hover:bg-white/10"
-                        >
-                          Lihat semua pesanan
-                        </button>
-                      </div>
                     </div>
                   ) : null}
                 </div>

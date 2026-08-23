@@ -54,3 +54,18 @@ export async function exportReport(
 
     return data as Blob;
 }
+
+export async function fetchAllReportRows(kind: ReportKind, params: ReportQuery): Promise<ReportRow[]> {
+    const rows: ReportRow[] = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+        const resp = await getReportPreview(kind, { ...params, page, per_page: 100 });
+        rows.push(...(resp.data ?? []));
+        lastPage = resp.meta.last_page;
+        page += 1;
+    } while (page <= lastPage);
+
+    return rows;
+}

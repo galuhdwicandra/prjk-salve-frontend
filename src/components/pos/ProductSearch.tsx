@@ -2,8 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Service } from '../../types/services';
 import { listServices } from '../../api/services';
-import { listServicePricesByService, computeEffectivePrice } from '../../api/servicePrices';
-import type { ServicePrice } from '../../types/services';
+import { computeEffectivePrice } from '../../api/servicePrices';
 
 type Props = {
   onPick: (row: Service & { price_effective: number }) => void;
@@ -62,7 +61,6 @@ function highlight(text: string, keyword: string): React.ReactNode {
 
 export default function ProductSearch({ onPick, branchId }: Props): React.ReactElement {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const priceCacheRef = useRef<Record<string, ServicePrice[]>>({});
 
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -70,7 +68,6 @@ export default function ProductSearch({ onPick, branchId }: Props): React.ReactE
   const [page, setPage] = useState(1);
   const [debouncedQ, setDebouncedQ] = useState('');
   const [base, setBase] = useState<Service[]>([]);
-  const [priceMap, setPriceMap] = useState<Record<string, ServicePrice[]>>({});
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,29 +87,18 @@ export default function ProductSearch({ onPick, branchId }: Props): React.ReactE
         setLoading(false);
         return;
       }
-      const res = await listServices({ q: keyword, is_active: true, leaf: true, per_page: 10, page });
+      const res = await listServices({
+        q: keyword,
+        is_active: true,
+        leaf: true,
+        per_page: 10,
+        page,
+        branch_id: branchId ?? undefined,
+      });
       const list = (res.data ?? []) as Service[];
       setHasMore(list.length === 10);
 
       setBase((prev) => (page === 1 ? list : [...prev, ...list]));
-
-      const entries = await Promise.all(
-        list.map(async (s) => {
-          const sid = String(s.id);
-          if (priceCacheRef.current[sid]) return [sid, priceCacheRef.current[sid]] as const;
-          const env = await listServicePricesByService(sid);
-          const pricesRaw = env.data ?? [];
-          const prices = Array.isArray(pricesRaw) ? (pricesRaw as ServicePrice[]) : [];
-          priceCacheRef.current[sid] = prices;
-          return [sid, prices] as const;
-        })
-      );
-
-      setPriceMap((prev) => {
-        const next = { ...prev };
-        for (const [sid, prices] of entries) next[sid] = Array.isArray(prices) ? prices : [];
-        return next;
-      });
 
       if (page === 1) setSelectedIdx(0);
     } catch {
@@ -120,7 +106,7 @@ export default function ProductSearch({ onPick, branchId }: Props): React.ReactE
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ, page]);
+  }, [debouncedQ, page, branchId]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -140,10 +126,10 @@ export default function ProductSearch({ onPick, branchId }: Props): React.ReactE
     if (!base.length) return;
     const computed: Row[] = base.map((s) => ({
       ...s,
-      price_effective: computeEffectivePrice(priceMap[String(s.id)], branchId, s.price_default),
+      price_effective: computeEffectivePrice(s.prices, branchId, s.price_default),
     }));
     setRows(computed);
-  }, [branchId, base, priceMap]);
+  }, [branchId, base]);
 
   const hintText = useMemo(() => {
     // Hint singkat, tidak mengubah logic (hanya copy)

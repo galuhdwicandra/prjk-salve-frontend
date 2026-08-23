@@ -1,6 +1,10 @@
 import { api } from './client';
 import type { ApiEnvelope } from './client';
-import type { PaymentMethodMaster, PaymentMethodUpsertPayload } from '../types/payments';
+import type {
+    PaymentMethodAccountRow,
+    PaymentMethodMaster,
+    PaymentMethodUpsertPayload,
+} from '../types/payments';
 
 export async function listPaymentMethods(params: { is_active?: boolean } = {}) {
     const { data } = await api.get<ApiEnvelope<PaymentMethodMaster[], unknown>>('/payment-methods', { params });
@@ -19,5 +23,16 @@ export async function updatePaymentMethod(id: string, payload: Partial<PaymentMe
 
 export async function deletePaymentMethod(id: string) {
     const { data } = await api.delete<ApiEnvelope<null, null>>(`/payment-methods/${id}`);
+    return data;
+}
+
+export async function setPaymentMethodAccount(
+    id: string,
+    payload: { branch_id: string; account_id: string | null },
+) {
+    const { data } = await api.post<ApiEnvelope<PaymentMethodAccountRow | null, null>>(
+        `/payment-methods/${id}/account`,
+        payload,
+    );
     return data;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { setActiveBranchId, useActiveBranchId } from '../store/useBranch';
 import { useSyncExternalStore } from 'react';
 import { useAuth } from '../store/useAuth';
 
@@ -9,11 +9,9 @@ interface Props {
 export default function BranchPicker({ className = 'loc-badge' }: Props) {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
   const branches = user?.branches ?? [];
-  const [active, setActive] = useState('');
+  const value = useActiveBranchId();
 
   if (branches.length === 0) return null;
-
-  const value = branches.some((b) => b.id === active) ? active : branches[0].id;
 
   return (
     <div className={className}>
@@ -21,7 +19,7 @@ export default function BranchPicker({ className = 'loc-badge' }: Props) {
       <select
         aria-label="Pilih outlet aktif"
         value={value}
-        onChange={(e) => setActive(e.target.value)}
+        onChange={(e) => setActiveBranchId(e.target.value)}
       >
         {branches.map((b) => (
           <option key={b.id} value={b.id}>{`${b.code} — ${b.name}`}</option>

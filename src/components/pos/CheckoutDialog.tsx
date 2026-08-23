@@ -7,6 +7,12 @@ import { applyVoucherToOrder } from "../../api/vouchers";
 import type { Order } from "../../types/orders";
 import { toIDR } from "../../utils/money";
 import { getErrorMessage } from "../../api/client";
+import { fileUrl } from "../../utils/files";
+
+function toLocalDateTimeInputValue(date = new Date()): string {
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
 
 type PayMode = PaymentMethod;
 
@@ -22,6 +28,7 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
   const paymentMethods = useActivePaymentMethods();
   const [dpAmount, setDpAmount] = useState<number>(0);
   const [payAmount, setPayAmount] = useState<number>(order.grand_total);
+  const [paidAt, setPaidAt] = useState<string>(toLocalDateTimeInputValue());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -42,6 +49,7 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
     setMode('PENDING');
     setDpAmount(0);
     setPayAmount(due);
+    setPaidAt(toLocalDateTimeInputValue());
     setErr(null);
     setVoucherCode('');
     setApplyMsg(null);
@@ -65,12 +73,12 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
         const n = Number.isFinite(dpAmount) ? dpAmount : 0;
         if (n <= 0) throw new Error('Nominal DP harus > 0');
         if (n > due) throw new Error('DP melebihi sisa tagihan');
-        payload = { method: 'DP', amount: n };
+        payload = { method: 'DP', amount: n, paid_at: paidAt.replace('T', ' ') };
       } else {
         const n = Number.isFinite(payAmount) ? payAmount : 0;
         if (n <= 0) throw new Error('Nominal bayar harus > 0');
         if (n > due) throw new Error('Nominal bayar melebihi sisa tagihan');
-        payload = { method: mode, amount: n };
+        payload = { method: mode, amount: n, paid_at: paidAt.replace('T', ' ') };
       }
 
       setLoading(true);
@@ -211,6 +219,29 @@ export default function CheckoutDialog({ open, onClose, order, onPaid }: Props) 
                 className="input px-3 py-2 w-full"
               />
               <div className="text-xs text-gray-500 mt-1">Sisa tagihan: {toIDR(due)}</div>
+            </div>
+          )}
+
+          {mode !== 'PENDING' && (
+            <div>
+              <label className="block text-sm mb-1">Tanggal Transaksi</label>
+              <input
+                type="datetime-local"
+                value={paidAt}
+                onChange={(e) => setPaidAt(e.target.value)}
+                className="input px-3 py-2 w-full"
+              />
+            </div>
+          )}
+
+          {mode === 'QRIS' && (
+            <div className="rounded-lg border border-(--color-border) p-3 text-center">
+              <div className="text-xs text-gray-600 mb-2">Scan untuk bayar (QRIS)</div>
+              <img
+                src={fileUrl('storage/qris.png')}
+                alt="QRIS"
+                className="mx-auto max-h-56"
+              />
             </div>
           )}
 

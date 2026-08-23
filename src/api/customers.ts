@@ -4,6 +4,7 @@ import { isAxiosError } from 'axios';
 import type {
     Customer,
     CustomerQuery,
+    CustomerShowResponse,
     CustomerUpsertPayload,
     Paginated,
     SingleResponse,
@@ -14,8 +15,8 @@ export async function listCustomers(params: CustomerQuery): Promise<Paginated<Cu
     return data;
 }
 
-export async function getCustomer(id: string): Promise<SingleResponse<Customer>> {
-    const { data } = await api.get<SingleResponse<Customer>>(`/customers/${id}`);
+export async function getCustomer(id: string): Promise<CustomerShowResponse> {
+    const { data } = await api.get<CustomerShowResponse>(`/customers/${id}`);
     return data;
 }
 

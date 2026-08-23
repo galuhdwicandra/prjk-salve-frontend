@@ -14,6 +14,8 @@ const state: AuthState = {
     user: null,
 };
 
+const EMPTY_MODULES: ModuleKey[] = [];
+
 const isDev = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV;
 
 export { firstAccessiblePath };
@@ -52,7 +54,7 @@ export const useAuth = {
         return state.user;
     },
     get modules(): ModuleKey[] {
-        return state.user?.modules ?? [];
+        return state.user?.modules ?? EMPTY_MODULES;
     },
     get branchIds(): string[] {
         return (state.user?.branches ?? []).map((b) => b.id);

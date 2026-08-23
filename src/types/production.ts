@@ -16,6 +16,15 @@ export type ProductionBoardStatus =
     | 'IRONING'
     | 'READY';
 
+export type WorkshopPhase = 'persiapan' | 'finishing';
+
+export interface ProductionBranchMini {
+    id: string;
+    code: string;
+    name: string;
+    type: string;
+}
+
 export interface ProductionMiniCustomer {
     id: string;
     name: string;
@@ -30,6 +39,7 @@ export interface ProductionMiniOrder {
     status: ProductionStatus;
     received_at?: string | null;
     ready_at?: string | null;
+    branch?: ProductionBranchMini | null;
     customer?: ProductionMiniCustomer | null;
 }
 
@@ -51,6 +61,7 @@ export interface ProductionTask {
     created_at?: string | null;
     updated_at?: string | null;
     assignee?: ProductionAssignee | null;
+    branch?: ProductionBranchMini | null;
     order?: ProductionMiniOrder | null;
 }
 
@@ -66,6 +77,7 @@ export type ProductionBoardFilterStatus = ProductionBoardStatus | 'OVERDUE';
 export interface ProductionBoardQuery {
     q?: string;
     status?: ProductionBoardFilterStatus;
+    phase?: WorkshopPhase;
     branch_id?: string;
     assigned_to?: string;
     page?: number;
@@ -125,38 +137,63 @@ export interface ProductionCorrectionRequestQuery {
     per_page?: number;
 }
 
-export interface ProductionReportDetail {
+export interface WorkRecapRow {
+    id: string;
+    logged_at?: string | null;
+    process_date?: string | null;
     order_id: string;
+    order_number?: string | null;
     invoice_no?: string | null;
-    number?: string | null;
     customer_name?: string | null;
+    workshop_code?: string | null;
+    workshop_name?: string | null;
+    phase: WorkshopPhase;
+    to_status: ProductionStatus;
     qty: number;
-    current_status?: ProductionStatus | null;
-    received_at?: string | null;
-    ready_at?: string | null;
-    started_date?: string | null;
-    finished_date?: string | null;
-    is_overdue: boolean;
-    overdue_days: number;
-    overdue_text?: string | null;
+    technician?: string | null;
 }
 
-export interface ProductionStaffReportRow {
+export interface WorkRecapTechnician {
+    id: string;
+    name: string;
+}
+
+export interface WorkRecapTechnicianCount {
     user_id: string;
-    staff_name: string;
-    total_invoice: number;
-    total_qty: number;
-    finished: number;
-    unfinished: number;
-    overdue: number;
-    details: ProductionReportDetail[];
+    name: string;
+    activities: number;
 }
 
-export interface ProductionReportQuery {
+export interface WorkRecapSummary {
+    activities: number;
+    persiapan: number;
+    finishing: number;
+    pairs: number;
+}
+
+export interface WorkRecapMeta {
+    from: string;
+    to: string;
+    branch_id?: string[] | null;
+    user_id?: string | null;
+    phase?: WorkshopPhase | null;
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+    summary: WorkRecapSummary;
+    by_technician: WorkRecapTechnicianCount[];
+    technicians: WorkRecapTechnician[];
+}
+
+export interface WorkRecapQuery {
     date_from?: string;
     date_to?: string;
     branch_id?: string;
     user_id?: string;
+    phase?: WorkshopPhase;
+    page?: number;
+    per_page?: number;
 }
 
 export interface ApiEnvelope<T, M = unknown> {
@@ -190,13 +227,6 @@ export type ProductionCorrectionRequestListResponse = ApiEnvelope<
     PaginationMeta
 >;
 
-export type ProductionReportResponse = ApiEnvelope<
-    ProductionStaffReportRow[],
-    {
-        from: string;
-        to: string;
-        branch_id?: string | null;
-    }
->;
+export type WorkRecapResponse = ApiEnvelope<WorkRecapRow[], WorkRecapMeta>;
 
 export type { PaginationMeta };

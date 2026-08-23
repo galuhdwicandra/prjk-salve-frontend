@@ -1,1770 +1,449 @@
-// src/pages/orders/OrderDetail.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { normalizeApiError } from '../../api/client';
 import {
-  getOrder,
-  updateOrderStatus,
-  getOrderReceiptHtml,
-  openOrderReceipt,
-  updateOrder,
   createOrderShareLink,
-  resetOrderPaymentToPending,
-  applyOrderLoyaltyCorrection,
+  getOrder,
+  openOrderReceipt,
+  voidOrder,
 } from '../../api/orders';
-import type { OrderUpdatePayload } from '../../types/orders';
-import CustomerPicker from '../../components/customers/CustomerPicker';
-import ProductSearch from '../../components/pos/ProductSearch';
-import ReceiptPreview from '../../components/ReceiptPreview';
-import type { Order, OrderBackendStatus } from '../../types/orders';
-import OrderStatusStepper from '../../components/orders/OrderStatusStepper';
-import OrderPhotosGallery from '../../components/orders/OrderPhotosGallery';
-import OrderPhotosUpload from '../../components/orders/OrderPhotosUpload';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getAllowedNext } from '../../utils/order-status';
-import { toIDR } from '../../utils/money';
-import { buildWhatsAppLink } from '../../utils/wa';
-import { buildReceiptMessage, buildStatusMessage } from '../../utils/receipt-wa';
 import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
-import { useIsManager } from '../../store/useAuth';
-import { createDelivery, listDeliveries } from '../../api/deliveries';
-import type { Delivery, DeliveryType } from '../../types/deliveries';
-import { normalizeApiError, type FieldErrors } from '../../api/client';
+import OrderBeforePhotos from '../../components/orders/OrderBeforePhotos';
+import CheckoutDialog from '../../components/pos/CheckoutDialog';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useAuth, useIsManager } from '../../store/useAuth';
+import { IconTrash } from '../users/icons';
+import { fmtDate } from '../../utils/date';
+import { rp } from '../../utils/money';
+import { buildReceiptMessage } from '../../utils/receipt-wa';
+import { buildWhatsAppLink } from '../../utils/wa';
+import EditOrderModal from './EditOrderModal';
+import OrderAdvancedPanel from './OrderAdvancedPanel';
+import PaymentHistoryModal from './PaymentHistoryModal';
+import type { Order } from '../../types/orders';
 
-type ShareLinkResponse = {
-  share_url?: string;
-  url?: string;
-};
-
-type OrderWithOptionalPhone = Order & {
+type OrderWithPhone = Order & {
   customer?: (Order['customer'] & { phone?: string | null }) | null;
 };
 
-type CreateDeliveryPayloadLocal = {
-  order_id: string;
-  type: DeliveryType;
-  fee: number;
-  zone_id: string | null;
-};
-
-type CreateDeliveryResponseLocal = {
-  data?: {
-    delivery?: Delivery;
-    id?: string;
-  } | Delivery | null;
-};
-
-function toDateInputValue(v?: string | null): string {
-  if (!v) return '';
-
-  const s = String(v).trim();
-
-  const match = s.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (match) return match[1];
-
-  return '';
+function termLabel(order: Order): string {
+  if (order.payment_status === 'PAID' || order.payment_status === 'SETTLED') return 'FULL \u2014 lunas di depan';
+  if (order.payment_status === 'DP') return 'DP \u2014 sebagian di depan';
+  return 'PENDING \u2014 bayar nanti';
 }
 
-function fromDateInputValue(v: string): string {
-  const s = String(v).trim();
-
-  const match = s.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (match) return match[1];
-
-  return '';
+function statusLabel(order: Order): string {
+  if (order.status === 'CANCELED') return 'VOID';
+  if (order.payment_status === 'PAID' || order.payment_status === 'SETTLED') return 'LUNAS';
+  if (order.payment_status === 'DP') return 'DP';
+  return 'BELUM BAYAR';
 }
 
-function qtyDisplay(v: unknown): string {
-  const n = Number(v ?? 0);
-  if (Number.isNaN(n)) return '0';
-  return String(Math.trunc(n));
-}
-
-function parseConsumerGoodsNotes(notes?: string | null): string[] {
-  if (!notes || !notes.trim()) return [''];
-
-  const rows = notes
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => line.replace(/^\d+\.\s*/, '').trim());
-
-  return rows.length > 0 ? rows : [''];
-}
-
-function buildConsumerGoodsNotes(rows: string[]): string | null {
-  const cleaned = rows
-    .map((row) => row.trim())
-    .filter((row) => row.length > 0);
-
-  if (cleaned.length === 0) return null;
-
-  return cleaned.map((row, index) => `${index + 1}. ${row}`).join('\n');
-}
-
-function focusFirstErrorField(errors: FieldErrors) {
-  const firstKey = Object.keys(errors)[0];
-  if (!firstKey) return;
-
-  const targetIdMap: Record<string, string> = {
-    next: 'order-status-select',
-    status: 'order-status-select',
-    order: 'order-status-select',
-  };
-
-  const targetId = targetIdMap[firstKey] ?? firstKey;
-  const el = document.getElementById(targetId) as
-    | HTMLInputElement
-    | HTMLSelectElement
-    | HTMLTextAreaElement
-    | HTMLButtonElement
-    | null;
-
-  if (!el) return;
-
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  window.setTimeout(() => el.focus?.(), 120);
-}
-
-type DraftItem = {
-  id?: string;
-  service_id: string;
-  service_name?: string;
-  price?: number;
-  qty: number | '';
-  note?: string | null;
-};
-type Draft = {
-  invoice_no: string;
-  customer_id: string | null;
-  notes: string | null;
-  discount?: number;
-  items: DraftItem[];
-  received_at?: string | null;
-  ready_at?: string | null;
-};
-
-function money(v: unknown): string {
-  return toIDR(Number(v ?? 0));
-}
-
-function editableDiscount(order: Order): number {
-  return Math.max(
-    0,
-    Number(order.discount ?? 0) - Number(order.loyalty_discount ?? 0)
-  );
-}
-
-function statusBadgeClass(status: OrderBackendStatus): string {
-  const base = 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset';
-  const cls =
-    status === 'CANCELED'
-      ? 'bg-red-50 text-red-700 ring-red-200'
-      : status === 'READY'
-        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-        : status === 'PICKED_UP'
-          ? 'bg-slate-900 text-white ring-slate-900'
-          : status === 'DELIVERING'
-            ? 'bg-blue-50 text-blue-700 ring-blue-200'
-            : status === 'WASHING' || status === 'DRYING' || status === 'IRONING'
-              ? 'bg-amber-50 text-amber-700 ring-amber-200'
-              : 'bg-slate-50 text-slate-700 ring-slate-200';
-  return `${base} ${cls}`;
-}
-
-export default function OrderDetail(): React.ReactElement {
+export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const canEdit = useIsManager();
+  const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
 
   const [row, setRow] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
-  const [statusFieldErrors, setStatusFieldErrors] = useState<FieldErrors>({});
-  const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [voidOpen, setVoidOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidBusy, setVoidBusy] = useState(false);
+
   const { toast, showSuccess, showError, hideToast } = useToast();
-
-  const [paymentCorrectionOpen, setPaymentCorrectionOpen] = useState(false);
-  const [paymentCorrectionReason, setPaymentCorrectionReason] = useState('');
-  const [paymentCorrectionSubmitting, setPaymentCorrectionSubmitting] = useState(false);
-  const [paymentCorrectionError, setPaymentCorrectionError] = useState<string | null>(null);
-
-  const [loyaltyCorrectionReward, setLoyaltyCorrectionReward] = useState<'DISC25' | 'FREE100'>('FREE100');
-  const [loyaltyCorrectionNote, setLoyaltyCorrectionNote] = useState('');
-  const [loyaltyCorrectionSubmitting, setLoyaltyCorrectionSubmitting] = useState(false);
-  const [loyaltyCorrectionErrors, setLoyaltyCorrectionErrors] = useState<FieldErrors>({});
-
-  const canEdit = useIsManager();
-  const canCreateDelivery = true;
-  const canCorrectLoyalty = canEdit;
-  const canUploadPhotos = true;
-  const canUploadPhotosForThisOrder =
-    canUploadPhotos && !['DELIVERING', 'PICKED_UP', 'CANCELED'].includes(String(row?.status ?? ''));
-
-  const [draft, setDraft] = useState<Draft>({
-    invoice_no: '',
-    customer_id: null,
-    notes: null,
-    items: [],
-  });
-  const [noteRows, setNoteRows] = useState<string[]>(['']);
-
-  // Delivery UI
-  const [deliveryOpen, setDeliveryOpen] = useState(false);
-  const [deliverySaving, setDeliverySaving] = useState(false);
-  const [deliveryErr, setDeliveryErr] = useState<string | null>(null);
-  const [deliveryType, setDeliveryType] = useState<DeliveryType>('delivery');
-  const [deliveryFee, setDeliveryFee] = useState<number>(0);
-  const [deliveryZoneId, setDeliveryZoneId] = useState<string>('');
-  const [existingDeliveryId, setExistingDeliveryId] = useState<string | null>(null);
-
-  const loyaltyCorrectionDiscount = useMemo(() => {
-    const subtotal = Number(row?.subtotal ?? 0);
-
-    if (loyaltyCorrectionReward === 'FREE100') {
-      return subtotal;
-    }
-
-    return Math.round(subtotal * 0.25);
-  }, [row?.subtotal, loyaltyCorrectionReward]);
-
-  const loyaltyCorrectionGrandTotal = useMemo(() => {
-    const subtotal = Number(row?.subtotal ?? 0);
-    return Math.max(0, subtotal - loyaltyCorrectionDiscount);
-  }, [row?.subtotal, loyaltyCorrectionDiscount]);
-
-  const loyaltyCorrectionDueAmount = useMemo(() => {
-    const paid = Number(row?.paid_amount ?? 0);
-    return Math.max(0, loyaltyCorrectionGrandTotal - paid);
-  }, [row?.paid_amount, loyaltyCorrectionGrandTotal]);
-
-  const [receiptOpen, setReceiptOpen] = useState(false);
-  const [receiptHtml, setReceiptHtml] = useState<string>('');
-  const [receiptLoading, setReceiptLoading] = useState(false);
-  const [receiptErr, setReceiptErr] = useState<string | null>(null);
-
-  const loadReceipt = useCallback(async () => {
-    if (!id) return;
-    setReceiptLoading(true);
-    setReceiptErr(null);
-    try {
-      const html = await getOrderReceiptHtml(id);
-      setReceiptHtml(html);
-    } catch {
-      setReceiptErr('Gagal memuat struk');
-    } finally {
-      setReceiptLoading(false);
-    }
-  }, [id]);
 
   const refresh = useCallback(async () => {
     if (!id) return;
+
     setLoading(true);
     setErr(null);
+
     try {
       const res = await getOrder(id);
       setRow(res.data);
-    } catch {
-      setErr('Gagal memuat detail');
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      setRow(null);
+
+      if (!normalized.isNotFound && !normalized.isForbidden) {
+        setErr(normalized.message || 'Gagal memuat detail');
+      }
     } finally {
       setLoading(false);
     }
   }, [id]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
-  async function handleResetPaymentToPending(): Promise<void> {
+  const sendWa = useCallback(async () => {
     if (!row) return;
 
-    const reason = paymentCorrectionReason.trim();
+    const target = row as OrderWithPhone;
+    const wa = target.customer?.whatsapp || target.customer?.phone || '';
 
-    if (reason.length < 5) {
-      setPaymentCorrectionError('Alasan koreksi minimal 5 karakter.');
+    if (!wa) {
+      showError('Nomor WhatsApp pelanggan belum tersedia.');
       return;
     }
 
-    setPaymentCorrectionSubmitting(true);
-    setPaymentCorrectionError(null);
+    try {
+      const link = await createOrderShareLink(row.id);
+      const templateKey = Number(row.due_amount ?? 0) > 0 ? 'receipt_pending' : 'receipt_paid';
+      const resolved = await resolveWhatsappTemplate(templateKey, row.branch_id);
+      const message = buildReceiptMessage(row, link, resolved.data);
+
+      window.open(buildWhatsAppLink(wa, message), '_blank', 'noopener,noreferrer');
+    } catch {
+      showError('Gagal menyiapkan pesan WhatsApp.');
+    }
+  }, [row, showError]);
+
+  async function submitVoid() {
+    if (!row) return;
+
+    setVoidBusy(true);
 
     try {
-      const result = await resetOrderPaymentToPending(row.id, {
-        correction_type: 'RESET_TO_PENDING',
-        reason,
-      });
-
-      setRow(result.order);
-      setPaymentCorrectionOpen(false);
-      setPaymentCorrectionReason('');
-
-      showSuccess('Pembayaran berhasil dikoreksi menjadi Pending.');
+      await voidOrder(row.id, voidReason.trim());
+      setVoidOpen(false);
+      setVoidReason('');
       await refresh();
-    } catch (e: unknown) {
-      const normalized = normalizeApiError(e);
-      const message = normalized.message || 'Gagal melakukan koreksi pembayaran.';
-
-      setPaymentCorrectionError(message);
-      showError(message);
+      showSuccess('Receipt berhasil di-void.');
+    } catch (e) {
+      showError(normalizeApiError(e).message || 'Gagal melakukan void receipt.');
     } finally {
-      setPaymentCorrectionSubmitting(false);
+      setVoidBusy(false);
     }
   }
 
-  useEffect(() => {
-    const orderId = row?.id;
-    if (!orderId) return;
-    let alive = true;
-    (async () => {
-      try {
-        const res = await listDeliveries({ q: orderId, per_page: 1 });
-        const latest: Delivery | null = res.data && res.data.length > 0 ? res.data[0] : null;
-        if (!alive) return;
-        setExistingDeliveryId(latest?.id ?? null);
-      } catch {
-        if (!alive) return;
-        setExistingDeliveryId(null);
-      }
-    })();
-    return () => { alive = false; };
-  }, [row?.id]);
+  if (loading && !row) {
+    return <div className="card"><div className="empty">Memuat{'\u2026'}</div></div>;
+  }
 
-  useEffect(() => {
-    if (!row) return;
-
-    setDraft({
-      invoice_no: row.invoice_no ?? '',
-      customer_id: row.customer?.id ?? row.customer_id ?? null,
-      notes: row.notes ?? null,
-      discount: editableDiscount(row),
-      received_at: row.received_at ?? null,
-      ready_at: row.ready_at ?? null,
-      items: (row.items ?? []).map(it => ({
-        id: it.id,
-        service_id: it.service_id,
-        service_name: it.service?.name,
-        price: Number(it.price),
-        qty: Number(it.qty),
-        note: it.note ?? null,
-      })),
-    });
-
-    setNoteRows(parseConsumerGoodsNotes(row.notes));
-
-    setLoyaltyCorrectionReward(
-      row.loyalty_reward === 'DISC25' || row.loyalty_reward === 'FREE100'
-        ? row.loyalty_reward
-        : 'FREE100'
+  if (err) {
+    return (
+      <div className="card">
+        <div role="alert" style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}>{err}</div>
+      </div>
     );
-    setLoyaltyCorrectionNote('');
-    setLoyaltyCorrectionErrors({});
-  }, [row]);
+  }
 
-  const changeQty = useCallback((serviceId: string, qty: number | '') => {
-    setDraft(d => ({
-      ...d,
-      items: d.items.map(it => {
-        if (it.service_id !== serviceId) return it;
+  if (!row) {
+    return (
+      <div className="card">
+        <div className="empty">
+          Order tidak tersedia, sudah dihapus, atau bukan milik outlet Anda.
+          <div style={{ marginTop: 12 }}>
+            <Link className="btn ghost sm" to="/orders">Kembali ke Receipt List</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        if (qty === '') {
-          return { ...it, qty: '' };
-        }
-
-        return { ...it, qty: Math.max(1, Math.trunc(qty)) };
-      }),
-    }));
-  }, []);
-  const changeNote = useCallback((serviceId: string, note: string) => {
-    setDraft(d => ({
-      ...d,
-      items: d.items.map(it => it.service_id === serviceId ? { ...it, note } : it),
-    }));
-  }, []);
-  const removeItem = useCallback((serviceId: string) => {
-    setDraft(d => ({ ...d, items: d.items.filter(it => it.service_id !== serviceId) }));
-  }, []);
-  const addItemFromSearch = useCallback((svc: { id: string; name: string; unit: string; price_effective: number }) => {
-    setDraft(d => {
-      const found = d.items.find(it => it.service_id === svc.id);
-      if (found) {
-        return {
-          ...d,
-          items: d.items.map(it =>
-            it.service_id === svc.id
-              ? { ...it, qty: Number(it.qty || 0) + 1, price: svc.price_effective }
-              : it
-          ),
-        };
-      }
-      return {
-        ...d,
-        items: [...d.items, { service_id: svc.id, service_name: svc.name, price: svc.price_effective, qty: 1, note: null }],
-      };
-    });
-  }, []);
-
-  const onChangeNoteRow = useCallback((index: number, value: string) => {
-    setNoteRows((prev) => prev.map((row, i) => (i === index ? value : row)));
-  }, []);
-
-  const onAddNoteRow = useCallback(() => {
-    setNoteRows((prev) => [...prev, '']);
-  }, []);
-
-  const onRemoveNoteRow = useCallback((index: number) => {
-    setNoteRows((prev) => {
-      if (prev.length === 1) return [''];
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
-
-  const consumerGoodsPreview = useMemo(() => {
-    return buildConsumerGoodsNotes(noteRows);
-  }, [noteRows]);
-
-  const onApplyLoyaltyCorrection = useCallback(async () => {
-    if (!id) return;
-
-    setLoyaltyCorrectionSubmitting(true);
-    setLoyaltyCorrectionErrors({});
-
-    try {
-      const res = await applyOrderLoyaltyCorrection(id, {
-        reward: loyaltyCorrectionReward,
-        note: loyaltyCorrectionNote,
-      });
-
-      if (res.data) {
-        setRow(res.data);
-      }
-
-      await refresh();
-      showSuccess(res.message?.trim() || 'Koreksi loyalty berhasil diterapkan.');
-    } catch (e: unknown) {
-      const normalized = normalizeApiError(e);
-      const nextErrors = normalized.errors ?? {};
-
-      setLoyaltyCorrectionErrors(nextErrors);
-      showError(normalized.message || 'Gagal menerapkan koreksi loyalty.');
-    } finally {
-      setLoyaltyCorrectionSubmitting(false);
-    }
-  }, [
-    id,
-    loyaltyCorrectionReward,
-    loyaltyCorrectionNote,
-    refresh,
-    showSuccess,
-    showError,
-  ]);
-
-  const onTransit = useCallback(async (next: OrderBackendStatus) => {
-    if (!id) return;
-
-    setStatusSubmitting(true);
-    setStatusFieldErrors({});
-
-    try {
-      const res = await updateOrderStatus(id, next);
-      await refresh();
-
-      showSuccess(
-        res.message?.trim() || `Status order berhasil diubah menjadi ${next}.`
-      );
-    } catch (e: unknown) {
-      const normalized = normalizeApiError(e);
-      const nextErrors = normalized.errors ?? {};
-
-      setStatusFieldErrors(nextErrors);
-
-      if (Object.keys(nextErrors).length > 0) {
-        focusFirstErrorField(nextErrors);
-      }
-
-      showError(normalized.message || 'Gagal ubah status');
-    } finally {
-      setStatusSubmitting(false);
-    }
-  }, [id, refresh, showSuccess, showError]);
-
-  const onSendWA = useCallback(async () => {
-    if (!row) return;
-    const orderRow = row as OrderWithOptionalPhone;
-    const wa =
-      orderRow.customer?.whatsapp ||
-      orderRow.customer?.phone ||
-      '';
-    if (!wa) {
-      alert('Nomor WhatsApp pelanggan belum tersedia.');
-      return;
-    }
-    try {
-      const link = await createOrderShareLink(row.id);
-      const sharePayload = link as ShareLinkResponse;
-      const shareUrl =
-        typeof link === 'string' ? link : sharePayload.share_url || sharePayload.url || '';
-      if (!shareUrl) {
-        alert('Gagal menghasilkan tautan kwitansi.');
-        return;
-      }
-      const msg = buildReceiptMessage(row as unknown as Order, shareUrl);
-      const url = buildWhatsAppLink(wa, msg);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
-      alert('Gagal menyiapkan pesan WhatsApp.');
-    }
-  }, [row]);
-
-  const onSendStatusWA = useCallback(async () => {
-    if (!row) return;
-    const orderRow = row as OrderWithOptionalPhone;
-    const wa = orderRow.customer?.whatsapp || orderRow.customer?.phone || '';
-    if (!wa) {
-      alert('Nomor WhatsApp pelanggan belum tersedia.');
-      return;
-    }
-    try {
-      const resolved = await resolveWhatsappTemplate('order_status', row.branch_id);
-      const msg = buildStatusMessage(row as unknown as Order, resolved.data);
-      const url = buildWhatsAppLink(wa, msg);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
-      alert('Gagal menyiapkan pesan WhatsApp.');
-    }
-  }, [row]);
-
-
-  const previewSubtotal = row
-    ? draft.items.reduce((s, it) => {
-      const harga = Number(
-        it.price ??
-        (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
-        0
-      );
-      return s + Number(it.qty || 0) * harga;
-    }, 0)
-    : 0;
+  const outlet = user?.branches.find((branch) => String(branch.id) === String(row.branch_id));
+  const lastPayment = (row.payments ?? [])[(row.payments ?? []).length - 1] ?? null;
+  const voided = row.status === 'CANCELED';
 
   return (
     <>
-      <Toast
-        show={toast.open}
-        kind={toast.kind}
-        message={toast.message}
-        onClose={hideToast}
-      />
-      <div className="space-y-4">
-        {loading && (
-          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-            Memuat…
-          </div>
-        )}
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
-        {err && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {err}
-          </div>
-        )}
+      <div style={{ marginBottom: 16 }}>
+        <Link className="btn ghost sm" to="/orders">{'\u2190'} Receipt List</Link>
+      </div>
 
-        {!loading && !row && !err && (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-            <div className="text-sm font-medium text-slate-900">Tidak ditemukan</div>
-            <div className="mt-1 text-sm text-slate-500">Order tidak tersedia atau sudah dihapus.</div>
-            <div className="mt-4">
-              <Link to="/orders" className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
-                Kembali
-              </Link>
+      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)' }}>
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--navy)' }}>
+                  {row.invoice_no ?? row.number}
+                </h2>
+                <div className="mini" style={{ marginTop: 4 }}>
+                  {fmtDate(row.received_at)}
+                  {outlet ? ` \u00b7 ${outlet.name}` : ''}
+                </div>
+              </div>
+
+              <div className="right">
+                <div className="mini">Total</div>
+                <div style={{ fontSize: 22, fontWeight: 900 }}>{rp(Number(row.grand_total))}</div>
+                <div style={{ fontWeight: 800, color: voided ? 'var(--danger)' : 'var(--ok)' }}>
+                  {statusLabel(row)}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* Create Delivery Modal */}
-        {row && deliveryOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
-            onClick={() => { if (!deliverySaving) setDeliveryOpen(false); }}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="border-b border-slate-200 px-4 py-3">
-                <div className="text-sm font-semibold text-slate-900">Buat Pengiriman</div>
-                <div className="mt-0.5 text-xs text-slate-500">
-                  Order: {row.invoice_no ?? row.number}
-                </div>
+            <div className="kv" style={{ marginTop: 18 }}>
+              <span className="muted">Pelanggan</span>
+              {row.customer_id ? (
+                <Link className="lnk" to={`/customers/${row.customer_id}`}>
+                  {row.customer?.name ?? row.customer_name ?? '\u2014'}
+                </Link>
+              ) : (
+                <span>{row.customer_name ?? '\u2014'}</span>
+              )}
+            </div>
+
+            <div className="tbl-wrap" style={{ marginTop: 14 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Layanan</th>
+                    <th className="num">Qty</th>
+                    <th className="num">Harga</th>
+                    <th className="num">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(row.items ?? []).map((item) => (
+                    <tr key={item.id}>
+                      <td data-label="Layanan">{item.service?.name ?? item.service_id}</td>
+                      <td className="num" data-label="Qty">{Number(item.qty)}</td>
+                      <td className="num" data-label="Harga">{rp(Number(item.price))}</td>
+                      <td className="num" data-label="Subtotal">{rp(Number(item.total))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="totals" style={{ marginTop: 16 }}>
+              <div className="l">
+                <span>Subtotal</span>
+                <span>{rp(Number(row.subtotal))}</span>
               </div>
-
-              <div className="space-y-3 px-4 py-4">
-                {deliveryErr && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                    {deliveryErr}
-                  </div>
-                )}
-
-                <div>
-                  <div className="text-xs font-semibold text-slate-600">Tipe</div>
-                  <select
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                    value={deliveryType}
-                    onChange={(e) => setDeliveryType(e.target.value as DeliveryType)}
-                    disabled={deliverySaving}
-                  >
-                    <option value="delivery">delivery</option>
-                    <option value="pickup">pickup</option>
-                    <option value="return">return</option>
-                  </select>
+              {Number(row.discount ?? 0) > 0 ? (
+                <div className="l">
+                  <span>Diskon</span>
+                  <span>{'\u2212'} {rp(Number(row.discount))}</span>
                 </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <div className="text-xs font-semibold text-slate-600">Ongkir (fee)</div>
-                    <input
-                      type="number"
-                      min={0}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                      value={Number.isFinite(deliveryFee) ? deliveryFee : 0}
-                      onChange={(e) => setDeliveryFee(Number(e.target.value || 0))}
-                      disabled={deliverySaving}
-                    />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-600">Zone ID (opsional)</div>
-                    <input
-                      type="text"
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none"
-                      placeholder="UUID zone (jika dipakai)"
-                      value={deliveryZoneId}
-                      onChange={(e) => setDeliveryZoneId(e.target.value)}
-                      disabled={deliverySaving}
-                    />
-                  </div>
-                </div>
+              ) : null}
+              <div className="l grand">
+                <span>Total</span>
+                <span>{rp(Number(row.grand_total))}</span>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
-                <button
-                  type="button"
-                  className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
-                  onClick={() => setDeliveryOpen(false)}
-                  disabled={deliverySaving}
-                >
-                  Batal
-                </button>
-
-                <button
-                  type="button"
-                  className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
-                  disabled={deliverySaving}
-                  onClick={async () => {
-                    if (!row?.id) return;
-                    setDeliverySaving(true);
-                    setDeliveryErr(null);
-                    try {
-                      const payload: CreateDeliveryPayloadLocal = {
-                        order_id: row.id,
-                        type: deliveryType,
-                        fee: Math.max(0, Number(deliveryFee || 0)),
-                        zone_id: deliveryZoneId.trim() ? deliveryZoneId.trim() : null,
-                      };
-
-                      // Backend store() mengembalikan: { data: { delivery: ... }, meta: { idempotent } }
-                      const res = await createDelivery(payload);
-                      const deliveryRes = res as CreateDeliveryResponseLocal;
-                      const created =
-                        deliveryRes.data && !Array.isArray(deliveryRes.data) && 'delivery' in deliveryRes.data
-                          ? deliveryRes.data.delivery ?? null
-                          : (deliveryRes.data as Delivery | null);
-
-                      const did = created?.id;
-                      if (!did) throw new Error('Delivery tidak terbaca dari response.');
-
-                      setExistingDeliveryId(did);
-                      setDeliveryOpen(false);
-                      showSuccess('Pengiriman berhasil dibuat.');
-                      navigate(`/deliveries/${encodeURIComponent(did)}`);
-                    } catch (e: unknown) {
-                      const normalized = normalizeApiError(e);
-                      setDeliveryErr(normalized.message || 'Gagal membuat pengiriman');
-                      showError(normalized.message || 'Gagal membuat pengiriman');
-                    } finally {
-                      setDeliverySaving(false);
-                    }
-                  }}
-                >
-                  {deliverySaving ? 'Membuat…' : 'Buat'}
-                </button>
+            <div style={{ marginTop: 16 }}>
+              <div className="kv">
+                <span className="muted">Ketentuan</span>
+                <span>{termLabel(row)}</span>
+              </div>
+              <div className="kv">
+                <span className="muted">Metode</span>
+                <span>{lastPayment?.method ?? '\u2014'}</span>
+              </div>
+              <div className="kv">
+                <span className="muted">Dibayar</span>
+                <b>{rp(Number(row.paid_amount))}</b>
+              </div>
+              {Number(row.due_amount) > 0 ? (
+                <div className="kv">
+                  <span className="muted">Sisa Tagihan</span>
+                  <b style={{ color: 'var(--danger)' }}>{rp(Number(row.due_amount))}</b>
+                </div>
+              ) : null}
+              <div className="kv">
+                <span className="muted">Estimasi selesai</span>
+                <span>{fmtDate(row.ready_at)}</span>
               </div>
             </div>
           </div>
-        )}
 
+          <details className="card">
+            <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
+              Opsi lanjutan {'\u2014'} status, pengiriman, foto & koreksi
+            </summary>
+            <div style={{ marginTop: 18 }}>
+              <OrderAdvancedPanel
+                order={row}
+                onRefresh={refresh}
+                onSuccess={showSuccess}
+                onError={showError}
+              />
+            </div>
+          </details>
+        </div>
 
-        {row && (
-          <>
-            {/* Top header */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-semibold text-slate-900">
-                    Order {row.invoice_no ?? row.number}
-                  </h1>
-                  <span className={statusBadgeClass(row.status)}>{row.status}</span>
-                </div>
-                <div className="mt-1 text-sm text-slate-500">
-                  Customer: <span className="font-medium text-slate-900">{row.customer?.name ?? '-'}</span>
-                </div>
-                <div className="mt-2">
-                  <OrderStatusStepper backendStatus={row.status} />
-                </div>
-              </div>
+        <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+          <div className="card">
+            <div className="card-title">Foto Before</div>
+            <OrderBeforePhotos
+              orderId={row.id}
+              photos={row.photos ?? []}
+              readOnly={voided}
+              onChanged={refresh}
+            />
+          </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap items-center gap-2">
-                {canCreateDelivery && (
-                  <>
-                    {typeof existingDeliveryId === 'string' && existingDeliveryId.length > 0 ? (
-                      <button
-                        type="button"
-                        className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                        onClick={() => navigate(`/deliveries/${encodeURIComponent(existingDeliveryId)}`)}
-                        title="Lihat pengiriman yang sudah dibuat"
-                      >
-                        Lihat Pengiriman
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                        onClick={() => { setDeliveryErr(null); setDeliveryOpen(true); }}
-                        title="Buat pengiriman untuk order ini"
-                      >
-                        Buat Pengiriman
-                      </button>
-                    )}
-                  </>
-                )}
-                {!isEditing && canEdit && (
-                  <button
-                    type="button"
-                    className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                    onClick={() => setIsEditing(true)}
-                    title="Edit order"
-                  >
-                    Edit
+          <div className="card">
+            <div className="card-title">Aksi</div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <button type="button" className="btn block" onClick={() => void openOrderReceipt(row.id)}>
+                <IconPrinter /> Cetak Receipt
+              </button>
+
+              <button type="button" className="btn block" onClick={() => void sendWa()}>
+                <IconChat /> Kirim via WA
+              </button>
+
+              <button
+                type="button"
+                className="btn ghost block"
+                disabled={!canEdit || voided}
+                onClick={() => setEditOpen(true)}
+              >
+                <IconPencil /> Edit Order
+              </button>
+
+              {Number(row.due_amount) > 0 && !voided ? (
+                <>
+                  <button type="button" className="btn block" onClick={() => setPayOpen(true)}>
+                    Terima Pembayaran
                   </button>
-                )}
 
-                {isEditing && canEdit && (
-                  <>
-                    <button
-                      type="button"
-                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setFieldErr({});
-
-                        if (row) {
-                          setDraft({
-                            invoice_no: row.invoice_no ?? '',
-                            customer_id: row.customer?.id ?? row.customer_id ?? null,
-                            notes: row.notes ?? null,
-                            discount: editableDiscount(row),
-                            received_at: row.received_at ?? null,
-                            ready_at: row.ready_at ?? null,
-                            items: (row.items ?? []).map(it => ({
-                              id: it.id,
-                              service_id: it.service_id,
-                              service_name: it.service?.name,
-                              price: Number(it.price),
-                              qty: Number(it.qty),
-                              note: it.note ?? null,
-                            })),
-                          });
-
-                          setNoteRows(parseConsumerGoodsNotes(row.notes));
-                        }
-                      }}
-                      title="Batalkan perubahan"
-                    >
-                      Batal
-                    </button>
-
-                    <button
-                      type="button"
-                      className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950 disabled:opacity-60"
-                      onClick={async () => {
-                        if (!id) return;
-                        setSaving(true); setFieldErr({});
-                        try {
-                          const payload: OrderUpdatePayload = {
-                            invoice_no: draft.invoice_no.trim(),
-                            customer_id: draft.customer_id ?? null,
-                            discount: Math.max(0, Number(draft.discount ?? 0)),
-                            notes: buildConsumerGoodsNotes(noteRows),
-                            items: draft.items.map(it => ({
-                              service_id: it.service_id,
-                              qty: Number(it.qty || 1),
-                              note: (it.note ?? '') || null,
-                            })),
-                            received_at: draft.received_at ? toDateInputValue(draft.received_at) : null,
-                            ready_at: draft.ready_at ? toDateInputValue(draft.ready_at) : null,
-                          };
-                          await updateOrder(id, payload);
-                          await refresh();
-                          setIsEditing(false);
-                          showSuccess('Order berhasil diperbarui.');
-                        } catch (e: unknown) {
-                          const normalized = normalizeApiError(e);
-                          const serverErrors = normalized.errors ?? {};
-
-                          const mapped: Record<string, string> = {};
-                          Object.entries(serverErrors).forEach(([key, value]) => {
-                            mapped[key] = Array.isArray(value) ? String(value[0] ?? '') : '';
-                          });
-
-                          setFieldErr(mapped);
-                          showError(normalized.message || 'Gagal menyimpan');
-                        } finally {
-                          setSaving(false);
-                        }
-                      }}
-                      disabled={saving || (draft.items.length === 0)}
-                      title="Simpan perubahan"
-                    >
-                      {saving ? 'Menyimpan…' : 'Simpan'}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  type="button"
-                  className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                  onClick={() => openOrderReceipt(row.id)}
-                  title="Buka struk di tab baru"
-                >
-                  Receipt
-                </button>
-
-                <button
-                  type="button"
-                  className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                  onClick={async () => {
-                    setReceiptOpen(true);
-                    if (!receiptHtml) await loadReceipt();
-                  }}
-                  title="Preview struk"
-                >
-                  Preview
-                </button>
-
-                <button
-                  type="button"
-                  className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                  onClick={onSendWA}
-                  title="Kirim kwitansi via WhatsApp"
-                >
-                  Kirim WA
-                </button>
-
-                {(row.due_amount ?? 0) > 0 && (
-                  <button
-                    type="button"
-                    className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                    onClick={() => {
-                      const targetInvoice = row.invoice_no ?? row.number ?? '';
-
-                      navigate(
-                        `/receivables?q=${encodeURIComponent(targetInvoice)}&focus_invoice=${encodeURIComponent(targetInvoice)}`
-                      );
-                    }}
-                    title="Menuju halaman Piutang untuk pelunasan"
-                  >
-                    Pelunasan
+                  <button type="button" className="btn orange block" onClick={() => void sendWa()}>
+                    <IconChat /> WA: Ingatkan Bayar
                   </button>
-                )}
-              </div>
-            </div>
-
-            {/* Catatan barang konsumen */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-              <div className="text-sm font-semibold text-slate-900">Catatan Barang Konsumen</div>
-              <div className="mt-1 text-xs text-slate-500">
-                Daftar barang atau atribut milik konsumen yang dicatat saat order dibuat.
-              </div>
-              <div className="mt-2 text-sm leading-6 text-slate-600 whitespace-pre-line">
-                {row.notes && row.notes.trim() !== '' ? row.notes : '-'}
-              </div>
-            </section>
-
-            {/* Main layout */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              {/* Left column */}
-              <div className="space-y-4 lg:col-span-8">
-                {/* Editing fields */}
-                {isEditing && (
-                  <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div className="text-sm font-semibold text-slate-900">Edit Order</div>
-                      <div className="text-xs text-slate-500">
-                        Perubahan data order, termasuk catatan barang konsumen, akan disimpan setelah klik “Simpan”.
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div>
-                        <div className="text-xs font-semibold text-slate-600">
-                          No Invoice <span className="text-red-600">*</span>
-                        </div>
-                        <input
-                          id="invoice_no"
-                          type="text"
-                          className="
-        mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-        focus:border-slate-900 focus:outline-none
-      "
-                          value={draft.invoice_no}
-                          onChange={(e) => setDraft(d => ({ ...d, invoice_no: e.target.value }))}
-                          disabled={!canEdit}
-                          required
-                          placeholder="Contoh: INV-15-04-0001"
-                        />
-                        {fieldErr['invoice_no'] && (
-                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['invoice_no']}</div>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="text-xs font-semibold text-slate-600">Pelanggan</div>
-                        <div className="mt-1">
-                          <CustomerPicker
-                            value={draft.customer_id ?? ''}
-                            onChange={(cid) => setDraft(d => ({ ...d, customer_id: cid || null }))}
-                          />
-                        </div>
-                        {fieldErr['customer_id'] && (
-                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['customer_id']}</div>
-                        )}
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="text-xs font-semibold text-slate-600">
-                            Catatan Barang Konsumen
-                          </label>
-
-                          <button
-                            type="button"
-                            onClick={onAddNoteRow}
-                            disabled={!canEdit}
-                            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            + Tambah Catatan
-                          </button>
-                        </div>
-
-                        <div className="mt-2 space-y-2">
-                          {noteRows.map((noteRow, index) => (
-                            <div key={index} className="flex items-start gap-2">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700">
-                                {index + 1}
-                              </div>
-
-                              <input
-                                type="text"
-                                value={noteRow}
-                                onChange={(e) => onChangeNoteRow(index, e.target.value)}
-                                placeholder={`Isi catatan barang #${index + 1}`}
-                                disabled={!canEdit}
-                                className="
-                                h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900
-                                placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
-                                disabled:cursor-not-allowed disabled:bg-slate-50
-                              "
-                              />
-
-                              <button
-                                type="button"
-                                onClick={() => onRemoveNoteRow(index)}
-                                disabled={!canEdit || (noteRows.length === 1 && !noteRows[0].trim())}
-                                className="inline-flex h-10 shrink-0 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                title="Hapus catatan"
-                              >
-                                Hapus
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="mt-2 text-[11px] text-slate-500">
-                          Setiap catatan akan otomatis diberi nomor saat order disimpan, sama seperti di modul POS.
-                        </div>
-
-                        {fieldErr['notes'] && (
-                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['notes']}</div>
-                        )}
-
-                        <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            Preview tersimpan
-                          </div>
-                          <div className="mt-1 whitespace-pre-line text-sm text-slate-700">
-                            {consumerGoodsPreview ?? '-'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs font-semibold text-slate-600">
-                          Tanggal Masuk <span className="text-red-600">*</span>
-                        </div>
-                        <input
-                          id="received_at"
-                          type="date"
-                          className="
-                            mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                            focus:border-slate-900 focus:outline-none
-                          "
-                          value={toDateInputValue(draft.received_at ?? null)}
-                          onChange={(e) => setDraft(d => ({ ...d, received_at: fromDateInputValue(e.target.value) }))}
-                          disabled={!canEdit}
-                          required
-                        />
-                        {fieldErr['received_at'] && (
-                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['received_at']}</div>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="text-xs font-semibold text-slate-600">
-                          Tanggal Selesai <span className="text-red-600">*</span>
-                        </div>
-                        <input
-                          id="ready_at"
-                          type="date"
-                          className="
-      mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-      focus:border-slate-900 focus:outline-none
-    "
-                          value={toDateInputValue(draft.ready_at ?? null)}
-                          onChange={(e) => setDraft(d => ({ ...d, ready_at: fromDateInputValue(e.target.value) }))}
-                          disabled={!canEdit}
-                          required
-                        />
-                        {fieldErr['ready_at'] && (
-                          <div className="mt-1 text-[11px] text-red-600">{fieldErr['ready_at']}</div>
-                        )}
-                      </div>
-                    </div>
-                  </section>
-                )}
-
-                {/* Items (read-only view when not editing) */}
-                {!isEditing && (
-                  <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">Items</div>
-                        <div className="text-xs text-slate-500">Rincian layanan pada order ini.</div>
-                      </div>
-                    </div>
-
-                    <div className="overflow-auto">
-                      <table className="min-w-full text-sm">
-                        <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
-                          <tr className="border-b border-slate-200">
-                            <Th>Layanan</Th>
-                            <Th>Qty</Th>
-                            <Th>Harga</Th>
-                            <Th className="text-right">Total</Th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {(row.items ?? []).map((it) => (
-                            <tr key={it.id} className="hover:bg-slate-50/60 transition-colors">
-                              <Td className="font-medium text-slate-900">{it.service?.name ?? it.service_id}</Td>
-                              <Td className="text-slate-700">{qtyDisplay(it.qty)}</Td>
-                              <Td className="text-slate-700">{money(it.price)}</Td>
-                              <Td className="text-right font-medium text-slate-900">{money(it.total)}</Td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="border-t border-slate-200 px-4 py-3">
-                      <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                        <Kpi label="Subtotal" value={money(row.subtotal)} />
-                        <Kpi label="Diskon" value={money(row.discount)} />
-                        <Kpi label="Grand Total" value={money(row.grand_total)} strong />
-                        <Kpi label="Sisa" value={money(row.due_amount)} strong />
-                      </div>
-                    </div>
-                  </section>
-                )}
-
-                {/* Items editor */}
-                {isEditing && canEdit && (
-                  <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                    <div className="px-4 py-3">
-                      <div className="text-sm font-semibold text-slate-900">Edit Items</div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        Tambahkan layanan, ubah qty/catatan, atau hapus item. Total final tetap dihitung backend.
-                      </div>
-                    </div>
-
-                    <div className="px-4 pb-4">
-                      <ProductSearch onPick={addItemFromSearch} branchId={row.branch_id} />
-                      {fieldErr['items'] && <div className="mt-1 text-[11px] text-red-600">{fieldErr['items']}</div>}
-                    </div>
-
-                    <div className="overflow-auto">
-                      <table className="min-w-full text-sm">
-                        <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
-                          <tr className="border-b border-slate-200">
-                            <Th>Layanan</Th>
-                            <Th className="w-[140px]">Qty</Th>
-                            <Th>Harga</Th>
-                            <Th className="text-right">Total</Th>
-                            <Th className="text-right">Aksi</Th>
-                          </tr>
-                        </thead>
-
-                        <tbody className="divide-y divide-slate-100">
-                          {draft.items.length === 0 && (
-                            <tr>
-                              <td className="px-4 py-5 text-sm text-slate-500" colSpan={5}>
-                                Belum ada item. Tambahkan layanan di atas.
-                              </td>
-                            </tr>
-                          )}
-
-                          {draft.items.map((it) => {
-                            const harga = Number(
-                              it.price ??
-                              (row.items ?? []).find(r => r.service_id === it.service_id)?.price ??
-                              0
-                            );
-                            const total = harga * Number(it.qty || 0);
-
-                            return (
-                              <tr key={it.service_id} className="hover:bg-slate-50/60 transition-colors">
-                                <Td className="align-top">
-                                  <div className="font-medium text-slate-900">{it.service_name ?? it.service_id}</div>
-                                  <input
-                                    className="
-                                    mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900
-                                    placeholder:text-slate-400 focus:border-slate-900 focus:outline-none
-                                  "
-                                    placeholder="Catatan item (opsional)"
-                                    value={it.note ?? ''}
-                                    onChange={(e) => changeNote(it.service_id, e.target.value)}
-                                    disabled={!canEdit}
-                                  />
-                                </Td>
-
-                                <Td className="align-top">
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    step={1}
-                                    inputMode="numeric"
-                                    className="
-                                      w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
-                                      focus:border-slate-900 focus:outline-none
-                                    "
-                                    value={it.qty === '' ? '' : qtyDisplay(it.qty)}
-                                    onFocus={(e) => e.currentTarget.select()}
-                                    onChange={(e) => {
-                                      const raw = e.target.value;
-
-                                      if (raw === '') {
-                                        changeQty(it.service_id, '');
-                                        return;
-                                      }
-
-                                      const next = Number(raw);
-                                      if (Number.isFinite(next)) {
-                                        changeQty(it.service_id, next);
-                                      }
-                                    }}
-                                    onBlur={() => {
-                                      if (it.qty === '') {
-                                        changeQty(it.service_id, 1);
-                                      }
-                                    }}
-                                    disabled={!canEdit}
-                                  />
-                                </Td>
-
-                                <Td className="align-top text-slate-700">{harga ? money(harga) : '—'}</Td>
-
-                                <Td className="align-top text-right font-medium text-slate-900">{money(total)}</Td>
-
-                                <Td className="align-top text-right">
-                                  <button
-                                    type="button"
-                                    className="
-                                    inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900
-                                    hover:bg-slate-50 disabled:opacity-60
-                                  "
-                                    onClick={() => removeItem(it.service_id)}
-                                    title="Hapus item"
-                                    disabled={!canEdit}
-                                  >
-                                    Hapus
-                                  </button>
-                                </Td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="border-t border-slate-200 px-4 py-3">
-                      <div className="flex flex-wrap items-end justify-between gap-3 text-sm">
-                        <div className="grid gap-1">
-                          <label htmlFor="discount" className="text-xs font-medium text-slate-700">
-                            Diskon (Rp)
-                          </label>
-                          <input
-                            id="discount"
-                            type="number"
-                            min={0}
-                            max={previewSubtotal}
-                            inputMode="numeric"
-                            className="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
-                            value={draft.discount ?? 0}
-                            onChange={(e) =>
-                              setDraft((d) => ({
-                                ...d,
-                                discount: Math.max(0, Number(e.target.value || 0)),
-                              }))
-                            }
-                            disabled={!canEdit}
-                          />
-                          {fieldErr['discount'] && (
-                            <div className="text-[11px] text-red-600">{fieldErr['discount']}</div>
-                          )}
-                        </div>
-
-                        <div className="text-right text-slate-600">
-                          Subtotal (preview): <span className="font-semibold text-slate-900">{money(previewSubtotal)}</span>
-                          <div>
-                            Setelah diskon: <span className="font-semibold text-slate-900">{money(Math.max(0, previewSubtotal - Number(draft.discount ?? 0)))}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                )}
-
-                {/* Photos */}
-                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">Foto Order</div>
-                      <div className="text-xs text-slate-500">Dokumentasi sebelum/sesudah proses.</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <OrderPhotosGallery
-                      key={`${row.id}:${row.photos?.length ?? 0}`}
-                      photos={row.photos ?? []}
-                    />
-                  </div>
-
-                  {canUploadPhotosForThisOrder && (
-                    <div className="mt-4">
-                      <OrderPhotosUpload
-                        orderId={row.id}
-                        onUploaded={async () => { await refresh(); }}
-                      />
-                    </div>
-                  )}
-                </section>
-              </div>
-
-              {/* Right column */}
-              <div className="space-y-4 lg:col-span-4">
-                {/* Summary */}
-                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                  <div className="text-sm font-semibold text-slate-900">Ringkasan</div>
-
-                  <div className="mt-3 grid gap-2 text-sm">
-                    <RowLine label="Nomor" value={row.invoice_no ?? row.number ?? '-'} />
-                    <RowLine label="Customer" value={row.customer?.name ?? '-'} />
-
-                    <RowLine label="Subtotal" value={money(row.subtotal ?? 0)} />
-
-                    {row.loyalty_reward && row.loyalty_reward !== 'NONE' ? (
-                      <>
-                        <RowLine
-                          label="Reward Loyalty"
-                          value={
-                            row.loyalty_reward === 'FREE100'
-                              ? 'Gratis 100%'
-                              : 'Diskon 25%'
-                          }
-                          strong
-                        />
-                        <RowLine
-                          label="Diskon Loyalty"
-                          value={money(row.loyalty_discount ?? row.discount ?? 0)}
-                          strong
-                        />
-                      </>
-                    ) : (
-                      <RowLine label="Diskon" value={money(row.discount ?? 0)} />
-                    )}
-
-                    <RowLine label="Total" value={money(row.grand_total)} strong />
-                    <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
-                    <RowLine label="Sisa" value={money(row.due_amount)} strong />
-                  </div>
-
-                  <div className="mt-4 grid gap-2 text-sm">
-                    <RowLine label="Tanggal Masuk" value={row.received_at ? String(row.received_at).replace('T', ' ').slice(0, 16) : '—'} />
-                    <RowLine label="Tanggal Selesai" value={row.ready_at ? String(row.ready_at).replace('T', ' ').slice(0, 16) : '—'} />
-                  </div>
-
-                  {(row.due_amount ?? 0) > 0 && (
-                    <div className="mt-4">
-                      <button
-                        type="button"
-                        className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                        onClick={() => {
-                          const targetInvoice = row.invoice_no ?? row.number ?? '';
-
-                          navigate(
-                            `/receivables?q=${encodeURIComponent(targetInvoice)}&focus_invoice=${encodeURIComponent(targetInvoice)}`
-                          );
-                        }}
-                      >
-                        Proses Pelunasan
-                      </button>
-                    </div>
-                  )}
-                </section>
-
-                {canCorrectLoyalty && (
-                  <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                    <div className="text-sm font-semibold text-emerald-900">
-                      Koreksi Loyalty Manual
-                    </div>
-
-                    <div className="mt-1 text-xs leading-5 text-emerald-800">
-                      Gunakan hanya untuk membetulkan order lama yang seharusnya mendapat diskon loyalty,
-                      misalnya pelanggan sudah mencapai 10 stamp dan order seharusnya gratis.
-                    </div>
-
-                    <div className="mt-3 grid gap-2 text-sm">
-                      <RowLine
-                        label="Reward Saat Ini"
-                        value={row.loyalty_reward && row.loyalty_reward !== 'NONE' ? row.loyalty_reward : 'Belum ada'}
-                        strong
-                      />
-                      <RowLine label="Subtotal" value={money(row.subtotal ?? 0)} />
-                      <RowLine label="Diskon Saat Ini" value={money(row.discount ?? 0)} />
-                      <RowLine label="Grand Total Saat Ini" value={money(row.grand_total ?? 0)} strong />
-                    </div>
-
-                    <div className="mt-4">
-                      <label
-                        htmlFor="loyalty-correction-reward"
-                        className="text-xs font-semibold text-emerald-900"
-                      >
-                        Jenis Reward
-                      </label>
-
-                      <select
-                        id="loyalty-correction-reward"
-                        className="mt-1 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-700 focus:outline-none disabled:bg-slate-100"
-                        value={loyaltyCorrectionReward}
-                        onChange={(e) => {
-                          const nextReward = e.target.value === 'DISC25' ? 'DISC25' : 'FREE100';
-                          setLoyaltyCorrectionReward(nextReward);
-
-                          if (loyaltyCorrectionErrors.reward) {
-                            setLoyaltyCorrectionErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.reward;
-                              return next;
-                            });
-                          }
-                        }}
-                        disabled={loyaltyCorrectionSubmitting}
-                      >
-                        <option value="FREE100">Gratis 100% / FREE100</option>
-                        <option value="DISC25">Diskon 25% / DISC25</option>
-                      </select>
-
-                      {loyaltyCorrectionErrors.reward?.[0] && (
-                        <div className="mt-1 text-[11px] text-red-600">
-                          {loyaltyCorrectionErrors.reward[0]}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 rounded-lg border border-emerald-200 bg-white px-3 py-2">
-                      <div className="grid gap-2 text-sm">
-                        <RowLine label="Diskon Loyalty" value={money(loyaltyCorrectionDiscount)} />
-                        <RowLine label="Grand Total" value={money(loyaltyCorrectionGrandTotal)} strong />
-                        <RowLine label="Sisa Tagihan" value={money(loyaltyCorrectionDueAmount)} strong />
-                      </div>
-                    </div>
-
-                    <div className="mt-4">
-                      <label
-                        htmlFor="loyalty-correction-note"
-                        className="text-xs font-semibold text-emerald-900"
-                      >
-                        Alasan Koreksi
-                      </label>
-
-                      <textarea
-                        id="loyalty-correction-note"
-                        className="mt-1 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-700 focus:outline-none disabled:bg-slate-100"
-                        rows={4}
-                        value={loyaltyCorrectionNote}
-                        onChange={(e) => {
-                          setLoyaltyCorrectionNote(e.target.value);
-
-                          if (loyaltyCorrectionErrors.note) {
-                            setLoyaltyCorrectionErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.note;
-                              return next;
-                            });
-                          }
-                        }}
-                        disabled={loyaltyCorrectionSubmitting}
-                        placeholder="Contoh: Koreksi manual karena pelanggan sudah mencapai 10 stamp loyalty dan order ini seharusnya gratis."
-                      />
-
-                      {loyaltyCorrectionErrors.note?.[0] && (
-                        <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                          {loyaltyCorrectionErrors.note[0]}
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={() => void onApplyLoyaltyCorrection()}
-                      disabled={loyaltyCorrectionSubmitting || loyaltyCorrectionNote.trim().length < 10}
-                    >
-                      {loyaltyCorrectionSubmitting ? 'Memproses…' : 'Terapkan Koreksi Loyalty'}
-                    </button>
-                  </section>
-                )}
-
-                {canEdit && row.payment_status !== 'PENDING' && (
-                  <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                    <div className="text-sm font-semibold text-amber-900">
-                      Koreksi Pembayaran
-                    </div>
-
-                    <div className="mt-1 text-xs leading-5 text-amber-800">
-                      Gunakan hanya jika terjadi kesalahan input pembayaran, misalnya order seharusnya Pending tetapi terlanjur tercatat lunas.
-                    </div>
-
-                    <div className="mt-3 grid gap-2 text-sm">
-                      <RowLine label="Status Bayar" value={row.payment_status} strong />
-                      <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
-                      <RowLine label="Sisa" value={money(row.due_amount ?? 0)} strong />
-                    </div>
-
-                    <button
-                      type="button"
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
-                      onClick={() => {
-                        setPaymentCorrectionOpen(true);
-                        setPaymentCorrectionReason('');
-                        setPaymentCorrectionError(null);
-                      }}
-                    >
-                      Reset Pembayaran ke Pending
-                    </button>
-                  </section>
-                )}
-
-                {/* Status transitions */}
-                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_-22px_rgba(0,0,0,.35)]">
-                  <div className="text-sm font-semibold text-slate-900">Ubah Status</div>
-
-                  <div className="mt-2 text-xs text-slate-500">
-                    Status saat ini: <span className="font-semibold text-slate-700">{row.status}</span>
-                  </div>
-
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start">
-                    <div className="w-full sm:max-w-xs">
-                      <select
-                        id="order-status-select"
-                        className={`w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none ${statusFieldErrors.next?.[0]
-                          ? 'border-red-500 focus:border-red-600'
-                          : 'border-slate-300 focus:border-slate-500'
-                          }`}
-                        defaultValue=""
-                        disabled={statusSubmitting}
-                        aria-invalid={Boolean(statusFieldErrors.next?.[0])}
-                        aria-describedby={statusFieldErrors.next?.[0] ? 'order-status-select-error' : undefined}
-                        onChange={(e) => {
-                          const value = e.target.value as OrderBackendStatus | '';
-                          if (!value) return;
-
-                          void onTransit(value);
-                          e.currentTarget.value = '';
-                        }}
-                      >
-                        <option value="">
-                          {statusSubmitting ? 'Memproses...' : '-- Pilih status --'}
-                        </option>
-
-                        {getAllowedNext(row.status).map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-
-                      {statusFieldErrors.next?.[0] && (
-                        <p id="order-status-select-error" className="mt-2 text-xs text-red-600">
-                          {statusFieldErrors.next[0]}
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                      onClick={onSendStatusWA}
-                      title="Kirim status order via WhatsApp"
-                    >
-                      Kirim Status via WA
-                    </button>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            {/* Payment Correction Modal */}
-            {paymentCorrectionOpen && (
-              <div
-                className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+                </>
+              ) : null}
+
+              <button
+                type="button"
+                className="btn danger block"
+                disabled={!canEdit || voided}
                 onClick={() => {
-                  if (!paymentCorrectionSubmitting) setPaymentCorrectionOpen(false);
+                  setVoidReason('');
+                  setVoidOpen(true);
                 }}
-                role="dialog"
-                aria-modal="true"
               >
-                <div
-                  className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="border-b border-slate-200 px-4 py-3">
-                    <div className="text-sm font-semibold text-slate-900">
-                      Reset Pembayaran ke Pending
-                    </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      Order: {row.invoice_no ?? row.number}
-                    </div>
-                  </div>
+                <IconTrash /> Void Receipt
+              </button>
 
-                  <div className="space-y-4 px-4 py-4">
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                      Tindakan ini akan mengubah status bayar menjadi Pending, mengosongkan nilai pembayaran,
-                      membuka kembali piutang, dan menghapus mutasi kas dari pembayaran yang salah.
-                    </div>
-
-                    <div className="grid gap-2 text-sm">
-                      <RowLine label="Invoice" value={row.invoice_no ?? row.number ?? '-'} />
-                      <RowLine label="Grand Total" value={money(row.grand_total)} strong />
-                      <RowLine label="Status Saat Ini" value={row.payment_status} />
-                      <RowLine label="Dibayar" value={money(row.paid_amount ?? 0)} />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="payment-correction-reason"
-                        className="text-xs font-semibold text-slate-600"
-                      >
-                        Alasan Koreksi
-                      </label>
-
-                      <textarea
-                        id="payment-correction-reason"
-                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none disabled:bg-slate-100"
-                        rows={4}
-                        value={paymentCorrectionReason}
-                        onChange={(e) => {
-                          setPaymentCorrectionReason(e.target.value);
-                          if (paymentCorrectionError) setPaymentCorrectionError(null);
-                        }}
-                        disabled={paymentCorrectionSubmitting}
-                        placeholder="Contoh: Salah input, seharusnya pelanggan belum membayar."
-                      />
-
-                      {paymentCorrectionError && (
-                        <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                          {paymentCorrectionError}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
-                    <button
-                      type="button"
-                      className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
-                      onClick={() => setPaymentCorrectionOpen(false)}
-                      disabled={paymentCorrectionSubmitting}
-                    >
-                      Batal
-                    </button>
-
-                    <button
-                      type="button"
-                      className="inline-flex rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-                      onClick={() => void handleResetPaymentToPending()}
-                      disabled={paymentCorrectionSubmitting || paymentCorrectionReason.trim().length < 5}
-                    >
-                      {paymentCorrectionSubmitting ? 'Memproses…' : 'Ya, Reset'}
-                    </button>
-                  </div>
-                </div>
+              <div className="mini">
+                Void membatalkan struk & mengembalikan saldo penjualannya.
               </div>
-            )}
 
-            {/* Receipt Preview Modal */}
-            {receiptOpen && (
-              <div
-                className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
-                onClick={() => setReceiptOpen(false)}
-                role="dialog"
-                aria-modal="true"
+              <button type="button" className="btn ghost block" onClick={() => setHistoryOpen(true)}>
+                Histori Pembayaran
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {editOpen ? (
+        <EditOrderModal
+          order={row}
+          onClose={() => setEditOpen(false)}
+          onPhotosChanged={refresh}
+          onSaved={async () => {
+            setEditOpen(false);
+            await refresh();
+            showSuccess('Order berhasil diperbarui.');
+          }}
+        />
+      ) : null}
+
+      {historyOpen ? (
+        <PaymentHistoryModal
+          order={row}
+          onClose={() => setHistoryOpen(false)}
+          onChanged={async () => {
+            await refresh();
+            showSuccess('Histori pembayaran diperbarui.');
+          }}
+        />
+      ) : null}
+
+      {voidOpen ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-label="Void Receipt">
+          <div className="box">
+            <div className="modal-head">
+              <h3>Void Receipt {'\u00b7'} {row.invoice_no ?? row.number}</h3>
+              <button type="button" className="mclose" onClick={() => setVoidOpen(false)} aria-label="Tutup">
+                {'\u2715'}
+              </button>
+            </div>
+
+            <div className="mini" style={{ marginBottom: 12 }}>
+              Seluruh pembayaran dihapus, jurnal penjualannya di-void, dan status order menjadi CANCELED.
+              Tindakan ini tidak dapat dibatalkan.
+            </div>
+
+            <div className="field">
+              <label htmlFor="void_reason">Alasan Void</label>
+              <textarea
+                id="void_reason"
+                value={voidReason}
+                disabled={voidBusy}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="Contoh: order dibatalkan pelanggan sebelum pengerjaan."
+              />
+            </div>
+
+            <div className="modal-foot">
+              <button type="button" className="btn ghost" disabled={voidBusy} onClick={() => setVoidOpen(false)}>
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn danger"
+                style={{ marginLeft: 'auto' }}
+                disabled={voidBusy || voidReason.trim().length < 5}
+                onClick={() => void submitVoid()}
               >
-                <div
-                  className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-                    <div className="text-sm font-semibold text-slate-900">Receipt Preview</div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
-                        onClick={loadReceipt}
-                        disabled={receiptLoading}
-                        title="Muat ulang HTML struk"
-                      >
-                        {receiptLoading ? 'Memuat…' : 'Reload'}
-                      </button>
+                {voidBusy ? 'Memproses\u2026' : 'Ya, Void Receipt'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-                      <button
-                        type="button"
-                        className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 active:bg-slate-950"
-                        onClick={() => openOrderReceipt(row.id, true)}
-                        title="Buka & print"
-                      >
-                        Open & Print
-                      </button>
-
-                      <button
-                        type="button"
-                        className="inline-flex rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                        onClick={() => setReceiptOpen(false)}
-                        title="Tutup"
-                      >
-                        Tutup
-                      </button>
-                    </div>
-                  </div>
-
-                  {receiptErr && (
-                    <div className="px-4 py-3 text-sm text-red-700">
-                      {receiptErr}
-                    </div>
-                  )}
-
-                  {!receiptErr && receiptLoading && (
-                    <div className="px-4 py-3 text-sm text-slate-600">
-                      Memuat struk…
-                    </div>
-                  )}
-
-                  {!receiptErr && !receiptLoading && !receiptHtml && (
-                    <div className="px-4 py-3 text-sm text-slate-600">
-                      Belum ada HTML struk.
-                    </div>
-                  )}
-
-                  {!receiptErr && !!receiptHtml && (
-                    <div className="p-4">
-                      <ReceiptPreview html={receiptHtml} height="70vh" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div >
+      <CheckoutDialog
+        open={payOpen}
+        order={row}
+        onClose={() => setPayOpen(false)}
+        onPaid={() => { void refresh(); }}
+      />
     </>
   );
 }
 
-/* ------------------------
-   Presentational helpers (UI-only)
-------------------------- */
-
-function Th({
-  children,
-  className = '',
-  ...rest
-}: React.ComponentProps<'th'>) {
+function IconPrinter() {
   return (
-    <th
-      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${className}`}
-      {...rest}
-    >
-      {children}
-    </th>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9V3h12v6" />
+      <rect x="4" y="9" width="16" height="7" rx="2" />
+      <path d="M6 16h12v5H6z" />
+    </svg>
   );
 }
 
-function Td({
-  children,
-  className = '',
-  ...rest
-}: React.ComponentProps<'td'>) {
+function IconChat() {
   return (
-    <td className={`px-4 py-3 align-middle ${className}`} {...rest}>
-      {children}
-    </td>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z" />
+    </svg>
   );
 }
 
-function Kpi({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function IconPencil() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className={`mt-0.5 text-sm ${strong ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{value}</div>
-    </div>
-  );
-}
-
-function RowLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="text-slate-500">{label}</div>
-      <div className={`text-right ${strong ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{value}</div>
-    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
   );
 }

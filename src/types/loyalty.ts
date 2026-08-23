@@ -1,6 +1,7 @@
 // src/types/loyalty.ts
 export interface LoyaltySummary {
   stamps: number;
+  lifetime?: number;
   cycle: number;
   next: number;
 }

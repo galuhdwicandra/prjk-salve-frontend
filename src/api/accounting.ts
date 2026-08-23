@@ -1,6 +1,7 @@
 import { api, type ApiEnvelope } from './client';
 import type {
   AccountingAccount,
+  AccountingAccountBulkDeleteMeta,
   AccountingAccountMapping,
   AccountingAccountMappingPayload,
   AccountingAccountMappingQuery,
@@ -16,6 +17,8 @@ import type {
   AccountingLedgerMeta,
   AccountingLedgerQuery,
   AccountingLedgerRow,
+  AccountingLedgerGroup,
+  AccountingLedgerGroupedMeta,
   AccountingProfitLossData,
   AccountingProfitLossMeta,
   AccountingProfitLossQuery,
@@ -77,6 +80,16 @@ export async function updateAccountingAccount(id: string, payload: AccountingAcc
 export async function deleteAccountingAccount(id: string) {
   const { data } = await api.delete<ApiEnvelope<null, null>>(
     `/accounting/accounts/${encodeURIComponent(id)}`
+  );
+
+  return data;
+}
+
+export async function bulkDeleteAccountingAccounts(ids: string[]) {
+  const { data } = await api.post<ApiEnvelope<null, AccountingAccountBulkDeleteMeta>>(
+    '/accounting/accounts/bulk-destroy',
+    { ids },
+    { headers: { 'Content-Type': 'application/json' } }
   );
 
   return data;
@@ -196,6 +209,17 @@ export async function voidAccountingJournal(id: string, void_reason: string) {
 
 export async function getAccountingLedger(params: AccountingLedgerQuery) {
   const { data } = await api.get<ApiEnvelope<AccountingLedgerRow[], AccountingLedgerMeta>>(
+    '/accounting/ledger',
+    { params }
+  );
+
+  return data;
+}
+
+export async function getAccountingLedgerGrouped(
+  params: Pick<AccountingLedgerQuery, 'branch_id' | 'date_from' | 'date_to'>,
+) {
+  const { data } = await api.get<ApiEnvelope<AccountingLedgerGroup[], AccountingLedgerGroupedMeta>>(
     '/accounting/ledger',
     { params }
   );

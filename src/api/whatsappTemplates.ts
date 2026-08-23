@@ -1,6 +1,7 @@
 import { api, type ApiEnvelope } from './client';
 import type {
     WhatsappTemplate,
+    WhatsappTemplateKey,
     WhatsappTemplateQuery,
     WhatsappTemplateUpsertPayload,
     PaginationMeta,
@@ -35,7 +36,7 @@ export async function deleteWhatsappTemplate(id: string) {
 }
 
 export async function resolveWhatsappTemplate(
-    key: 'receipt_pending' | 'receipt_paid' | 'order_status',
+    key: WhatsappTemplateKey,
     branch_id?: string | null,
 ) {
     const params: Record<string, string> = { key };

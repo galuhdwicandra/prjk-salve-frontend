@@ -1,12 +1,11 @@
-// src/api/invoiceCounters.ts
 import { api } from './client';
 import type { ApiEnvelope } from './client';
 import type {
-  InvoiceCounter, DocumentNumber, DocumentNumberSavePayload,
+  InvoiceCounter, DocumentNumber, DocumentNumberPreviewMeta, DocumentNumberSavePayload,
 } from '../types/branches';
 
 export async function previewDocumentNumbers(branch_id: string) {
-  const { data } = await api.get<ApiEnvelope<DocumentNumber[], null>>(
+  const { data } = await api.get<ApiEnvelope<DocumentNumber[], DocumentNumberPreviewMeta>>(
     '/invoice-counters/preview',
     { params: { branch_id } },
   );
