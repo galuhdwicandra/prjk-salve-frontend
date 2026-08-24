@@ -152,6 +152,7 @@ export default function POSPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerWhatsapp, setCustomerWhatsapp] = useState('');
   const [orderDate, setOrderDate] = useState<string>(todayLocalYMD);
   const [note, setNote] = useState('');
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
@@ -192,6 +193,10 @@ export default function POSPage() {
   const [loy, setLoy] = useState<LoyaltySummary | null>(null);
 
   useEffect(() => {
+    setCustomerId('');
+    setCustomerName('');
+    setCustomerWhatsapp('');
+    setLoy(null);
     setItems([]);
   }, [branchId]);
 
@@ -207,6 +212,7 @@ export default function POSPage() {
       return;
     }
 
+    setLoy(null);
     let alive = true;
 
     getLoyaltySummary(customerId, branchId)
@@ -293,6 +299,8 @@ export default function POSPage() {
     setItems([]);
     setCustomerId('');
     setCustomerName('');
+    setCustomerWhatsapp('');
+    setLoy(null);
     setNote('');
     setBeforeFiles([]);
     setUseDiscount(false);
@@ -508,7 +516,8 @@ export default function POSPage() {
       }
 
       setCustomerId(String(created.id));
-      setCustomerName(created.name);
+      setCustomerName(created.name)
+      setCustomerWhatsapp(created.whatsapp ?? '');;
       closeCustomerModal();
     } catch (err: unknown) {
       const e = normalizeApiError(err);
@@ -548,17 +557,84 @@ export default function POSPage() {
                 <div id="customer_id">
                   <CustomerPicker
                     value={customerId}
-                    onChange={setCustomerId}
-                    onPicked={setCustomerName}
+                    onChange={(id) => {
+                      setCustomerId(id);
+
+                      if (!id) {
+                        setCustomerName('');
+                        setCustomerWhatsapp('');
+                        setLoy(null);
+                      }
+                    }}
+                    onPicked={(customer) => {
+                      setCustomerName(customer.name);
+                      setCustomerWhatsapp(customer.whatsapp ?? '');
+                    }}
                     onCreateNew={(name) => {
                       setNewCustomerName(name);
                       setCustomerError(null);
                       setOpenCustomerCreate(true);
                     }}
                     branchId={branchId}
-                    placeholder="Cari nama/WA/alamat pelanggan…"
+                    placeholder="Cari nama / no. WA, atau ketik data baru"
                   />
                 </div>
+                {customerId ? (
+                  <>
+                    <div className="picked" style={{ marginTop: 8 }}>
+                      <span>
+                        <b>{customerName}</b>{' '}
+                        <span className="mini">{customerWhatsapp || '—'}</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        className="link"
+                        onClick={() => {
+                          setCustomerId('');
+                          setCustomerName('');
+                          setCustomerWhatsapp('');
+                          setLoy(null);
+                        }}
+                      >
+                        ganti
+                      </button>
+                    </div>
+
+                    {loy ? (
+                      <div className="loyalty">
+                        <div className="loy-h">
+                          <span>Loyalty Stamp</span>
+                          <b>
+                            {loy.stamps}/{loy.cycle}
+                          </b>
+                        </div>
+
+                        <div
+                          className="stamp-bar"
+                          aria-label={`Loyalty stamp ${loy.stamps} dari ${loy.cycle}`}
+                        >
+                          {Array.from(
+                            { length: loy.cycle },
+                            (_, index) => index + 1,
+                          ).map((stamp) => (
+                            <span
+                              key={stamp}
+                              className={stamp <= loy.stamps ? 'stamp on' : 'stamp'}
+                            >
+                              {stamp}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="mini" style={{ marginTop: 5 }}>
+                          Aturan stamp menyusul — sementara mengikuti jumlah
+                          kunjungan.
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
                 {fieldErrors.customer_id?.[0] ? (
                   <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
                     {fieldErrors.customer_id[0]}

@@ -8,7 +8,7 @@ type Props = {
   placeholder?: string;
   requiredText?: string;
   branchId?: string;
-  onPicked?: (name: string) => void;
+  onPicked?: (customer: CustomerLite) => void;
   onCreateNew?: (name: string) => void;
 };
 
@@ -34,7 +34,6 @@ export default function CustomerPicker({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState<CustomerLite[]>([]);
-  const [selectedLabel, setSelectedLabel] = useState<string>("");
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -117,27 +116,15 @@ export default function CustomerPicker({
 
   // Jika parent reset value → kosongkan label
   useEffect(() => {
-    if (!value) setSelectedLabel("");
+    if (value) setQuery("");
   }, [value]);
 
   const showHelper = useMemo(() => !value && !!requiredText, [value, requiredText]);
-  const displayText = selectedLabel || query;
 
   function pick(c: CustomerLite) {
-    setSelectedLabel(c.name);
-    setQuery(c.name);
-    onChange(c.id);
-    onPicked?.(c.name);
-    setOpen(false);
-    setActiveIndex(-1);
-    inputRef.current?.focus();
-  }
-
-  function clearSelection() {
-    setSelectedLabel("");
     setQuery("");
-    onChange("");
-    setList([]);
+    onChange(c.id);
+    onPicked?.(c);
     setOpen(false);
     setActiveIndex(-1);
     inputRef.current?.focus();
@@ -174,10 +161,9 @@ export default function CustomerPicker({
           <input
             ref={inputRef}
             className="input w-full pl-9 py-2"
-            value={displayText}
+            value={query}
             onChange={(e) => {
-              setSelectedLabel("");
-              onChange(""); // reset id saat user mulai mengetik lagi
+              onChange("");
               setQuery(e.target.value);
             }}
             placeholder={placeholder}
@@ -197,16 +183,6 @@ export default function CustomerPicker({
           </span>
         </div>
 
-        {value && (
-          <button
-            type="button"
-            className="btn-outline text-xs px-2 py-1"
-            onClick={clearSelection}
-            title="Bersihkan pilihan"
-          >
-            ×
-          </button>
-        )}
       </div>
 
       {showHelper && (
