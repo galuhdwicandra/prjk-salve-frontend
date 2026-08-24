@@ -10,6 +10,7 @@ import type {
   OrderBackendStatus,
   OrderPaymentCorrectionPayload,
   OrderPaymentCorrectionResult,
+  OrderBulkVoidResult,
   LoyaltyReward,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
@@ -80,6 +81,19 @@ export async function voidOrder(id: string, reason: string) {
     { reason },
     { headers: { 'Content-Type': 'application/json' } }
   );
+  return data;
+}
+
+export async function bulkVoidOrders(orderIds: string[], reason: string) {
+  const { data } = await api.post<SingleResponse<OrderBulkVoidResult>>(
+    '/orders/bulk-void',
+    {
+      order_ids: orderIds,
+      reason,
+    },
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+
   return data;
 }
 

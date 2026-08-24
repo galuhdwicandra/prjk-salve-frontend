@@ -118,7 +118,7 @@ export default function DeliveryNoteDialog({ note, onClose, onDone, onError }: P
         if (!busy) onClose();
       }}
     >
-      <div className="box" onClick={(e) => e.stopPropagation()}>
+      <div className="box lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <h3>

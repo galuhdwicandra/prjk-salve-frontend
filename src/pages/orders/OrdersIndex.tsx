@@ -2,14 +2,23 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
-import { listOrders } from '../../api/orders';
+import { bulkVoidOrders, listOrders } from '../../api/orders';
 import DateRangePicker from '../../components/DateRangePicker';
-import { useAuth } from '../../store/useAuth';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
+import { useAuth, useIsManager } from '../../store/useAuth';
 import { fmtDate, rangeFor } from '../../utils/date';
 import { downloadXlsx } from '../../utils/export-table';
 import { rp } from '../../utils/money';
 import type { Order, PaginationMeta, PaymentStatus } from '../../types/orders';
-import { IconKebab, IconSort, IconSortDown, IconSortUp } from '../users/icons';
+import {
+  IconDownload,
+  IconKebab,
+  IconSort,
+  IconSortDown,
+  IconSortUp,
+  IconTrash,
+} from '../users/icons';
 
 type SortKey = 'date' | 'no' | 'customer' | 'status' | 'process' | 'total' | 'outstanding' | 'outlet';
 type SortState = { key: SortKey; dir: 1 | -1 };
@@ -37,7 +46,9 @@ function processChip(destination: Order['processing_destination']): { label: str
 
 export default function OrdersIndex() {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
+  const canVoid = useIsManager();
   const branches = useMemo(() => user?.branches ?? [], [user]);
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
   const [rows, setRows] = useState<Order[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -53,9 +64,13 @@ export default function OrdersIndex() {
   const [sort, setSort] = useState<SortState>({ key: 'date', dir: 1 });
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [voidOpen, setVoidOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidTargets, setVoidTargets] = useState<string[]>([]);
 
   const query = useMemo(
     () => ({
@@ -151,6 +166,49 @@ export default function OrdersIndex() {
   const to = Math.min(page * perPage, total);
   const allChecked = sorted.length > 0 && sorted.every((order) => selected.includes(String(order.id)));
 
+  const selectedRows = useMemo(
+    () => sorted.filter((order) => selected.includes(String(order.id))),
+    [sorted, selected],
+  );
+
+  function openBulkVoid() {
+    const targets = selectedRows
+      .filter((order) => order.status !== 'CANCELED')
+      .map((order) => String(order.id));
+
+    if (targets.length === 0) {
+      showError('Tidak ada receipt terpilih yang dapat di-void.');
+      return;
+    }
+
+    setVoidTargets(targets);
+    setVoidReason('');
+    setVoidOpen(true);
+  }
+
+  async function submitBulkVoid() {
+    if (voidTargets.length === 0 || voidReason.trim().length < 5) return;
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      const result = await bulkVoidOrders(voidTargets, voidReason.trim());
+      const count = result.data?.voided_count ?? voidTargets.length;
+
+      setVoidOpen(false);
+      setVoidReason('');
+      setVoidTargets([]);
+
+      await refresh();
+      showSuccess(`${count} receipt berhasil di-void.`);
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal melakukan void receipt terpilih.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function onSort(key: SortKey) {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
   }
@@ -225,6 +283,12 @@ export default function OrdersIndex() {
 
   return (
     <>
+      <Toast
+        show={toast.open}
+        kind={toast.kind}
+        message={toast.message}
+        onClose={hideToast}
+      />
       {slot ? createPortal(pageActions, slot) : null}
 
       <div className="card">
@@ -290,6 +354,43 @@ export default function OrdersIndex() {
               ))}
             </select>
           </div>
+        </div>
+
+        <div className={selected.length ? 'bulkbar show' : 'bulkbar'}>
+          <span className="bb-count">{selected.length} dipilih</span>
+
+          <div className="toolbar">
+            <button
+              type="button"
+              className="btn ghost sm"
+              disabled={busy}
+              onClick={() => void onExport()}
+            >
+              <IconDownload />
+              Export terpilih
+            </button>
+
+            {canVoid ? (
+              <button
+                type="button"
+                className="btn danger sm"
+                disabled={busy}
+                onClick={openBulkVoid}
+              >
+                <IconTrash />
+                Void terpilih
+              </button>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            className="link"
+            disabled={busy}
+            onClick={() => setSelected([])}
+          >
+            bersihkan
+          </button>
         </div>
 
         {error ? (
@@ -418,6 +519,68 @@ export default function OrdersIndex() {
           </div>
         ) : null}
       </div>
+      {voidOpen ? (
+        <div
+          className="modal show"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Void receipt terpilih"
+        >
+          <div className="box">
+            <div className="modal-head">
+              <h3>Void {voidTargets.length} Receipt</h3>
+              <button
+                type="button"
+                className="mclose"
+                disabled={busy}
+                aria-label="Tutup"
+                onClick={() => setVoidOpen(false)}
+              >
+                {'\u2715'}
+              </button>
+            </div>
+
+            <div className="mini" style={{ marginBottom: 12 }}>
+              Seluruh pembayaran receipt terpilih akan dihapus, jurnal
+              penjualannya di-void, dan status order menjadi CANCELED.
+              Tindakan ini tidak dapat dibatalkan.
+            </div>
+
+            <div className="field">
+              <label htmlFor="bulk_void_reason">Alasan Void</label>
+              <textarea
+                id="bulk_void_reason"
+                value={voidReason}
+                maxLength={200}
+                disabled={busy}
+                placeholder="Contoh: order dibatalkan pelanggan sebelum pengerjaan."
+                onChange={(event) => setVoidReason(event.target.value)}
+              />
+            </div>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={busy}
+                onClick={() => setVoidOpen(false)}
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                className="btn danger"
+                style={{ marginLeft: 'auto' }}
+                disabled={busy || voidReason.trim().length < 5}
+                onClick={() => void submitBulkVoid()}
+              >
+                {busy ? 'Memproses\u2026' : 'Konfirmasi Void'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

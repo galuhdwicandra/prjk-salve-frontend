@@ -287,17 +287,20 @@ export default function SortingList() {
     setDialog({ kind: 'pickup', orders: selectedOrders });
   };
 
-  const afterNoteCreated = async (note: DeliveryNote, label: string) => {
+  const afterNoteCreated = async (
+    note: DeliveryNote,
+    label: string,
+  ) => {
     setDialog({ kind: 'none' });
     setSelected([]);
-    await load();
     showSuccess(`${label} ${note.number} dibuat (${note.orders?.length ?? 0} order)`);
 
     try {
       printDeliveryNote(note);
     } catch (e) {
-      showError(getErrorMessage(e, 'Gagal membuka jendela cetak.'));
+      showError(getErrorMessage(e, 'Gagal membuka dialog cetak.'));
     }
+    await load();
   };
 
   return (

@@ -147,6 +147,11 @@ export interface OrderPaymentCorrectionResult {
     order: Order;
 }
 
+export interface OrderBulkVoidResult {
+    voided_ids: string[];
+    voided_count: number;
+}
+
 export interface OrderQuery {
     q?: string;
     status?: OrderBackendStatus;

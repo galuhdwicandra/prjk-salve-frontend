@@ -3,20 +3,20 @@ import type { DeliveryNote, SortingOrder } from '../../api/sorting';
 
 const SHEET_CSS = `
 *{box-sizing:border-box}
-body{font-family:ui-sans-serif,system-ui,"Segoe UI",Arial,sans-serif;color:#0f172a;margin:0;padding:18px}
-.sheet{border:1.5px solid #0f172a;border-radius:6px;padding:14px 16px}
-.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}
-.hd h1{font-size:15px;font-weight:900;letter-spacing:.04em;margin:0}
-.hd .no{font-size:10px;color:#475569;margin-top:2px}
-.hd .meta{font-size:9.5px;text-align:right;line-height:1.5}
-table{width:100%;border-collapse:collapse;font-size:9px}
-th,td{border:1px solid #94a3b8;padding:3px 5px;text-align:left;vertical-align:top}
-th{background:#e2e8f0;font-weight:800}
-td.num,th.num{text-align:right}
-tfoot td{font-weight:900;background:#f1f5f9}
-.sign{display:flex;justify-content:space-around;gap:24px;margin-top:34px;font-size:9.5px}
-.sign div{text-align:center;flex:1}
-.sign .line{border-bottom:1px solid #0f172a;margin-top:44px}
+body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:14px;font-size:12px}
+.sheet{border:2px solid #0a2a66;border-radius:8px;padding:14px;margin-bottom:16px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:2px solid #0a2a66;padding-bottom:8px;margin-bottom:10px}
+.hd h1{font-size:20px;font-weight:800;color:#0a2a66;letter-spacing:1px;margin:0}
+.hd .no{font-size:11px;color:#555;margin-top:2px}
+.hd .meta{font-size:11px;text-align:right;line-height:1.5}
+.sheet table{width:100%;border-collapse:collapse;font-size:11px}
+.sheet th,.sheet td{border:1px solid #cbd5e1;padding:5px 7px;text-align:left;vertical-align:top}
+.sheet th{background:#eef2f7;font-weight:800}
+.sheet td.num,.sheet th.num{text-align:center}
+.sheet tfoot td{font-weight:800;background:#f8fafc}
+.sign{display:flex;justify-content:space-between;margin-top:24px;font-size:11px}
+.sign div{text-align:center;width:45%}
+.sign .line{border-bottom:1px solid #0f172a;margin-top:40px}
 .label{border:1.5px solid #0f172a;border-radius:6px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid}
 .label .n{font-size:16px;font-weight:900}
 .label .r{display:flex;justify-content:space-between;font-size:10px;margin-top:3px;color:#334155}
@@ -31,22 +31,60 @@ function esc(value: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-function openPrintWindow(title: string, body: string): void {
-  const w = window.open('', '_blank', 'noopener,noreferrer');
-  if (!w) throw new Error('Popup diblokir browser. Izinkan pop-up untuk situs ini.');
+function openPrintFrame(title: string, body: string): void {
+  const frame = document.createElement('iframe');
 
-  w.document.open();
-  w.document.write(
-    `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(title)}</title>` +
-    `<style>${SHEET_CSS}</style></head><body>${body}` +
-    `<script>window.onload=function(){window.print();setTimeout(function(){window.close()},400)}</script>` +
-    `</body></html>`,
-  );
-  w.document.close();
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.position = 'fixed';
+  frame.style.right = '0';
+  frame.style.bottom = '0';
+  frame.style.width = '1px';
+  frame.style.height = '1px';
+  frame.style.border = '0';
+  frame.style.opacity = '0';
+
+  frame.onload = () => {
+    frame.onload = null;
+
+    const printWindow = frame.contentWindow;
+    if (!printWindow) {
+      frame.remove();
+      return;
+    }
+
+    const cleanup = () => {
+      if (frame.isConnected) frame.remove();
+    };
+
+    printWindow.addEventListener('afterprint', cleanup, { once: true });
+
+    try {
+      printWindow.focus();
+      printWindow.print();
+    } catch {
+      cleanup();
+    }
+  };
+
+  frame.srcdoc =
+    `<!doctype html><html lang="id"><head><meta charset="utf-8">` +
+    `<title>${esc(title)}</title><style>${SHEET_CSS}</style>` +
+    `</head><body>${body}</body></html>`;
+
+  document.body.appendChild(frame);
+}
+
+function branchLabel(branch: { name: string; code: string } | null | undefined): string | null {
+  if (!branch) return null;
+  return branch.code ? `${branch.name} (${branch.code})` : branch.name;
+}
+
+function originLabel(note: DeliveryNote): string {
+  return note.from_contact?.name ?? branchLabel(note.branch) ?? '-';
 }
 
 function destinationLabel(note: DeliveryNote): string {
-  return note.to_contact?.name ?? note.to_branch?.name ?? '-';
+  return note.to_contact?.name ?? branchLabel(note.to_branch) ?? '-';
 }
 
 export function printDeliveryNote(note: DeliveryNote): void {
@@ -76,13 +114,17 @@ export function printDeliveryNote(note: DeliveryNote): void {
     .join('');
 
   const heading = note.kind === 'ambil' ? 'SURAT JALAN AMBIL' : 'SURAT JALAN';
+  const routeMeta =
+    note.kind === 'ambil'
+      ? `Dari: <b>${esc(originLabel(note))}</b><br>Ke: <b>${esc(destinationLabel(note))}</b>`
+      : `Ke: <b>${esc(destinationLabel(note))}</b>`;
 
-  openPrintWindow(
+  openPrintFrame(
     note.number,
     `<div class="sheet">
       <div class="hd">
         <div><h1>${heading}</h1><div class="no">${esc(note.number)}</div></div>
-        <div class="meta">Tanggal: ${esc(fmtDate(note.note_date))}<br>Ke: ${esc(destinationLabel(note))}</div>
+        <div class="meta">Tanggal: ${esc(fmtDate(note.note_date))}<br>${routeMeta}</div>
       </div>
       <table>
         <thead><tr><th class="num">#</th><th>No. Order</th><th>Pelanggan</th><th>Asal</th><th>Treatment</th><th class="num">Pasang</th></tr></thead>
@@ -114,5 +156,5 @@ export function printOrderLabels(orders: LabelOrder[]): void {
     )
     .join('');
 
-  openPrintWindow(orders.length === 1 ? `Label ${orders[0].number}` : 'Label Order', body);
+  openPrintFrame(orders.length === 1 ? `Label ${orders[0].number}` : 'Label Order', body);
 }
