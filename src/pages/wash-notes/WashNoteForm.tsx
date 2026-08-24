@@ -1,15 +1,32 @@
 // src/pages/wash-notes/WashNoteForm.tsx
 import { useEffect, useMemo, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { createWashNote, updateWashNote, getWashNote, searchOrderCandidates, listWashNotes } from '../../api/washNotes';
 import { useNavigate, useParams } from 'react-router-dom';
 import { todayLocalYMD, toLocalYMD } from '../../utils/date';
+import type { OrderLite, ProcessStatus } from '../../api/washNotes';
+
+const PROCESS_STATUSES: readonly ProcessStatus[] = [
+    'QUEUE',
+    'WASH',
+    'DRY',
+    'FINISHING',
+    'COMPLETED',
+    'PICKED_UP',
+];
+
+type DuplicateWashNoteResponse = {
+    meta?: {
+        existing_id?: string | number | null;
+    } | null;
+};
 
 type ItemDraft = {
     order_id: string;
     number: string;
     customer?: string;
     qty: number;
-    process_status?: 'QUEUE' | 'WASH' | 'DRY' | 'FINISHING' | 'COMPLETED' | 'PICKED_UP';
+    process_status?: ProcessStatus;
     started_at?: string | null;
     finished_at?: string | null;
     note?: string | null;
@@ -55,7 +72,7 @@ export default function WashNoteForm() {
     const [noteDate, setNoteDate] = useState(() => todayLocalYMD());
     const [items, setItems] = useState<ItemDraft[]>([]);
     const [q, setQ] = useState('');
-    const [candidates, setCandidates] = useState<any[]>([]);
+    const [candidates, setCandidates] = useState<OrderLite[]>([]);
     const today = todayLocalYMD();
     const [from, setFrom] = useState<string>(today);
     const [to, setTo] = useState<string>(today);
@@ -71,7 +88,7 @@ export default function WashNoteForm() {
             const res = await getWashNote(id);
             const n = res.data;
             setNoteDate(toLocalYMD(n.note_date));
-            const mapped = (n.items ?? []).map((it: any) => ({
+            const mapped: ItemDraft[] = (n.items ?? []).map((it) => ({
                 order_id: it.order_id,
                 number: it.order?.number ?? it.order_id,
                 customer: it.order?.customer?.name ?? '',
@@ -110,7 +127,7 @@ export default function WashNoteForm() {
                 on_date: od,
                 exclude_note_id: id || undefined,
             });
-            const rows = (res.data ?? []) as any[];
+            const rows = res.data ?? [];
             const filtered = rows.filter(o => {
                 const oid = norm(String(o.id));
                 const onum = norm(String(o.number));
@@ -126,7 +143,7 @@ export default function WashNoteForm() {
         if (q.length >= 2) search(); else setCandidates([]);
     }, [q, from, to, noteDate, items]);
 
-    const addItem = (o: any) => {
+    const addItem = (o: OrderLite) => {
         const oid = norm(String(o.id));
         const onum = norm(String(o.number));
         if (items.some(x => norm(x.order_id) === oid || norm(x.number) === onum)) return;
@@ -149,7 +166,7 @@ export default function WashNoteForm() {
     const clearSelected = () => setItems([]);
 
     const invalidQty = useMemo(
-        () => items.some(it => isNaN(it.qty as any) || (it.qty as number) < 0),
+        () => items.some(it => Number.isNaN(it.qty) || it.qty < 0),
         [items]
     );
     const invalidTime = useMemo(() => {
@@ -191,13 +208,9 @@ export default function WashNoteForm() {
                 await createWashNote(payload);
             }
             nav('/wash-notes');
-        } catch (err: any) {
-            const resp = err?.response;
-            const status = resp?.status;
-            const data = resp?.data;
-
-            if (status === 422) {
-                const existingId = data?.meta?.existing_id;
+        } catch (err: unknown) {
+            if (isAxiosError<DuplicateWashNoteResponse>(err) && err.response?.status === 422) {
+                const existingId = err.response.data?.meta?.existing_id;
                 if (existingId) {
                     return nav(`/wash-notes/${existingId}/edit`);
                 }
@@ -207,7 +220,9 @@ export default function WashNoteForm() {
                     if (existing?.id) {
                         return nav(`/wash-notes/${existing.id}/edit`);
                     }
-                } catch { }
+                } catch {
+                    throw err;
+                }
             }
             throw err;
         } finally {
@@ -421,15 +436,15 @@ export default function WashNoteForm() {
                                                 <select
                                                     className="input"
                                                     value={it.process_status ?? ''}
-                                                    onChange={e => setItems(prev => prev.map((x, i) => i === idx ? { ...x, process_status: (e.target.value || undefined) as any } : x))}
+                                                    onChange={e => {
+                                                        const processStatus = PROCESS_STATUSES.find(status => status === e.target.value);
+                                                        setItems(prev => prev.map((x, i) => i === idx ? { ...x, process_status: processStatus } : x));
+                                                    }}
                                                 >
                                                     <option value="">(kosong)</option>
-                                                    <option value="QUEUE">QUEUE</option>
-                                                    <option value="WASH">WASH</option>
-                                                    <option value="DRY">DRY</option>
-                                                    <option value="FINISHING">FINISHING</option>
-                                                    <option value="COMPLETED">COMPLETED</option>
-                                                    <option value="PICKED_UP">PICKED_UP</option>
+                                                    {PROCESS_STATUSES.map(status => (
+                                                        <option key={status} value={status}>{status}</option>
+                                                    ))}
                                                 </select>
                                             </Td>
                                             <Td>

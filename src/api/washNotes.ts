@@ -12,6 +12,7 @@ export interface WashNoteItem {
     started_at?: string | null;
     finished_at?: string | null;
     note?: string | null;
+    order?: OrderLite | null;
 }
 
 export interface WashNote {

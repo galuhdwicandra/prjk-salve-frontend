@@ -9,7 +9,7 @@ import {
 } from '../../api/orders';
 import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import OrderBeforePhotos from '../../components/orders/OrderBeforePhotos';
-import CheckoutDialog from '../../components/pos/CheckoutDialog';
+import ReceivePaymentModal from './ReceivePaymentModal';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useAuth, useIsManager } from '../../store/useAuth';
@@ -20,7 +20,6 @@ import { buildOrderWaMessage } from '../../utils/wa-templates';
 import type { WaConfigKey } from '../../types/whatsapp-templates';
 import { buildWhatsAppLink } from '../../utils/wa';
 import EditOrderModal from './EditOrderModal';
-import OrderAdvancedPanel from './OrderAdvancedPanel';
 import PaymentHistoryModal from './PaymentHistoryModal';
 import type { Order } from '../../types/orders';
 
@@ -264,20 +263,7 @@ export default function OrderDetail() {
               </div>
             </div>
           </div>
-
-          <details className="card">
-            <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
-              Opsi lanjutan {'\u2014'} status, pengiriman, foto & koreksi
-            </summary>
-            <div style={{ marginTop: 18 }}>
-              <OrderAdvancedPanel
-                order={row}
-                onRefresh={refresh}
-                onSuccess={showSuccess}
-                onError={showError}
-              />
-            </div>
-          </details>
+          
         </div>
 
         <div className="rcd-side">
@@ -415,12 +401,16 @@ export default function OrderDetail() {
         </div>
       ) : null}
 
-      <CheckoutDialog
-        open={payOpen}
-        order={row}
-        onClose={() => setPayOpen(false)}
-        onPaid={() => { void refresh(); }}
-      />
+      {payOpen ? (
+        <ReceivePaymentModal
+          order={row}
+          onClose={() => setPayOpen(false)}
+          onSaved={async () => {
+            await refresh();
+            showSuccess('Pembayaran berhasil disimpan.');
+          }}
+        />
+      ) : null}
     </>
   );
 }

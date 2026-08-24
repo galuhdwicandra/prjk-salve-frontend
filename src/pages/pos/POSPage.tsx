@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ProductGallery from '../../components/pos/ProductGallery';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
 import QrisPreview from '../../components/pos/QrisPreview';
@@ -136,8 +135,52 @@ function PosSection({
   );
 }
 
+function PendingPhotoThumbnail({
+  file,
+  index,
+  onRemove,
+}: {
+  file: File;
+  index: number;
+  onRemove: () => void;
+}) {
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const previewUrl = URL.createObjectURL(file);
+
+    if (imageRef.current) {
+      imageRef.current.src = previewUrl;
+    }
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [file]);
+
+  return (
+    <div
+      className="photo-thumb"
+      style={{ width: 64, height: 64 }}
+    >
+      <img
+        ref={imageRef}
+        alt={`Foto before ${index + 1}`}
+      />
+
+      <button
+        type="button"
+        className="photo-x"
+        aria-label={`Hapus foto ${file.name}`}
+        onClick={onRemove}
+      >
+        {'\u2715'}
+      </button>
+    </div>
+  );
+}
+
 export default function POSPage() {
-  const nav = useNavigate();
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
   const branchId = useActiveBranchId();
   const branchCode = (user?.branches ?? []).find((b) => b.id === branchId)?.code ?? '';
@@ -296,6 +339,7 @@ export default function POSPage() {
   const onRemove = (id: string) => setItems((prev) => prev.filter((p) => p.service_id !== id));
 
   function resetForm() {
+    setOpenSec('cust');
     setItems([]);
     setCustomerId('');
     setCustomerName('');
@@ -303,6 +347,8 @@ export default function POSPage() {
     setLoy(null);
     setNote('');
     setBeforeFiles([]);
+    setMode('FULL');
+    setMethod(paymentMethods[0]?.code ?? 'CASH');
     setUseDiscount(false);
     setDiscount('');
     setUseVoucher(false);
@@ -310,6 +356,8 @@ export default function POSPage() {
     setVoucherMsg(null);
     setCashReceived('');
     setOrderDate(todayLocalYMD());
+    setError(null);
+    setFieldErrors({});
     clientRefRef.current = crypto.randomUUID();
   }
 
@@ -319,6 +367,17 @@ export default function POSPage() {
 
     if (good.length > 0) setBeforeFiles((prev) => [...prev, ...good]);
     if (rejected > 0) showError(`${rejected} file ditolak (bukan gambar atau lebih dari 4 MB).`);
+  }
+
+  function handlePhotoInput(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const files = event.currentTarget.files
+      ? Array.from(event.currentTarget.files)
+      : [];
+
+    acceptPhotos(files);
+    event.currentTarget.value = '';
   }
 
   function validatePosForm(): FieldErrors {
@@ -437,23 +496,30 @@ export default function POSPage() {
         order = payRes.order;
       }
 
+      let photoUploadError: string | null = null;
+
       if (beforeFiles.length > 0) {
         try {
           await uploadOrderPhotos(order.id, beforeFiles, []);
-        } catch (e) {
-          const photoErr = normalizeApiError(e);
-          showError(
-            `Order ${order.number ?? ''} tersimpan, tetapi foto gagal diunggah: ${photoErr.message}. Ulangi upload dari Receipt List.`,
-          );
+        } catch (err: unknown) {
+          photoUploadError = normalizeApiError(err).message;
         }
       }
 
-      clientRefRef.current = crypto.randomUUID();
-      showSuccess('Order berhasil disimpan.');
+      const orderReference = order.invoice_no ?? order.number;
+      const successMessage = orderReference
+        ? `Order ${orderReference} berhasil dibuat.`
+        : 'Order berhasil dibuat.';
 
-      window.setTimeout(() => {
-        nav(`/orders/${order.id}/receipt`, { replace: true });
-      }, 400);
+      resetForm();
+
+      if (photoUploadError) {
+        showError(
+          `${successMessage} Namun, foto gagal diunggah: ${photoUploadError}. Ulangi upload melalui Receipt List.`,
+        );
+      } else {
+        showSuccess(successMessage);
+      }
     } catch (err: unknown) {
       const e = normalizeApiError(err);
 
@@ -865,7 +931,7 @@ export default function POSPage() {
                   accept="image/*"
                   capture="environment"
                   style={{ display: 'none' }}
-                  onChange={(e) => acceptPhotos(e.target.files ? Array.from(e.target.files) : [])}
+                  onChange={handlePhotoInput}
                 />
                 <input
                   ref={galleryRef}
@@ -873,18 +939,32 @@ export default function POSPage() {
                   accept="image/*"
                   multiple
                   style={{ display: 'none' }}
-                  onChange={(e) => acceptPhotos(e.target.files ? Array.from(e.target.files) : [])}
+                  onChange={handlePhotoInput}
                 />
+
+                {beforeFiles.length > 0 ? (
+                  <div className="photo-grid" style={{ marginBottom: 10 }}>
+                    {beforeFiles.map((file, index) => (
+                      <PendingPhotoThumbnail
+                        key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                        file={file}
+                        index={index}
+                        onRemove={() => {
+                          setBeforeFiles((previous) =>
+                            previous.filter(
+                              (_, fileIndex) => fileIndex !== index,
+                            ),
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : null}
 
                 <div className="mini">
                   Foto kondisi awal sepatu. Bisa juga ditambahkan nanti lewat menu Receipt List.
                 </div>
 
-                {beforeFiles.length > 0 ? (
-                  <div className="mini" style={{ marginTop: 6 }}>
-                    {beforeFiles.length} file dipilih.
-                  </div>
-                ) : null}
               </div>
 
               <div className="field" style={{ marginBottom: 0 }}>

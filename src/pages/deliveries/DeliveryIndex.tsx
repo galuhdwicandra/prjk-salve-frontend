@@ -9,6 +9,7 @@ import type { Delivery } from '../../types/deliveries';
 import { fmtDate } from '../../utils/date';
 import { IconSort, IconSortDown, IconSortUp } from '../users/icons';
 import DeliveryNoteDialog from './DeliveryNoteDialog';
+import CourierDeliveryDialog from './CourierDeliveryDialog';
 
 type Tab = 'notes' | 'courier';
 type SortKey = 'no' | 'date' | 'route' | 'orders' | 'status' | 'order' | 'customer' | 'outlet' | 'qty';
@@ -60,6 +61,9 @@ export default function DeliveryIndex() {
   const [err, setErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<DeliveryNote | null>(null);
 
+  const [courierDetail, setCourierDetail] = useState<Delivery | null>(null);
+  const [courierTotal, setCourierTotal] = useState(0);
+
   const [search, setSearch] = useState('');
   const [term, setTerm] = useState('');
   const [status, setStatus] = useState(STATUS_OPTIONS[0].value);
@@ -68,6 +72,32 @@ export default function DeliveryIndex() {
   const [sort, setSort] = useState<SortState>({ key: 'date', dir: 1 });
 
   const { toast, showSuccess, showError, hideToast } = useToast();
+
+  const loadCourierTotal = useCallback(async () => {
+    try {
+      const response = await listDeliveries({
+        active: true,
+        page: 1,
+        per_page: 1,
+      });
+
+      setCourierTotal(
+        response.meta?.total ?? response.data?.length ?? 0,
+      );
+    } catch {
+      setCourierTotal(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCourierTotal();
+  }, [loadCourierTotal]);
+
+  const afterCourierAction = async (message: string) => {
+    setCourierDetail(null);
+    await Promise.all([load(), loadCourierTotal()]);
+    showSuccess(message);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => setTerm(search.trim()), 300);
@@ -90,7 +120,12 @@ export default function DeliveryIndex() {
         return;
       }
 
-      const res = await listDeliveries({ q: term || undefined, per_page: perPage, page });
+      const res = await listDeliveries({
+        q: term || undefined,
+        active: true,
+        per_page: perPage,
+        page,
+      });
       setCouriers(res.data ?? []);
       setMeta(res.meta ? { total: res.meta.total, last_page: res.meta.last_page } : null);
     } catch (e) {
@@ -175,7 +210,9 @@ export default function DeliveryIndex() {
             aria-current={t.key === tab ? 'page' : undefined}
             onClick={() => setTab(t.key)}
           >
-            {t.label}
+            {t.key === 'courier'
+              ? `${t.label} (${courierTotal})`
+              : t.label}
           </button>
         ))}
       </div>
@@ -336,7 +373,16 @@ export default function DeliveryIndex() {
               ) : (
                 sortedCouriers.map((r) => (
                   <tr key={r.id}>
-                    <td data-label="No. Antar">{r.number ?? '-'}</td>
+                    <td data-label="No. Antar">
+                      <button
+                        type="button"
+                        className="link"
+                        disabled={!r.number}
+                        onClick={() => setCourierDetail(r)}
+                      >
+                        {r.number ?? '-'}
+                      </button>
+                    </td>
                     <td data-label="No. Order">{r.order_invoice_no ?? r.order_number ?? '-'}</td>
                     <td data-label="Pelanggan">{r.customer?.name ?? '-'}</td>
                     <td data-label="Outlet">{r.branch?.code ?? '-'}</td>
@@ -406,6 +452,14 @@ export default function DeliveryIndex() {
         onDone={afterAction}
         onError={showError}
       />
+
+      {courierDetail ? (
+        <CourierDeliveryDialog
+          delivery={courierDetail}
+          onClose={() => setCourierDetail(null)}
+          onDone={afterCourierAction}
+        />
+      ) : null}
 
       <Toast show={toast.open} message={toast.message} kind={toast.kind} onClose={hideToast} />
     </div>

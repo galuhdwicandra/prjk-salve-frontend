@@ -36,10 +36,11 @@ export async function updateDeliveryStatus(id: string, payload: DeliveryStatusPa
   const hasFile = !!payload.photo;
   if (hasFile) {
     const fd = new FormData();
+    fd.append('_method', 'PUT');
     fd.append('status', payload.status);
     if (payload.note) fd.append('note', payload.note);
     if (payload.photo) fd.append('photo', payload.photo);
-    const { data } = await api.put<SingleResponse<Delivery>>(
+    const { data } = await api.post<SingleResponse<Delivery>>(
       `/deliveries/${encodeURIComponent(id)}/status`,
       fd
     );

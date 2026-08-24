@@ -15,6 +15,7 @@ export interface Delivery {
     id: string;
     number: string | null;
     order_id: string;
+    due_amount?: number;
     type: string;
     zone_id: string | null;
     fee: number;
@@ -71,13 +72,13 @@ export interface DeliveryAssignPayload {
 export interface DeliveryStatusPayload {
     status: DeliveryStatus;
     note?: string | null;
-    /** Optional; hanya diperlukan saat HANDOVER */
     photo?: File | null;
 }
 
 export interface DeliveryQuery {
     q?: string;
     status?: DeliveryStatus;
+    active?: boolean;
     courier_id?: string | number;
     page?: number;
     per_page?: number;
