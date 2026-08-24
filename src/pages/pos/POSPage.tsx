@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } fro
 import { useNavigate } from 'react-router-dom';
 import ProductGallery from '../../components/pos/ProductGallery';
 import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
+import QrisPreview from '../../components/pos/QrisPreview';
 import CustomerPicker from '../../components/customers/CustomerPicker';
 import Toast from '../../components/Toast';
 import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
@@ -249,6 +250,9 @@ export default function POSPage() {
   );
 
   const dueNow = useMemo(() => Math.max(0, total - payableNow), [total, payableNow]);
+
+  const methodLabel = paymentMethods.find((pm) => pm.code === method)?.name ?? method;
+  const qrisAmount = /qris/i.test(method) || /qris/i.test(methodLabel) ? payableNow : 0;
 
   const maxSla = useMemo(() => items.reduce((max, it) => Math.max(max, it.sla_days ?? 0), 0), [items]);
   const readyAt = useMemo(() => addDays(orderDate, maxSla), [orderDate, maxSla]);
@@ -854,7 +858,7 @@ export default function POSPage() {
                 {mode !== 'PENDING' ? (
                   <div className="kv">
                     <span className="muted">Metode</span>
-                    <span>{paymentMethods.find((pm) => pm.code === method)?.name ?? method}</span>
+                    <span>{methodLabel}</span>
                   </div>
                 ) : null}
                 <div className="kv">
@@ -871,6 +875,9 @@ export default function POSPage() {
                   <span className="muted">Estimasi Selesai</span>
                   <span>{fmtDate(readyAt)}</span>
                 </div>
+                {qrisAmount > 0 ? (
+                  <QrisPreview amount={qrisAmount} />
+                ) : null}
               </div>
             </PosSection>
           </div>

@@ -91,6 +91,7 @@ export function getTopbarTitle(pathname: string): string {
 
 export function getPageSub(pathname: string): string | null {
     if (pathname.startsWith("/settings/whatsapp-templates")) return "Template pesan WA ke pelanggan";
+    if (pathname.startsWith("/orders/")) return "Rincian struk order";
     if (pathname.startsWith("/customers/")) return "Profil, loyalty & histori pelanggan";
     if (pathname.startsWith("/vouchers")) return "Kelola kode voucher & aturan loyalty card";
     if (pathname.startsWith("/transactions/new/in")) return "Catat pemasukan di luar penjualan";

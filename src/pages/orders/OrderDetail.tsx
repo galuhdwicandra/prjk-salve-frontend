@@ -161,16 +161,16 @@ export default function OrderDetail() {
     <>
       <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 14 }}>
         <Link className="btn ghost sm" to="/orders">{'\u2190'} Receipt List</Link>
       </div>
 
-      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)' }}>
-        <div style={{ display: 'grid', gap: 16 }}>
+      <div className="rcd">
+        <div className="rcd-main">
           <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--navy)' }}>
+            <div className="rcd-head">
+              <div style={{ minWidth: 0 }}>
+                <h2 className="rcd-no">
                   {row.invoice_no ?? row.number}
                 </h2>
                 <div className="mini" style={{ marginTop: 4 }}>
@@ -179,17 +179,17 @@ export default function OrderDetail() {
                 </div>
               </div>
 
-              <div className="right">
+              <div className="rcd-total">
                 <div className="mini">Total</div>
-                <div style={{ fontSize: 22, fontWeight: 900 }}>{rp(Number(row.grand_total))}</div>
-                <div style={{ fontWeight: 800, color: voided ? 'var(--danger)' : 'var(--ok)' }}>
+                <b>{rp(Number(row.grand_total))}</b>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: voided ? 'var(--danger)' : 'var(--ok)' }}>
                   {statusLabel(row)}
                 </div>
               </div>
             </div>
 
             <div className="kv" style={{ marginTop: 18 }}>
-              <span className="muted">Pelanggan</span>
+              <div>Pelanggan</div>
               {row.customer_id ? (
                 <Link className="lnk" to={`/customers/${row.customer_id}`}>
                   {row.customer?.name ?? row.customer_name ?? '\u2014'}
@@ -241,25 +241,25 @@ export default function OrderDetail() {
 
             <div style={{ marginTop: 16 }}>
               <div className="kv">
-                <span className="muted">Ketentuan</span>
+                <div>Ketentuan</div>
                 <span>{termLabel(row)}</span>
               </div>
               <div className="kv">
-                <span className="muted">Metode</span>
+                <div>Metode</div>
                 <span>{lastPayment?.method ?? '\u2014'}</span>
               </div>
               <div className="kv">
-                <span className="muted">Dibayar</span>
+                <div>Dibayar</div>
                 <b>{rp(Number(row.paid_amount))}</b>
               </div>
               {Number(row.due_amount) > 0 ? (
                 <div className="kv">
-                  <span className="muted">Sisa Tagihan</span>
+                  <div>Sisa Tagihan</div>
                   <b style={{ color: 'var(--danger)' }}>{rp(Number(row.due_amount))}</b>
                 </div>
               ) : null}
               <div className="kv">
-                <span className="muted">Estimasi selesai</span>
+                <div>Estimasi selesai</div>
                 <span>{fmtDate(row.ready_at)}</span>
               </div>
             </div>
@@ -280,7 +280,7 @@ export default function OrderDetail() {
           </details>
         </div>
 
-        <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+        <div className="rcd-side">
           <div className="card">
             <div className="card-title">Foto Before</div>
             <OrderBeforePhotos

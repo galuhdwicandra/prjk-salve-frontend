@@ -231,11 +231,11 @@ export default function BranchIndex() {
           </div>
         ) : null}
 
-        <div className="tbl-wrap">
+        <div className="tbl-wrap selectable-table">
           <table>
             <thead>
               <tr>
-                <th style={{ width: '1%' }}>
+                <th className="dt-check">
                   <input
                     type="checkbox"
                     checked={allChecked}

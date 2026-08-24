@@ -54,62 +54,33 @@ export default function OrderBeforePhotos({ orderId, photos, readOnly = false, o
 
   return (
     <div>
-      <div
-        className="mini"
-        style={{
-          background: before.length > 0 ? 'var(--ok-bg)' : 'var(--warn-bg)',
-          color: before.length > 0 ? 'var(--ok)' : 'var(--warn)',
-          fontWeight: 700,
-          borderRadius: 'var(--r-sm)',
-          padding: '10px 12px',
-          marginBottom: 12,
-        }}
-      >
+      <div className={before.length > 0 ? 'rcd-badge ok' : 'rcd-badge no'}>
         {before.length > 0
           ? '\u2713 Foto lengkap \u2014 order masuk Workshop'
-          : 'Belum ada foto \u2014 order belum bisa disortir ke Workshop'}
+          : '\u2715 Belum ada foto \u2014 order belum bisa disortir ke Workshop'}
       </div>
 
-      {before.length > 0 ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-          {before.map((photo) => (
-            <div key={photo.id} style={{ position: 'relative' }}>
-              <img
-                src={fileUrl(photo.path)}
-                alt="Foto before"
-                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }}
-              />
-              {readOnly ? null : (
-                <button
-                  type="button"
-                  aria-label="Hapus foto"
-                  disabled={busy}
-                  onClick={() => void remove(photo.id)}
-                  style={{
-                    position: 'absolute',
-                    top: -6,
-                    right: -6,
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    border: 0,
-                    background: 'var(--navy)',
-                    color: '#fff',
-                    fontSize: 11,
-                    lineHeight: 1,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {'\u2715'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <div className="photo-grid" style={{ margin: '12px 0' }}>
+        {before.map((photo) => (
+          <div key={photo.id} className="photo-thumb">
+            <img src={fileUrl(photo.path)} alt="Foto before" />
+            {readOnly ? null : (
+              <button
+                type="button"
+                className="photo-x"
+                aria-label="Hapus foto"
+                disabled={busy}
+                onClick={() => void remove(photo.id)}
+              >
+                {'\u2715'}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
 
       {readOnly ? null : (
-        <div className="toolbar">
+        <div className="photo-btns">
           <button type="button" className="btn ghost sm" disabled={busy} onClick={() => cameraRef.current?.click()}>
             Kamera
           </button>

@@ -413,11 +413,11 @@ export default function CustomersIndex() {
           </div>
         ) : null}
 
-        <div className="tbl-wrap">
+        <div className="tbl-wrap customer-table">
           <table>
             <thead>
               <tr>
-                <th style={{ width: '1%' }}>
+                <th className="dt-check">
                   <input
                     type="checkbox"
                     checked={allChecked}

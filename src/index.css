@@ -115,6 +115,78 @@
 .craft .cf-dtl td { padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
 .craft .cf-dtl th.num, .craft .cf-dtl td.num { text-align: right; white-space: nowrap; }
 
+.craft .rcp-qr-status {
+  display: grid;
+  width: 210px;
+  height: 210px;
+  margin: 8px auto 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 16px;
+}
+
+.craft :is(.customer-table, .selectable-table) :is(th.dt-check, td.dt-check) {
+  box-sizing: border-box;
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  text-align: center;
+}
+
+.craft :is(.customer-table, .selectable-table) .dt-check input[type="checkbox"] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  vertical-align: middle;
+  accent-color: var(--blue);
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: checkbox;
+}
+
+.craft :is(.customer-table, .selectable-table) .dt-check input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .craft :is(.customer-table, .selectable-table) td.dt-check {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+.rcp-qr {
+  text-align: center;
+  border-top: 1px dashed var(--line);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.rcp-qr img {
+  width: 210px;
+  height: 210px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px;
+  background: #fff;
+}
+
+.craft .rcd-total { flex: none; white-space: nowrap; }
+.craft .rcd-side .card + .card { margin-top: 0; }
+
+@media (max-width: 720px) {
+  .craft .tbl-wrap td:not(.num) { white-space: normal; }
+}
+
 @media (max-width: 640px) {
   .craft .set-card:not([data-module="set-user"]) { display: none; }
   .craft .set-mobile-note {

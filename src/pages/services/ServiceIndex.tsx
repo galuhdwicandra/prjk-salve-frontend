@@ -350,11 +350,11 @@ export default function ServiceIndex() {
           </div>
         ) : null}
 
-        <div className="tbl-wrap catalog-tbl">
+        <div className="tbl-wrap catalog-tbl selectable-table">
           <table>
             <thead>
               <tr>
-                <th style={{ width: '1%' }}>
+                <th className="dt-check">
                   <input
                     type="checkbox"
                     checked={allChecked}
