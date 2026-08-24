@@ -102,7 +102,7 @@ export async function handoverOrders(order_ids: string[], photos: File[]) {
 
   const { data } = await api.post<
     ApiEnvelope<{ handed_over: { order_id: string; number: string }[]; skipped: SkippedOrder[] }, null>
-  >('/sorting/handover', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  >('/sorting/handover', fd);
   return data;
 }
 
@@ -157,7 +157,6 @@ async function postProof(id: string, action: 'complete' | 'pick' | 'arrive', pho
   const { data } = await api.post<ApiEnvelope<DeliveryNote, null>>(
     `/delivery-notes/${encodeURIComponent(id)}/${action}`,
     fd,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return data;
 }

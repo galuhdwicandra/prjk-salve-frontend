@@ -166,6 +166,7 @@ export function normalizeApiError(err: unknown): NormalizedApiError {
     const messageFromField = firstErrorMessage(errors);
 
     let message =
+        (status === 422 ? messageFromField : null) ||
         data?.message?.trim() ||
         messageFromField ||
         err.message ||
@@ -180,8 +181,6 @@ export function normalizeApiError(err: unknown): NormalizedApiError {
         message = 'Anda tidak memiliki izin untuk melakukan aksi ini.';
     } else if (status === 404 && !data?.message) {
         message = 'Data yang diminta tidak ditemukan.';
-    } else if (status === 422 && !data?.message && messageFromField) {
-        message = messageFromField;
     } else if (status !== null && status >= 500) {
         message = data?.message?.trim() || 'Terjadi kesalahan pada server.';
     }

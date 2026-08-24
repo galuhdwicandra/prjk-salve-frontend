@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getErrorMessage } from '../../api/client';
 import { arriveDeliveryNote, completeDeliveryNote, pickDeliveryNote } from '../../api/sorting';
 import type { DeliveryNote, DeliveryNoteOrder, DeliveryNoteStatus } from '../../api/sorting';
@@ -40,9 +40,6 @@ export default function DeliveryNoteDialog({ note, onClose, onDone, onError }: P
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
 
   const previews = useMemo(
     () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
@@ -182,49 +179,64 @@ export default function DeliveryNoteDialog({ note, onClose, onDone, onError }: P
             )}
 
             <div className="toolbar">
-              <button
-                type="button"
+              <label
                 className="btn ghost sm"
-                disabled={busy}
-                onClick={() => cameraRef.current?.click()}
+                aria-disabled={busy}
+                style={{ position: 'relative', overflow: 'hidden' }}
               >
                 <IconCamera />
                 Kamera
-              </button>
-              <button
-                type="button"
+                <input
+                  type="file"
+                  aria-label="Ambil foto menggunakan kamera"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  disabled={busy}
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'pointer',
+                  }}
+                />
+              </label>
+
+              <label
                 className="btn ghost sm"
-                disabled={busy}
-                onClick={() => galleryRef.current?.click()}
+                aria-disabled={busy}
+                style={{ position: 'relative', overflow: 'hidden' }}
               >
                 <IconImage />
                 Galeri
-              </button>
+                <input
+                  type="file"
+                  aria-label="Pilih foto dari galeri"
+                  accept="image/*"
+                  multiple
+                  disabled={busy}
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'pointer',
+                  }}
+                />
+              </label>
             </div>
-
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              multiple
-              hidden
-              onChange={(e) => {
-                addFiles(e.target.files);
-                e.target.value = '';
-              }}
-            />
-            <input
-              ref={galleryRef}
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              onChange={(e) => {
-                addFiles(e.target.files);
-                e.target.value = '';
-              }}
-            />
+            
           </>
         ) : (
           <>
@@ -319,6 +331,6 @@ export default function DeliveryNoteDialog({ note, onClose, onDone, onError }: P
           ) : null}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
