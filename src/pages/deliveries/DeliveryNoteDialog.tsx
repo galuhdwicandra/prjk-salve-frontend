@@ -80,7 +80,11 @@ export default function DeliveryNoteDialog({ note, onClose, onDone, onError }: P
   const toText = note.to_contact?.name ?? note.to_branch?.code ?? note.to_branch?.name ?? '-';
 
   const addFiles = (list: FileList | null) => {
-    setFiles((prev) => [...prev, ...Array.from(list ?? [])]);
+    const selectedFiles = Array.from(list ?? []);
+
+    if (selectedFiles.length === 0) return;
+
+    setFiles((prev) => [...prev, ...selectedFiles]);
   };
 
   const submit = async () => {
