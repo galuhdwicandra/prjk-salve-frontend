@@ -48,4 +48,4 @@ Response format:
 ===================================
 [STORY]
 
-lihat gambar di folder [frontend/docs_foto/] tambahkan kolom saldo pada tabel
+lihat gambar di folder [frontend/docs_foto/] ketika klik profile harusnya ada ubah password

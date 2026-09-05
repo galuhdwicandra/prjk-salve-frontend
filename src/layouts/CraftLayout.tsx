@@ -9,6 +9,9 @@ import { listOrders } from "../api/orders";
 import { listContacts } from "../api/contacts";
 import BranchPicker from "../components/BranchPicker";
 import NotificationBell from "../components/NotificationBell";
+import Toast from "../components/Toast";
+import ChangePasswordModal from "../components/ChangePasswordModal";
+import { useToast } from "../hooks/useToast";
 
 type NavSheet = MenuGroup | "profile" | null;
 
@@ -36,6 +39,7 @@ export default function CraftLayout() {
   const [openGroup, setOpenGroup] = useState<string | null>(activeGroupTitle);
   const [meFailed, setMeFailed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [pwdOpen, setPwdOpen] = useState(false);
   const [sheet, setSheet] = useState<NavSheet>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [fly, setFly] = useState<{ title: string; top: number; left: number } | null>(null);
@@ -44,6 +48,7 @@ export default function CraftLayout() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const flyRef = useRef<HTMLDivElement | null>(null);
+  const { toast, showSuccess, hideToast } = useToast();
 
   const staticGroups = useMemo<SearchGroup[]>(() => {
     const keyword = query.trim().toLowerCase();
@@ -494,6 +499,16 @@ export default function CraftLayout() {
                     <b>{me.name}</b>
                     <span className="mini">{roleText}</span>
                   </div>
+                  <button
+                    type="button"
+                    className="dd-link"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      setPwdOpen(true);
+                    }}
+                  >
+                    Ubah Password
+                  </button>
                   <button type="button" className="dd-link" onClick={handleLogout}>
                     Keluar
                   </button>
@@ -559,7 +574,7 @@ export default function CraftLayout() {
           <>
             <div className="ns-title">{me.name}</div>
             <div className="mini" style={{ padding: "0 6px 8px" }}>
-              {roleText}
+              {roleText ? `${roleText} \u00b7 ${me.email}` : me.email}
             </div>
             {settingsGroup ? (
               <button
@@ -574,6 +589,17 @@ export default function CraftLayout() {
                 <span className="d">Kelola akun &amp; sistem</span>
               </button>
             ) : null}
+            <button
+              type="button"
+              className="ns-link"
+              onClick={() => {
+                setSheet(null);
+                setPwdOpen(true);
+              }}
+            >
+              <b>Ubah Password</b>
+              <span className="d">Ganti kata sandi</span>
+            </button>
             <button type="button" className="ns-link" onClick={handleLogout}>
               <b>Keluar</b>
               <span className="d">Akhiri sesi ini</span>
@@ -620,6 +646,18 @@ export default function CraftLayout() {
         onClick={() => setSheet(null)}
         aria-hidden="true"
       />
+
+      {pwdOpen ? (
+        <ChangePasswordModal
+          onClose={() => setPwdOpen(false)}
+          onDone={(message) => {
+            setPwdOpen(false);
+            showSuccess(message);
+          }}
+        />
+      ) : null}
+
+      <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
     </div>
   );
 }

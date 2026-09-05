@@ -86,6 +86,11 @@ export interface ApiEnvelope<T = unknown, M = unknown> {
     errors: Record<string, string[]> | null;
 }
 export interface LoginPayload { login: string; password: string; }
+export interface ChangePasswordPayload {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+}
 type LoginResp = ApiEnvelope<{ user: MeUser }, { token: string }>;
 type MeResp = ApiEnvelope<{ user: MeUser }, null>;
 type LogoutResp = ApiEnvelope<null, null>;
@@ -245,6 +250,11 @@ export async function apiMe() {
 }
 export async function apiLogout() {
     const { data } = await api.post<LogoutResp>('/auth/logout');
+    return data;
+}
+
+export async function apiChangePassword(payload: ChangePasswordPayload) {
+    const { data } = await api.post<LogoutResp>('/auth/change-password', payload);
     return data;
 }
 
