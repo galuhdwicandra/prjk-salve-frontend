@@ -79,6 +79,7 @@ export function getTopbarTitle(pathname: string): string {
     if (pathname.startsWith("/accounting/balance-sheet")) return "Neraca";
     if (pathname.startsWith("/accounting/cash-flow")) return "Cashflow";
     if (pathname.startsWith("/accounting")) return "Akuntansi";
+    if (pathname.startsWith("/settings/journal-coa")) return "COA & Mapping Jurnal";
     if (pathname.startsWith("/settings/transaction-categories")) return "Master Kategori Transaksi";
     if (pathname.startsWith("/settings/customer-labels")) return "Master Label Customer";
     if (pathname.startsWith("/settings/payment-methods")) return "Master Metode Pembayaran";
@@ -165,7 +166,7 @@ const MENU_GROUPS: MenuGroup[] = [
             { label: "Master Produk & Layanan", to: "/services", module: "set-master", icon: "services", desc: "Katalog, harga per outlet & SLA" },
             { label: "Master Outlet", to: "/branches", module: "set-outlet", icon: "branches", desc: "Data gerai / lokasi Salve" },
             { label: "Master Kategori Transaksi", to: "/settings/transaction-categories", module: "set-coa", icon: "accounting", desc: "Kategori untuk Uang Masuk / Keluar" },
-            { label: "COA & Mapping Jurnal", to: "/accounting/account-mappings", module: "set-jurnal", icon: "accounting", desc: "Akun jurnal default & mapping otomatis" },
+            { label: "COA & Mapping Jurnal", to: "/settings/journal-coa", module: "set-jurnal", icon: "accounting", desc: "Akun jurnal otomatis default & pemetaan" },
             { label: "Master Label Customer", to: "/settings/customer-labels", module: "set-labels", icon: "customers", desc: "Tag/label untuk pelanggan" },
             { label: "Master Metode Pembayaran", to: "/settings/payment-methods", module: "set-paymethod", icon: "finance", desc: "Mapping metode ke akun kas/bank per cabang" },
             { label: "Penomoran Otomatis", to: "/settings/numbering", module: "set-num", icon: "reportsSettings", desc: "Format nomor dokumen otomatis" },

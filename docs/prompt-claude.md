@@ -48,4 +48,4 @@ Response format:
 ===================================
 [STORY]
 
-lihat gambar di folder [frontend/docs_foto/] jika milih QRIS harusnya kolom uang diterima-nya hide saja karena kan harusnya QRISnya udah sesuai dengan nilai tagihan
+lihat gambar di folder [frontend/docs_foto/] tambahkan kolom saldo pada tabel

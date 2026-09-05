@@ -8,8 +8,10 @@ const JournalIndex = lazy(() => import('../../pages/accounting/JournalIndex'));
 const JournalForm = lazy(() => import('../../pages/accounting/JournalForm'));
 const JournalDetail = lazy(() => import('../../pages/accounting/JournalDetail'));
 const JournalTransferForm = lazy(() => import('../../pages/accounting/JournalTransferForm'));
+const JournalCoaPage = lazy(() => import('../../pages/accounting/JournalCoaPage'));
 
 export const setJurnalRoutes: RouteObject[] = [
+  route('settings/journal-coa', 'set-jurnal', JournalCoaPage),
   route('accounting/account-mappings', 'set-jurnal', AccountMappingIndex),
   route('accounting/account-mappings/new', 'set-jurnal', AccountMappingForm),
   route('accounting/account-mappings/:id/edit', 'set-jurnal', AccountMappingForm),

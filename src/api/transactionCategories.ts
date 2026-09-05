@@ -23,3 +23,11 @@ export async function deleteTransactionCategory(id: string) {
     const { data } = await api.delete<ApiEnvelope<null, null>>(`/transaction-categories/${id}`);
     return data;
 }
+
+export async function setDefaultTransactionCategory(id: string) {
+    const { data } = await api.post<ApiEnvelope<TransactionCategory, null>>(
+        `/transaction-categories/${id}/default`,
+        {},
+    );
+    return data;
+}
