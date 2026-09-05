@@ -46,3 +46,6 @@ Response format:
 5. What was intentionally not added, and when it would become appropriate to add it.
 6. Verification commands that I can run myself — do not run them.
 ===================================
+[STORY]
+
+lihat gambar di folder [frontend/docs_foto/] jika milih QRIS harusnya kolom uang diterima-nya hide saja karena kan harusnya QRISnya udah sesuai dengan nilai tagihan

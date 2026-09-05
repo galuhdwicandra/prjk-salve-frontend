@@ -301,7 +301,9 @@ export default function POSPage() {
   const dueNow = useMemo(() => Math.max(0, total - payableNow), [total, payableNow]);
 
   const methodLabel = paymentMethods.find((pm) => pm.code === method)?.name ?? method;
-  const qrisAmount = /qris/i.test(method) || /qris/i.test(methodLabel) ? payableNow : 0;
+  const isQris = /qris/i.test(method) || /qris/i.test(methodLabel);
+  const qrisAmount = isQris ? payableNow : 0;
+  const showCashReceived = !(isQris && mode === 'FULL');
 
   const maxSla = useMemo(() => items.reduce((max, it) => Math.max(max, it.sla_days ?? 0), 0), [items]);
   const readyAt = useMemo(() => addDays(orderDate, maxSla), [orderDate, maxSla]);
@@ -791,27 +793,31 @@ export default function POSPage() {
                     </select>
                   </div>
 
-                  <div className="field">
-                    <label htmlFor="cash_received">Uang Diterima (Rp)</label>
-                    <input
-                      id="cash_received"
-                      type="text"
-                      inputMode="numeric"
-                      value={cashReceived}
-                      onChange={(e) => setCashReceived(e.target.value.replace(/[^\d]/g, ''))}
-                      placeholder="0"
-                    />
-                    {change > 0 ? (
-                      <div className="mini" style={{ marginTop: 6 }}>
-                        Kembalian: <b>{toIDR(change)}</b>
-                      </div>
-                    ) : null}
-                    {fieldErrors.dp_amount?.[0] ? (
-                      <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
-                        {fieldErrors.dp_amount[0]}
-                      </div>
-                    ) : null}
-                  </div>
+                  {showCashReceived ? (
+                    <div className="field">
+                      <label htmlFor="cash_received">
+                        {mode === 'DP' ? 'Nominal DP (Rp)' : 'Uang Diterima (Rp)'}
+                      </label>
+                      <input
+                        id="cash_received"
+                        type="text"
+                        inputMode="numeric"
+                        value={cashReceived}
+                        onChange={(e) => setCashReceived(e.target.value.replace(/[^\d]/g, ''))}
+                        placeholder="0"
+                      />
+                      {change > 0 ? (
+                        <div className="mini" style={{ marginTop: 6 }}>
+                          Kembalian: <b>{toIDR(change)}</b>
+                        </div>
+                      ) : null}
+                      {fieldErrors.dp_amount?.[0] ? (
+                        <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                          {fieldErrors.dp_amount[0]}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
 
