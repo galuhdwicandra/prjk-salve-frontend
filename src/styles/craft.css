@@ -224,7 +224,7 @@
 .field{margin-bottom:14px}
 .row{display:flex;gap:12px}
 .row>*{flex:1;min-width:0}
-& input[type=checkbox]{width:auto;accent-color:var(--blue);cursor:pointer}
+& input[type=checkbox]{appearance:auto;width:16px;height:16px;accent-color:var(--blue);cursor:pointer}
 
 /* login */
 #login{position:fixed;inset:0;display:flex;background:var(--bg)}

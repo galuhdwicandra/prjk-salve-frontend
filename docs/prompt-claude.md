@@ -48,4 +48,10 @@ Response format:
 ===================================
 [STORY]
 
-Pada Master Outlet, format waktu perlu menggunakan format 24 jam. Seluruh pemilihan dan tampilan jam tidak menggunakan format AM/PM agar penentuan waktu lebih jelas dan konsisten.
+Master Kategori Transaksi – Mapping Akun
+
+Perlu dilakukan pengecekan kembali terhadap kebutuhan mapping akun pada Master Kategori Transaksi.
+
+Master Kategori Transaksi seharusnya berfungsi untuk menyederhanakan pengelompokan akun. Saat ini user masih diminta melakukan mapping akun kembali, sehingga proses tersebut terkesan dilakukan dua kali.
+
+Perlu dipastikan apakah mapping akun pada Master Kategori Transaksi memang masih diperlukan atau dapat menggunakan mapping yang sudah tersedia sebelumnya agar tidak terjadi proses yang redundant.

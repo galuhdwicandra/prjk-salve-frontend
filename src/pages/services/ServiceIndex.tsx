@@ -3,16 +3,19 @@ import { createPortal } from 'react-dom';
 import { getErrorMessage } from '../../api/client';
 import { listBranches } from '../../api/branches';
 import { listServiceCategories } from '../../api/serviceCategories';
-import { listServices, updateService } from '../../api/services';
+import { createService, listServices, updateService } from '../../api/services';
+import { setServicePrice } from '../../api/servicePrices';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useIsManager } from '../../store/useAuth';
 import type { Branch } from '../../types/branches';
 import type { PaginationMeta, Service, ServiceCategory } from '../../types/services';
+import { parseCsvLine } from '../../utils/csv';
+import { downloadXlsx } from '../../utils/export-table';
 import { num } from '../../utils/money';
-import { IconArchive, IconKebab, IconPlus, IconSort, IconSortDown, IconSortUp, IconTag, IconUnarchive } from '../users/icons';
+import { IconArchive, IconDownload, IconKebab, IconPlus, IconSort, IconSortDown, IconSortUp, IconTag, IconUnarchive, IconUpload } from '../users/icons';
 import CategoryModal from './CategoryModal';
-import ServiceModal from './ServiceModal';
+import ServiceModal, { DEFAULT_UNIT } from './ServiceModal';
 
 type SortState = { key: string; dir: 1 | -1 };
 
@@ -52,6 +55,7 @@ export default function ServiceIndex() {
   const [sort, setSort] = useState<SortState>({ key: 'name', dir: 1 });
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
   const [modal, setModal] = useState<{ open: boolean; service: Service | null }>({ open: false, service: null });
@@ -197,6 +201,159 @@ export default function ServiceIndex() {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
   }
 
+  const buildSheet = useCallback(
+    (items: { parent: Service; variants: Service[] }[]) => [
+      ['Kategori', 'Produk', 'Varian', 'SLA', ...branches.map((branch) => branch.name)],
+      ...items.flatMap(({ parent, variants }) =>
+        variants.length === 0
+          ? [[parent.category?.name ?? '', parent.name, '', '', ...branches.map(() => '')]]
+          : variants.map((variant) => [
+              parent.category?.name ?? '',
+              parent.name,
+              variant.name,
+              slaOf(variant) ?? '',
+              ...branches.map((branch) => priceAt(variant, branch.id) ?? ''),
+            ]),
+      ),
+    ],
+    [branches],
+  );
+
+  async function onExport() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await listServices({
+        tree: true,
+        q: keyword || undefined,
+        category_id: categoryId || undefined,
+        page: 1,
+        per_page: 500,
+      });
+      const items = (res.data ?? [])
+        .filter((parent) => archived || parent.is_active)
+        .map((parent) => ({
+          parent,
+          variants: (parent.variants ?? []).filter((variant) => archived || variant.is_active),
+        }));
+
+      if (items.length === 0) {
+        showSuccess('Tidak ada data untuk diekspor.');
+        return;
+      }
+
+      downloadXlsx(
+        `master-produk-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        'Produk',
+        buildSheet(items),
+      );
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal mengekspor data'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onImport(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
+      const head = parseCsvLine(lines.shift() ?? '').map((cell) => cell.toLowerCase());
+      const iCategory = head.indexOf('kategori');
+      const iParent = head.indexOf('produk');
+      const iVariant = head.indexOf('varian');
+      const iSla = head.indexOf('sla');
+
+      if (iCategory < 0 || iParent < 0 || iVariant < 0) {
+        setError('Header CSV wajib memuat kolom "kategori", "produk", dan "varian".');
+        return;
+      }
+
+      const priceColumns = branches
+        .map((branch) => ({ branch, index: head.indexOf(branch.name.toLowerCase()) }))
+        .filter((column) => column.index >= 0);
+      const categoryByName = new Map(categories.map((category) => [category.name.toLowerCase(), category.id]));
+      const rootRes = await listServices({ root: true, per_page: 500 });
+      const parentByName = new Map((rootRes.data ?? []).map((item) => [item.name.toLowerCase(), item.id]));
+
+      let ok = 0;
+      let skipped = 0;
+
+      for (const line of lines) {
+        const cols = parseCsvLine(line);
+        const parentName = (cols[iParent] ?? '').trim();
+        const variantName = (cols[iVariant] ?? '').trim();
+        const rowCategoryId = categoryByName.get((cols[iCategory] ?? '').trim().toLowerCase());
+
+        if (!parentName || !rowCategoryId) {
+          skipped += 1;
+          continue;
+        }
+
+        try {
+          let parentId = parentByName.get(parentName.toLowerCase());
+
+          if (!parentId) {
+            const created = await createService({
+              category_id: rowCategoryId,
+              parent_id: null,
+              name: parentName,
+              unit: DEFAULT_UNIT,
+              price_default: 0,
+              is_active: true,
+            });
+            parentId = String(created.data?.id ?? '');
+            parentByName.set(parentName.toLowerCase(), parentId);
+          }
+
+          if (!variantName) {
+            ok += 1;
+            continue;
+          }
+
+          const variant = await createService({
+            category_id: rowCategoryId,
+            parent_id: parentId,
+            name: variantName,
+            unit: DEFAULT_UNIT,
+            price_default: 0,
+            is_active: true,
+          });
+          const variantId = String(variant.data?.id ?? '');
+          const sla = Number((cols[iSla] ?? '').trim());
+          const slaDays = Number.isInteger(sla) && sla >= 0 && sla <= 365 ? sla : null;
+
+          for (const column of priceColumns) {
+            const raw = (cols[column.index] ?? '').replace(/[^\d.-]/g, '');
+            if (raw === '') continue;
+            const price = Number(raw);
+            if (!Number.isFinite(price) || price < 0) continue;
+
+            await setServicePrice({
+              service_id: variantId,
+              branch_id: column.branch.id,
+              price,
+              sla_days: slaDays,
+            });
+          }
+
+          ok += 1;
+        } catch {
+          skipped += 1;
+        }
+      }
+
+      showSuccess(`Import selesai: ${ok} baris diproses, ${skipped} dilewati.`);
+      await refresh();
+      await loadParents();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Gagal mengimpor data'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function toggleRow(id: string, checked: boolean) {
     setSelected((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
   }
@@ -261,6 +418,13 @@ export default function ServiceIndex() {
             <span className="chk">{archived ? '\u2713' : ''}</span>
           </button>
 
+          <div className="kebab-sep" />
+
+          <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
+            <IconDownload />
+            <span>Export Excel</span>
+          </button>
+
           {canManage ? (
             <>
               <div className="kebab-sep" />
@@ -275,6 +439,22 @@ export default function ServiceIndex() {
                 <IconTag />
                 <span>Kelola Kategori</span>
               </button>
+              <label className="kebab-item">
+                <IconUpload />
+                <span>Import CSV</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  hidden
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    setKebabOpen(false);
+                    if (file) void onImport(file);
+                  }}
+                />
+              </label>
             </>
           ) : null}
         </div>

@@ -6,7 +6,11 @@ import type { Branch } from '../../types/branches';
 import type { Service, ServiceCategory, ServiceUpsertPayload } from '../../types/services';
 import { IconArchive, IconTrash, IconUnarchive } from '../users/icons';
 
-const DEFAULT_UNIT = 'ITEM';
+export const DEFAULT_UNIT = 'ITEM';
+
+function parentLabelOf(item: Service): string {
+    return `${item.name} (${item.category?.name ?? '-'})`;
+}
 
 type OutletState = { active: boolean; price: string };
 
@@ -14,7 +18,7 @@ type FormState = {
     name: string;
     categoryId: string;
     isVariant: boolean;
-    parentId: string;
+    parentLabel: string;
     sla: string;
     outlets: Record<string, OutletState>;
 };
@@ -28,7 +32,12 @@ type Props = {
     onDone: (message: string) => void;
 };
 
-function initialForm(service: Service | null, categories: ServiceCategory[], branches: Branch[]): FormState {
+function initialForm(
+    service: Service | null,
+    categories: ServiceCategory[],
+    branches: Branch[],
+    parents: Service[],
+): FormState {
     const prices = service?.prices ?? [];
     const outlets: Record<string, OutletState> = {};
 
@@ -38,12 +47,13 @@ function initialForm(service: Service | null, categories: ServiceCategory[], bra
     });
 
     const sla = prices.find((price) => price.sla_days != null)?.sla_days;
+    const parent = parents.find((item) => item.id === service?.parent_id) ?? null;
 
     return {
         name: service?.name ?? '',
         categoryId: service?.category_id ?? categories[0]?.id ?? '',
         isVariant: Boolean(service?.parent_id),
-        parentId: service?.parent_id ?? '',
+        parentLabel: parent ? parentLabelOf(parent) : '',
         sla: sla != null ? String(sla) : '1',
         outlets,
     };
@@ -56,7 +66,7 @@ function isValidPrice(value: string): boolean {
 
 export default function ServiceModal({ service, parents, categories, branches, onClose, onDone }: Props) {
     const editing = Boolean(service);
-    const [form, setForm] = useState<FormState>(() => initialForm(service, categories, branches));
+    const [form, setForm] = useState<FormState>(() => initialForm(service, categories, branches, parents));
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -73,12 +83,12 @@ export default function ServiceModal({ service, parents, categories, branches, o
             return null;
         }
 
-        if (form.isVariant && !form.parentId) {
-            setError('Produk keluarga (induk) wajib dipilih.');
+        const parent = parents.find((item) => parentLabelOf(item) === form.parentLabel.trim()) ?? null;
+        if (form.isVariant && !parent) {
+            setError('Produk keluarga (induk) wajib dipilih dari daftar.');
             return null;
         }
 
-        const parent = parents.find((item) => item.id === form.parentId) ?? null;
         const categoryId = form.isVariant ? parent?.category_id ?? '' : form.categoryId;
         if (!categoryId) {
             setError('Kategori wajib dipilih.');
@@ -87,7 +97,7 @@ export default function ServiceModal({ service, parents, categories, branches, o
 
         return {
             category_id: categoryId,
-            parent_id: form.isVariant ? form.parentId : null,
+            parent_id: form.isVariant ? parent?.id ?? null : null,
             name,
             unit: service?.unit ?? DEFAULT_UNIT,
             price_default: service ? Number(service.price_default) : 0,
@@ -272,20 +282,21 @@ export default function ServiceModal({ service, parents, categories, branches, o
                     <>
                         <div className="field">
                             <label htmlFor="svc-parent">Produk Keluarga (induk)</label>
-                            <select
+                            <input
                                 id="svc-parent"
-                                value={form.parentId}
-                                onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-                            >
-                                <option value="">pilih produk induk{'\u2026'}</option>
+                                list="svc-parent-options"
+                                autoComplete="off"
+                                placeholder="ketik nama produk induk{'\u2026'}"
+                                value={form.parentLabel}
+                                onChange={(e) => setForm({ ...form, parentLabel: e.target.value })}
+                            />
+                            <datalist id="svc-parent-options">
                                 {parents
                                     .filter((item) => item.id !== service?.id)
                                     .map((item) => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.name} ({item.category?.name ?? '-'})
-                                        </option>
+                                        <option key={item.id} value={parentLabelOf(item)} />
                                     ))}
-                            </select>
+                            </datalist>
                         </div>
 
                         <div className="field">
