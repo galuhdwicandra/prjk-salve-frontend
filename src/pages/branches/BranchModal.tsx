@@ -196,6 +196,7 @@ export default function BranchModal({ branch, types, onClose, onDone }: Props) {
                         <div className="row">
                             <input
                                 id="br-open"
+                                lang="id"
                                 type="time"
                                 value={form.openTime}
                                 aria-label="Jam buka"
@@ -206,6 +207,7 @@ export default function BranchModal({ branch, types, onClose, onDone }: Props) {
                             </span>
                             <input
                                 type="time"
+                                lang="id"
                                 value={form.closeTime}
                                 aria-label="Jam tutup"
                                 onChange={(e) => setForm({ ...form, closeTime: e.target.value })}

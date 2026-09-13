@@ -6,6 +6,7 @@ import { SidebarIcon } from '../../layouts/SidebarIcon';
 import type { Branch } from '../../types/branches';
 import type { User, UserUpsertPayload } from '../../types/users';
 import { roleFor, toggleValues, usernameFromEmail } from '../../utils/user-access';
+import { PASSWORD_HINT, passwordError } from '../../utils/password';
 import { IconArchive, IconChevron, IconTrash, IconUnarchive } from './icons';
 
 type Props = {
@@ -118,7 +119,10 @@ export default function UserModal({ user, branches, isSelf, onClose, onDone }: P
         if (!name) return setError('Nama lengkap wajib diisi.');
         if (!email) return setError('Email wajib diisi.');
         if (username.length < 3) return setError('Username minimal 3 karakter (huruf kecil, angka, titik, underscore).');
-        if (!editing && form.password.length < 8) return setError('Password minimal 8 karakter, kombinasi huruf besar/kecil dan angka.');
+        if (!editing || form.password) {
+            const invalid = passwordError(form.password);
+            if (invalid) return setError(invalid);
+        }
         if (form.modules.length === 0) return setError('Pilih minimal satu modul.');
         if (form.branchIds.length === 0) return setError('Pilih minimal satu cabang.');
 
@@ -262,8 +266,8 @@ export default function UserModal({ user, branches, isSelf, onClose, onDone }: P
                                 {editing ? 'Reset Password' : 'Password'}{' '}
                                 <span className="mini">
                                     {editing
-                                        ? '(kosongkan bila tidak diubah)'
-                                        : '(min. 8 karakter, kombinasi huruf besar/kecil & angka)'}
+                                        ? `(kosongkan bila tidak diubah; ${PASSWORD_HINT})`
+                                        : `(${PASSWORD_HINT})`}
                                 </span>
                             </label>
                             <input

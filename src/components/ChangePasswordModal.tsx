@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiChangePassword, getErrorMessage } from '../api/client';
+import { PASSWORD_HINT, passwordError } from '../utils/password';
 
 type Props = {
   onClose: () => void;
@@ -19,8 +20,9 @@ export default function ChangePasswordModal({ onClose, onDone }: Props) {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('Password baru minimal 8 karakter.');
+    const invalid = passwordError(newPassword);
+    if (invalid) {
+      setError(invalid);
       return;
     }
 
@@ -79,7 +81,7 @@ export default function ChangePasswordModal({ onClose, onDone }: Props) {
           <label htmlFor="cp-new">
             Password Baru{' '}
             <span style={{ color: 'var(--blue)', fontWeight: 600 }}>
-              (minimal 8 karakter, huruf besar-kecil dan angka)
+              ({PASSWORD_HINT})
             </span>
           </label>
           <input

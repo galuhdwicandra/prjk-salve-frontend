@@ -48,4 +48,4 @@ Response format:
 ===================================
 [STORY]
 
-lihat gambar di folder [frontend/docs_foto/] ketika klik profile harusnya ada ubah password
+Pada Master Outlet, format waktu perlu menggunakan format 24 jam. Seluruh pemilihan dan tampilan jam tidak menggunakan format AM/PM agar penentuan waktu lebih jelas dan konsisten.
