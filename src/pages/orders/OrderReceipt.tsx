@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { getOrderReceiptHtml, getOrder, createOrderShareLink } from '../../api/orders';
+import { issueTrackerLink } from '../../api/tracker';
 import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import { buildWhatsAppLink } from '../../utils/wa';
 import { buildOrderWaMessage } from '../../utils/wa-templates';
@@ -65,6 +66,7 @@ export default function OrderReceipt(): React.ReactElement {
   const [waPhone, setWaPhone] = useState<string>('');
   const [order, setOrder] = useState<Order | null>(null);
   const [shareUrl, setShareUrl] = useState<string>('');
+  const [trackerUrl, setTrackerUrl] = useState<string>('');
   const [waBusy, setWaBusy] = useState(false);
   const [paper, setPaper] = useState<Paper>('58');
   const [zoom, setZoom] = useState<number>(1); // 1 = 100%
@@ -100,6 +102,13 @@ export default function OrderReceipt(): React.ReactElement {
           setShareUrl(link);
         } catch {
           /* abaikan, tetap bisa cetak manual */
+        }
+
+        try {
+          const res = await issueTrackerLink(id);
+          setTrackerUrl(res.data?.tracker_url ?? '');
+        } catch {
+          /* abaikan, pesan WA tetap terkirim tanpa link tracker */
         }
       } catch (e: unknown) {
         setError((e as Error).message || 'Gagal memuat struk');
@@ -182,7 +191,7 @@ export default function OrderReceipt(): React.ReactElement {
 
     const templateRow = await getResolvedTemplate();
     const message = buildOrderWaMessage(order, 'struk', templateRow?.content, {
-      trackerUrl: shareUrl || '',
+      trackerUrl: trackerUrl || '',
     });
 
     console.log('[WA TEMPLATE][message]', {

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { normalizeApiError } from '../../api/client';
 import {
-  createOrderShareLink,
   getOrder,
   openOrderReceipt,
   voidOrder,
 } from '../../api/orders';
+import { issueTrackerLink } from '../../api/tracker';
 import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import OrderBeforePhotos from '../../components/orders/OrderBeforePhotos';
 import ReceivePaymentModal from './ReceivePaymentModal';
@@ -95,7 +95,7 @@ export default function OrderDetail() {
     }
 
     try {
-      const link = await createOrderShareLink(row.id);
+      const link = (await issueTrackerLink(row.id)).data?.tracker_url ?? '';
       const resolved = await resolveWhatsappTemplate(key, row.branch_id);
       const branch = useAuth.user?.branches.find((b) => String(b.id) === String(row.branch_id));
       const message = buildOrderWaMessage(row, key, resolved.data?.content, {

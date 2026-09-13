@@ -68,12 +68,13 @@ export default function ProductGallery({ onPick, branchId }: Props) {
     const search = keyword.trim().toLowerCase();
 
     return parents
-      .map((parent) => {
-        const variants = (parent.variants ?? []).filter((variant) => variant.is_active);
-        return { parent, options: variants.length > 0 ? variants : [parent] };
-      })
+      .map((parent) => ({
+        parent,
+        options: (parent.variants ?? []).filter((variant) => variant.is_active),
+      }))
+      .filter((entry) => entry.options.length > 0)
       .filter((entry) => !search || entry.parent.name.toLowerCase().includes(search));
-  }, [parents, keyword]);
+  }, [parents, keyword, priceOf]);
 
   function pick(service: Service) {
     onPick({
@@ -143,7 +144,7 @@ export default function ProductGallery({ onPick, branchId }: Props) {
                       {entry.options.length > 1 ? 'mulai ' : ''}
                       {rp(lowest)}
                     </span>
-                    <span className="pcard-cnt">{entry.options.length} varian</span>
+                    <span className="pcard-cnt">{entry.options.length} pilihan</span>
                   </div>
 
                   <span className="pcard-add">+</span>

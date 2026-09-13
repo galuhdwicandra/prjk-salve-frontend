@@ -192,9 +192,12 @@ export default function TransactionCategoryModal({ category, onClose, onDone }: 
 
         {cashIn ? (
           <div className="field">
-            <label htmlFor="tc-in-acc">Akun Pendapatan (saat Uang Masuk)</label>
+            <label htmlFor="tc-in-acc">
+              Akun Pendapatan (saat Uang Masuk){' '}
+              <span style={{ color: 'var(--blue)', fontWeight: 600 }}>(opsional)</span>
+            </label>
             <select id="tc-in-acc" value={inAccountId} onChange={(e) => setInAccountId(e.target.value)}>
-              <option value="">{'\u2014'} pilih akun {'\u2014'}</option>
+              <option value="">Otomatis {'\u2014'} Pendapatan Lain-lain</option>
               {accounts.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.code} {'\u00b7'} {row.name}
@@ -206,9 +209,12 @@ export default function TransactionCategoryModal({ category, onClose, onDone }: 
 
         {cashOut ? (
           <div className="field">
-            <label htmlFor="tc-out-acc">Akun Beban (saat Uang Keluar)</label>
+            <label htmlFor="tc-out-acc">
+              Akun Beban (saat Uang Keluar){' '}
+              <span style={{ color: 'var(--blue)', fontWeight: 600 }}>(opsional)</span>
+            </label>
             <select id="tc-out-acc" value={outAccountId} onChange={(e) => setOutAccountId(e.target.value)}>
-              <option value="">{'\u2014'} pilih akun {'\u2014'}</option>
+              <option value="">Otomatis {'\u2014'} Beban Lain-lain</option>
               {accounts.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.code} {'\u00b7'} {row.name}

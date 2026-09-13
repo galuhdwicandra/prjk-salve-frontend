@@ -7,7 +7,7 @@ import Toast from '../../components/Toast';
 import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
 import { createCustomer } from '../../api/customers';
 import { uploadOrderPhotos } from '../../api/orderPhotos';
-import { applyVoucherToOrder } from '../../api/vouchers';
+import { applyVoucherToOrder, previewVoucher } from '../../api/vouchers';
 import { getLoyaltySummary } from '../../api/loyalty';
 import { normalizeApiError, type FieldErrors, type ApiEnvelope } from '../../api/client';
 import { useActivePaymentMethods } from '../../hooks/useActivePaymentMethods';
@@ -209,6 +209,8 @@ export default function POSPage() {
   const [useVoucher, setUseVoucher] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherMsg, setVoucherMsg] = useState<string | null>(null);
+  const [voucherAmount, setVoucherAmount] = useState(0);
+  const [voucherBusy, setVoucherBusy] = useState(false);
 
   const [dateOpen, setDateOpen] = useState(false);
   const [dateDraft, setDateDraft] = useState('');
@@ -283,8 +285,8 @@ export default function POSPage() {
   }, [loy, subtotal]);
 
   const total = useMemo(
-    () => Math.max(0, subtotal - discountValue - loyaltyDiscount),
-    [subtotal, discountValue, loyaltyDiscount],
+    () => Math.max(0, subtotal - discountValue - loyaltyDiscount - voucherAmount),
+    [subtotal, discountValue, loyaltyDiscount, voucherAmount],
   );
 
   const payableNow = useMemo(() => {
@@ -311,6 +313,7 @@ export default function POSPage() {
   const canSubmit = items.length > 0 && !!customerId && !loading;
 
   function addItem(svc: { id: string; name: string; unit: string; price_effective: number; sla_days: number }) {
+    const existing = items.find((p) => p.service_id === svc.id);
     setItems((prev) => {
       const found = prev.find((p) => p.service_id === svc.id);
 
@@ -330,6 +333,12 @@ export default function POSPage() {
         },
       ];
     });
+
+    showSuccess(
+      existing
+        ? `${svc.name} \u2014 jumlah jadi ${existing.qty + 1}.`
+        : `${svc.name} masuk keranjang.`,
+    );
   }
 
   const onChangeQty = (id: string, qty: number) =>
@@ -356,6 +365,7 @@ export default function POSPage() {
     setUseVoucher(false);
     setVoucherCode('');
     setVoucherMsg(null);
+    setVoucherAmount(0);
     setCashReceived('');
     setOrderDate(todayLocalYMD());
     setError(null);
@@ -399,6 +409,38 @@ export default function POSPage() {
     }
 
     return errors;
+  }
+
+  async function applyVoucher() {
+    const code = voucherCode.trim().toUpperCase();
+
+    if (!code) {
+      setVoucherMsg('Kode voucher wajib diisi.');
+      return;
+    }
+
+    setVoucherBusy(true);
+
+    try {
+      const res = await previewVoucher({
+        code,
+        subtotal,
+        branch_id: branchId || null,
+        customer_id: customerId || null,
+      });
+
+      const amount = Number(res.data?.amount ?? 0);
+
+      setVoucherAmount(amount);
+      setVoucherMsg(`Voucher ${code} diterapkan, potongan ${toIDR(amount)}.`);
+    } catch (ex: unknown) {
+      const e = normalizeApiError(ex);
+
+      setVoucherAmount(0);
+      setVoucherMsg(e.message || 'Voucher tidak valid.');
+    } finally {
+      setVoucherBusy(false);
+    }
   }
 
   function buildPayload(): OrderCreatePayload {
@@ -847,6 +889,7 @@ export default function POSPage() {
                         if (!e.target.checked) {
                           setVoucherCode('');
                           setVoucherMsg(null);
+                          setVoucherAmount(0);
                         }
                       }}
                     />
@@ -872,13 +915,26 @@ export default function POSPage() {
 
               {useVoucher ? (
                 <div className="field">
-                  <label htmlFor="voucher_code">Kode Voucher</label>
-                  <input
-                    id="voucher_code"
-                    value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                    placeholder="masukkan kode"
-                  />
+                  <div className="toolbar">
+                    <input
+                      id="voucher_code"
+                      value={voucherCode}
+                      onChange={(e) => {
+                        setVoucherCode(e.target.value.toUpperCase());
+                        setVoucherAmount(0);
+                        setVoucherMsg(null);
+                      }}
+                      placeholder="masukkan kode"
+                    />
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      disabled={voucherBusy || subtotal <= 0}
+                      onClick={() => void applyVoucher()}
+                    >
+                      {voucherBusy ? 'Memeriksa\u2026' : 'Pakai Voucher'}
+                    </button>
+                  </div>
                   {fieldErrors.voucher_code?.[0] ? (
                     <div className="mini" style={{ color: 'var(--danger)', marginTop: 6 }}>
                       {fieldErrors.voucher_code[0]}
@@ -907,6 +963,12 @@ export default function POSPage() {
                   <div className="l">
                     <span>Loyalti</span>
                     <span className="mono">{toIDR(loyaltyDiscount)}</span>
+                  </div>
+                ) : null}
+                {voucherAmount > 0 ? (
+                  <div className="l">
+                    <span>Voucher</span>
+                    <span className="mono">{toIDR(voucherAmount)}</span>
                   </div>
                 ) : null}
                 <div className="l grand">

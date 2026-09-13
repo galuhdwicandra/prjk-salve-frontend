@@ -205,7 +205,7 @@ export default function TrackerIndex() {
                                 disabled={busy}
                                 onClick={handleIssueLink}
                             >
-                                {detail.tracker_url ? 'Buat ulang & salin link' : 'Buat & salin link'}
+                                {detail.tracker_url ? 'Salin link' : 'Buat & salin link'}
                             </button>
                             {detail.tracker_url ? (
                                 <button

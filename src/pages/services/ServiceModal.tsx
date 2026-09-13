@@ -18,7 +18,7 @@ type FormState = {
     name: string;
     categoryId: string;
     isVariant: boolean;
-    parentLabel: string;
+    parentId: string;
     sla: string;
     outlets: Record<string, OutletState>;
 };
@@ -36,7 +36,6 @@ function initialForm(
     service: Service | null,
     categories: ServiceCategory[],
     branches: Branch[],
-    parents: Service[],
 ): FormState {
     const prices = service?.prices ?? [];
     const outlets: Record<string, OutletState> = {};
@@ -47,13 +46,12 @@ function initialForm(
     });
 
     const sla = prices.find((price) => price.sla_days != null)?.sla_days;
-    const parent = parents.find((item) => item.id === service?.parent_id) ?? null;
 
     return {
         name: service?.name ?? '',
         categoryId: service?.category_id ?? categories[0]?.id ?? '',
         isVariant: Boolean(service?.parent_id),
-        parentLabel: parent ? parentLabelOf(parent) : '',
+        parentId: service?.parent_id ?? '',
         sla: sla != null ? String(sla) : '1',
         outlets,
     };
@@ -66,7 +64,7 @@ function isValidPrice(value: string): boolean {
 
 export default function ServiceModal({ service, parents, categories, branches, onClose, onDone }: Props) {
     const editing = Boolean(service);
-    const [form, setForm] = useState<FormState>(() => initialForm(service, categories, branches, parents));
+    const [form, setForm] = useState<FormState>(() => initialForm(service, categories, branches));
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -83,9 +81,9 @@ export default function ServiceModal({ service, parents, categories, branches, o
             return null;
         }
 
-        const parent = parents.find((item) => parentLabelOf(item) === form.parentLabel.trim()) ?? null;
+        const parent = parents.find((item) => item.id === form.parentId) ?? null;
         if (form.isVariant && !parent) {
-            setError('Produk keluarga (induk) wajib dipilih dari daftar.');
+            setError('Produk keluarga (induk) wajib dipilih.');
             return null;
         }
 
@@ -282,21 +280,20 @@ export default function ServiceModal({ service, parents, categories, branches, o
                     <>
                         <div className="field">
                             <label htmlFor="svc-parent">Produk Keluarga (induk)</label>
-                            <input
+                            <select
                                 id="svc-parent"
-                                list="svc-parent-options"
-                                autoComplete="off"
-                                placeholder="ketik nama produk induk{'\u2026'}"
-                                value={form.parentLabel}
-                                onChange={(e) => setForm({ ...form, parentLabel: e.target.value })}
-                            />
-                            <datalist id="svc-parent-options">
+                                value={form.parentId}
+                                onChange={(e) => setForm({ ...form, parentId: e.target.value })}
+                            >
+                                <option value="">{'\u2014'} pilih produk keluarga {'\u2014'}</option>
                                 {parents
                                     .filter((item) => item.id !== service?.id)
                                     .map((item) => (
-                                        <option key={item.id} value={parentLabelOf(item)} />
+                                        <option key={item.id} value={item.id}>
+                                            {parentLabelOf(item)}
+                                        </option>
                                     ))}
-                            </datalist>
+                            </select>
                         </div>
 
                         <div className="field">

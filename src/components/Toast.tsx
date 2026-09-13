@@ -25,7 +25,7 @@ export default function Toast({
     }, duration);
 
     return () => window.clearTimeout(timer);
-  }, [show, duration, onClose]);
+  }, [show, message, duration, onClose]);
 
   if (!show || !message) return null;
 

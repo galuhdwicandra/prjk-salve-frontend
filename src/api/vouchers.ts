@@ -2,8 +2,14 @@
 import { api } from '../api/client';
 import type {
     ID, Voucher, VoucherQuery, VoucherUpsertPayload,
-    ListResponse, ItemResponse, ApplyVoucherPayload, ApplyVoucherResponse
+    ListResponse, ItemResponse, ApplyVoucherPayload, ApplyVoucherResponse,
+    VoucherPreviewPayload, VoucherPreview
 } from '../types/vouchers';
+
+export async function previewVoucher(payload: VoucherPreviewPayload): Promise<ItemResponse<VoucherPreview>> {
+    const res = await api.post<ItemResponse<VoucherPreview>>('/vouchers/preview', payload);
+    return res.data;
+}
 
 export async function listVouchers(query: VoucherQuery = {}): Promise<ListResponse<Voucher>> {
     const res = await api.get<ListResponse<Voucher>>('/vouchers', { params: query });

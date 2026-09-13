@@ -67,3 +67,16 @@ export type ApplyVoucherResponse = {
     applied_amount: number;
     order: unknown;
 };
+
+export type VoucherPreviewPayload = {
+    code: string;
+    subtotal: number;
+    branch_id?: ID | null;
+    customer_id?: ID | null;
+};
+
+export type VoucherPreview = {
+    code: string;
+    name: string;
+    amount: number;
+};

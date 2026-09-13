@@ -48,10 +48,8 @@ Response format:
 ===================================
 [STORY]
 
-Master Kategori Transaksi – Mapping Akun
+Kas & Bank – Import dan Export
 
-Perlu dilakukan pengecekan kembali terhadap kebutuhan mapping akun pada Master Kategori Transaksi.
-
-Master Kategori Transaksi seharusnya berfungsi untuk menyederhanakan pengelompokan akun. Saat ini user masih diminta melakukan mapping akun kembali, sehingga proses tersebut terkesan dilakukan dua kali.
-
-Perlu dipastikan apakah mapping akun pada Master Kategori Transaksi memang masih diperlukan atau dapat menggunakan mapping yang sudah tersedia sebelumnya agar tidak terjadi proses yang redundant.
+Fitur Import dan Export pada modul Kas & Bank perlu disesuaikan dengan mekanisme yang digunakan pada Craft.
+Selain dapat melakukan export data Kas & Bank, user juga perlu dapat melakukan export data mutasi Kas & Bank.
+Format dan alur Import/Export sebisa mungkin mengikuti implementasi pada Craft agar pengalaman penggunaan tetap konsisten.
