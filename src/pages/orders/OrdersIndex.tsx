@@ -9,7 +9,7 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useAuth, useIsManager } from '../../store/useAuth';
 import { fmtDate, rangeFor } from '../../utils/date';
-import type { ExportJob } from '../../utils/export-table';
+import type { Aoa, ExportJob } from '../../utils/export-table';
 import { rp } from '../../utils/money';
 import type { Order, PaginationMeta, PaymentStatus } from '../../types/orders';
 import {
@@ -232,22 +232,53 @@ export default function OrdersIndex() {
         ? sorted.filter((order) => selected.includes(String(order.id)))
         : (await listOrders({ ...query, page: 1, per_page: 500 })).data ?? [];
 
+     const orderRows = (order: Order): Aoa => {
+       const receipt = [
+         order.received_at ?? '',
+         order.invoice_no ?? order.number,
+         order.customer?.name ?? order.customer_name ?? '',
+         outletCodes.get(String(order.branch_id)) ?? '',
+         statusChip(order.payment_status).label,
+         processChip(order.processing_destination).label,
+       ];
+
+       const transaction = [
+         Number(order.subtotal),
+         Number(order.discount),
+         Number(order.grand_total),
+         Number(order.dp_amount),
+         Number(order.paid_amount),
+         Number(order.due_amount),
+         order.latest_payment_method ?? '',
+         order.paid_at ?? '',
+       ];
+
+       const items = order.items ?? [];
+
+       if (items.length === 0) return [[...receipt, '', '', '', '', ...transaction]];
+
+       return items.map((item) => [
+         ...receipt,
+         item.service?.name ?? item.service_id,
+         Number(item.qty),
+         Number(item.price),
+         Number(item.total),
+         ...transaction,
+       ]);
+     };
+
       setJob({
         filename: `receipt-list-${range[0]}-${range[1]}`,
         sheet: 'Receipt List',
         subtitle: `Periode ${fmtDate(range[0])} \u2013 ${fmtDate(range[1])}`,
         aoa: [
-          ['Tanggal', 'No. Receipt', 'Pelanggan', 'Status', 'Proses', 'Total', 'Outstanding', 'Outlet'],
-          ...source.map((order) => [
-            order.received_at ?? '',
-            order.invoice_no ?? order.number,
-            order.customer?.name ?? order.customer_name ?? '',
-            statusChip(order.payment_status).label,
-            processChip(order.processing_destination).label,
-            Number(order.grand_total),
-            Number(order.due_amount),
-            outletCodes.get(String(order.branch_id)) ?? '',
-          ]),
+         [
+           'Tanggal', 'No. Receipt', 'Pelanggan', 'Outlet', 'Status Bayar', 'Proses',
+           'Produk', 'Qty', 'Harga Satuan', 'Subtotal Produk',
+           'Subtotal Receipt', 'Diskon Receipt', 'Total Receipt', 'DP', 'Dibayar',
+           'Outstanding', 'Metode Bayar', 'Tanggal Bayar',
+         ],
+         ...source.flatMap(orderRows),
         ],
       });
     } catch (err) {
