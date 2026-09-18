@@ -4,9 +4,12 @@ import { getErrorMessage } from '../../api/client';
 import { listContactCategories } from '../../api/contactCategories';
 import { createContact, deleteContact, listContacts, updateContact } from '../../api/contacts';
 import Toast from '../../components/Toast';
+import { ExportJobModal, ImportModal } from '../../components/DataIoModals';
+import type { ImportColumn } from '../../components/DataIoModals';
 import { useToast } from '../../hooks/useToast';
 import type { Contact, ContactCategory, ContactQuery, PaginationMeta } from '../../types/contacts';
-import { downloadXlsx } from '../../utils/export-table';
+import type { ExportJob } from '../../utils/export-table';
+import { readTableFile } from '../../utils/import-table';
 import { buildWhatsAppLink } from '../../utils/wa';
 import {
   IconArchive,
@@ -29,6 +32,15 @@ type SortState = { key: SortKey; dir: 'asc' | 'desc' };
 
 const PAGE_SIZES = [25, 50, 100];
 
+const IMPORT_COLUMNS: ImportColumn[] = [
+  ['nama', 'Wajib diisi'],
+  ['telepon', 'Opsional'],
+  ['alamat', 'Opsional'],
+  ['kategori', 'Dipisah titik koma, opsional'],
+];
+
+const IMPORT_EXAMPLE = ['Toko Makmur', '08123456789', 'Jl. Mawar 1', 'Supplier; Langganan'];
+
 export default function ContactsIndex() {
   const { toast, showSuccess, hideToast } = useToast();
 
@@ -48,6 +60,8 @@ export default function ContactsIndex() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [form, setForm] = useState<{ open: boolean; contact: Contact | null }>({ open: false, contact: null });
   const [categoryModal, setCategoryModal] = useState(false);
@@ -161,7 +175,12 @@ export default function ContactsIndex() {
         return;
       }
 
-      downloadXlsx(`database-kontak-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Kontak', toSheet(items));
+      setJob({
+        filename: `database-kontak-${new Date().toISOString().slice(0, 10)}`,
+        sheet: 'Kontak',
+        subtitle: `${items.length} kontak`,
+        aoa: toSheet(items),
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Gagal mengekspor data'));
     } finally {
@@ -173,15 +192,15 @@ export default function ContactsIndex() {
     setBusy(true);
     setError(null);
     try {
-      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
-      const head = (lines.shift() ?? '').split(',').map((cell) => cell.trim().toLowerCase());
+      const data = await readTableFile(file);
+      const head = (data.shift() ?? []).map((cell) => cell.trim().toLowerCase());
       const iName = head.indexOf('nama');
       const iPhone = head.indexOf('telepon');
       const iAddress = head.indexOf('alamat');
       const iCategory = head.indexOf('kategori');
 
       if (iName < 0) {
-        setError('Header CSV wajib memuat kolom "nama".');
+        setError('Header berkas wajib memuat kolom "nama".');
         return;
       }
 
@@ -189,9 +208,8 @@ export default function ContactsIndex() {
       let ok = 0;
       let skipped = 0;
 
-      for (const line of lines) {
-        const cols = line.split(',').map((cell) => cell.trim());
-        const name = cols[iName] ?? '';
+      for (const cols of data) {
+        const name = (cols[iName] ?? '').trim();
 
         if (!name) {
           skipped += 1;
@@ -201,16 +219,16 @@ export default function ContactsIndex() {
         const categoryIds =
           iCategory >= 0 && cols[iCategory]
             ? cols[iCategory]
-                .split(';')
-                .map((row) => byName.get(row.trim().toLowerCase()))
-                .filter((row): row is string => Boolean(row))
+              .split(';')
+              .map((row) => byName.get(row.trim().toLowerCase()))
+              .filter((row): row is string => Boolean(row))
             : [];
 
         try {
           await createContact({
             name,
-            phone: iPhone >= 0 ? cols[iPhone] || null : null,
-            address: iAddress >= 0 ? cols[iAddress] || null : null,
+            phone: iPhone >= 0 ? cols[iPhone]?.trim() || null : null,
+            address: iAddress >= 0 ? cols[iAddress]?.trim() || null : null,
             category_ids: categoryIds,
           });
           ok += 1;
@@ -219,10 +237,11 @@ export default function ContactsIndex() {
         }
       }
 
+      setImportOpen(false);
       showSuccess(`Import selesai: ${ok} ditambahkan, ${skipped} dilewati.`);
       await refresh();
     } catch (err) {
-      setError(getErrorMessage(err, 'Gagal membaca berkas CSV'));
+      setError(err instanceof Error ? err.message : getErrorMessage(err, 'Gagal membaca berkas import.'));
     } finally {
       setBusy(false);
     }
@@ -303,21 +322,18 @@ export default function ContactsIndex() {
 
           <div className="kebab-sep" />
 
-          <label className="kebab-item">
+          <button
+            type="button"
+            className="kebab-item"
+            disabled={busy}
+            onClick={() => {
+              setKebabOpen(false);
+              setImportOpen(true);
+            }}
+          >
             <IconUpload />
             <span>Import</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              hidden
-              disabled={busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) void onImport(file);
-              }}
-            />
-          </label>
+          </button>
 
           <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
             <IconDownload />
@@ -482,10 +498,10 @@ export default function ContactsIndex() {
                     <td data-label="Category">
                       {(row.categories ?? []).length > 0
                         ? row.categories?.map((cat) => (
-                            <span key={cat.id} className="tag" style={{ marginRight: 4 }}>
-                              {cat.name}
-                            </span>
-                          ))
+                          <span key={cat.id} className="tag" style={{ marginRight: 4 }}>
+                            {cat.name}
+                          </span>
+                        ))
                         : '\u2014'}
                     </td>
                     <td data-label="Alamat">{row.address || '\u2014'}</td>
@@ -575,6 +591,20 @@ export default function ContactsIndex() {
           }}
         />
       ) : null}
+
+      {importOpen ? (
+        <ImportModal
+          title="Kontak"
+          templateName="template-kontak.xlsx"
+          columns={IMPORT_COLUMNS}
+          example={IMPORT_EXAMPLE}
+          busy={busy}
+          onClose={() => setImportOpen(false)}
+          onFile={(file) => void onImport(file)}
+        />
+      ) : null}
+
+      {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={setError} /> : null}
     </>
   );
 }

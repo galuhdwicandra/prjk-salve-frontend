@@ -4,11 +4,12 @@ import { Link } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
 import { bulkVoidOrders, listOrders } from '../../api/orders';
 import DateRangePicker from '../../components/DateRangePicker';
+import { ExportJobModal } from '../../components/DataIoModals';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useAuth, useIsManager } from '../../store/useAuth';
 import { fmtDate, rangeFor } from '../../utils/date';
-import { downloadXlsx } from '../../utils/export-table';
+import type { ExportJob } from '../../utils/export-table';
 import { rp } from '../../utils/money';
 import type { Order, PaginationMeta, PaymentStatus } from '../../types/orders';
 import {
@@ -67,6 +68,7 @@ export default function OrdersIndex() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
@@ -230,10 +232,11 @@ export default function OrdersIndex() {
         ? sorted.filter((order) => selected.includes(String(order.id)))
         : (await listOrders({ ...query, page: 1, per_page: 500 })).data ?? [];
 
-      downloadXlsx(
-        `receipt-list-${range[0]}-${range[1]}.xlsx`,
-        'Receipt List',
-        [
+      setJob({
+        filename: `receipt-list-${range[0]}-${range[1]}`,
+        sheet: 'Receipt List',
+        subtitle: `Periode ${fmtDate(range[0])} \u2013 ${fmtDate(range[1])}`,
+        aoa: [
           ['Tanggal', 'No. Receipt', 'Pelanggan', 'Status', 'Proses', 'Total', 'Outstanding', 'Outlet'],
           ...source.map((order) => [
             order.received_at ?? '',
@@ -246,7 +249,7 @@ export default function OrdersIndex() {
             outletCodes.get(String(order.branch_id)) ?? '',
           ]),
         ],
-      );
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Gagal mengekspor data.'));
     }
@@ -275,7 +278,7 @@ export default function OrdersIndex() {
             void onExport();
           }}
         >
-          <span>{selected.length > 0 ? `Export ${selected.length} terpilih` : 'Export XLSX'}</span>
+          <span>{selected.length > 0 ? `Export ${selected.length} terpilih` : 'Export'}</span>
         </button>
       </div>
     </div>
@@ -290,6 +293,8 @@ export default function OrdersIndex() {
         onClose={hideToast}
       />
       {slot ? createPortal(pageActions, slot) : null}
+
+      {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={setError} /> : null}
 
       <div className="card">
         <div className="card-title">

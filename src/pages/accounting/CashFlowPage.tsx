@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getAccountingCashFlow } from '../../api/accounting';
 import { getErrorMessage } from '../../api/client';
 import DateRangePicker from '../../components/DateRangePicker';
+import { ExportFormatModal } from '../../components/DataIoModals';
 import { useCanModule } from '../../store/useAuth';
 import { useActiveBranchId } from '../../store/useBranch';
 import type {
@@ -328,30 +329,11 @@ export default function CashFlowPage() {
       ) : null}
 
       {exportOpen ? (
-        <div className="modal show" role="dialog" aria-modal="true" aria-label="Pilih format export">
-          <div className="box">
-            <div className="modal-head">
-              <h3>Pilih Format Export</h3>
-              <button type="button" className="mclose" onClick={() => setExportOpen(false)}>
-                {'\u2715'}
-              </button>
-            </div>
-
-            <div className="mini" style={{ marginBottom: 12 }}>
-              {totalItems} baris data. {'\u00B7'} Periode {fmtDate(from)} {'\u2013'} {fmtDate(to)}
-            </div>
-
-            <button type="button" className="txn-choice" onClick={() => runExport('xlsx')}>
-              <b>Export ke Excel</b>
-              <span>Berkas .xlsx untuk diolah lebih lanjut</span>
-            </button>
-
-            <button type="button" className="txn-choice" onClick={() => runExport('pdf')}>
-              <b>Export ke PDF</b>
-              <span>Berkas siap cetak / dibagikan</span>
-            </button>
-          </div>
-        </div>
+        <ExportFormatModal
+          note={`${totalItems} baris data. \u00B7 Periode ${fmtDate(from)} \u2013 ${fmtDate(to)}`}
+          onClose={() => setExportOpen(false)}
+          onPick={runExport}
+        />
       ) : null}
     </div>
   );

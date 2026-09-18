@@ -54,3 +54,21 @@ export function printPdf(title: string, subtitle: string, aoa: Aoa): boolean {
 
     return true;
 }
+
+export type ExportJob = {
+    filename: string;
+    sheet: string;
+    subtitle: string;
+    aoa: Aoa;
+};
+
+export function runExportJob(job: ExportJob, format: 'xlsx' | 'pdf'): string | null {
+    if (format === 'xlsx') {
+        downloadXlsx(`${job.filename}.xlsx`, job.sheet, job.aoa);
+        return null;
+    }
+
+    return printPdf(job.sheet, job.subtitle, job.aoa)
+        ? null
+        : 'Popup diblokir browser. Izinkan popup untuk export PDF.';
+}

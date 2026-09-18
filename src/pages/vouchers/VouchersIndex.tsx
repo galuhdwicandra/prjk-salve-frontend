@@ -3,11 +3,14 @@ import { createPortal } from 'react-dom';
 import { getErrorMessage } from '../../api/client';
 import { createVoucher, deleteVoucher, listVouchers, updateVoucher } from '../../api/vouchers';
 import Toast from '../../components/Toast';
+import { ExportJobModal, ImportModal } from '../../components/DataIoModals';
+import type { ImportColumn } from '../../components/DataIoModals';
 import { useToast } from '../../hooks/useToast';
 import { useIsManager } from '../../store/useAuth';
 import type { PaginationMeta, Voucher, VoucherStatus, VoucherType } from '../../types/vouchers';
 import { fmtDate } from '../../utils/date';
-import { downloadXlsx } from '../../utils/export-table';
+import type { ExportJob } from '../../utils/export-table';
+import { readTableFile } from '../../utils/import-table';
 import { num, rp } from '../../utils/money';
 import {
   IconArchive,
@@ -27,6 +30,34 @@ import VoucherModal from './VoucherModal';
 type SortState = { key: string; dir: 1 | -1 };
 
 const PAGE_SIZE = 25;
+
+const VOUCHER_COLUMNS = [
+  'kode',
+  'nama',
+  'tipe',
+  'nilai',
+  'masa_dari',
+  'masa_ke',
+  'kuota_maks',
+  'gabung_voucher',
+  'gabung_diskon',
+  'hitung_setelah_diskon',
+];
+
+const IMPORT_COLUMNS: ImportColumn[] = [
+  ['kode', '4-10 huruf/angka, wajib'],
+  ['nama', 'Wajib diisi'],
+  ['tipe', 'rp / pct'],
+  ['nilai', 'Angka, wajib'],
+  ['masa_dari', 'YYYY-MM-DD, opsional'],
+  ['masa_ke', 'YYYY-MM-DD, opsional'],
+  ['kuota_maks', 'Angka; kosong = tak terbatas'],
+  ['gabung_voucher', 'ya / tidak'],
+  ['gabung_diskon', 'ya / tidak'],
+  ['hitung_setelah_diskon', 'ya / tidak'],
+];
+
+const IMPORT_EXAMPLE = ['SALVE10', 'Diskon 10rb', 'rp', 10000, '', '', '100', 'tidak', 'ya', 'ya'];
 
 const STATUS_LABEL: Record<VoucherStatus, string> = {
   aktif: 'Aktif',
@@ -82,6 +113,8 @@ export default function VouchersIndex() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [modal, setModal] = useState<{ open: boolean; voucher: Voucher | null }>({ open: false, voucher: null });
   const [loyaltyOpen, setLoyaltyOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -189,21 +222,26 @@ export default function VouchersIndex() {
         return;
       }
 
-      downloadXlsx(`master-promo-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Voucher', [
-        ['kode', 'nama', 'tipe', 'nilai', 'masa_dari', 'masa_ke', 'kuota_maks', 'gabung_voucher', 'gabung_diskon', 'hitung_setelah_diskon'],
-        ...items.map((item) => [
-          item.code,
-          item.name,
-          item.type === 'PERCENT' ? 'pct' : 'rp',
-          Number(item.value),
-          item.start_at?.slice(0, 10) ?? '',
-          item.end_at?.slice(0, 10) ?? '',
-          item.usage_limit ?? '',
-          item.stack_voucher ? 'ya' : 'tidak',
-          item.stack_discount ? 'ya' : 'tidak',
-          item.percent_after_discount ? 'ya' : 'tidak',
-        ]),
-      ]);
+      setJob({
+        filename: `master-promo-${new Date().toISOString().slice(0, 10)}`,
+        sheet: 'Voucher',
+        subtitle: `${items.length} voucher`,
+        aoa: [
+          VOUCHER_COLUMNS,
+          ...items.map((item) => [
+            item.code,
+            item.name,
+            item.type === 'PERCENT' ? 'pct' : 'rp',
+            Number(item.value),
+            item.start_at?.slice(0, 10) ?? '',
+            item.end_at?.slice(0, 10) ?? '',
+            item.usage_limit ?? '',
+            item.stack_voucher ? 'ya' : 'tidak',
+            item.stack_discount ? 'ya' : 'tidak',
+            item.percent_after_discount ? 'ya' : 'tidak',
+          ]),
+        ],
+      });
     } catch (err) {
       showError(getErrorMessage(err, 'Gagal mengekspor data'));
     } finally {
@@ -268,21 +306,18 @@ export default function VouchersIndex() {
         </button>
 
         <div className="kebab-menu">
-          <label className="kebab-item">
+          <button
+            type="button"
+            className="kebab-item"
+            disabled={busy}
+            onClick={() => {
+              setKebabOpen(false);
+              setImportOpen(true);
+            }}
+          >
             <IconUpload />
             <span>Import</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              hidden
-              disabled={busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) void onImport(file);
-              }}
-            />
-          </label>
+          </button>
 
           <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
             <IconDownload />
@@ -313,12 +348,12 @@ export default function VouchersIndex() {
     setBusy(true);
     setError(null);
     try {
-      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
-      const head = (lines.shift() ?? '').split(',').map((cell) => cell.trim().toLowerCase());
+      const data = await readTableFile(file);
+      const head = (data.shift() ?? []).map((cell) => cell.trim().toLowerCase());
       const at = (name: string) => head.indexOf(name);
 
       if (at('kode') < 0 || at('nama') < 0 || at('nilai') < 0) {
-        setError('Header CSV wajib memuat kolom "kode", "nama", dan "nilai".');
+        setError('Header berkas wajib memuat kolom "kode", "nama", dan "nilai".');
         return;
       }
 
@@ -326,9 +361,8 @@ export default function VouchersIndex() {
       let ok = 0;
       let skipped = 0;
 
-      for (const line of lines) {
-        const cols = line.split(',').map((cell) => cell.trim());
-        const code = (cols[at('kode')] ?? '').toUpperCase();
+      for (const cols of data) {
+        const code = (cols[at('kode')] ?? '').trim().toUpperCase();
         const amount = Number((cols[at('nilai')] ?? '').replace(/\D/g, ''));
 
         if (!/^[A-Z0-9]{4,10}$/.test(code) || amount <= 0) {
@@ -344,7 +378,7 @@ export default function VouchersIndex() {
         try {
           await createVoucher({
             code,
-            name: cols[at('nama')] || code,
+            name: cols[at('nama')]?.trim() || code,
             type: isPercent ? 'PERCENT' : 'NOMINAL',
             value: isPercent ? Math.min(amount, 100) : amount,
             start_at: from || null,
@@ -361,10 +395,11 @@ export default function VouchersIndex() {
         }
       }
 
+      setImportOpen(false);
       showSuccess(`Import selesai: ${ok} ditambahkan, ${skipped} dilewati.`);
       await refresh();
     } catch (err) {
-      setError(getErrorMessage(err, 'Gagal membaca berkas CSV'));
+      setError(err instanceof Error ? err.message : getErrorMessage(err, 'Gagal membaca berkas import.'));
     } finally {
       setBusy(false);
     }
@@ -613,6 +648,21 @@ export default function VouchersIndex() {
           showSuccess(message);
         }} />
       ) : null}
+
+      {importOpen ? (
+        <ImportModal
+          title="Voucher"
+          templateName="template-promo.xlsx"
+          columns={IMPORT_COLUMNS}
+          example={IMPORT_EXAMPLE}
+          busy={busy}
+          onClose={() => setImportOpen(false)}
+          onFile={(file) => void onImport(file)}
+        />
+      ) : null}
+
+      {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={showError} /> : null}
+
     </>
   );
 }

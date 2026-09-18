@@ -6,12 +6,14 @@ import { listServiceCategories } from '../../api/serviceCategories';
 import { createService, listServices, updateService } from '../../api/services';
 import { setServicePrice } from '../../api/servicePrices';
 import Toast from '../../components/Toast';
+import { ExportJobModal, ImportModal } from '../../components/DataIoModals';
+import type { ImportColumn } from '../../components/DataIoModals';
 import { useToast } from '../../hooks/useToast';
 import { useIsManager } from '../../store/useAuth';
 import type { Branch } from '../../types/branches';
 import type { PaginationMeta, Service, ServiceCategory } from '../../types/services';
-import { parseCsvLine } from '../../utils/csv';
-import { downloadXlsx } from '../../utils/export-table';
+import type { ExportJob } from '../../utils/export-table';
+import { readTableFile } from '../../utils/import-table';
 import { num } from '../../utils/money';
 import { IconArchive, IconDownload, IconKebab, IconPlus, IconSort, IconSortDown, IconSortUp, IconTag, IconUnarchive, IconUpload } from '../users/icons';
 import CategoryModal from './CategoryModal';
@@ -58,6 +60,8 @@ export default function ServiceIndex() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [modal, setModal] = useState<{ open: boolean; service: Service | null }>({ open: false, service: null });
   const [catModal, setCatModal] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -208,16 +212,33 @@ export default function ServiceIndex() {
         variants.length === 0
           ? [[parent.category?.name ?? '', parent.name, '', '', ...branches.map(() => '')]]
           : variants.map((variant) => [
-              parent.category?.name ?? '',
-              parent.name,
-              variant.name,
-              slaOf(variant) ?? '',
-              ...branches.map((branch) => priceAt(variant, branch.id) ?? ''),
-            ]),
+            parent.category?.name ?? '',
+            parent.name,
+            variant.name,
+            slaOf(variant) ?? '',
+            ...branches.map((branch) => priceAt(variant, branch.id) ?? ''),
+          ]),
       ),
     ],
     [branches],
   );
+
+  const importColumns = useMemo<ImportColumn[]>(
+    () => [
+      ['kategori', 'Wajib, harus sudah terdaftar'],
+      ['produk', 'Wajib diisi'],
+      ['varian', 'Kosongkan bila hanya membuat produk induk'],
+      ['sla', 'Jumlah hari 0-365, opsional'],
+      ...branches.map((branch): ImportColumn => [branch.name, `Harga di ${branch.name}, opsional`]),
+    ],
+    [branches],
+  );
+
+  const importExample = useMemo(
+    () => ['Cuci Sepatu', 'Fast Clean', 'Regular', 3, ...branches.map(() => 35000)],
+    [branches],
+  );
+
 
   async function onExport() {
     setBusy(true);
@@ -242,11 +263,12 @@ export default function ServiceIndex() {
         return;
       }
 
-      downloadXlsx(
-        `master-produk-${new Date().toISOString().slice(0, 10)}.xlsx`,
-        'Produk',
-        buildSheet(items),
-      );
+      setJob({
+        filename: `master-produk-${new Date().toISOString().slice(0, 10)}`,
+        sheet: 'Produk',
+        subtitle: `${items.length} produk`,
+        aoa: buildSheet(items),
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Gagal mengekspor data'));
     } finally {
@@ -258,15 +280,15 @@ export default function ServiceIndex() {
     setBusy(true);
     setError(null);
     try {
-      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
-      const head = parseCsvLine(lines.shift() ?? '').map((cell) => cell.toLowerCase());
+      const data = await readTableFile(file);
+      const head = (data.shift() ?? []).map((cell) => cell.trim().toLowerCase());
       const iCategory = head.indexOf('kategori');
       const iParent = head.indexOf('produk');
       const iVariant = head.indexOf('varian');
       const iSla = head.indexOf('sla');
 
       if (iCategory < 0 || iParent < 0 || iVariant < 0) {
-        setError('Header CSV wajib memuat kolom "kategori", "produk", dan "varian".');
+        setError('Header berkas wajib memuat kolom "kategori", "produk", dan "varian".');
         return;
       }
 
@@ -280,8 +302,7 @@ export default function ServiceIndex() {
       let ok = 0;
       let skipped = 0;
 
-      for (const line of lines) {
-        const cols = parseCsvLine(line);
+      for (const cols of data) {
         const parentName = (cols[iParent] ?? '').trim();
         const variantName = (cols[iVariant] ?? '').trim();
         const rowCategoryId = categoryByName.get((cols[iCategory] ?? '').trim().toLowerCase());
@@ -344,11 +365,12 @@ export default function ServiceIndex() {
         }
       }
 
+      setImportOpen(false);
       showSuccess(`Import selesai: ${ok} baris diproses, ${skipped} dilewati.`);
       await refresh();
       await loadParents();
     } catch (err) {
-      setError(getErrorMessage(err, 'Gagal mengimpor data'));
+      setError(err instanceof Error ? err.message : getErrorMessage(err, 'Gagal mengimpor data'));
     } finally {
       setBusy(false);
     }
@@ -422,7 +444,7 @@ export default function ServiceIndex() {
 
           <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
             <IconDownload />
-            <span>Export Excel</span>
+            <span>Export</span>
           </button>
 
           {canManage ? (
@@ -439,22 +461,18 @@ export default function ServiceIndex() {
                 <IconTag />
                 <span>Kelola Kategori</span>
               </button>
-              <label className="kebab-item">
+              <button
+                type="button"
+                className="kebab-item"
+                disabled={busy}
+                onClick={() => {
+                  setKebabOpen(false);
+                  setImportOpen(true);
+                }}
+              >
                 <IconUpload />
-                <span>Import CSV</span>
-                <input
-                  type="file"
-                  accept=".csv,text/csv"
-                  hidden
-                  disabled={busy}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = '';
-                    setKebabOpen(false);
-                    if (file) void onImport(file);
-                  }}
-                />
-              </label>
+                <span>Import</span>
+              </button>
             </>
           ) : null}
         </div>
@@ -703,7 +721,7 @@ export default function ServiceIndex() {
           }}
         />
       ) : null}
-      
+
       {catModal ? (
         <CategoryModal
           onClose={() => {
@@ -713,6 +731,20 @@ export default function ServiceIndex() {
           }}
         />
       ) : null}
+
+      {importOpen ? (
+        <ImportModal
+          title="Produk"
+          templateName="template-produk.xlsx"
+          columns={importColumns}
+          example={importExample}
+          busy={busy}
+          onClose={() => setImportOpen(false)}
+          onFile={(file) => void onImport(file)}
+        />
+      ) : null}
+
+      {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={showError} /> : null}
     </>
   );
 }

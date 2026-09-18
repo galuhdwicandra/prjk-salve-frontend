@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ExportJobModal, ImportModal } from '../../components/DataIoModals';
+import type { ImportColumn } from '../../components/DataIoModals';
 import { createPortal } from 'react-dom';
 import {
   bulkDeleteAccountingAccounts,
   createAccountingAccount,
+  getAccountingLedgerGrouped,
   listAccountingAccounts,
   updateAccountingAccount,
 } from '../../api/accounting';
@@ -11,7 +14,9 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useShowBalance } from '../../store/useAuth';
 import type { AccountingAccount } from '../../types/accounting';
-import { downloadXlsx } from '../../utils/export-table';
+import { fmtDate } from '../../utils/date';
+import type { ExportJob } from '../../utils/export-table';
+import { readTableFile } from '../../utils/import-table';
 import { toIDR } from '../../utils/money';
 import {
   IconArchive,
@@ -26,10 +31,20 @@ import {
 } from '../users/icons';
 import CashAccountModal from './CashAccountModal';
 import CashAccountTxnDialog from './CashAccountTxnDialog';
+import { ExportMutasiModal, IoChooser } from './CashIoModals';
 
 const PAGE_SIZES = [25, 50, 100];
 
+const IMPORT_COLUMNS: ImportColumn[] = [
+  ['nama', 'Wajib diisi'],
+  ['keterangan', 'Opsional'],
+];
+
+const IMPORT_EXAMPLE = ['Kas Tunai', 'Kas fisik di toko'];
+
 type SortKey = 'name' | 'balance' | 'description';
+
+type IoMode = 'import' | 'export' | 'import-accounts' | 'export-mutasi' | null;
 
 function toNumber(value: string | number | null | undefined): number {
   const parsed = Number(value ?? 0);
@@ -58,7 +73,8 @@ export default function CashAccountIndex() {
   });
   const [opened, setOpened] = useState<AccountingAccount | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [io, setIo] = useState<IoMode>(null);
+  const [job, setJob] = useState<ExportJob | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -103,10 +119,10 @@ export default function CashAccountIndex() {
     const keyword = q.trim().toLowerCase();
     const base = keyword
       ? rows.filter(
-          (row) =>
-            row.name.toLowerCase().includes(keyword) ||
-            (row.description ?? '').toLowerCase().includes(keyword),
-        )
+        (row) =>
+          row.name.toLowerCase().includes(keyword) ||
+          (row.description ?? '').toLowerCase().includes(keyword),
+      )
       : rows;
 
     return [...base].sort((a, b) => {
@@ -181,23 +197,74 @@ export default function CashAccountIndex() {
   }
 
   function exportAccounts() {
-    const aoa: unknown[][] = [['nama', 'keterangan', 'saldo']];
+    const aoa: unknown[][] = [['nama', 'keterangan']];
 
-    filtered.forEach((row) => aoa.push([row.name, row.description ?? '', toNumber(row.balance)]));
+    filtered.forEach((row) => aoa.push([row.name, row.description ?? '']));
 
-    downloadXlsx(`kas-bank-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Kas & Bank', aoa);
+    setIo(null);
+    setJob({
+      filename: `kas-bank-${new Date().toISOString().slice(0, 10)}`,
+      sheet: 'Kas & Bank',
+      subtitle: `${filtered.length} akun`,
+      aoa,
+    });
   }
 
-  async function importCsv(file: File) {
+  async function exportMutasi(accounts: AccountingAccount[], from: string, to: string) {
     setBusy(true);
     try {
-      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
-      const head = (lines.shift() ?? '').split(',').map((cell) => cell.trim().toLowerCase());
+      const res = await getAccountingLedgerGrouped({ date_from: from, date_to: to });
+      const names = new Map(accounts.map((account) => [account.id, account.name]));
+      const header = ['rekening', 'no_transaksi', 'tanggal', 'tipe', 'keterangan', 'masuk', 'keluar'];
+      const aoa: unknown[][] = [showBalance ? [...header, 'saldo'] : header];
+
+      (Array.isArray(res.data) ? res.data : [])
+        .filter((group) => names.has(group.account.id))
+        .forEach((group) => {
+          group.rows.forEach((row) => {
+            const line: unknown[] = [
+              names.get(group.account.id) ?? group.account.name,
+              row.journal_no ?? row.source_no ?? '',
+              row.journal_date ?? '',
+              row.debit > 0 ? 'masuk' : 'keluar',
+              row.description ?? '',
+              row.debit,
+              row.credit,
+            ];
+
+            aoa.push(showBalance ? [...line, row.balance ?? 0] : line);
+          });
+        });
+
+      if (aoa.length === 1) {
+        showError('Tidak ada mutasi pada periode ini.');
+        return;
+      }
+
+      setIo(null);
+      setJob({
+        filename: `mutasi-bank-${from}-${to}`,
+        sheet: 'Mutasi Bank',
+        subtitle: `Periode ${fmtDate(from)} \u2013 ${fmtDate(to)}`,
+        aoa,
+      });
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal memuat mutasi rekening'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importAccounts(file: File) {
+    setBusy(true);
+    try {
+      const rows = await readTableFile(file);
+      const head = (rows.shift() ?? []).map((cell) => cell.trim().toLowerCase());
       const iName = head.indexOf('nama');
       const iNote = head.indexOf('keterangan');
 
       if (iName < 0) {
-        showError('Header CSV wajib memuat kolom "nama".');
+        showError('Header berkas wajib memuat kolom "nama".');
         return;
       }
 
@@ -210,10 +277,9 @@ export default function CashAccountIndex() {
       let updated = 0;
       let skipped = 0;
 
-      for (const line of lines) {
-        const cols = line.split(',').map((cell) => cell.trim());
-        const name = cols[iName] ?? '';
-        const description = iNote >= 0 ? cols[iNote] ?? '' : '';
+      for (const row of rows) {
+        const name = (row[iName] ?? '').trim();
+        const description = iNote >= 0 ? (row[iNote] ?? '').trim() : '';
 
         if (!name) {
           skipped += 1;
@@ -240,10 +306,11 @@ export default function CashAccountIndex() {
         }
       }
 
+      setIo(null);
       showSuccess(`Import selesai: ${added} baru, ${updated} diperbarui, ${skipped} dilewati.`);
       await refresh();
     } catch (err) {
-      showError(getErrorMessage(err, 'Gagal membaca berkas CSV'));
+      showError(err instanceof Error ? err.message : getErrorMessage(err, 'Gagal membaca berkas import.'));
     } finally {
       setBusy(false);
     }
@@ -286,7 +353,7 @@ export default function CashAccountIndex() {
             disabled={busy}
             onClick={() => {
               setKebabOpen(false);
-              fileRef.current?.click();
+              setIo('import');
             }}
           >
             <IconUpload />
@@ -297,7 +364,7 @@ export default function CashAccountIndex() {
             className="kebab-item"
             onClick={() => {
               setKebabOpen(false);
-              exportAccounts();
+              setIo('export');
             }}
           >
             <IconDownload />
@@ -325,18 +392,6 @@ export default function CashAccountIndex() {
       <Toast show={toast.open} kind={toast.kind} message={toast.message} onClose={hideToast} />
 
       {slot ? createPortal(pageActions, slot) : null}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".csv,text/csv"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (file) void importCsv(file);
-        }}
-      />
 
       <div className="card">
         <div className="card-title">
@@ -567,6 +622,38 @@ export default function CashAccountIndex() {
             void refresh();
           }}
         />
+      ) : null}
+      {io === 'import' || io === 'export' ? (
+        <IoChooser
+          mode={io}
+          onClose={() => setIo(null)}
+          onPickAccounts={() => (io === 'import' ? setIo('import-accounts') : exportAccounts())}
+          onPickMutasi={() => setIo('export-mutasi')}
+        />
+      ) : null}
+
+      {io === 'import-accounts' ? (
+        <ImportModal
+          title="Kas & Bank"
+          templateName="template-kas-bank.xlsx"
+          columns={IMPORT_COLUMNS}
+          example={IMPORT_EXAMPLE}
+          busy={busy}
+          onClose={() => setIo(null)}
+          onFile={(file) => void importAccounts(file)}
+        />
+      ) : null}
+
+      {io === 'export-mutasi' ? (
+        <ExportMutasiModal
+          busy={busy}
+          onClose={() => setIo(null)}
+          onSubmit={(accounts, from, to) => void exportMutasi(accounts, from, to)}
+        />
+      ) : null}
+
+      {job ? (
+        <ExportJobModal job={job} onClose={() => setJob(null)} onError={showError} />
       ) : null}
     </>
   );

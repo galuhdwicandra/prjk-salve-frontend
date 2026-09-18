@@ -4,11 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
 import { createCustomer, listCustomers, updateCustomer } from '../../api/customers';
 import Toast from '../../components/Toast';
+import { ExportJobModal, ImportModal } from '../../components/DataIoModals';
+import type { ImportColumn } from '../../components/DataIoModals';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../store/useAuth';
 import type { Customer, CustomerQuery, PaginationMeta } from '../../types/customers';
 import { fmtDate } from '../../utils/date';
-import { downloadXlsx } from '../../utils/export-table';
+import type { ExportJob } from '../../utils/export-table';
+import { readTableFile } from '../../utils/import-table';
 import { rp } from '../../utils/money';
 import {
   IconArchive,
@@ -26,6 +29,15 @@ type SortState = { key: SortKey; dir: 'asc' | 'desc' };
 type VisitsOp = '' | 'gte' | 'lte';
 
 const PAGE_SIZES = [25, 50, 100];
+
+const IMPORT_COLUMNS: ImportColumn[] = [
+  ['nama', 'Wajib diisi'],
+  ['wa', 'Wajib diisi, hanya angka'],
+  ['alamat', 'Opsional'],
+  ['label', 'Dipisah titik koma, opsional'],
+];
+
+const IMPORT_EXAMPLE = ['Budi', '08123456789', 'Jl. Mawar 1', 'VIP; Langganan'];
 
 export default function CustomersIndex() {
   const navigate = useNavigate();
@@ -50,6 +62,8 @@ export default function CustomersIndex() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
 
   const { toast, showSuccess, hideToast } = useToast();
@@ -156,11 +170,12 @@ export default function CustomersIndex() {
         return;
       }
 
-      downloadXlsx(
-        `database-pelanggan-${new Date().toISOString().slice(0, 10)}.xlsx`,
-        'Pelanggan',
-        toSheet(items),
-      );
+      setJob({
+        filename: `database-pelanggan-${new Date().toISOString().slice(0, 10)}`,
+        sheet: 'Pelanggan',
+        subtitle: `${items.length} pelanggan`,
+        aoa: toSheet(items),
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Gagal mengekspor data'));
     } finally {
@@ -177,24 +192,23 @@ export default function CustomersIndex() {
     setBusy(true);
     setError(null);
     try {
-      const lines = (await file.text()).split(/\r?\n/).filter((line) => line.trim() !== '');
-      const head = (lines.shift() ?? '').split(',').map((cell) => cell.trim().toLowerCase());
+      const data = await readTableFile(file);
+      const head = (data.shift() ?? []).map((cell) => cell.trim().toLowerCase());
       const iName = head.indexOf('nama');
       const iWa = head.indexOf('wa');
       const iAddress = head.indexOf('alamat');
       const iLabel = head.indexOf('label');
 
       if (iName < 0 || iWa < 0) {
-        setError('Header CSV wajib memuat kolom "nama" dan "wa".');
+        setError('Header berkas wajib memuat kolom "nama" dan "wa".');
         return;
       }
 
       let ok = 0;
       let skipped = 0;
 
-      for (const line of lines) {
-        const cols = line.split(',').map((cell) => cell.trim());
-        const name = cols[iName] ?? '';
+      for (const cols of data) {
+        const name = (cols[iName] ?? '').trim();
         const wa = (cols[iWa] ?? '').replace(/\D+/g, '');
 
         if (!name || !wa) {
@@ -206,7 +220,7 @@ export default function CustomersIndex() {
           await createCustomer({
             name,
             whatsapp: wa,
-            address: iAddress >= 0 ? cols[iAddress] || null : null,
+            address: iAddress >= 0 ? cols[iAddress]?.trim() || null : null,
             tags:
               iLabel >= 0 && cols[iLabel]
                 ? cols[iLabel].split(';').map((tag) => tag.trim()).filter(Boolean)
@@ -219,10 +233,11 @@ export default function CustomersIndex() {
         }
       }
 
+      setImportOpen(false);
       showSuccess(`Import selesai: ${ok} ditambahkan, ${skipped} dilewati.`);
       await refresh();
     } catch (err) {
-      setError(getErrorMessage(err, 'Gagal membaca berkas CSV'));
+      setError(err instanceof Error ? err.message : getErrorMessage(err, 'Gagal membaca berkas import.'));
     } finally {
       setBusy(false);
     }
@@ -274,21 +289,18 @@ export default function CustomersIndex() {
         </button>
 
         <div className="kebab-menu">
-          <label className="kebab-item">
+          <button
+            type="button"
+            className="kebab-item"
+            disabled={busy}
+            onClick={() => {
+              setKebabOpen(false);
+              setImportOpen(true);
+            }}
+          >
             <IconUpload />
             <span>Import</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              hidden
-              disabled={busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) void onImport(file);
-              }}
-            />
-          </label>
+          </button>
 
           <button type="button" className="kebab-item" disabled={busy} onClick={() => void onExport()}>
             <IconDownload />
@@ -564,6 +576,20 @@ export default function CustomersIndex() {
             </div>
           </div>
         ) : null}
+
+      {importOpen ? (
+        <ImportModal
+          title="Pelanggan"
+          templateName="template-pelanggan.xlsx"
+          columns={IMPORT_COLUMNS}
+          example={IMPORT_EXAMPLE}
+          busy={busy}
+          onClose={() => setImportOpen(false)}
+          onFile={(file) => void onImport(file)}
+        />
+      ) : null}
+
+      {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={setError} /> : null}
       </div>
     </>
   );

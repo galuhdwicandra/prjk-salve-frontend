@@ -5,12 +5,13 @@ import { listAccountingAccounts } from '../../api/accounting';
 import { listCashTransactions } from '../../api/cashTransactions';
 import { getErrorMessage } from '../../api/client';
 import Toast from '../../components/Toast';
+import { ExportJobModal } from '../../components/DataIoModals';
 import { useToast } from '../../hooks/useToast';
 import { useActiveBranchId } from '../../store/useBranch';
 import type { AccountingAccount } from '../../types/accounting';
 import type { CashTransaction, CashTransactionKind, PaginationMeta } from '../../types/cash-transactions';
 import { fmtDate } from '../../utils/date';
-import { downloadXlsx } from '../../utils/export-table';
+import type { ExportJob } from '../../utils/export-table';
 import { rp } from '../../utils/money';
 import { IconDownload, IconKebab, IconPlus } from '../users/icons';
 import FundTransferModal from './FundTransferModal';
@@ -46,6 +47,7 @@ export default function TransactionsIndex() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kebabOpen, setKebabOpen] = useState(false);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
 
@@ -116,7 +118,12 @@ export default function TransactionsIndex() {
       );
     });
 
-    downloadXlsx(`transaksi-${tab.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xlsx`, 'Transaksi', aoa);
+    setJob({
+      filename: `transaksi-${tab.toLowerCase()}-${new Date().toISOString().slice(0, 10)}`,
+      sheet: 'Transaksi',
+      subtitle: `Transaksi ${tab.toLowerCase()}`,
+      aoa,
+    });
   }
 
   const pageActions = (
@@ -317,6 +324,8 @@ export default function TransactionsIndex() {
           }}
         />
       ) : null}
+
+      {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={setError} /> : null}
     </>
   );
 }

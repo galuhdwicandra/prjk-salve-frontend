@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { getAccountingLedgerGrouped } from '../../api/accounting';
 import { getErrorMessage } from '../../api/client';
 import DateRangePicker from '../../components/DateRangePicker';
+import { ExportFormatModal } from '../../components/DataIoModals';
 import { useShowBalance } from '../../store/useAuth';
 import { useActiveBranchId } from '../../store/useBranch';
 import type { AccountingLedgerGroup, AccountingLedgerGroupRow } from '../../types/accounting';
@@ -258,30 +259,11 @@ export default function BukuBesarPage() {
       </div>
 
       {exportOpen ? (
-        <div className="modal show" role="dialog" aria-modal="true" aria-label="Pilih format export">
-          <div className="box">
-            <div className="modal-head">
-              <h3>Pilih Format Export</h3>
-              <button type="button" className="mclose" onClick={() => setExportOpen(false)}>
-                {'\u2715'}
-              </button>
-            </div>
-
-            <div className="mini" style={{ marginBottom: 12 }}>
-              {totalRows} baris data. {'\u00B7'} Periode {fmtDate(from)} {'\u2013'} {fmtDate(to)}
-            </div>
-
-            <button type="button" className="txn-choice" onClick={() => runExport('xlsx')}>
-              <b>Export ke Excel</b>
-              <span>Berkas .xlsx untuk diolah lebih lanjut</span>
-            </button>
-
-            <button type="button" className="txn-choice" onClick={() => runExport('pdf')}>
-              <b>Export ke PDF</b>
-              <span>Berkas siap cetak / dibagikan</span>
-            </button>
-          </div>
-        </div>
+        <ExportFormatModal
+          note={`${totalRows} baris data. \u00B7 Periode ${fmtDate(from)} \u2013 ${fmtDate(to)}`}
+          onClose={() => setExportOpen(false)}
+          onPick={runExport}
+        />
       ) : null}
     </div>
   );

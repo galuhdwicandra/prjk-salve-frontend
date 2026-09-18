@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { getReportPreview, fetchAllReportRows, type ReportKind, type ReportRow } from '../../api/reports';
 import { listBranches } from '../../api/branches';
 import { getErrorMessage, normalizeApiError } from '../../api/client';
-import { aoaToXlsxBlob } from '../../utils/xlsx';
+import { ExportJobModal } from '../../components/DataIoModals';
+import type { ExportJob } from '../../utils/export-table';
 import { reportColumnLabel } from '../../utils/report-columns';
 
 type Branch = { id: string; name: string };
@@ -53,6 +54,7 @@ export default function ReportsIndex() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [job, setJob] = useState<ExportJob | null>(null);
 
     useEffect(() => {
         listBranches({ per_page: 100 })
@@ -129,17 +131,14 @@ export default function ReportsIndex() {
         ];
 
         const safeKind = kind === 'deep-clean' ? 'treatment_deep_clean' : kind;
-        const fname = `${safeKind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}.xlsx`;
-        const url = URL.createObjectURL(aoaToXlsxBlob(aoa, reportKindLabel(kind)));
-        const a = document.createElement('a');
+        const fname = `${safeKind}_${from.replaceAll('-', '')}-${to.replaceAll('-', '')}_${branchId ? 'branch' : 'all'}`;
 
-        a.href = url;
-        a.download = fname;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-
-        URL.revokeObjectURL(url);
+        setJob({
+            filename: fname,
+            sheet: reportKindLabel(kind),
+            subtitle: `${from} \u2013 ${to}`,
+            aoa,
+        });
 
         if (offline) {
             setError(`Tidak terhubung ke server. File berisi ${data.length} baris yang sudah termuat saja, bukan seluruh periode.`);
@@ -290,7 +289,7 @@ export default function ReportsIndex() {
                             Terapkan
                         </button>
                         <button onClick={onExport} className="btn-outline">
-                            Export Excel
+                            Export
                         </button>
                     </div>
                 </div>
@@ -370,6 +369,8 @@ export default function ReportsIndex() {
                     </button>
                 </nav>
             )}
+
+            {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={setError} /> : null}
         </div>
     );
 }

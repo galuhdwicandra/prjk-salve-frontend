@@ -4,6 +4,7 @@ import { getDashboardSummary } from "../../api/dashboard";
 import { fetchAllReportRows } from "../../api/reports";
 import type { Branch } from "../../types/branches";
 import type { CashflowPoint, DashboardSummary, DashboardSummaryMeta } from "../../types/dashboard";
+import { ExportFormatModal } from "../../components/DataIoModals";
 import { downloadXlsx, printPdf } from "../../utils/export-table";
 import { ORDER_EXPORT_COLUMNS, reportColumnLabel } from "../../utils/report-columns";
 import { toIDR } from "../../utils/money";
@@ -329,24 +330,11 @@ export default function DashboardHome() {
       </div>
 
       {exportOpen ? (
-        <div className="modal show" role="dialog" aria-modal="true" aria-label="Pilih format export">
-          <div className="box">
-            <div className="modal-head">
-              <h3>Pilih Format Export</h3>
-              <button type="button" className="mclose" onClick={() => setExportOpen(false)}>
-                {"\u2715"}
-              </button>
-            </div>
-            <button type="button" className="txn-choice" onClick={() => runExport("xlsx")} disabled={exporting}>
-              <b>Export ke Excel</b>
-              <span>Berkas .xlsx untuk diolah lebih lanjut</span>
-            </button>
-            <button type="button" className="txn-choice" onClick={() => runExport("pdf")} disabled={exporting}>
-              <b>Export ke PDF</b>
-              <span>Berkas siap cetak / dibagikan</span>
-            </button>
-          </div>
-        </div>
+        <ExportFormatModal
+          busy={exporting}
+          onClose={() => setExportOpen(false)}
+          onPick={(format) => void runExport(format)}
+        />
       ) : null}
     </div>
   );
