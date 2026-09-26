@@ -53,20 +53,16 @@ backend: staging
 frontend: staging
 
 New Branch
-tamplate format nama: features/CAHTBOT-A1-Sesi-order-dan-client_ref-anti-duplikat
+tamplate format nama: features/CHATBOT-A2-Guard-slot-wajib-satu-pintu-menuju-submit
 
 [DESCRIPTION]
-Satu percakapan bot mewakili tepat satu calon order. Agar pengiriman ulang akibat timeout atau klik ganda tidak melahirkan order kedua, sesi memegang satu client_ref (UUID) yang dipakai pada payload POST /orders. Backend menyimpan pemetaan client_ref → order selama 1 hari, jadi permintaan ulang dengan ref yang sama memulangkan order yang sama beserta meta.idempotent = true. Seluruh isi slot percakapan ikut dipersistensi supaya sesi yang terputus bisa dilanjutkan.
-
-Referensi: backend/app/Http/Controllers/Api/OrderController.php bagian cache order:create:ref:.
+Inti jaminan "tidak ada langkah yang terlewat". Pemanggilan POST /orders hanya boleh terjadi dari state CONFIRM, dan dijaga satu fungsi guard tunggal (bukan pengecekan yang tersebar di tiap langkah). Slot wajib diturunkan dari aturan OrderStoreRequest: branch_id, customer_id, items minimal satu, received_at, ready_at, ditambah mode pembayaran yang dipilih bot.
 
 [ACCEPTANCE-CRITERIA]
-Given percakapan baru dimulai, When bot menampilkan pertanyaan pertama, Then satu client_ref UUID v4 sudah dibuat dan tersimpan.
+Given satu atau lebih slot wajib kosong, When guard dijalankan, Then submit ditolak dan bot melompat ke slot kosong pertama sambil menyebut slot mana yang kurang.
 
-Given slot apa pun berubah, When perubahan diterima, Then state sesi tersimpan di localStorage dengan kunci berbasis client_ref.
+Given semua slot wajib terisi, When pengguna memilih "Simpan" di state CONFIRM, Then POST /orders dipanggil tepat satu kali.
 
-Given sesi belum disubmit lalu halaman ditutup, When bot dibuka lagi, Then percakapan lanjut dari slot terakhir dengan semua isi slot utuh.
+Tidak ada jalur kode lain yang memanggil POST /orders selain dari state CONFIRM.
 
-Given order sudah berhasil dibuat / dibatalkan / sesi kedaluwarsa, When percakapan berikutnya dimulai, Then client_ref baru dibuat.
-
-client_ref yang sama tidak pernah dipakai untuk dua order berbeda.
+Daftar slot wajib berada di satu konstanta, bukan diulang di beberapa tempat.
