@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { NormalizedApiError } from '../api/client';
 
 const ACTIVE_KEY = 'pos-salve:chat:active';
 const SESSION_PREFIX = 'pos-salve:chat:';
@@ -19,16 +20,39 @@ export type ChatSlotKey = Exclude<ChatStep, 'confirm'>;
 
 export type ChatSlots = Record<ChatSlotKey, string>;
 
+export type ChatErrorSlot = ChatSlotKey | 'cart' | 'discount' | 'payment' | 'voucher';
+
+export interface ChatNotice {
+  message: string;
+  offerPos: boolean;
+  flaggedItems: number[];
+}
+
 export interface ChatSession {
   clientRef: string;
   createdAt: number;
   step: ChatStep;
   slots: ChatSlots;
+  notice: ChatNotice | null;
 }
 
 export const CHAT_SLOT_STEPS = CHAT_STEPS.filter(
   (step): step is ChatSlotKey => step !== 'confirm',
 );
+
+export const SERVER_FIELD_SLOTS = new Map<string, ChatErrorSlot>([
+  ['customer_id', 'customerName'],
+  ['items', 'cart'],
+  ['received_at', 'receivedAt'],
+  ['ready_at', 'readyAt'],
+  ['discount_value', 'discount'],
+  ['amount', 'payment'],
+  ['code', 'voucher'],
+]);
+
+function isSlotStep(slot: ChatErrorSlot): slot is ChatSlotKey {
+  return (CHAT_SLOT_STEPS as readonly string[]).includes(slot);
+}
 
 const EMPTY_SLOTS: ChatSlots = {
   customerName: '',
@@ -70,7 +94,7 @@ function readStored(): ChatSession | null {
     if (!CHAT_STEPS.includes(parsed.step)) return null;
     if (Date.now() - parsed.createdAt >= SESSION_TTL_MS) return null;
 
-    return { ...parsed, slots: { ...EMPTY_SLOTS, ...parsed.slots } };
+    return { ...parsed, slots: { ...EMPTY_SLOTS, ...parsed.slots }, notice: parsed.notice ?? null };
   } catch {
     return null;
   }
@@ -109,6 +133,7 @@ export function startChatSession(): ChatSession {
     createdAt: Date.now(),
     step: CHAT_STEPS[0],
     slots: EMPTY_SLOTS,
+    notice: null,
   };
 
   persist(session);
@@ -142,11 +167,43 @@ export function setChatSlot(key: ChatSlotKey, value: string): void {
 export function setChatStep(step: ChatStep): void {
   if (!current) return;
 
-  const session: ChatSession = { ...current, step };
+  const session: ChatSession = { ...current, step, notice: null };
 
   persist(session);
   commit(session);
 }
+
+export function applyChatServerError(error: NormalizedApiError): void {
+  if (!current) return;
+
+  const fields = error.isValidationError ? Object.keys(error.errors) : [];
+  const field = fields.find((key) => SERVER_FIELD_SLOTS.has(key.split('.')[0]));
+  const slot = field ? SERVER_FIELD_SLOTS.get(field.split('.')[0]) : undefined;
+  const target = slot && isSlotStep(slot) ? slot : null;
+
+  const flaggedItems = [
+    ...new Set(
+      fields
+        .map((key) => /^items\.(\d+)\./.exec(key)?.[1])
+        .filter((index): index is string => index !== undefined)
+        .map(Number),
+    ),
+  ];
+
+  const session: ChatSession = {
+    ...current,
+    step: target ?? current.step,
+    notice: {
+      message: (field && error.errors[field]?.[0]) || error.message,
+      offerPos: target === null,
+      flaggedItems,
+    },
+  };
+
+  persist(session);
+  commit(session);
+}
+
 
 function subscribe(fn: () => void): () => void {
   subscribers.add(fn);

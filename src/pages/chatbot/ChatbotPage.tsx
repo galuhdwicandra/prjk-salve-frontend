@@ -8,6 +8,7 @@ import {
   useChatSession,
 } from '../../store/useChatSession';
 import type { ChatSlotKey } from '../../store/useChatSession';
+import { Link } from 'react-router-dom';
 
 interface QuestionDef {
   text: string;
@@ -56,7 +57,7 @@ export default function ChatbotPage() {
     if (!value && !QUESTIONS[session.step].optional) return;
 
     setChatSlot(session.step, value);
-    setChatStep(CHAT_SLOT_STEPS[stepIndex + 1] ?? 'confirm');
+    setChatStep(session.notice ? 'confirm' : CHAT_SLOT_STEPS[stepIndex + 1] ?? 'confirm');
     setDraft('');
   }
 
@@ -91,6 +92,20 @@ export default function ChatbotPage() {
               </div>
             </div>
           ))}
+
+          {session.notice ? (
+            <div style={bubbleRow('left')}>
+              <div className="wa-bubble" role="alert">
+                {session.notice.message}
+                {session.notice.offerPos ? (
+                  <>
+                    {' '}
+                    <Link to="/pos">Lanjutkan di form POS</Link>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {question ? (
             <div style={bubbleRow('left')}>
