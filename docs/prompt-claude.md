@@ -46,17 +46,27 @@ Response format:
 5. What was intentionally not added, and when it would become appropriate to add it.
 6. Verification commands that I can run myself — do not run them.
 ===================================
-[STORY]
+[STOR]
 
-Receipt List – Detail Data Export
+Untuk parent branch nya:
+backend: staging
+frontend: staging
 
-Hasil export dari Receipt List perlu dibuat lebih detail.
+New Branch
+tamplate format nama: features/CAHTBOT-A1-Sesi-order-dan-client_ref-anti-duplikat
 
-Data export sebisa mungkin tidak hanya menampilkan informasi utama receipt, tetapi juga mencakup:
+[DESCRIPTION]
+Satu percakapan bot mewakili tepat satu calon order. Agar pengiriman ulang akibat timeout atau klik ganda tidak melahirkan order kedua, sesi memegang satu client_ref (UUID) yang dipakai pada payload POST /orders. Backend menyimpan pemetaan client_ref → order selama 1 hari, jadi permintaan ulang dengan ref yang sama memulangkan order yang sama beserta meta.idempotent = true. Seluruh isi slot percakapan ikut dipersistensi supaya sesi yang terputus bisa dilanjutkan.
 
-Produk yang terdapat pada masing-masing receipt.
-Jumlah/quantity masing-masing produk.
-Harga masing-masing produk.
-Informasi transaksi yang berkaitan dengan receipt.
+Referensi: backend/app/Http/Controllers/Api/OrderController.php bagian cache order:create:ref:.
 
-Detail tersebut dibutuhkan agar data hasil export dapat digunakan untuk analisis laporan keuangan, khususnya untuk menganalisis penjualan berdasarkan masing-masing jenis produk.
+[ACCEPTANCE-CRITERIA]
+Given percakapan baru dimulai, When bot menampilkan pertanyaan pertama, Then satu client_ref UUID v4 sudah dibuat dan tersimpan.
+
+Given slot apa pun berubah, When perubahan diterima, Then state sesi tersimpan di localStorage dengan kunci berbasis client_ref.
+
+Given sesi belum disubmit lalu halaman ditutup, When bot dibuka lagi, Then percakapan lanjut dari slot terakhir dengan semua isi slot utuh.
+
+Given order sudah berhasil dibuat / dibatalkan / sesi kedaluwarsa, When percakapan berikutnya dimulai, Then client_ref baru dibuat.
+
+client_ref yang sama tidak pernah dipakai untuk dua order berbeda.
