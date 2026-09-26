@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from 'react';
+import { createOrder } from '../api/orders';
+import type { OrderItemInput } from '../types/orders';
 
 const ACTIVE_KEY = 'pos-salve:chat:active';
 const SESSION_PREFIX = 'pos-salve:chat:';
@@ -10,6 +12,7 @@ export const CHAT_STEPS = [
   'receivedAt',
   'readyAt',
   'notes',
+  'payMode',
   'confirm',
 ] as const;
 
@@ -19,11 +22,15 @@ export type ChatSlotKey = Exclude<ChatStep, 'confirm'>;
 
 export type ChatSlots = Record<ChatSlotKey, string>;
 
+export type ChatPayMode = 'PENDING' | 'DP' | 'FULL';
+
 export interface ChatSession {
   clientRef: string;
   createdAt: number;
   step: ChatStep;
   slots: ChatSlots;
+  customerId: string;
+  items: OrderItemInput[];
 }
 
 export const CHAT_SLOT_STEPS = CHAT_STEPS.filter(
@@ -36,6 +43,7 @@ const EMPTY_SLOTS: ChatSlots = {
   receivedAt: '',
   readyAt: '',
   notes: '',
+  payMode: '',
 };
 
 const subscribers = new Set<() => void>();
@@ -70,7 +78,12 @@ function readStored(): ChatSession | null {
     if (!CHAT_STEPS.includes(parsed.step)) return null;
     if (Date.now() - parsed.createdAt >= SESSION_TTL_MS) return null;
 
-    return { ...parsed, slots: { ...EMPTY_SLOTS, ...parsed.slots } };
+    return {
+      ...parsed,
+      customerId: parsed.customerId ?? '',
+      items: parsed.items ?? [],
+      slots: { ...EMPTY_SLOTS, ...parsed.slots },
+    };
   } catch {
     return null;
   }
@@ -109,6 +122,8 @@ export function startChatSession(): ChatSession {
     createdAt: Date.now(),
     step: CHAT_STEPS[0],
     slots: EMPTY_SLOTS,
+    customerId: '',
+    items: [],
   };
 
   persist(session);
@@ -146,6 +161,57 @@ export function setChatStep(step: ChatStep): void {
 
   persist(session);
   commit(session);
+}
+
+interface ChatRequiredSlot {
+  label: string;
+  step: ChatSlotKey | null;
+  filled: (session: ChatSession, branchId: string) => boolean;
+}
+
+export const CHAT_REQUIRED_SLOTS: readonly ChatRequiredSlot[] = [
+  { label: 'Outlet', step: null, filled: (_session, branchId) => branchId !== '' },
+  { label: 'Pelanggan', step: 'customerName', filled: (session) => session.customerId !== '' },
+  { label: 'Layanan', step: null, filled: (session) => session.items.length > 0 },
+  { label: 'Tanggal diterima', step: 'receivedAt', filled: (session) => session.slots.receivedAt !== '' },
+  { label: 'Target selesai', step: 'readyAt', filled: (session) => session.slots.readyAt !== '' },
+  { label: 'Mode pembayaran', step: 'payMode', filled: (session) => session.slots.payMode !== '' },
+];
+
+export function guardChatSubmit(session: ChatSession, branchId: string): ChatRequiredSlot[] {
+  return CHAT_REQUIRED_SLOTS.filter((slot) => !slot.filled(session, branchId));
+}
+
+export type ChatSubmitResult =
+  | { ok: true; reference: string | null }
+  | { ok: false; missing: string[] };
+
+export async function submitChatOrder(branchId: string): Promise<ChatSubmitResult> {
+  const session = current;
+
+  if (!session || session.step !== 'confirm') return { ok: false, missing: [] };
+
+  const missing = guardChatSubmit(session, branchId);
+
+  if (missing.length > 0) {
+    const target = missing.find((slot) => slot.step !== null)?.step;
+
+    if (target) setChatStep(target);
+
+    return { ok: false, missing: missing.map((slot) => slot.label) };
+  }
+
+  const res = await createOrder({
+    branch_id: branchId,
+    customer_id: session.customerId,
+    items: session.items,
+    notes: session.slots.notes || null,
+    received_at: session.slots.receivedAt,
+    ready_at: session.slots.readyAt,
+    client_ref: session.clientRef,
+  });
+
+  return { ok: true, reference: res.data?.invoice_no ?? res.data?.number ?? null };
 }
 
 function subscribe(fn: () => void): () => void {
