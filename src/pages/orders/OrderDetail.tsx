@@ -4,10 +4,9 @@ import { normalizeApiError } from '../../api/client';
 import {
   getOrder,
   openOrderReceipt,
+  openOrderWhatsApp,
   voidOrder,
 } from '../../api/orders';
-import { issueTrackerLink } from '../../api/tracker';
-import { resolveWhatsappTemplate } from '../../api/whatsappTemplates';
 import OrderBeforePhotos from '../../components/orders/OrderBeforePhotos';
 import ReceivePaymentModal from './ReceivePaymentModal';
 import Toast from '../../components/Toast';
@@ -16,9 +15,7 @@ import { useAuth, useIsManager } from '../../store/useAuth';
 import { IconTrash } from '../users/icons';
 import { fmtDate } from '../../utils/date';
 import { rp } from '../../utils/money';
-import { buildOrderWaMessage } from '../../utils/wa-templates';
 import type { WaConfigKey } from '../../types/whatsapp-templates';
-import { buildWhatsAppLink } from '../../utils/wa';
 import EditOrderModal from './EditOrderModal';
 import PaymentHistoryModal from './PaymentHistoryModal';
 import type { Order } from '../../types/orders';
@@ -95,15 +92,9 @@ export default function OrderDetail() {
     }
 
     try {
-      const link = (await issueTrackerLink(row.id)).data?.tracker_url ?? '';
-      const resolved = await resolveWhatsappTemplate(key, row.branch_id);
       const branch = useAuth.user?.branches.find((b) => String(b.id) === String(row.branch_id));
-      const message = buildOrderWaMessage(row, key, resolved.data?.content, {
-        outletName: branch?.name,
-        trackerUrl: link,
-      });
 
-      window.open(buildWhatsAppLink(wa, message), '_blank', 'noopener,noreferrer');
+      await openOrderWhatsApp(row, key, wa, branch?.name);
     } catch {
       showError('Gagal menyiapkan pesan WhatsApp.');
     }
@@ -263,7 +254,7 @@ export default function OrderDetail() {
               </div>
             </div>
           </div>
-          
+
         </div>
 
         <div className="rcd-side">

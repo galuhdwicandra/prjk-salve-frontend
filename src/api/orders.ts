@@ -14,6 +14,11 @@ import type {
   LoyaltyReward,
 } from '../types/orders';
 import type { PaymentCreatePayload, Payment } from '../types/payments';
+import { issueTrackerLink } from './tracker';
+import { resolveWhatsappTemplate } from './whatsappTemplates';
+import { buildOrderWaMessage } from '../utils/wa-templates';
+import { buildWhatsAppLink } from '../utils/wa';
+import type { WaConfigKey } from '../types/whatsapp-templates';
 
 export async function listOrders(params: OrderQuery = {}) {
   const { data } = await api.get<Paginated<Order>>('/orders', { params });
@@ -184,6 +189,13 @@ export async function openOrderReceipt(id: string, autoPrint = false): Promise<v
     w.close();
     throw err;
   }
+}
+
+export async function openOrderWhatsApp(order: Order, key: WaConfigKey, phone: string, outletName?: string): Promise<void> {
+  const trackerUrl = (await issueTrackerLink(order.id)).data?.tracker_url ?? '';
+  const resolved = await resolveWhatsappTemplate(key, order.branch_id);
+  const message = buildOrderWaMessage(order, key, resolved.data?.content, { outletName, trackerUrl });
+  window.open(buildWhatsAppLink(phone, message), '_blank', 'noopener,noreferrer');
 }
 
 type ShareLinkPayload = { share_url: string; expires_in_minutes: number | null };

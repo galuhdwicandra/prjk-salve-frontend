@@ -45,18 +45,3 @@ Response format:
 4. For genuinely necessary new files: full code.
 5. What was intentionally not added, and when it would become appropriate to add it.
 6. Verification commands that I can run myself — do not run them.
-===================================
-[STORY]
-
-Receipt List – Detail Data Export
-
-Hasil export dari Receipt List perlu dibuat lebih detail.
-
-Data export sebisa mungkin tidak hanya menampilkan informasi utama receipt, tetapi juga mencakup:
-
-Produk yang terdapat pada masing-masing receipt.
-Jumlah/quantity masing-masing produk.
-Harga masing-masing produk.
-Informasi transaksi yang berkaitan dengan receipt.
-
-Detail tersebut dibutuhkan agar data hasil export dapat digunakan untuk analisis laporan keuangan, khususnya untuk menganalisis penjualan berdasarkan masing-masing jenis produk.

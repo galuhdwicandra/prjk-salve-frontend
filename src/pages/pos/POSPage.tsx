@@ -4,7 +4,7 @@ import CartPanel, { type CartItem } from '../../components/pos/CartPanel';
 import QrisPreview from '../../components/pos/QrisPreview';
 import CustomerPicker from '../../components/customers/CustomerPicker';
 import Toast from '../../components/Toast';
-import { createOrder, getOrder, createOrderPayment } from '../../api/orders';
+import { createOrder, getOrder, createOrderPayment, openOrderReceipt, openOrderWhatsApp } from '../../api/orders';
 import { createCustomer } from '../../api/customers';
 import { uploadOrderPhotos } from '../../api/orderPhotos';
 import { applyVoucherToOrder, previewVoucher } from '../../api/vouchers';
@@ -23,12 +23,14 @@ import {
 } from '../../utils/offline-queue';
 import { toIDR } from '../../utils/money';
 import { fmtDate, todayLocalYMD } from '../../utils/date';
-import type { OrderCreatePayload } from '../../types/orders';
+import type { Order, OrderCreatePayload } from '../../types/orders';
 import type { PaymentCreatePayload, PaymentMethod } from '../../types/payments';
 import type { Customer, SingleResponse as CustomerSingleResponse } from '../../types/customers';
 import type { LoyaltySummary } from '../../types/loyalty';
 
 type PayMode = 'PENDING' | 'DP' | 'FULL';
+
+type SaveAction = 'none' | 'print' | 'wa';
 
 const PAY_MODE_LABEL: Record<PayMode, string> = {
   PENDING: 'PENDING — bayar nanti',
@@ -214,6 +216,8 @@ export default function POSPage() {
 
   const [dateOpen, setDateOpen] = useState(false);
   const [dateDraft, setDateDraft] = useState('');
+  const [dueOpen, setDueOpen] = useState(false);
+  const [dueDraft, setDueDraft] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -309,6 +313,7 @@ export default function POSPage() {
 
   const maxSla = useMemo(() => items.reduce((max, it) => Math.max(max, it.sla_days ?? 0), 0), [items]);
   const readyAt = useMemo(() => addDays(orderDate, maxSla), [orderDate, maxSla]);
+  const dueValid = dueDraft !== '' && dueDraft >= orderDate;
 
   const canSubmit = items.length > 0 && !!customerId && !loading;
 
@@ -443,7 +448,7 @@ export default function POSPage() {
     }
   }
 
-  function buildPayload(): OrderCreatePayload {
+  function buildPayload(readyDate: string): OrderCreatePayload {
     return {
       branch_id: branchId || undefined,
       customer_id: customerId,
@@ -457,7 +462,7 @@ export default function POSPage() {
       discount_value: discountValue,
       notes: note.trim() ? note.trim() : null,
       received_at: orderDate,
-      ready_at: readyAt,
+      ready_at: readyDate,
       client_ref: clientRefRef.current,
     };
   }
@@ -474,11 +479,9 @@ export default function POSPage() {
     showSuccess('Jaringan offline. Order masuk antrean dan terkirim otomatis saat online.');
   }
 
-  async function onSubmit() {
+  function openDueConfirm() {
     if (submitLockRef.current || loading) return;
 
-    submitLockRef.current = true;
-    setLoading(true);
     setFieldErrors({});
     setError(null);
 
@@ -489,12 +492,52 @@ export default function POSPage() {
       setError('Masih ada data order yang belum benar. Silakan periksa kembali.');
       showError('Masih ada data order yang belum benar. Silakan periksa kembali.');
       focusFirstErrorField(clientErrors);
-      submitLockRef.current = false;
-      setLoading(false);
       return;
     }
 
-    const payload = buildPayload();
+    setDueDraft(readyAt);
+    setDueOpen(true);
+  }
+
+  function confirmDue(action: SaveAction) {
+    if (!dueValid) return;
+    setDueOpen(false);
+    void onSubmit(action, dueDraft);
+  }
+
+  async function printReceipt(orderId: string) {
+    try {
+      await openOrderReceipt(orderId);
+    } catch (err: unknown) {
+      const e = normalizeApiError(err);
+      const reason = e.status === null && !e.isNetworkError && err instanceof Error ? err.message : e.message;
+      showError(`Order tersimpan, tetapi receipt gagal dibuka. ${reason}`);
+    }
+  }
+
+  async function sendReceiptWa(order: Order, fallbackWa: string) {
+    const wa = order.customer?.whatsapp || fallbackWa;
+
+    if (!wa) {
+      showError('Order tersimpan, tetapi nomor WhatsApp pelanggan belum tersedia.');
+      return;
+    }
+
+    try {
+      const branch = user?.branches.find((b) => String(b.id) === String(order.branch_id));
+      await openOrderWhatsApp(order, 'struk', wa, branch?.name);
+    } catch {
+      showError('Order tersimpan, tetapi pesan WhatsApp gagal disiapkan. Kirim ulang dari Receipt List.');
+    }
+  }
+
+  async function onSubmit(action: SaveAction, readyDate: string) {
+    if (submitLockRef.current || loading) return;
+
+    submitLockRef.current = true;
+    setLoading(true);
+
+    const payload = buildPayload(readyDate);
 
     const offlinePayment: PaymentCreatePayload | null =
       mode !== 'PENDING'
@@ -564,6 +607,9 @@ export default function POSPage() {
       } else {
         showSuccess(successMessage);
       }
+
+      if (action === 'print') await printReceipt(order.id);
+      if (action === 'wa') await sendReceiptWa(order, customerWhatsapp);
     } catch (err: unknown) {
       const e = normalizeApiError(err);
 
@@ -1111,7 +1157,7 @@ export default function POSPage() {
             id="save_order"
             className="btn dark block po-save"
             disabled={!canSubmit}
-            onClick={() => void onSubmit()}
+            onClick={openDueConfirm}
             style={!canSubmit ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
           >
             {loading ? 'Menyimpan…' : 'Simpan Order'}
@@ -1158,6 +1204,55 @@ export default function POSPage() {
                 }}
               >
                 Konfirmasi
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {dueOpen ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-labelledby="due_title">
+          <div className="box">
+            <div className="modal-head">
+              <h3 id="due_title">Konfirmasi Jatuh Tempo</h3>
+              <button type="button" className="mclose" onClick={() => setDueOpen(false)} aria-label="Tutup">
+                {'\u2715'}
+              </button>
+            </div>
+
+            <div className="kv">
+              <span>Estimasi selesai (SLA terlama {maxSla} hari)</span>
+              <b>{fmtDate(readyAt)}</b>
+            </div>
+
+            <div className="field" style={{ marginTop: 12 }}>
+              <label htmlFor="due_date">Tanggal Jatuh Tempo ke Pelanggan</label>
+              <input
+                id="due_date"
+                type="date"
+                min={orderDate}
+                value={dueDraft}
+                onChange={(e) => setDueDraft(e.target.value)}
+              />
+            </div>
+
+            <div className="mini" style={{ marginBottom: 16 }}>
+              Pastikan tanggal ini realistis sesuai kapasitas. Ubah bila perlu janji tanggal berbeda.
+            </div>
+
+            <div className="modal-foot" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <button type="button" className="btn ghost" onClick={() => setDueOpen(false)}>
+                Batal
+              </button>
+              <span style={{ flex: 1 }} />
+              <button type="button" className="btn" disabled={!dueValid} onClick={() => confirmDue('none')}>
+                Simpan Order
+              </button>
+              <button type="button" className="btn" disabled={!dueValid} onClick={() => confirmDue('print')}>
+                Cetak
+              </button>
+              <button type="button" className="btn dark" disabled={!dueValid} onClick={() => confirmDue('wa')}>
+                Kirim WA
               </button>
             </div>
           </div>
