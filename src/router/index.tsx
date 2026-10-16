@@ -50,7 +50,9 @@ export const router = createBrowserRouter([
         path: '/t/:token',
         element: (
           <LazyBoundary>
-            <CustomerTracker />
+            <div className="craft">
+              <CustomerTracker />
+            </div>
           </LazyBoundary>
         ),
       },

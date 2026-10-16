@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
 import { getCustomerTracker } from '../../api/tracker';
 import { fileUrl } from '../../utils/files';
 import { buildWhatsAppLink } from '../../utils/wa';
 import type { CustomerTrackerData } from '../../types/tracker';
+
+const LOGO_STYLE: CSSProperties = { width: 240, maxWidth: '80%', height: 'auto', aspectRatio: '4 / 1', objectFit: 'cover' };
 
 const STEPS = ['Diterima', 'Sedang dikerjakan', 'Siap diambil', 'Selesai'];
 const INVALID_MESSAGE = 'Link tidak valid atau kedaluwarsa. Minta link terbaru ke Salve ya.';
@@ -55,7 +57,7 @@ export default function CustomerTracker() {
                 <div className="trk-wrap">
                     <div className="trk-card">
                         <div className="trk-logobar">
-                            <img src="/logo-salve.png" alt="Salve" />
+                            <img src="/logo-salve.png" alt="Salve" style={LOGO_STYLE} />
                         </div>
                         <div className="trk-foot" style={{ padding: 26 }}>
                             {error ?? 'Memuat status pesanan…'}
