@@ -62,7 +62,7 @@ export default function OrdersIndex() {
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [sort, setSort] = useState<SortState>({ key: 'date', dir: 1 });
+  const [sort, setSort] = useState<SortState>({ key: 'date', dir: -1 });
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);

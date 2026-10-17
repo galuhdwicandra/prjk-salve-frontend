@@ -45,3 +45,6 @@ Response format:
 4. For genuinely necessary new files: full code.
 5. What was intentionally not added, and when it would become appropriate to add it.
 6. Verification commands that I can run myself — do not run them.
+==============================
+[STORY]
+Pada tabel Receipt List, ketika ada pesanan baru masuk, pesanan tersebut harus tampil di urutan paling atas (diurutkan dari yang terbaru ke yang terlama).
