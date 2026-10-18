@@ -47,4 +47,4 @@ Response format:
 6. Verification commands that I can run myself — do not run them.
 ==============================
 [STORY]
-Pada tabel Receipt List, ketika ada pesanan baru masuk, pesanan tersebut harus tampil di urutan paling atas (diurutkan dari yang terbaru ke yang terlama).
+Pada tabel Receipt List, saya ingin ditambahkan aksi hapus, tapi hanya superadmin saja yang bisa hapus

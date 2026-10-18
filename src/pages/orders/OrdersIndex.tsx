@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
-import { bulkVoidOrders, listOrders } from '../../api/orders';
+import { bulkVoidOrders, deleteOrder, listOrders } from '../../api/orders';
 import DateRangePicker from '../../components/DateRangePicker';
 import { ExportJobModal } from '../../components/DataIoModals';
 import Toast from '../../components/Toast';
@@ -26,6 +26,12 @@ type SortState = { key: SortKey; dir: 1 | -1 };
 
 const PAGE_SIZES = [25, 50, 100];
 
+const TERMINAL_STATUSES: Order['status'][] = ['DELIVERING', 'PICKED_UP', 'CANCELED'];
+
+function canDelete(order: Order): boolean {
+  return !TERMINAL_STATUSES.includes(order.status);
+}
+
 const STATUS_OPTIONS: { value: PaymentStatus | ''; label: string }[] = [
   { value: '', label: 'Semua' },
   { value: 'PAID', label: 'Lunas' },
@@ -48,6 +54,8 @@ function processChip(destination: Order['processing_destination']): { label: str
 export default function OrdersIndex() {
   const user = useSyncExternalStore(useAuth.subscribe, () => useAuth.user);
   const canVoid = useIsManager();
+  const isSuperadmin = (user?.roles ?? []).includes('Superadmin');
+  const columns = isSuperadmin ? 10 : 9;
   const branches = useMemo(() => user?.branches ?? [], [user]);
   const { toast, showSuccess, showError, hideToast } = useToast();
 
@@ -73,6 +81,7 @@ export default function OrdersIndex() {
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidTargets, setVoidTargets] = useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
   const query = useMemo(
     () => ({
@@ -211,6 +220,25 @@ export default function OrdersIndex() {
     }
   }
 
+  async function submitDelete() {
+    if (!deleteTarget) return;
+
+    const label = deleteTarget.invoice_no ?? deleteTarget.number;
+    setBusy(true);
+    setError(null);
+
+    try {
+      await deleteOrder(String(deleteTarget.id));
+      setDeleteTarget(null);
+      await refresh();
+      showSuccess(`Receipt ${label} berhasil dihapus.`);
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal menghapus receipt.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function onSort(key: SortKey) {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
   }
@@ -232,53 +260,53 @@ export default function OrdersIndex() {
         ? sorted.filter((order) => selected.includes(String(order.id)))
         : (await listOrders({ ...query, page: 1, per_page: 500 })).data ?? [];
 
-     const orderRows = (order: Order): Aoa => {
-       const receipt = [
-         order.received_at ?? '',
-         order.invoice_no ?? order.number,
-         order.customer?.name ?? order.customer_name ?? '',
-         outletCodes.get(String(order.branch_id)) ?? '',
-         statusChip(order.payment_status).label,
-         processChip(order.processing_destination).label,
-       ];
+      const orderRows = (order: Order): Aoa => {
+        const receipt = [
+          order.received_at ?? '',
+          order.invoice_no ?? order.number,
+          order.customer?.name ?? order.customer_name ?? '',
+          outletCodes.get(String(order.branch_id)) ?? '',
+          statusChip(order.payment_status).label,
+          processChip(order.processing_destination).label,
+        ];
 
-       const transaction = [
-         Number(order.subtotal),
-         Number(order.discount),
-         Number(order.grand_total),
-         Number(order.dp_amount),
-         Number(order.paid_amount),
-         Number(order.due_amount),
-         order.latest_payment_method ?? '',
-         order.paid_at ?? '',
-       ];
+        const transaction = [
+          Number(order.subtotal),
+          Number(order.discount),
+          Number(order.grand_total),
+          Number(order.dp_amount),
+          Number(order.paid_amount),
+          Number(order.due_amount),
+          order.latest_payment_method ?? '',
+          order.paid_at ?? '',
+        ];
 
-       const items = order.items ?? [];
+        const items = order.items ?? [];
 
-       if (items.length === 0) return [[...receipt, '', '', '', '', ...transaction]];
+        if (items.length === 0) return [[...receipt, '', '', '', '', ...transaction]];
 
-       return items.map((item) => [
-         ...receipt,
-         item.service?.name ?? item.service_id,
-         Number(item.qty),
-         Number(item.price),
-         Number(item.total),
-         ...transaction,
-       ]);
-     };
+        return items.map((item) => [
+          ...receipt,
+          item.service?.name ?? item.service_id,
+          Number(item.qty),
+          Number(item.price),
+          Number(item.total),
+          ...transaction,
+        ]);
+      };
 
       setJob({
         filename: `receipt-list-${range[0]}-${range[1]}`,
         sheet: 'Receipt List',
         subtitle: `Periode ${fmtDate(range[0])} \u2013 ${fmtDate(range[1])}`,
         aoa: [
-         [
-           'Tanggal', 'No. Receipt', 'Pelanggan', 'Outlet', 'Status Bayar', 'Proses',
-           'Produk', 'Qty', 'Harga Satuan', 'Subtotal Produk',
-           'Subtotal Receipt', 'Diskon Receipt', 'Total Receipt', 'DP', 'Dibayar',
-           'Outstanding', 'Metode Bayar', 'Tanggal Bayar',
-         ],
-         ...source.flatMap(orderRows),
+          [
+            'Tanggal', 'No. Receipt', 'Pelanggan', 'Outlet', 'Status Bayar', 'Proses',
+            'Produk', 'Qty', 'Harga Satuan', 'Subtotal Produk',
+            'Subtotal Receipt', 'Diskon Receipt', 'Total Receipt', 'DP', 'Dibayar',
+            'Outstanding', 'Metode Bayar', 'Tanggal Bayar',
+          ],
+          ...source.flatMap(orderRows),
         ],
       });
     } catch (err) {
@@ -455,16 +483,17 @@ export default function OrdersIndex() {
                 <th className="sortable num" onClick={() => onSort('total')}>Total{sortIcon('total')}</th>
                 <th className="sortable num" onClick={() => onSort('outstanding')}>Outstanding{sortIcon('outstanding')}</th>
                 <th className="sortable" onClick={() => onSort('outlet')}>Outlet{sortIcon('outlet')}</th>
+                {isSuperadmin ? <th>Aksi</th> : null}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="empty">Memuat{'\u2026'}</td>
+                  <td colSpan={columns} className="empty">Memuat{'\u2026'}</td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="empty">Tidak ada receipt pada periode ini.</td>
+                  <td colSpan={columns} className="empty">Tidak ada receipt pada periode ini.</td>
                 </tr>
               ) : (
                 sorted.map((order) => {
@@ -504,6 +533,21 @@ export default function OrdersIndex() {
                       <td className="num" data-label="Total">{rp(Number(order.grand_total))}</td>
                       <td className="num" data-label="Outstanding">{due > 0 ? rp(due) : '\u2014'}</td>
                       <td data-label="Outlet">{outletCodes.get(String(order.branch_id)) ?? '\u2014'}</td>
+                      {isSuperadmin ? (
+                        <td data-label="Aksi">
+                          {canDelete(order) ? (
+                            <button
+                              type="button"
+                              className="btn danger sm"
+                              disabled={busy}
+                              aria-label={`Hapus ${order.invoice_no ?? order.number}`}
+                              onClick={() => setDeleteTarget(order)}
+                            >
+                              <IconTrash />
+                            </button>
+                          ) : '\u2014'}
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })
@@ -612,6 +656,56 @@ export default function OrdersIndex() {
                 onClick={() => void submitBulkVoid()}
               >
                 {busy ? 'Memproses\u2026' : 'Konfirmasi Void'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {deleteTarget ? (
+        <div
+          className="modal show"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Hapus receipt"
+        >
+          <div className="box">
+            <div className="modal-head">
+              <h3>Hapus Receipt {deleteTarget.invoice_no ?? deleteTarget.number}</h3>
+              <button
+                type="button"
+                className="mclose"
+                disabled={busy}
+                aria-label="Tutup"
+                onClick={() => setDeleteTarget(null)}
+              >
+                {'\u2715'}
+              </button>
+            </div>
+
+            <div className="mini" style={{ marginBottom: 12 }}>
+              Receipt beserta item, foto, pembayaran, dan riwayatnya akan dihapus
+              permanen. Mutasi kas pembayaran dihapus dan jurnalnya di-void.
+              Tindakan ini tidak dapat dibatalkan.
+            </div>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={busy}
+                onClick={() => setDeleteTarget(null)}
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                className="btn danger"
+                style={{ marginLeft: 'auto' }}
+                disabled={busy}
+                onClick={() => void submitDelete()}
+              >
+                {busy ? 'Memproses\u2026' : 'Hapus'}
               </button>
             </div>
           </div>
