@@ -5,6 +5,7 @@ import { listOrders } from '../api/orders';
 import { useCanModule } from '../store/useAuth';
 import { useActiveBranchId } from '../store/useBranch';
 import type { DeliveryStatus } from '../types/deliveries';
+import { todayLocalYMD } from '../utils/date';
 import { IconBell } from '../pages/users/icons';
 
 type NotificationItem = {
@@ -28,6 +29,7 @@ export default function NotificationBell() {
   const location = useLocation();
   const branchId = useActiveBranchId();
   const canDelivery = useCanModule('ops-kirim');
+  const canReceipt = useCanModule('kasir-receipt');
 
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -36,7 +38,7 @@ export default function NotificationBell() {
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
-    if (!canDelivery) {
+    if (!canDelivery && !canReceipt) {
       setItems([]);
       return;
     }
@@ -47,19 +49,31 @@ export default function NotificationBell() {
     const scope = branchId ? { branch_id: branchId } : {};
 
     try {
-      const [orderRes, deliveryRes] = await Promise.all([
-        listOrders({ ...scope, status: 'DELIVERING', per_page: 1 }),
+      const [orderRes, deliveryRes, finishedRes] = await Promise.all([
+        canDelivery ? listOrders({ ...scope, status: 'DELIVERING', per_page: 1 }) : null,
         Promise.all(
-          PENDING_DELIVERY_STATUSES.map((status) =>
+          (canDelivery ? PENDING_DELIVERY_STATUSES : []).map((status) =>
             listDeliveries({ ...scope, status, per_page: 1 }),
           ),
         ),
+        canReceipt ? listOrders({ ...scope, finished_on: todayLocalYMD(), per_page: 1 }) : null,
       ]);
 
-      const delivering = orderRes.meta?.total ?? 0;
+      const delivering = orderRes?.meta?.total ?? 0;
       const pending = deliveryRes.reduce((sum, res) => sum + (res.meta?.total ?? 0), 0);
+      const finished = finishedRes?.meta?.total ?? 0;
 
       const next: NotificationItem[] = [];
+
+      if (finished > 0) {
+        next.push({
+          key: 'finished-today',
+          dot: 'var(--ok)',
+          strong: `${finished} order`,
+          text: 'selesai hari ini',
+          to: '/orders?finished=today',
+        });
+      }
 
       if (delivering > 0) {
         next.push({
@@ -88,10 +102,12 @@ export default function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  }, [branchId, canDelivery]);
+  }, [branchId, canDelivery, canReceipt]);
 
   useEffect(() => {
     void load();
+    const timer = window.setInterval(() => void load(), 60000);
+    return () => window.clearInterval(timer);
   }, [load]);
 
   useEffect(() => {

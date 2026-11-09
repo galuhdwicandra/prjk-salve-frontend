@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
 import { bulkVoidOrders, deleteOrder, listOrders } from '../../api/orders';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -8,7 +8,7 @@ import { ExportJobModal } from '../../components/DataIoModals';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useAuth, useIsManager } from '../../store/useAuth';
-import { fmtDate, rangeFor } from '../../utils/date';
+import { fmtDate, rangeFor, todayLocalYMD } from '../../utils/date';
 import type { Aoa, ExportJob } from '../../utils/export-table';
 import { rp } from '../../utils/money';
 import type { Order, PaginationMeta, PaymentStatus } from '../../types/orders';
@@ -67,6 +67,8 @@ export default function OrdersIndex() {
   const [range, setRange] = useState<[string, string]>(() => [...rangeFor('month')] as [string, string]);
   const [status, setStatus] = useState<PaymentStatus | ''>('');
   const [branchId, setBranchId] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const finishedToday = searchParams.get('finished') === 'today';
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
@@ -88,12 +90,13 @@ export default function OrdersIndex() {
       q: keyword || undefined,
       payment_status: status || undefined,
       branch_id: branchId || undefined,
-      date_from: range[0],
-      date_to: range[1],
+      date_from: finishedToday ? undefined : range[0],
+      date_to: finishedToday ? undefined : range[1],
+      finished_on: finishedToday ? todayLocalYMD() : undefined,
       sort_by: 'received_at' as const,
       sort_dir: sort.key === 'date' && sort.dir < 0 ? ('desc' as const) : ('asc' as const),
     }),
-    [keyword, status, branchId, range, sort],
+    [keyword, status, branchId, range, sort, finishedToday],
   );
 
   const refresh = useCallback(async () => {
@@ -356,12 +359,13 @@ export default function OrdersIndex() {
       {job ? <ExportJobModal job={job} onClose={() => setJob(null)} onError={setError} /> : null}
 
       <div className="card">
-        <div className="card-title">
-          <span>Receipt List</span>
-          <span className="ct-note">semua struk order dari POS {'\u00b7'} order tanpa foto belum masuk Workshop</span>
+        <div className="card-hd">
+          <div className="card-title">
+            <span>Receipt List</span>
+            <span className="ct-note">semua struk order dari POS {'\u00b7'} order tanpa foto belum masuk Workshop</span>
+          </div>
           <input
-            className="inp"
-            style={{ maxWidth: 380 }}
+            className="hd-search"
             placeholder="no / pelanggan"
             aria-label="Cari nomor receipt atau pelanggan"
             value={q}
@@ -370,16 +374,33 @@ export default function OrdersIndex() {
         </div>
 
         <div className="row" style={{ marginBottom: 14 }}>
+          {finishedToday ? null : (
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Periode</label>
+              <DateRangePicker
+                from={range[0]}
+                to={range[1]}
+                onChange={(start, end) => {
+                  setRange([start, end]);
+                  setPage(1);
+                }}
+              />
+            </div>
+          )}
+
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>Periode</label>
-            <DateRangePicker
-              from={range[0]}
-              to={range[1]}
-              onChange={(start, end) => {
-                setRange([start, end]);
+            <label htmlFor="receipt_finished">Pengerjaan</label>
+            <select
+              id="receipt_finished"
+              value={finishedToday ? 'today' : ''}
+              onChange={(e) => {
+                setSearchParams(e.target.value ? { finished: e.target.value } : {});
                 setPage(1);
               }}
-            />
+            >
+              <option value="">Semua</option>
+              <option value="today">Selesai hari ini</option>
+            </select>
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>

@@ -14,6 +14,7 @@ type Props = {
 export default function OrderBeforePhotos({ orderId, photos, readOnly = false, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ url: string; big: boolean } | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -63,7 +64,14 @@ export default function OrderBeforePhotos({ orderId, photos, readOnly = false, o
       <div className="photo-grid" style={{ margin: '12px 0' }}>
         {before.map((photo) => (
           <div key={photo.id} className="photo-thumb">
-            <img src={fileUrl(photo.path)} alt="Foto before" />
+            <button
+              type="button"
+              className="photo-open"
+              aria-label="Perbesar foto"
+              onClick={() => setZoom({ url: fileUrl(photo.path), big: false })}
+            >
+              <img src={fileUrl(photo.path)} alt="Foto before" />
+            </button>
             {readOnly ? null : (
               <button
                 type="button"
@@ -113,6 +121,22 @@ export default function OrderBeforePhotos({ orderId, photos, readOnly = false, o
           {error}
         </div>
       ) : null}
+
+      {zoom ? (
+        <div className="modal show" role="dialog" aria-modal="true" aria-label="Foto before" onClick={() => setZoom(null)}>
+          <div className={zoom.big ? 'zoom-box big' : 'zoom-box'} onClick={(e) => e.stopPropagation()}>
+            <img
+              src={zoom.url}
+              alt="Foto before"
+              onClick={() => setZoom((z) => (z ? { ...z, big: !z.big } : z))}
+            />
+          </div>
+          <button type="button" className="zoom-x" aria-label="Tutup" onClick={() => setZoom(null)}>
+            {'\u2715'}
+          </button>
+        </div>
+      ) : null}
+
     </div>
   );
 }

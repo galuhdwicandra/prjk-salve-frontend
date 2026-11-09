@@ -199,7 +199,7 @@ export default function POSPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerWhatsapp, setCustomerWhatsapp] = useState('');
   const [orderDate, setOrderDate] = useState<string>(todayLocalYMD);
-  const [note, setNote] = useState('');
+  const [noteRows, setNoteRows] = useState<string[]>(['']);
   const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
 
   const [mode, setMode] = useState<PayMode>('FULL');
@@ -361,7 +361,7 @@ export default function POSPage() {
     setCustomerName('');
     setCustomerWhatsapp('');
     setLoy(null);
-    setNote('');
+    setNoteRows(['']);
     setBeforeFiles([]);
     setMode('FULL');
     setMethod(paymentMethods[0]?.code ?? 'CASH');
@@ -449,6 +449,8 @@ export default function POSPage() {
   }
 
   function buildPayload(readyDate: string): OrderCreatePayload {
+    const noteLines = noteRows.map((row) => row.trim()).filter((row) => row !== '');
+
     return {
       branch_id: branchId || undefined,
       customer_id: customerId,
@@ -460,7 +462,7 @@ export default function POSPage() {
       })),
       discount_type: 'NOMINAL',
       discount_value: discountValue,
-      notes: note.trim() ? note.trim() : null,
+      notes: noteLines.length > 0 ? noteLines.map((row, i) => `${i + 1}. ${row}`).join('\n') : null,
       received_at: orderDate,
       ready_at: readyDate,
       client_ref: clientRefRef.current,
@@ -1082,15 +1084,37 @@ export default function POSPage() {
               </div>
 
               <div className="field" style={{ marginBottom: 0 }}>
-                <label htmlFor="order_note">
+                <label htmlFor="order_note_0">
                   Catatan <span className="mini">(opsional)</span>
                 </label>
-                <textarea
-                  id="order_note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="mis. sol lepas kiri, warna kusam…"
-                />
+                {noteRows.map((row, index) => (
+                  <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span className="mono" style={{ width: 20, flexShrink: 0 }}>{index + 1}.</span>
+                    <input
+                      id={`order_note_${index}`}
+                      type="text"
+                      value={row}
+                      style={{ flex: 1, minWidth: 0 }}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNoteRows((prev) => prev.map((r, i) => (i === index ? value : r)));
+                      }}
+                      placeholder={index === 0 ? 'mis. sol lepas kiri, warna kusam…' : `Catatan #${index + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="qbtn"
+                      aria-label={`Hapus catatan ${index + 1}`}
+                      disabled={noteRows.length === 1 && row === ''}
+                      onClick={() => setNoteRows((prev) => (prev.length === 1 ? [''] : prev.filter((_, i) => i !== index)))}
+                    >
+                      {'\u2715'}
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className="btn ghost sm" onClick={() => setNoteRows((prev) => [...prev, ''])}>
+                  + Tambah Catatan
+                </button>
               </div>
             </PosSection>
 

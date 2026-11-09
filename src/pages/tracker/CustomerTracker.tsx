@@ -37,6 +37,7 @@ export default function CustomerTracker() {
     const { token } = useParams<{ token: string }>();
     const [data, setData] = useState<CustomerTrackerData | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [zoom, setZoom] = useState<{ url: string; big: boolean } | null>(null);
 
     useEffect(() => {
         document.title = 'Lacak Pesanan · Salve';
@@ -136,6 +137,15 @@ export default function CustomerTracker() {
                         ) : null}
                     </div>
 
+                    {data.notes?.trim() ? (
+                        <>
+                            <div className="trk-sec-t">Catatan</div>
+                            <div style={{ margin: '0 22px', fontSize: 13, lineHeight: 1.6, color: '#0A2A66', whiteSpace: 'pre-line' }}>
+                                {data.notes}
+                            </div>
+                        </>
+                    ) : null}
+
                     {data.outstanding > 0 ? (
                         <div className="trk-qr">
                             <div className="trk-sec-t" style={{ margin: '0 0 4px' }}>
@@ -175,7 +185,14 @@ export default function CustomerTracker() {
                             <div className="trk-photos">
                                 {data.photos.map((photo) => (
                                     <div className="trk-photo" key={photo.path}>
-                                        <img src={fileUrl(photo.path)} alt={photo.group} />
+                                        <button
+                                            type="button"
+                                            className="photo-open"
+                                            aria-label="Perbesar foto"
+                                            onClick={() => setZoom({ url: fileUrl(photo.path), big: false })}
+                                        >
+                                            <img src={fileUrl(photo.path)} alt={photo.group} />
+                                        </button>
                                         <span className="trk-photo-g">{photo.group}</span>
                                     </div>
                                 ))}
@@ -198,6 +215,22 @@ export default function CustomerTracker() {
                     </div>
                 </div>
             </div>
+
+            {zoom ? (
+                <div className="modal show" role="dialog" aria-modal="true" aria-label="Foto pesanan" onClick={() => setZoom(null)}>
+                    <div className={zoom.big ? 'zoom-box big' : 'zoom-box'} onClick={(e) => e.stopPropagation()}>
+                        <img
+                            src={zoom.url}
+                            alt="Foto pesanan"
+                            onClick={() => setZoom((z) => (z ? { ...z, big: !z.big } : z))}
+                        />
+                    </div>
+                    <button type="button" className="zoom-x" aria-label="Tutup" onClick={() => setZoom(null)}>
+                        {'\u2715'}
+                    </button>
+                </div>
+            ) : null}
+
         </div>
     );
 }

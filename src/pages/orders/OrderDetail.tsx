@@ -252,6 +252,12 @@ export default function OrderDetail() {
                 <div>Estimasi selesai</div>
                 <span>{fmtDate(row.ready_at)}</span>
               </div>
+              <div className="kv">
+                <div>Catatan</div>
+                <span style={{ whiteSpace: 'pre-line', textAlign: 'right' }}>
+                  {row.notes?.trim() ? row.notes : '\u2014'}
+                </span>
+              </div>
             </div>
           </div>
 

@@ -47,4 +47,6 @@ Response format:
 6. Verification commands that I can run myself — do not run them.
 ==============================
 [STORY]
-Pada tabel Receipt List, saya ingin ditambahkan aksi hapus, tapi hanya superadmin saja yang bisa hapus
+1. Pengaturan jumlah baris per halaman
+   - Kondisi sekarang: di pojok kanan bawah tabel ada pengaturan jumlah baris per halaman, tapi hanya bisa digeser-geser (scroll).
+   - Yang diinginkan: di tambahkan jumlah baris per halaman bisa dipilih langsung (misalnya dropdown: 20,50, 100, 500, 1000).

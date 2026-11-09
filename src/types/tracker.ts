@@ -71,6 +71,7 @@ export interface CustomerTrackerData {
     };
     show_pickup: boolean;
     outstanding: number;
+    notes: string | null;
     photos: TrackerPhoto[];
     timeline: TrackerEvent[];
     updated_at: string;

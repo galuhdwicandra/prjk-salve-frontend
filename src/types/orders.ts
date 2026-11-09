@@ -160,6 +160,7 @@ export interface OrderQuery {
     payment_method?: PaymentMethod;
     date_from?: string;
     date_to?: string;
+    finished_on?: string;
     sort_by?: 'created_at' | 'received_at' | 'ready_at';
     sort_dir?: 'asc' | 'desc';
     page?: number;
