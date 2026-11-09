@@ -160,7 +160,7 @@ export function waOrderVars(order: Order, options: WaOrderOptions = {}): Record<
         sisa,
         estimasi: fmtDate(order.ready_at),
         items: items
-            .map((item) => `${item.service?.name ?? ''}  ${item.qty} \u00D7 ${rp(Number(item.price ?? 0))} = ${rp(Number(item.total ?? 0))}`)
+            .map((item) => `${item.service?.name ?? ''}  ${Number(item.qty ?? 0)} \u00D7 ${rp(Number(item.price ?? 0))} = ${rp(Number(item.total ?? 0))}`)
             .join('\n'),
         ringkasan,
         link_tracker: options.trackerUrl ?? '',

@@ -47,6 +47,13 @@ Response format:
 6. Verification commands that I can run myself — do not run them.
 ==============================
 [STORY]
-1. Pengaturan jumlah baris per halaman
-   - Kondisi sekarang: di pojok kanan bawah tabel ada pengaturan jumlah baris per halaman, tapi hanya bisa digeser-geser (scroll).
-   - Yang diinginkan: di tambahkan jumlah baris per halaman bisa dipilih langsung (misalnya dropdown: 20,50, 100, 500, 1000).
+1. Pada pesan invoice WhatsApp yang dikirim ke pelanggan, tolong perbaiki format QTY (jumlah) supaya tidak menampilkan angka desimal yang tidak perlu.
+
+Kondisi sekarang: QTY tampil sebagai "1.00".
+Yang diinginkan: QTY tampil sebagai "1".
+
+Aturannya:
+- Kalau QTY bilangan bulat, tampilkan tanpa desimal (1.00 menjadi 1, 2.00 menjadi 2. dst).
+- Hapus nol di belakang koma saja (1.50 menjadi 1.5).
+
+Perubahan ini khusus untuk format QTY di pesan invoice WA.

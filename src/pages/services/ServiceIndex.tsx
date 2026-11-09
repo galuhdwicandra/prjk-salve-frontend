@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { getErrorMessage } from '../../api/client';
 import { listBranches } from '../../api/branches';
@@ -65,6 +65,8 @@ export default function ServiceIndex() {
   const [modal, setModal] = useState<{ open: boolean; service: Service | null }>({ open: false, service: null });
   const [catModal, setCatModal] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropId, setDropId] = useState<string | null>(null);
 
   const { toast, showSuccess, showError, hideToast } = useToast();
 
@@ -380,6 +382,52 @@ export default function ServiceIndex() {
     setSelected((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
   }
 
+  async function moveVariants(targets: Service[], parentId: string) {
+    const parent = parents.find((item) => item.id === parentId);
+    const moving = targets.filter((item) => item.parent_id !== parentId);
+    if (!parent || moving.length === 0) return;
+    setBusy(true);
+    try {
+      await Promise.all(
+        moving.map((item) =>
+          updateService(item.id, {
+            category_id: parent.category_id,
+            parent_id: parent.id,
+            name: item.name,
+            unit: item.unit,
+            price_default: Number(item.price_default),
+            is_active: item.is_active,
+          }),
+        ),
+      );
+      showSuccess(`${moving.length} varian dipindah ke ${parent.name}.`);
+    } catch (err) {
+      showError(getErrorMessage(err, 'Gagal memindahkan varian'));
+    } finally {
+      setBusy(false);
+    }
+    await refresh();
+  }
+
+  function dropZone(parentId: string) {
+    if (!canManage) return {};
+    return {
+      onDragOver: (e: DragEvent<HTMLTableRowElement>) => {
+        if (!dragId) return;
+        e.preventDefault();
+        setDropId(parentId);
+      },
+      onDrop: (e: DragEvent<HTMLTableRowElement>) => {
+        e.preventDefault();
+        const dragged = allVariants.find((item) => item.id === dragId);
+        setDragId(null);
+        setDropId(null);
+        if (!dragged) return;
+        void moveVariants(selected.includes(dragged.id) ? selectedRows : [dragged], parentId);
+      },
+    };
+  }
+
   function openModal(service: Service | null) {
     setModal({ open: true, service });
   }
@@ -541,6 +589,22 @@ export default function ServiceIndex() {
                 {archived ? <IconUnarchive /> : <IconArchive />}
                 {archived ? 'Pulihkan terpilih' : 'Arsipkan terpilih'}
               </button>
+              <select
+                value=""
+                aria-label="Pindah varian terpilih ke kelompok"
+                disabled={busy}
+                style={{ width: 'auto', padding: '6px 10px', fontSize: 13 }}
+                onChange={(e) => void moveVariants(selectedRows, e.target.value)}
+              >
+                <option value="">Pindah ke kelompok{'\u2026'}</option>
+                {parents
+                  .filter((item) => item.is_active)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.category?.name ?? '-'})
+                    </option>
+                  ))}
+              </select>
             </div>
             <button type="button" className="link" onClick={() => setSelected([])}>
               bersihkan
@@ -594,7 +658,10 @@ export default function ServiceIndex() {
               ) : (
                 groups.map(({ parent, variants }) => (
                   <Fragment key={parent.id}>
-                    <tr className={parent.is_active ? 'fam-row' : 'fam-row dt-arc'}>
+                    <tr
+                      className={`fam-row${parent.is_active ? '' : ' dt-arc'}${dropId === parent.id ? ' drop' : ''}`}
+                      {...dropZone(parent.id)}
+                    >
                       <td className="dt-check" />
                       <td colSpan={columnCount - 1}>
                         <div className="fam-row-in">
@@ -620,6 +687,16 @@ export default function ServiceIndex() {
                           key={variant.id}
                           className={variant.is_active ? 'rowc' : 'rowc dt-arc'}
                           onClick={() => openModal(variant)}
+                          draggable={canManage && !busy}
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDragId(variant.id);
+                          }}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setDropId(null);
+                          }}
+                          {...dropZone(parent.id)}
                         >
                           <td className="dt-check" onClick={(e) => e.stopPropagation()}>
                             <input
