@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { listDeliveries } from '../api/deliveries';
 import { listOrders } from '../api/orders';
-import { useCanModule } from '../store/useAuth';
+import { useAuth, useCanModule } from '../store/useAuth';
 import { useActiveBranchId } from '../store/useBranch';
 import type { DeliveryStatus } from '../types/deliveries';
-import { todayLocalYMD } from '../utils/date';
+import { fmtDate, todayLocalYMD } from '../utils/date';
 import { IconBell } from '../pages/users/icons';
 
 type NotificationItem = {
@@ -35,9 +35,14 @@ export default function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [allBranches, setAllBranches] = useState(false);
+  const multiBranch = useAuth.branchIds.length > 1;
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const seqRef = useRef(0)
 
   const load = useCallback(async () => {
+    const seq = ++seqRef.current;
+
     if (!canDelivery && !canReceipt) {
       setItems([]);
       return;
@@ -47,23 +52,52 @@ export default function NotificationBell() {
     setFailed(false);
 
     const scope = branchId ? { branch_id: branchId } : {};
+    const newScope = allBranches ? {} : scope;
 
     try {
-      const [orderRes, deliveryRes, finishedRes] = await Promise.all([
+      const today = todayLocalYMD();
+
+      const [orderRes, deliveryRes, finishedRes, oneDayRes, newRes] = await Promise.all([
         canDelivery ? listOrders({ ...scope, status: 'DELIVERING', per_page: 1 }) : null,
         Promise.all(
           (canDelivery ? PENDING_DELIVERY_STATUSES : []).map((status) =>
             listDeliveries({ ...scope, status, per_page: 1 }),
           ),
         ),
-        canReceipt ? listOrders({ ...scope, finished_on: todayLocalYMD(), per_page: 1 }) : null,
+        canReceipt ? listOrders({ ...scope, finished_on: today, per_page: 1 }) : null,
+        canReceipt
+          ? listOrders({ ...scope, one_day_due: 1, sort_by: 'ready_at', sort_dir: 'asc', per_page: 50 })
+          : null,
+        canReceipt ? listOrders({ ...newScope, date_from: today, date_to: today, per_page: 50 }) : null,
       ]);
+
+      if (seq !== seqRef.current) return;
 
       const delivering = orderRes?.meta?.total ?? 0;
       const pending = deliveryRes.reduce((sum, res) => sum + (res.meta?.total ?? 0), 0);
       const finished = finishedRes?.meta?.total ?? 0;
 
       const next: NotificationItem[] = [];
+
+      for (const order of oneDayRes?.data ?? []) {
+        next.push({
+          key: `one-day-${order.id}`,
+          dot: order.ready_at && order.ready_at < today ? 'var(--danger)' : 'var(--warn)',
+          strong: order.customer?.name ?? order.customer_name ?? '-',
+          text: `· ${order.number} · ${order.branch?.name ?? '-'} · One Day selesai ${fmtDate(order.ready_at)}`,
+          to: `/orders/${order.id}`,
+        });
+      }
+
+      for (const order of (newRes?.data ?? []).filter((o) => o.status !== 'CANCELED')) {
+        next.push({
+          key: `new-${order.id}`,
+          dot: '#2563EB',
+          strong: order.customer?.name ?? order.customer_name ?? '-',
+          text: `· ${order.number} · ${order.branch?.name ?? '-'} · order baru`,
+          to: `/orders/${order.id}`,
+        });
+      }
 
       if (finished > 0) {
         next.push({
@@ -97,14 +131,16 @@ export default function NotificationBell() {
 
       setItems(next);
     } catch {
+      if (seq !== seqRef.current) return;
       setItems([]);
       setFailed(true);
     } finally {
-      setLoading(false);
+      if (seq === seqRef.current) setLoading(false);
     }
-  }, [branchId, canDelivery, canReceipt]);
+  }, [allBranches, branchId, canDelivery, canReceipt]);
 
   useEffect(() => {
+    setItems([]);
     void load();
     const timer = window.setInterval(() => void load(), 60000);
     return () => window.clearInterval(timer);
@@ -161,8 +197,24 @@ export default function NotificationBell() {
       {items.length > 0 ? <span className="notif-badge">{badge}</span> : null}
 
       <div className={open ? 'notif-dd show' : 'notif-dd'}>
-        <div className="notif-hd">
-          Notifikasi{items.length > 0 ? ` (${items.length})` : ''}
+
+        <div
+          className="notif-hd"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+        >
+          <span>Notifikasi{items.length > 0 ? ` (${items.length})` : ''}</span>
+          {multiBranch ? (
+            <div className="loc-badge">
+              <select
+                aria-label="Cakupan cabang notifikasi order baru"
+                value={allBranches ? 'all' : 'active'}
+                onChange={(e) => setAllBranches(e.target.value === 'all')}
+              >
+                <option value="active">Cabang aktif</option>
+                <option value="all">Semua cabang</option>
+              </select>
+            </div>
+          ) : null}
         </div>
 
         {loading && items.length === 0 ? (

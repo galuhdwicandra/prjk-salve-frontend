@@ -4,6 +4,7 @@ import { getOrder } from '../../api/orders';
 import { deleteOrderPhoto, uploadOrderPhotos } from '../../api/orderPhotos';
 import { fmtDate, fmtDateTime } from '../../utils/date';
 import { fileUrl } from '../../utils/files';
+import { PhotoZoom } from '../../components/orders/OrderBeforePhotos';
 import { IconCamera, IconImage, IconTag } from '../users/icons';
 import { printOrderLabels } from '../sorting/print';
 import type { Order, OrderBackendStatus, OrderPhoto } from '../../types/orders';
@@ -37,6 +38,7 @@ export default function WorkshopDetailDialog({ open, task, onClose, onPhotosChan
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [zoom, setZoom] = useState<string | null>(null);
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -216,17 +218,25 @@ export default function WorkshopDetailDialog({ open, task, onClose, onPhotosChan
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
             {before.map((photo) => (
               <div key={photo.id} style={{ position: 'relative' }}>
-                <img
-                  src={fileUrl(photo.path)}
-                  alt="Foto before"
-                  style={{
-                    width: 72,
-                    height: 72,
-                    objectFit: 'cover',
-                    borderRadius: 8,
-                    border: '1px solid var(--line)',
-                  }}
-                />
+                <button
+                  type="button"
+                  className="photo-open"
+                  aria-label="Perbesar foto"
+                  onClick={() => setZoom(fileUrl(photo.path))}
+                >
+                  <img
+                    src={fileUrl(photo.path)}
+                    alt="Foto before"
+                    style={{
+                      display: 'block',
+                      width: 72,
+                      height: 72,
+                      objectFit: 'cover',
+                      borderRadius: 8,
+                      border: '1px solid var(--line)',
+                    }}
+                  />
+                </button>
                 <button
                   type="button"
                   aria-label="Hapus foto"
@@ -290,11 +300,11 @@ export default function WorkshopDetailDialog({ open, task, onClose, onPhotosChan
                   ready_at: task.order?.ready_at ?? null,
                   branch: workshop
                     ? {
-                        id: workshop.id,
-                        name: workshop.name,
-                        code: workshop.code,
-                        type: workshop.type,
-                      }
+                      id: workshop.id,
+                      name: workshop.name,
+                      code: workshop.code,
+                      type: workshop.type,
+                    }
                     : null,
                 },
               ])
@@ -360,6 +370,8 @@ export default function WorkshopDetailDialog({ open, task, onClose, onPhotosChan
           Aksi Proses/Finishing dilakukan dari daftar Workshop. Harga & pembayaran ada di Receipt
           List.
         </p>
+
+        {zoom ? <PhotoZoom url={zoom} onClose={() => setZoom(null)} /> : null}
       </div>
     </div>
   );

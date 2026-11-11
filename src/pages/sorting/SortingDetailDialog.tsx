@@ -6,6 +6,7 @@ import type { SortingDestination, SortingOrder, SortingTab } from '../../api/sor
 import type { Order, OrderBackendStatus, OrderPhoto } from '../../types/orders';
 import { fmtDate, fmtDateTime } from '../../utils/date';
 import { fileUrl } from '../../utils/files';
+import { PhotoZoom } from '../../components/orders/OrderBeforePhotos';
 import { IconCamera, IconImage, IconTag } from '../users/icons';
 import { printOrderLabels } from './print';
 
@@ -63,6 +64,7 @@ export default function SortingDetailDialog({
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -278,17 +280,25 @@ export default function SortingDetailDialog({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
             {before.map((photo) => (
               <div key={photo.id} style={{ position: 'relative' }}>
-                <img
-                  src={fileUrl(photo.path)}
-                  alt="Foto before"
-                  style={{
-                    width: 72,
-                    height: 72,
-                    objectFit: 'cover',
-                    borderRadius: 8,
-                    border: '1px solid var(--line)',
-                  }}
-                />
+                <button
+                  type="button"
+                  className="photo-open"
+                  aria-label="Perbesar foto"
+                  onClick={() => setZoom(fileUrl(photo.path))}
+                >
+                  <img
+                    src={fileUrl(photo.path)}
+                    alt="Foto before"
+                    style={{
+                      display: 'block',
+                      width: 72,
+                      height: 72,
+                      objectFit: 'cover',
+                      borderRadius: 8,
+                      border: '1px solid var(--line)',
+                    }}
+                  />
+                </button>
                 <button
                   type="button"
                   aria-label="Hapus foto"
@@ -426,6 +436,8 @@ export default function SortingDetailDialog({
             </p>
           </>
         )}
+
+        {zoom ? <PhotoZoom url={zoom} onClose={() => setZoom(null)} /> : null}
       </div>
     </div>
   );

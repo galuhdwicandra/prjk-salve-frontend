@@ -2,6 +2,7 @@
 import type { Service } from './services';
 import type { Customer } from './customers';
 import type { Payment } from './payments';
+import type { Branch } from './branches';
 
 export type OrderBackendStatus =
     | 'QUEUE' | 'WASHING' | 'DRYING' | 'IRONING' | 'READY' | 'DELIVERING' | 'PICKED_UP' | 'CANCELED';
@@ -80,6 +81,7 @@ export interface Order {
     created_at: string | null;
     updated_at: string | null;
     customer?: Customer | null;
+    branch?: Pick<Branch, 'id' | 'code' | 'name'> | null;
     items?: OrderItem[];
     photos?: OrderPhoto[];
     payments?: Payment[];
@@ -161,6 +163,7 @@ export interface OrderQuery {
     date_from?: string;
     date_to?: string;
     finished_on?: string;
+    one_day_due?: 1;
     sort_by?: 'created_at' | 'received_at' | 'ready_at';
     sort_dir?: 'asc' | 'desc';
     page?: number;

@@ -89,6 +89,8 @@ function nowLocal(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
 }
 
+const ONE_DAY_SERVICE = 'One Day';
+
 function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + days);
@@ -312,7 +314,8 @@ export default function POSPage() {
   const showCashReceived = !(isQris && mode === 'FULL');
 
   const maxSla = useMemo(() => items.reduce((max, it) => Math.max(max, it.sla_days ?? 0), 0), [items]);
-  const readyAt = useMemo(() => addDays(orderDate, maxSla), [orderDate, maxSla]);
+  const hasOneDay = items.some((it) => it.name === ONE_DAY_SERVICE);
+  const readyAt = useMemo(() => addDays(orderDate, hasOneDay ? 1 : maxSla), [orderDate, maxSla, hasOneDay]);
   const dueValid = dueDraft !== '' && dueDraft >= orderDate;
 
   const canSubmit = items.length > 0 && !!customerId && !loading;
@@ -1245,7 +1248,7 @@ export default function POSPage() {
             </div>
 
             <div className="kv">
-              <span>Estimasi selesai (SLA terlama {maxSla} hari)</span>
+              <span>{hasOneDay ? 'Estimasi selesai (One Day, H+1)' : `Estimasi selesai (SLA terlama ${maxSla} hari)`}</span>
               <b>{fmtDate(readyAt)}</b>
             </div>
 
@@ -1256,6 +1259,7 @@ export default function POSPage() {
                 type="date"
                 min={orderDate}
                 value={dueDraft}
+                disabled={hasOneDay}
                 onChange={(e) => setDueDraft(e.target.value)}
               />
             </div>

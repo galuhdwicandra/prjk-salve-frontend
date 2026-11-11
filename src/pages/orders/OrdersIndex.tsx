@@ -69,6 +69,7 @@ export default function OrdersIndex() {
   const [branchId, setBranchId] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const finishedToday = searchParams.get('finished') === 'today';
+  const newToday = searchParams.get('masuk') === 'today';
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
@@ -90,13 +91,13 @@ export default function OrdersIndex() {
       q: keyword || undefined,
       payment_status: status || undefined,
       branch_id: branchId || undefined,
-      date_from: finishedToday ? undefined : range[0],
-      date_to: finishedToday ? undefined : range[1],
+      date_from: finishedToday ? undefined : newToday ? todayLocalYMD() : range[0],
+      date_to: finishedToday ? undefined : newToday ? todayLocalYMD() : range[1],
       finished_on: finishedToday ? todayLocalYMD() : undefined,
       sort_by: 'received_at' as const,
       sort_dir: sort.key === 'date' && sort.dir < 0 ? ('desc' as const) : ('asc' as const),
     }),
-    [keyword, status, branchId, range, sort, finishedToday],
+    [keyword, status, branchId, range, sort, finishedToday, newToday],
   );
 
   const refresh = useCallback(async () => {
@@ -374,7 +375,7 @@ export default function OrdersIndex() {
         </div>
 
         <div className="row" style={{ marginBottom: 14 }}>
-          {finishedToday ? null : (
+          {finishedToday || newToday ? null : (
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Periode</label>
               <DateRangePicker
@@ -392,14 +393,15 @@ export default function OrdersIndex() {
             <label htmlFor="receipt_finished">Pengerjaan</label>
             <select
               id="receipt_finished"
-              value={finishedToday ? 'today' : ''}
+              value={finishedToday ? 'finished' : newToday ? 'masuk' : ''}
               onChange={(e) => {
-                setSearchParams(e.target.value ? { finished: e.target.value } : {});
+                setSearchParams(e.target.value ? { [e.target.value]: 'today' } : {});
                 setPage(1);
               }}
             >
               <option value="">Semua</option>
-              <option value="today">Selesai hari ini</option>
+              <option value="finished">Selesai hari ini</option>
+              <option value="masuk">Masuk hari ini</option>
             </select>
           </div>
 
@@ -544,7 +546,12 @@ export default function OrdersIndex() {
                           {order.invoice_no ?? order.number}
                         </Link>
                       </td>
-                      <td data-label="Pelanggan">{order.customer?.name ?? order.customer_name ?? '\u2014'}</td>
+                      <td data-label="Pelanggan">
+                        {order.customer?.name ?? order.customer_name ?? '\u2014'}
+                        {order.customer?.whatsapp ? (
+                          <span className="mini"> {'\u00b7'} {'\u2026'}{order.customer.whatsapp.slice(-4)}</span>
+                        ) : null}
+                      </td>
                       <td data-label="Status">
                         <span className={badge.cls}>{badge.label}</span>
                       </td>

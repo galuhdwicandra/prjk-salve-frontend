@@ -14,7 +14,7 @@ type Props = {
 export default function OrderBeforePhotos({ orderId, photos, readOnly = false, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [zoom, setZoom] = useState<{ url: string; big: boolean } | null>(null);
+  const [zoom, setZoom] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +68,7 @@ export default function OrderBeforePhotos({ orderId, photos, readOnly = false, o
               type="button"
               className="photo-open"
               aria-label="Perbesar foto"
-              onClick={() => setZoom({ url: fileUrl(photo.path), big: false })}
+              onClick={() => setZoom(fileUrl(photo.path))}
             >
               <img src={fileUrl(photo.path)} alt="Foto before" />
             </button>
@@ -122,21 +122,23 @@ export default function OrderBeforePhotos({ orderId, photos, readOnly = false, o
         </div>
       ) : null}
 
-      {zoom ? (
-        <div className="modal show" role="dialog" aria-modal="true" aria-label="Foto before" onClick={() => setZoom(null)}>
-          <div className={zoom.big ? 'zoom-box big' : 'zoom-box'} onClick={(e) => e.stopPropagation()}>
-            <img
-              src={zoom.url}
-              alt="Foto before"
-              onClick={() => setZoom((z) => (z ? { ...z, big: !z.big } : z))}
-            />
-          </div>
-          <button type="button" className="zoom-x" aria-label="Tutup" onClick={() => setZoom(null)}>
-            {'\u2715'}
-          </button>
-        </div>
-      ) : null}
+      {zoom ? <PhotoZoom url={zoom} onClose={() => setZoom(null)} /> : null}
 
+    </div>
+  );
+}
+
+export function PhotoZoom({ url, onClose }: { url: string; onClose: () => void }) {
+  const [big, setBig] = useState(false);
+
+  return (
+    <div className="modal show" role="dialog" aria-modal="true" aria-label="Foto before" onClick={onClose}>
+      <div className={big ? 'zoom-box big' : 'zoom-box'} onClick={(e) => e.stopPropagation()}>
+        <img src={url} alt="Foto before" onClick={() => setBig((b) => !b)} />
+      </div>
+      <button type="button" className="zoom-x" aria-label="Tutup" onClick={onClose}>
+        {'\u2715'}
+      </button>
     </div>
   );
 }
