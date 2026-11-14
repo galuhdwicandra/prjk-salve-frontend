@@ -191,7 +191,7 @@ export default function CustomerPicker({
 
       {open && (
         <div
-          className="absolute z-20 mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white shadow-elev-2 overflow-hidden"
+          className="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-white shadow-elev-2 overflow-hidden"
           role="listbox"
           id={`listbox-${listboxId}`}
         >

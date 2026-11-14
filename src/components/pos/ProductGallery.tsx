@@ -4,7 +4,7 @@ import { computeEffectivePrice, computeEffectiveSla } from '../../api/servicePri
 import type { Service } from '../../types/services';
 import { rp } from '../../utils/money';
 
-type PickedRow = { id: string; name: string; unit: string; price_effective: number; sla_days: number };
+type PickedRow = { id: string; name: string; unit: string; price_effective: number; sla_days: number; parent_name: string };
 
 type Props = {
   onPick: (row: PickedRow) => void;
@@ -76,20 +76,21 @@ export default function ProductGallery({ onPick, branchId }: Props) {
       .filter((entry) => !search || entry.parent.name.toLowerCase().includes(search));
   }, [parents, keyword, priceOf]);
 
-  function pick(service: Service) {
+  function pick(service: Service, parentName: string) {
     onPick({
       id: service.id,
       name: service.name,
       unit: service.unit,
       price_effective: priceOf(service),
       sla_days: computeEffectiveSla(service.prices, branchId),
+      parent_name: parentName,
     });
     setPicked(null);
   }
 
   function openEntry(entry: GalleryEntry) {
     if (entry.options.length === 1) {
-      pick(entry.options[0]);
+      pick(entry.options[0], entry.parent.name);
       return;
     }
 
@@ -171,7 +172,7 @@ export default function ProductGallery({ onPick, branchId }: Props) {
 
             <div className="vpick">
               {picked.options.map((variant) => (
-                <button type="button" className="vpick-row" key={variant.id} onClick={() => pick(variant)}>
+                <button type="button" className="vpick-row" key={variant.id} onClick={() => pick(variant, picked.parent.name)}>
                   <span className="vp-nm">{variant.name}</span>
                   <span className="vp-meta">
                     <span className="vp-pr mono">{rp(priceOf(variant))}</span>

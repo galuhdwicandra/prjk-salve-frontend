@@ -11,6 +11,7 @@ export type CartItem = {
   qty: number;
   sla_days?: number;
   note?: string | null;
+  parent_name?: string;
 };
 
 type Props = {

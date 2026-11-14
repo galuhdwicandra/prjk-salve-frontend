@@ -90,6 +90,7 @@ function nowLocal(): string {
 }
 
 const ONE_DAY_SERVICE = 'One Day';
+const LOYALTY_SERVICE = 'Deep Clean';
 
 function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`);
@@ -284,11 +285,13 @@ export default function POSPage() {
   const receivedValue = useMemo(() => parseMoneyInput(cashReceived), [cashReceived]);
 
   const loyaltyDiscount = useMemo(() => {
-    if (!loy || subtotal <= 0) return 0;
-    if (loy.next === 5) return subtotal * 0.25;
-    if (loy.next === 10) return subtotal;
+    const eligible = items.filter((it) => it.parent_name === LOYALTY_SERVICE && it.name !== ONE_DAY_SERVICE);
+    if (!loy || eligible.length === 0) return 0;
+    const base = Math.min(...eligible.map((it) => it.price * Math.min(it.qty, 1)));
+    if (loy.next === 5) return base * 0.25;
+    if (loy.next === 10) return base;
     return 0;
-  }, [loy, subtotal]);
+  }, [loy, items]);
 
   const total = useMemo(
     () => Math.max(0, subtotal - discountValue - loyaltyDiscount - voucherAmount),
@@ -320,7 +323,7 @@ export default function POSPage() {
 
   const canSubmit = items.length > 0 && !!customerId && !loading;
 
-  function addItem(svc: { id: string; name: string; unit: string; price_effective: number; sla_days: number }) {
+  function addItem(svc: { id: string; name: string; unit: string; price_effective: number; sla_days: number; parent_name: string }) {
     const existing = items.find((p) => p.service_id === svc.id);
     setItems((prev) => {
       const found = prev.find((p) => p.service_id === svc.id);

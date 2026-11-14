@@ -47,4 +47,5 @@ Response format:
 6. Verification commands that I can run myself — do not run them.
 ==============================
 [STORY]
-1. ketika saya filter ke cabang utama, kenapa di icon notifikasi yang muncul nya malah cabang lain, dan filter tidak langsung cepat ke ganti, kan seharusnya cepat ke ganti
+1. lihat semua gambar yang ada di file frontend/docs_foto/
+di data pelanggan kalau search terkadang kep, trus di local bagian tambah pelanggan baru itu muncul walaupun nama nya sudah ada, tapi di production tidak muncul, terutama di mobile
