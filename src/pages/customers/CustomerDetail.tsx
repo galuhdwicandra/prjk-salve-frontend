@@ -12,8 +12,10 @@ import type { LoyaltySummary } from '../../types/loyalty';
 import type { Order } from '../../types/orders';
 import { fmtDate } from '../../utils/date';
 import { rp } from '../../utils/money';
+import { useIsManager } from '../../store/useAuth';
 import { IconArchive, IconEdit, IconSort, IconSortDown, IconSortUp, IconTrash, IconUnarchive } from '../users/icons';
 import CustomerEditModal from './CustomerEditModal';
+import CustomerStampModal from './CustomerStampModal';
 
 const ORDER_PAGE_SIZES = [5, 10, 25];
 
@@ -21,6 +23,7 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast, showSuccess, hideToast } = useToast();
+  const canEditStamp = useIsManager();
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vouchers, setVouchers] = useState<CustomerVoucherUsage[]>([]);
@@ -37,6 +40,7 @@ export default function CustomerDetail() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [stampOpen, setStampOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -374,6 +378,19 @@ export default function CustomerDetail() {
             <span>Edit</span>
           </button>
 
+          {canEditStamp ? (
+            <button
+              type="button"
+              className="btn block"
+              style={{ marginBottom: 10 }}
+              disabled={busy}
+              onClick={() => setStampOpen(true)}
+            >
+              <IconEdit />
+              <span>Edit Stamp</span>
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="btn block"
@@ -400,6 +417,20 @@ export default function CustomerDetail() {
             setEditOpen(false);
             setCustomer(updated);
             showSuccess('Pelanggan diperbarui.');
+          }}
+        />
+      ) : null}
+
+      {stampOpen ? (
+        <CustomerStampModal
+          customer={customer}
+          stamps={stamps}
+          cycle={cycle}
+          onClose={() => setStampOpen(false)}
+          onDone={(summary) => {
+            setStampOpen(false);
+            setLoyalty(summary);
+            showSuccess('Stamp pelanggan diperbarui.');
           }}
         />
       ) : null}
