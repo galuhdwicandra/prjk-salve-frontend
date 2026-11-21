@@ -48,4 +48,4 @@ Response format:
 ==============================
 [STORY]
 1. lihat semua gambar yang ada di file frontend/docs_foto/
-client ingin ada di data pelanggan ada edit stamp, rekomendasikan baiknya gimana, jadi ketika ada perbedaan di kartu fisik stamp dengan si stamp sistem di sistem bisa di edit dan di samakan dengan yang di kartu fisik.
+setiap klik simpan order kenapa selalu loading lama di production, dan ketika di refresh muncul tulisan 1 order di tahan

@@ -24,6 +24,7 @@ const STORE = 'orders';
 const listeners = new Set<() => void>();
 let pendingCount = 0;
 let failedCount = 0;
+let failedMessage: string | null = null;
 let flushing = false;
 
 function openDb(): Promise<IDBDatabase> {
@@ -56,6 +57,7 @@ async function refreshCount(): Promise<void> {
   const jobs = await readAll();
   pendingCount = jobs.filter((job) => job.error === null).length;
   failedCount = jobs.filter((job) => job.error !== null).length;
+  failedMessage = jobs.find((job) => job.error !== null)?.error ?? null;
   listeners.forEach((fn) => fn());
 }
 
@@ -74,8 +76,12 @@ export function getFailedCount(): number {
   return failedCount;
 }
 
+export function getFailedMessage(): string | null {
+  return failedMessage;
+}
+
 export async function enqueueOrder(job: NewQueuedOrder): Promise<void> {
-  const id = crypto.randomUUID();
+  const id = job.payload.client_ref ?? crypto.randomUUID();
 
   const row: QueuedOrder = {
     id,
@@ -137,7 +143,7 @@ export async function flushQueue(): Promise<void> {
         await sendOne(job);
       } catch (err) {
         const e = normalizeApiError(err);
-        if (e.isNetworkError) return;
+        if (e.isNetworkError || e.status === 409) return;
 
         job.error = e.message;
         await tx('readwrite', (store) => store.put(job));
@@ -147,4 +153,14 @@ export async function flushQueue(): Promise<void> {
     flushing = false;
     await refreshCount();
   }
+}
+
+export async function discardFailed(): Promise<void> {
+  const jobs = await readAll();
+
+  for (const job of jobs) {
+    if (job.error !== null) await tx('readwrite', (store) => store.delete(job.id));
+  }
+
+  await refreshCount();
 }

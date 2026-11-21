@@ -20,6 +20,8 @@ import {
   getPendingCount,
   getFailedCount,
   subscribeQueue,
+  getFailedMessage,
+  discardFailed,
 } from '../../utils/offline-queue';
 import { toIDR } from '../../utils/money';
 import { fmtDate, todayLocalYMD } from '../../utils/date';
@@ -193,6 +195,7 @@ export default function POSPage() {
 
   const pendingSync = useSyncExternalStore(subscribeQueue, getPendingCount, getPendingCount);
   const failedSync = useSyncExternalStore(subscribeQueue, getFailedCount, getFailedCount);
+  const failedSyncMessage = useSyncExternalStore(subscribeQueue, getFailedMessage, getFailedMessage);
 
   const [openSec, setOpenSec] = useState('cust');
   const toggleSec = (id: string) => setOpenSec((current) => (current === id ? '' : id));
@@ -251,6 +254,15 @@ export default function POSPage() {
     setLoy(null);
     setItems([]);
   }, [branchId]);
+
+  useEffect(() => {
+    if (!loading) return;
+
+    const block = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', block);
+
+    return () => window.removeEventListener('beforeunload', block);
+  }, [loading]);
 
   useEffect(() => {
     if (paymentMethods.length === 0) return;
@@ -487,6 +499,13 @@ export default function POSPage() {
     showSuccess('Jaringan offline. Order masuk antrean dan terkirim otomatis saat online.');
   }
 
+  function discardFailedSync() {
+    const ok = window.confirm(
+      `Order gagal sinkron: ${failedSyncMessage ?? '-'}\n\nPastikan order sudah ada di Receipt List. Hapus dari perangkat ini?`,
+    );
+    if (ok) void discardFailed();
+  }
+
   function openDueConfirm() {
     if (submitLockRef.current || loading) return;
 
@@ -584,7 +603,7 @@ export default function POSPage() {
         const payPayload: PaymentCreatePayload = {
           method: mode === 'DP' ? 'DP' : method,
           amount,
-          paid_at: nowLocal(),
+          paid_at: offlinePayment?.paid_at ?? nowLocal(),
         };
 
         const payRes = await createOrderPayment(order.id, payPayload);
@@ -698,7 +717,12 @@ export default function POSPage() {
       {pendingSync > 0 || failedSync > 0 ? (
         <div className="toolbar" style={{ marginBottom: 12 }}>
           {pendingSync > 0 ? <span className="chip c-dp">{pendingSync} order menunggu sinkron</span> : null}
-          {failedSync > 0 ? <span className="chip c-belum">{failedSync} order gagal sinkron</span> : null}
+          {failedSync > 0 ? (
+            <>
+              <span className="chip c-belum">{failedSync} order gagal sinkron</span>
+              <button type="button" className="btn ghost sm" onClick={discardFailedSync}>Hapus</button>
+            </>
+          ) : null}
         </div>
       ) : null}
 
